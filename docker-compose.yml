@@ -1,6 +1,7 @@
 # World Model Kernel: the database and the MCP gateway.
 #   make up                 db + gateway
 #   make up-otel            also an OpenTelemetry Collector and a trace viewer (Jaeger)
+#   make up-research        also the research pack's paper-source server (arXiv, OpenAlex, Crossref)
 name: wmk
 
 services:
@@ -46,6 +47,20 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
       - "127.0.0.1:${WMK_GATEWAY_PORT:-8000}:8000"
+
+  papers:
+    # The research pack's paper-source MCP server. It has no database credentials: agents
+    # pass the papers it finds to the gateway's ingest_source themselves.
+    profiles: [research]
+    build:
+      context: .
+      dockerfile: packs/research/mcp/Dockerfile
+    image: wmk-papers:dev
+    environment:
+      WMK_PAPERS_OPENALEX_API_KEY: ${WMK_PAPERS_OPENALEX_API_KEY:-}
+      WMK_PAPERS_MAILTO: ${WMK_PAPERS_MAILTO:-}
+    ports:
+      - "127.0.0.1:${WMK_PAPERS_PORT:-8001}:8001"
 
   otel-collector:
     profiles: [otel]

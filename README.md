@@ -28,6 +28,12 @@ when a person is the source. For a stdio harness, run the gateway with
 `WMK_TRANSPORT=stdio uv run wmk-gateway`. `make up-otel` adds an OpenTelemetry
 Collector and Jaeger (http://localhost:16686).
 
+For research, `make up-research` adds the research pack's paper-source server on
+`http://localhost:8001/mcp` (arXiv, OpenAlex, Crossref): connect it beside the gateway and
+give the harness [`packs/research/`](packs/research/SKILL.md) as a skill. Set
+`WMK_PAPERS_MAILTO` to a contact email for the APIs' polite pools, and
+`WMK_PAPERS_OPENALEX_API_KEY` (free) to search OpenAlex.
+
 ## The seven tools
 
 | Tool | Tier | Does |
@@ -83,7 +89,8 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make test` | Unit, SQL and regression tests (starts the database) |
 | `make eval` | Every fixture through the eval profile (precision and recall for entities and edges), then the resolution set (auto-band precision and recall, candidate recall, clean new names) |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
-| `make live` | The MVP check with a real harness: headless Claude Code, the core and interview skills and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$3 a run); not in CI |
+| `make live` (`SCENARIO=research`) | The MVP check with a real harness: headless Claude Code, the core and interview skills and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$3 a run); not in CI |
+| `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make lint` | `ruff check` and `ruff format --check` |
 
 Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
@@ -99,6 +106,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | `WMK_TRANSPORT`, `WMK_HOST`, `WMK_PORT` | `streamable-http`, `0.0.0.0`, `8000` | gateway |
 | `WMK_EMBEDDING_URL`, `WMK_EMBEDDING_MODEL`, `WMK_EMBEDDING_API_KEY` | unset | gateway: optional OpenAI-compatible embeddings |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | gateway: export spans and metrics |
+| `WMK_PAPERS_MAILTO`, `WMK_PAPERS_OPENALEX_API_KEY` | unset | papers: contact email for the APIs; OpenAlex search |
 
 ## Guarantees
 
@@ -113,10 +121,11 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 
 ## Current limits
 
-Research is the first product pack: papers are mapped from their abstracts (as text or
-Markdown) by any MCP harness following the core and research skills. Not yet built: the
-paper-source server, the parser container for full text, workers, observer runs, and the
-pack installer (packs are applied with the kernel SQL). Redaction masks the graph and read
+Research is the first product pack: papers are found with the paper-source server and
+mapped from their abstracts by any MCP harness following the core and research skills.
+Not yet built: the parser container for full text, workers, observer runs, and the pack
+installer (packs are applied with the kernel SQL; pack servers run beside the gateway,
+[ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Redaction masks the graph and read
 paths but does not yet erase source content
 ([ADR 0006](docs/decisions/0006-redaction-in-phase-1.md)). CI drives the eval profile with
 scripted extraction ([ADR 0008](docs/decisions/0008-eval-profile-runs-scripted-extraction.md));

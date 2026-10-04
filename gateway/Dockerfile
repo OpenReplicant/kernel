@@ -11,14 +11,14 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-default-groups --no-install-project
 
 COPY kernel ./kernel
 COPY gateway ./gateway
 COPY evals ./evals
 COPY packs ./packs
 COPY profiles ./profiles
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-default-groups
 
 EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=3s --retries=20 \

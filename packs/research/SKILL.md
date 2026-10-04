@@ -18,6 +18,14 @@ reports is a **finding**: a Claim node of its own, linked to the paper that repo
 Agreement and disagreement between papers are edges between findings, so the evidence on
 any question can be counted and traced to papers.
 
+## Find papers
+
+When the `papers` MCP server is connected, `search_papers` finds candidates (OpenAlex when
+configured, else Crossref; `source: arxiv` for preprints) and `get_paper` returns one
+paper's full record with `ingest`: the exact `ingest_source` arguments described below.
+Pass them to the kernel's `ingest_source` unchanged. Without it, build the same arguments
+from whatever text you were given.
+
 ## Ingest a paper
 
 One source per paper. `content`: the title, an authors line, venue and year, the DOI or

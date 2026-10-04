@@ -6,8 +6,9 @@ LICENSE file and PyPI metadata, and release dates from PyPI or release feeds, on
 Items marked † rest on secondary sources; re-check them before adopting. Licence posture:
 [ADR 0012](decisions/0012-dependency-licences.md).
 
-None of these are built yet. Workers, the parser container, observer runs, the pack
-installer and workflows are outside Phase 1.
+Adopted so far: `arxiv`, `pyalex` and `habanero` in the research pack's paper-source server
+([ADR 0014](decisions/0014-pack-servers-run-beside-the-gateway.md)). habanero uses `httpx2`,
+the continuation of httpx under Pydantic's stewardship (BSD-3).
 
 ## Recommendations
 

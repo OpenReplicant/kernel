@@ -1,0 +1,18 @@
+{
+  "id": "https://openalex.org/W0000000001",
+  "doi": "https://doi.org/10.5555/WMK.RGD.2026A",
+  "title": "Does Retrieval Gating Help Long-Document Summarization?",
+  "display_name": "Does Retrieval Gating Help Long-Document Summarization?",
+  "publication_year": 2026,
+  "ids": {"openalex": "https://openalex.org/W0000000001", "doi": "https://doi.org/10.5555/wmk.rgd.2026a"},
+  "primary_location": {"source": {"display_name": "Synthetic Journal of Text Generation"}},
+  "authorships": [
+    {"author": {"id": "https://openalex.org/A0000000001", "display_name": "Chen Wu",
+                "orcid": "https://orcid.org/0000-0002-1825-0097"},
+     "raw_author_name": "Chen Wu"}
+  ],
+  "abstract_inverted_index": {"We": [0], "test": [1], "RGD": [2, 8], "on": [3], "GovLong.": [4],
+                              "It": [5], "did": [6], "not": [7], "help.": [9]},
+  "cited_by_count": 3,
+  "referenced_works": ["https://openalex.org/W0000000002"]
+}
