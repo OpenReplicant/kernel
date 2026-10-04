@@ -33,13 +33,14 @@ DECLARE
   v_redacted constant text := '[redacted]';
 BEGIN
   INSERT INTO kernel.claims (id, log_offset, text, chunk_id, source_id, source_key, agent_id, basis, modality,
-                             polarity, confidence, resolution, unresolved, recorded_at, trace_id, span_id)
+                             polarity, confidence, trust, resolution, unresolved, recorded_at, trace_id, span_id)
   VALUES (c ->> 'id', v_offset, c ->> 'text', c ->> 'chunk_id', c ->> 'source_id', c ->> 'source_key', v_agent,
-          c ->> 'basis', c ->> 'modality', (c ->> 'polarity')::smallint, c ->> 'confidence', c ->> 'resolution',
+          c ->> 'basis', c ->> 'modality', (c ->> 'polarity')::smallint, c ->> 'confidence',
+          coalesce(c ->> 'trust', entry ->> 'agent_trust'), c ->> 'resolution',
           c -> 'unresolved', v_at, entry ->> 'trace_id', entry ->> 'span_id');
 
-  v_weight := kernel.level_weight(entry ->> 'agent_trust') * kernel.basis_weight(c ->> 'basis')
-              * kernel.level_weight(c ->> 'confidence');
+  v_weight := kernel.level_weight(coalesce(c ->> 'trust', entry ->> 'agent_trust'))
+              * kernel.basis_weight(c ->> 'basis') * kernel.level_weight(c ->> 'confidence');
   v_asr := 'asr_' || split_part(c ->> 'id', '_', 2) || '_';
 
   FOR op, idx IN SELECT o.value, (o.ordinality - 1)::int FROM jsonb_array_elements(entry -> 'ops') WITH ORDINALITY AS o LOOP

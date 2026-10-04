@@ -4,7 +4,9 @@
 -- belief_v1, for one edge, claim node or node status:
 --   1. Group assertions by source_key; each source counts once, through its latest
 --      assertion (same source, newer supersedes).
---   2. Each counted assertion weighs agent trust x basis x confidence band.
+--   2. Each counted assertion weighs trust x basis x confidence band. Trust is the claim's
+--      (kernel.claims.trust): the writer's, or for a reported claim citing a source with
+--      an author, the lower of the writer's and the author's.
 --      Denials (polarity -1) weigh against.
 --   3. Status: unknown with no weight; contested when both sides reach the credibility
 --      threshold (0.25), when counted sources disagree on the validity window, or when

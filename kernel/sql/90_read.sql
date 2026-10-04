@@ -32,7 +32,7 @@ CREATE VIEW kernel.claims_view AS
 SELECT c.id, c.log_offset,
        CASE WHEN r.claim_id IS NULL THEN c.text ELSE '[redacted]' END AS text,
        c.chunk_id, c.source_id, c.source_key, c.agent_id, c.basis, c.modality, c.polarity, c.confidence,
-       c.resolution, c.unresolved, c.recorded_at, c.trace_id, c.span_id, r.claim_id IS NOT NULL AS redacted
+       c.trust, c.resolution, c.unresolved, c.recorded_at, c.trace_id, c.span_id, r.claim_id IS NOT NULL AS redacted
 FROM kernel.claims c
 LEFT JOIN kernel.claim_redactions r ON r.claim_id = c.id;
 COMMENT ON VIEW kernel.claims_view IS 'Claims with redacted text masked. Readers use this view, not kernel.claims.';
@@ -40,7 +40,7 @@ COMMENT ON VIEW kernel.claims_view IS 'Claims with redacted text masked. Readers
 CREATE VIEW kernel.log_entries AS
 SELECT l.log_offset, l.entry_id, l.recorded_at, l.agent_id, l.read_at_offset, l.trace_id, l.span_id,
        c.id AS claim_id, c.text AS claim_text, c.chunk_id, c.source_id, c.source_key, c.basis, c.modality,
-       c.polarity, c.confidence, c.resolution, c.unresolved, kernel.mask_ops(l.ops) AS ops, l.conflicts
+       c.polarity, c.confidence, c.trust, c.resolution, c.unresolved, kernel.mask_ops(l.ops) AS ops, l.conflicts
 FROM kernel.log l
 JOIN kernel.claims_view c ON c.log_offset = l.log_offset;
 COMMENT ON VIEW kernel.log_entries IS 'Log entries with their claim, redaction applied.';
@@ -96,7 +96,7 @@ LANGUAGE sql STABLE AS $$
         'claim', jsonb_build_object('id', h.claim_id, 'text', h.claim_text, 'source', h.chunk_id,
                                     'source_id', h.source_id, 'basis', h.basis, 'modality', h.modality,
                                     'polarity', CASE h.polarity WHEN 1 THEN 'positive' ELSE 'negative' END,
-                                    'confidence', h.confidence, 'resolution', h.resolution,
+                                    'confidence', h.confidence, 'trust', h.trust, 'resolution', h.resolution,
                                     'unresolved', h.unresolved),
         'ops', h.ops,
         'conflicts', CASE WHEN h.conflicts <> '[]' THEN h.conflicts END)))

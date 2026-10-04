@@ -3,7 +3,10 @@ different sources make a fact contested, no decay, conflicts never resolved by o
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
+from psycopg.types.json import Jsonb
 
 from tests.conftest import KernelDB, Rejected
 
@@ -235,3 +238,60 @@ def test_belief_as_of_record_time(kdb: KernelDB, agent: str, approver: dict[str,
     now = kdb.one("SELECT kernel.edge_state_as_of(%s, %s)", [edge, kdb.head()])
     assert then["belief_status"] == "accepted" and now["belief_status"] == "contested"
     assert kdb.one("SELECT kernel.edge_state_as_of(%s, %s)", [edge, 1])["known"] is False
+
+
+def test_a_report_weighs_no_more_than_its_speaker(
+    kdb: KernelDB, agent: str, approver: dict[str, str]
+) -> None:
+    """Reported claims weigh the lower of the writer's and the cited author's trust; observed
+    and inferred claims are the writer's own."""
+    people = kdb.claim(
+        agent,
+        "An anonymous tipster and the CFO",
+        [
+            {
+                "op": "create",
+                "ref": "$anon",
+                "type": "Agent",
+                "kind": "human",
+                "name": "Tipster",
+                "trust_level": "low",
+            },
+            {
+                "op": "create",
+                "ref": "$cfo",
+                "type": "Agent",
+                "kind": "human",
+                "name": "CFO",
+                "trust_level": "high",
+            },
+        ],
+        basis="observed",
+    )["refs"]
+    tip = kdb.source(agent, "Tip: Dana approves invoices.", author=people["$anon"])
+    memo = kdb.source(agent, "CFO memo: Dana approves invoices.", author=people["$cfo"])
+
+    def trust(chunk: str, basis: str) -> tuple[str, Decimal]:
+        result = kdb.claim(
+            agent,
+            "Dana approves",
+            [{"op": "assert", "edge": "implements", "from": approver["dana"], "to": approver["role"]}],
+            source=chunk,
+            basis=basis,
+        )
+        claim = result["claim_id"]
+        return (
+            kdb.one("SELECT trust FROM kernel.claims WHERE id = %s", [claim]),
+            kdb.one("SELECT weight FROM kernel.assertions WHERE claim_id = %s", [claim]),
+        )
+
+    # A medium-trust writer relaying a low-trust speaker: the speaker's low trust counts.
+    assert trust(tip, "reported") == ("low", Decimal("0.4") * Decimal("0.7") * Decimal("0.7"))
+    # Relaying a high-trust speaker cannot lift a claim above the writer's own trust.
+    assert trust(memo, "reported") == ("medium", Decimal("0.7") * Decimal("0.7") * Decimal("0.7"))
+    # What the writer observed in the source is the writer's own.
+    assert trust(tip, "observed") == ("medium", Decimal("0.7") * Decimal("1.0") * Decimal("0.7"))
+    # Readers see which trust weighed a claim.
+    source = kdb.one("SELECT source_id FROM kernel.chunks WHERE id = %s", [tip])
+    log = kdb.one("SELECT kernel.query_log(%s)", [Jsonb({"source_id": source, "order": "asc"})])
+    assert [e["claim"]["trust"] for e in log["entries"]] == ["low", "medium"]
