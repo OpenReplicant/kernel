@@ -89,7 +89,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make test` | Unit, SQL and regression tests (starts the database) |
 | `make eval` | Every fixture through the eval profile (precision and recall for entities and edges), then the resolution set (auto-band precision and recall, candidate recall, clean new names) |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
-| `make live` (`SCENARIO=research`) | The MVP check with a real harness: headless Claude Code, the core and interview skills and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$3 a run); not in CI |
+| `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make lint` | `ruff check` and `ruff format --check` |
 

@@ -4,6 +4,8 @@
 # since the model words them itself.
 name: research
 session: research-live
+# Runs as the eval profile's machine agent: no person takes part.
+profile: eval
 skills: [skills/core, packs/research]
 notes: |
   You are mapping papers into a World Model Kernel for a research field map. Use the
@@ -76,4 +78,5 @@ checks:
     - name: findings that agree are related
       sql: "SELECT count(*) FROM kernel.edges WHERE edge = 'supports'"
       min: 1
-  fully_cited_answer: true
+  # The answer may mark one sentence untraced (what the graph does not show).
+  min_traced_share: 0.8

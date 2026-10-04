@@ -157,6 +157,16 @@ def check(dsn: str, checks: dict[str, Any]) -> list[str]:
                 or ("max" in wanted and value > wanted["max"])
             ):
                 failures.append(f"{named['name']}: got {value}, expected {wanted}")
+        if share := checks.get("min_traced_share"):
+            # An answer may leave a sentence untraced on purpose (one saying what the graph
+            # does not show); most of it must rest on the graph.
+            best = conn.execute(
+                "SELECT max(traced) FROM (SELECT avg((cardinality(assertion_ids) > 0)::int) AS traced "
+                "FROM kernel.cites GROUP BY answer_id) a"
+            ).fetchone()
+            if not best or best[0] is None or float(best[0]) < share:
+                got = None if not best or best[0] is None else round(float(best[0]), 2)
+                failures.append(f"no answer with at least {share:.0%} of its sentences traced (best {got})")
         if checks.get("fully_cited_answer"):
             answers = conn.execute(
                 "SELECT answer_id, bool_and(cardinality(assertion_ids) > 0) FROM kernel.cites "
@@ -215,10 +225,22 @@ def main() -> None:
     dsn = admin.dsn_for(admin.admin_dsn(), args.database)
     with psycopg.connect(dsn) as conn:
         row = conn.execute("SELECT count(*) FROM kernel.nodes WHERE type <> 'Agent'").fetchone()
+        profiles = {
+            r[0]
+            for r in conn.execute(
+                "SELECT identity ->> 'profile' FROM kernel.nodes "
+                "WHERE type = 'Agent' AND identity ? 'profile'"
+            )
+        }
     if row and row[0] and not args.allow_existing:
         sys.exit(
             f"{args.database} already holds {row[0]} nodes; start from a fresh stack (make down up) "
             "or pass --allow-existing"
+        )
+    if (wanted := scenario.get("profile")) and profiles != {wanted}:
+        sys.exit(
+            f"the {args.scenario} scenario needs a gateway on the {wanted} profile "
+            f"(found {sorted(profiles)}): make down && WMK_PROFILE={wanted} make up"
         )
     cwd = workspace(args.url, scenario)
     turn_prefix = scenario.get("turn_prefix", "[Turn {n} from the person]\n")
