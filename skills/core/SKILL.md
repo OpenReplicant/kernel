@@ -49,7 +49,9 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
      in a pack's domain, its namespace (`bpm` for processes, activities, roles).
    - `assert` edges between ids or refs, with `valid_from`/`valid_to` when the source
      dates the fact ("since March 2026" means `valid_from: 2026-03-01`). Resolve
-     relative dates against the source's own date, never today's.
+     relative dates against the source's own date, never today's. A document's own
+     date ("org chart, January 2026") says when the fact held, not when it began: leave
+     `valid_from` out unless the source says when it started.
    - To change an existing fact, assert on its `edge_id`: close it with `valid_to`, or
      deny it with `polarity: negative`. Never recreate it.
    - Goals, rules, requirements and proposals are claims: `promote` them into Claim
@@ -57,7 +59,11 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
      `supersedes`, `refines`, `assumes`.
    - Duplicates you discover later: `link` them (`same_as`); nodes are never merged.
 5. **Write** with `write`. On success keep the returned `refs` (your `$refs` mapped to
-   ids) and use the returned `offset` as your next `read_at_offset`.
+   ids) and use the returned `offset` as your next `read_at_offset`. The returned
+   `edges` show the state each edge is in after your write. `contested` is an outcome,
+   not a failure: `contested_with` names an edge another source holds open across yours,
+   and `window_agreed: false` means sources disagree on the dates. Your claim is on
+   record; do not write it again. Tell the person both sides and what would settle it.
 6. **Handle rejections.** A rejected write returns an RFC 9457 problem document with
    `type`, `detail`, the broken `rule`, and `candidates` or `nearest` allowed terms.
    Fix the payload and retry (see [reference/rejections.md](reference/rejections.md)).

@@ -1,0 +1,33 @@
+# A live-harness scenario: an operator hands over a document, then a person talks.
+# The harness's model does all the extraction; nothing here is scripted tool calls.
+name: northwind
+session: northwind-live
+documents:
+  - title: Finance organisation chart, January 2026
+    content: |
+      Northwind Foods: Finance organisation (January 2026)
+
+      Finance controller: Omar Haddad (omar.haddad@northwind.test)
+      Procurement lead: Maya Chen (maya.chen@northwind.test)
+      Accounts payable clerk: Jonas Berg (jonas.berg@northwind.test)
+turns:
+  - Hi, I'm Maya Chen, I lead procurement at Northwind Foods. Yes, you can record what I say.
+    I'll walk you through how purchase requests work here.
+  - Anyone can raise a purchase request in Coupa. The requester's line manager reviews it first.
+    If it's over 10,000 euros, it then goes to the finance controller for a second approval.
+    After that, procurement turns it into a purchase order and sends it to the supplier.
+  - The finance controller used to be Omar Haddad, but since 1 August 2026 it's Lucia Ferreira.
+    Omar moved to the audit team.
+  - Officially every request over 10k needs the controller's sign-off. Honestly though, in practice
+    urgent ones sometimes skip it and get approved afterwards.
+  - Who is the finance controller right now, and what happens to a 15,000 euro request?
+    Answer from the world model and cite what you relied on.
+checks:
+  # The document and the person disagree about who holds this role: both holders, contested.
+  contested_role: finance controller
+  # The person's description becomes a bpm process with at least this many parts.
+  min_process_parts: 3
+  # "Omar moved to the audit team" is placed, not left unresolved.
+  membership: {member: omar haddad, of: audit}
+  # The final answer is cited, every sentence traced.
+  fully_cited_answer: true
