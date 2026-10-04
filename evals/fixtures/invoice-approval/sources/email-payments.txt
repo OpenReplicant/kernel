@@ -1,0 +1,5 @@
+From: payments@acme.test
+To: ap@acme.test
+Subject: Friday payment run
+
+Reminder: Dana Ruiz still signs off all supplier invoices before the Friday payment run.

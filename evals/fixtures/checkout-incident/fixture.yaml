@@ -1,0 +1,14 @@
+name: checkout-incident
+description: >
+  An incident report in the core namespace, without a pack: components and their
+  dependencies, events with times and participants, cause and order between events,
+  a proposed change kept as a Claim node, and a wrong kind fixed on retry.
+namespaces: [core]
+sources:
+  report: {file: sources/incident.md, media_type: text/markdown, title: Checkout outage incident report}
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities: {precision: 1.0, recall: 1.0}
+  edges: {precision: 1.0, recall: 1.0}
+  attributes: 1.0

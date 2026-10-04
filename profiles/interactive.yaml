@@ -1,0 +1,42 @@
+# ACP profile: interactive
+# Real use through an ACP client. The person and the assistant are both agents; with
+# the person's consent each turn is ingested as a source, so claims cite the turn.
+name: interactive
+purpose: Real use through an ACP client
+
+agent:
+  name: wmk-assistant
+  kind: machine
+  trust_level: medium
+
+identity:
+  person:
+    name: Person
+    kind: human
+    trust_level: high
+    # identity:
+    #   email: you@example.com   # set this so the same person is recognised across sessions
+
+permissions:
+  mode: ask               # permission requests are passed to the person
+
+skills:
+  - core
+
+transcript_capture:
+  enabled: true
+  requires_consent: true  # ask before the first turn is ingested; respect a no
+  turn_source:
+    media_type: text/plain
+    collection: session   # one collection per ACP session id: a conversation counts as one source
+    author: person
+
+limits:
+  timeout_seconds: 3600
+  max_turns: 500
+  budget_usd: 25.00
+
+mcp_servers:
+  - name: wmk
+    transport: streamable-http
+    url: http://localhost:8000/mcp

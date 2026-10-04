@@ -1,0 +1,24 @@
+entities:
+  - {type: Entity, kind: component, name: Checkout service}
+  - {type: Entity, kind: component, name: Payments API}
+  - {type: Entity, kind: component, name: Main Postgres cluster}
+  - {type: Event, kind: incident, name: Checkout outage, status: completed}
+  - {type: Event, kind: change, name: Payments API pool size change}
+  - {type: Event, kind: change, name: Rollback of the pool size change}
+  - {type: Agent, kind: human, name: Priya Shah}
+  - {type: Claim, kind: proposed, name: We propose adding a canary stage before configuration changes reach the payments API.,
+     status: open}
+
+edges:
+  - {edge: depends_on, from: Checkout service, to: Payments API}
+  - {edge: depends_on, from: Payments API, to: Main Postgres cluster}
+  - {edge: participates_in, from: Checkout service, to: Checkout outage}
+  - {edge: participates_in, from: Payments API, to: Payments API pool size change}
+  - {edge: causes, from: Payments API pool size change, to: Checkout outage, belief_status: accepted}
+  - {edge: precedes, from: Payments API pool size change, to: Checkout outage}
+  - {edge: participates_in, from: Priya Shah, to: Checkout outage}
+  - {edge: participates_in, from: Priya Shah, to: Rollback of the pool size change}
+  - {edge: about, from: We propose adding a canary stage before configuration changes reach the payments API.,
+     to: Payments API}
+
+unresolved_claims: 0

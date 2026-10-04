@@ -1,0 +1,59 @@
+# The graph the fixture should produce. Entities match on type, kind and name; edges on
+# edge, kind and endpoint names. Listed attributes must match too.
+entities:
+  - {type: Entity, kind: process, name: Invoice approval}
+  - {type: Entity, kind: org_unit, name: Finance}
+  - {type: Entity, kind: org_unit, name: Accounts payable}
+  - {type: Entity, kind: activity, name: Receive invoice}
+  - {type: Entity, kind: activity, name: Enter invoice}
+  - {type: Entity, kind: activity, name: Check invoice against purchase order}
+  - {type: Entity, kind: activity, name: Approve invoice}
+  - {type: Entity, kind: activity, name: Pay invoice}
+  - {type: Entity, kind: gateway, name: "Amounts match?"}
+  - {type: Entity, kind: role, name: AP clerk}
+  - {type: Entity, kind: role, name: Invoice approver}
+  - {type: Entity, kind: data, name: Supplier invoice}
+  - {type: Entity, kind: data, name: Purchase order}
+  - {type: Entity, kind: component, name: ERP system}
+  - {type: Agent, kind: human, name: Dana Ruiz}
+  - {type: Agent, kind: human, name: Lee Park}
+  - {type: Agent, kind: human, name: Sam Ortiz}
+  - {type: Claim, kind: normative, name: "Only approved invoices may be paid.", belief_status: accepted}
+  - {type: Claim, kind: descriptive, name: Invoices under 500 euros are often paid without any approval.,
+     belief_status: accepted}
+
+edges:
+  - {edge: responsible_for, from: Finance, to: Invoice approval}
+  - {edge: part_of, from: Receive invoice, to: Invoice approval}
+  - {edge: responsible_for, from: Accounts payable, to: Receive invoice}
+  - {edge: depends_on, kind: reads_from, from: Receive invoice, to: Supplier invoice}
+  - {edge: part_of, from: Enter invoice, to: Invoice approval}
+  - {edge: responsible_for, from: AP clerk, to: Enter invoice}
+  - {edge: depends_on, kind: uses, from: Enter invoice, to: ERP system}
+  - {edge: depends_on, kind: reads_from, from: Enter invoice, to: Supplier invoice}
+  - {edge: flows_to, from: Receive invoice, to: Enter invoice}
+  - {edge: part_of, from: Check invoice against purchase order, to: Invoice approval}
+  - {edge: responsible_for, from: AP clerk, to: Check invoice against purchase order}
+  - {edge: depends_on, kind: reads_from, from: Check invoice against purchase order, to: Purchase order}
+  - {edge: flows_to, from: Enter invoice, to: Check invoice against purchase order}
+  - {edge: part_of, from: "Amounts match?", to: Invoice approval}
+  - {edge: part_of, from: Approve invoice, to: Invoice approval}
+  - {edge: flows_to, from: Check invoice against purchase order, to: "Amounts match?"}
+  - {edge: flows_to, from: "Amounts match?", to: Approve invoice}
+  - {edge: responsible_for, from: Invoice approver, to: Approve invoice}
+  - {edge: part_of, from: Pay invoice, to: Invoice approval}
+  - {edge: flows_to, from: Approve invoice, to: Pay invoice}
+  - {edge: responsible_for, from: Finance, to: Pay invoice}
+  - {edge: about, from: "Only approved invoices may be paid.", to: Pay invoice}
+  - {edge: implements, from: Lee Park, to: AP clerk, belief_status: accepted}
+  # Three sources disagree on when Dana's approval ended, and Sam's overlaps it.
+  - {edge: implements, from: Dana Ruiz, to: Invoice approver, valid_from: "2025-01-01", valid_to: null,
+     belief_status: contested}
+  - {edge: implements, from: Sam Ortiz, to: Invoice approver, valid_from: "2026-03-01", valid_to: null,
+     belief_status: contested}
+  - {edge: about, from: Invoices under 500 euros are often paid without any approval., to: Pay invoice}
+  - {edge: about, from: Invoices under 500 euros are often paid without any approval., to: Approve invoice}
+  - {edge: contradicts, from: Invoices under 500 euros are often paid without any approval.,
+     to: "Only approved invoices may be paid."}
+
+unresolved_claims: 1

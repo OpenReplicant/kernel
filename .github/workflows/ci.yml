@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: make lint
+
+  kernel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Start the stack (db + gateway)
+        run: make up
+      - name: Unit, SQL and regression tests
+        run: make test
+      - name: Eval fixtures through the eval profile
+        run: make eval
+      - name: Seed the running stack through its gateway
+        run: make seed
+      - name: Replay the live log (a non-empty diff fails the build)
+        run: make replay
+      - name: Stack logs
+        if: failure()
+        run: docker compose logs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: evals/out/report.json
+          if-no-files-found: ignore
