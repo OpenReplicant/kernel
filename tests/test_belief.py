@@ -193,6 +193,10 @@ def test_single_valued_cross_source_conflict_is_contested(
     ]
     assert kdb.edge(dana)["belief_status"] == "contested" and kdb.edge(sam)["belief_status"] == "contested"
     assert kdb.edge(dana)["contested_with"] == [sam]
+    # The write result says why: the edge it asserted is contested by Dana's edge.
+    assert [(e["edge_id"], e["belief_status"], e["contested_with"]) for e in result["edges"]] == [
+        (sam, "contested", [dana])
+    ]
     # HR later closes Dana's window itself: the conflict is no longer active.
     kdb.claim(
         agent,

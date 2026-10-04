@@ -54,7 +54,7 @@ On a Claim node: `{"op": "assert", "claim_id": "clm_...", "polarity": "negative"
 
 | Group | Edges |
 | --- | --- |
-| Structure | `part_of`, `instance_of`, `subtype_of`, `depends_on`, `implements` (entity or agent to role), `flows_to` |
+| Structure | `part_of` (also a person's membership of a team), `instance_of`, `subtype_of`, `depends_on`, `implements` (entity or agent to role), `flows_to` |
 | Identity | `same_as` (via link/unlink), `denotes` (symbol to what it names) |
 | Epistemic | `about`, `supports`, `contradicts`, `supersedes`, `refines`, `assumes` (claim to claim) |
 | Time and causation | `participates_in` (to an event, with `props.role`), `precedes`, `causes` |

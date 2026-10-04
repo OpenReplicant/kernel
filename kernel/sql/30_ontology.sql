@@ -100,7 +100,7 @@ INSERT INTO kernel.node_types (name, label, description, id_prefix) VALUES
 -- Kernel edges --------------------------------------------------------------------
 
 INSERT INTO kernel.edge_types (name, edge_group, label, description, from_types, to_types) VALUES
-  ('part_of', 'structure', 'part of', 'The source node is a component or step of the target node.', '{Entity,Event}', '{Entity,Event}'),
+  ('part_of', 'structure', 'part of', 'The source node is a component, step or member of the target node, such as a person in a team.', '{Entity,Agent,Event}', '{Entity,Event}'),
   ('instance_of', 'structure', 'instance of', 'The source node is an instance of the target concept.', '{Entity,Agent,Event}', '{Entity}'),
   ('subtype_of', 'structure', 'subtype of', 'The source concept is a specialisation of the target concept.', '{Entity}', '{Entity}'),
   ('depends_on', 'structure', 'depends on', 'The source node needs the target node to work or exist.', '{Entity}', '{Entity}'),

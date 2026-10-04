@@ -5,7 +5,7 @@ WMK_DB_PASSWORD ?= postgres
 export WMK_ADMIN_DSN ?= postgresql://postgres:$(WMK_DB_PASSWORD)@localhost:$(WMK_DB_PORT)/postgres
 export WMK_DATABASE ?= wmk
 
-.PHONY: help up up-otel down db test replay eval seed lint fmt
+.PHONY: help up up-otel down db test replay eval seed live lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
@@ -14,6 +14,7 @@ help:
 	@echo "make test     unit, SQL and regression tests (starts db)"
 	@echo "make eval     run the eval fixtures through the eval profile"
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
+	@echo "make live     a real harness (headless Claude Code) maps a conversation; needs the claude CLI"
 	@echo "make replay   rebuild the graph from the log of \$$WMK_DATABASE and diff against the live graph"
 	@echo "make lint     ruff check and format check"
 
@@ -37,6 +38,9 @@ eval: db
 
 seed:
 	uv run python -m evals.seed --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+
+live:
+	uv run python -m evals.live --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --database $(WMK_DATABASE)
 
 replay:
 	uv run python -m evals.replay --database $(WMK_DATABASE)

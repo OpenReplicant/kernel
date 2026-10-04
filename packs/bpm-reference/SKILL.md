@@ -23,6 +23,7 @@ Systems (`component`) and business objects (`data`, such as an invoice) stay in 
 | A decision ("if the amounts match") | a `gateway`, with `flows_to` in and out |
 | Who does a step | `role responsible_for activity`, or `org_unit responsible_for activity` |
 | Who holds a role | `agent implements role`, dated with `valid_from`/`valid_to` |
+| Who belongs to a team or department | `agent part_of org_unit`, dated when the source says |
 | A step reads a document or record | `activity reads_from data` |
 | A step is done in a system | `activity uses component` |
 | A policy ("only approved invoices may be paid") | promote a `normative` claim `about` the activity |

@@ -20,3 +20,8 @@ plays the script through the seven tools over MCP, scores entities and edges sep
 CI tests the kernel, gateway and pack deterministically. Extraction quality of a real
 model is measured once a harness is chosen: it replaces the script with live tool calls
 under the same profile, and the scoring stays as it is.
+
+Until then, `make live` (`evals/live.py`) runs headless Claude Code against a running stack
+with the interactive profile: it maps a document and a conversation, answers with citations
+and replays the log, with loose checks on the resulting graph. It needs model access, so it
+runs by hand, not in CI.

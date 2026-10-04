@@ -81,6 +81,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make test` | Unit, SQL and regression tests (starts the database) |
 | `make eval` | Every fixture through the eval profile; precision and recall for entities and edges |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
+| `make live` | The MVP check with a real harness: headless Claude Code, the core skill and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$1 a run); not in CI |
 | `make lint` | `ruff check` and `ruff format --check` |
 
 Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default

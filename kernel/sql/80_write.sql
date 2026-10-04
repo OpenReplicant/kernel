@@ -281,7 +281,9 @@ $$;
 -- NULL only for self-registration: one create of an Agent with "self": true.
 --
 -- Returns {"offset", "entry_id", "claim_id", "recorded_at", "resolution", "refs",
---          "ops", "conflicts", "ambiguous"}.
+--          "ops", "conflicts", "ambiguous", "edges"}. "edges" is the state each edge the
+-- entry asserted on is in after it: belief status, window, and why it is contested
+-- (contested_with: conflicting edges; window_agreed false: sources disagree on dates).
 CREATE FUNCTION kernel.write(payload jsonb, p_agent_id text DEFAULT NULL) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, kernel, public, pg_temp
@@ -963,6 +965,16 @@ BEGIN
     'refs', (SELECT coalesce(jsonb_object_agg(k, v ->> 'id'), '{}') FROM jsonb_each(refs) AS r(k, v) WHERE k NOT LIKE '$#%'),
     'ops', (SELECT coalesce(jsonb_agg(o - 'embedding'), '[]') FROM jsonb_array_elements(resolved) o),
     'conflicts', v_conflicts,
-    'ambiguous', ambiguous);
+    'ambiguous', ambiguous,
+    'edges', (
+      SELECT coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+               'edge_id', e.id, 'edge', e.edge, 'kind', e.kind, 'from', e.from_id, 'to', e.to_id,
+               'belief_status', e.belief_status, 'valid_from', kernel.iso(e.valid_from),
+               'valid_to', kernel.iso(e.valid_to), 'window_agreed', e.window_agreed,
+               'sources_for', e.sources_for, 'sources_against', e.sources_against,
+               'contested_with', CASE WHEN e.contested_with <> '{}' THEN to_jsonb(e.contested_with) END))
+             ORDER BY e.id), '[]')
+      FROM kernel.edges e
+      WHERE e.id IN (SELECT o ->> 'edge_id' FROM jsonb_array_elements(resolved) o WHERE o ? 'edge_id')));
 END
 $$;

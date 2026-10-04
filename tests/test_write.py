@@ -520,3 +520,77 @@ def test_redact_masks_graph_and_log_views(kdb: KernelDB, agent: str) -> None:
         'SELECT properties::text FROM world."Agent" WHERE properties::text LIKE %s', [f"%{sam}%"]
     )
     assert "Sam Ortiz" not in vertex
+
+
+def test_write_result_reports_edge_states(kdb: KernelDB, agent: str) -> None:
+    hr = kdb.source(agent, "HR: Dana approves invoices from 2025.")
+    audit = kdb.source(agent, "Audit: Dana approved invoices until March 2026.")
+    first = kdb.claim(
+        agent,
+        "Dana approves invoices",
+        [
+            {"op": "create", "ref": "$d", "type": "Agent", "kind": "human", "name": "Dana"},
+            {"op": "create", "ref": "$r", "kind": "role", "namespace": "bpm", "name": "Invoice approver"},
+            {
+                "op": "assert",
+                "ref": "$e",
+                "edge": "implements",
+                "from": "$d",
+                "to": "$r",
+                "valid_from": "2025-01-01",
+            },
+        ],
+        source=hr,
+    )
+    edge = first["refs"]["$e"]
+    assert first["edges"] == [
+        {
+            "edge_id": edge,
+            "edge": "implements",
+            "from": first["refs"]["$d"],
+            "to": first["refs"]["$r"],
+            "belief_status": "accepted",
+            "valid_from": "2025-01-01T00:00:00Z",
+            "window_agreed": True,
+            "sources_for": 1,
+            "sources_against": 0,
+        }
+    ]
+    second = kdb.claim(
+        agent,
+        "Dana approved until March 2026",
+        [{"op": "assert", "edge_id": edge, "valid_to": "2026-03-01"}],
+        source=audit,
+    )
+    assert second["edges"][0]["belief_status"] == "contested"
+    assert second["edges"][0]["window_agreed"] is False and second["edges"][0]["sources_for"] == 2
+
+
+def test_agents_can_be_part_of_a_team(kdb: KernelDB, agent: str) -> None:
+    chunk = kdb.source(agent, "Omar moved to the audit team in August 2026.")
+    result = kdb.claim(
+        agent,
+        "Omar moved to the audit team in August 2026",
+        [
+            {"op": "create", "ref": "$o", "type": "Agent", "kind": "human", "name": "Omar Haddad"},
+            {"op": "create", "ref": "$t", "kind": "org_unit", "namespace": "bpm", "name": "Audit"},
+            {
+                "op": "assert",
+                "ref": "$e",
+                "edge": "part_of",
+                "from": "$o",
+                "to": "$t",
+                "valid_from": "2026-08-01",
+            },
+        ],
+        source=chunk,
+    )
+    assert kdb.edge(result["refs"]["$e"])["belief_status"] == "accepted"
+    with pytest.raises(Rejected) as err:
+        kdb.claim(
+            agent,
+            "x",
+            [{"op": "assert", "edge": "part_of", "from": result["refs"]["$t"], "to": result["refs"]["$o"]}],
+            basis="observed",
+        )
+    assert err.value.rule == "kernel.edge_range"

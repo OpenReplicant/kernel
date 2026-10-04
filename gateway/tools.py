@@ -131,6 +131,9 @@ class Tools:
         - {"op": "redact", "node": id, "fields"?: [...]} or {"op": "redact", "claim": claim id}
         Dates are YYYY-MM-DD or ISO 8601; windows are [valid_from, valid_to). There is no delete:
         retract with polarity "negative" or a supersedes edge.
+
+        The result's "edges" give each touched edge's state afterwards. A contested edge is an
+        outcome, not a failure: another source disagrees, and both stay on record.
         """
         payload: dict[str, Any] = {
             "claim": claim.model_dump(exclude_none=True),
