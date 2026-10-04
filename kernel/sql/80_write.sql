@@ -872,7 +872,7 @@ BEGIN
         PERFORM kernel.reject('reference', NULL, format('ops[%s].about_edges must list existing edge ids', idx));
       END IF;
       f := jsonb_build_object('id', v_claim_id, 'type', 'Claim', 'kind', v_modality, 'namespace', 'core',
-                              'name', left(c ->> 'text', 120), 'new', true);
+                              'name', kernel.claim_node_name(c ->> 'text'), 'new', true);
       refs := refs || jsonb_build_object(coalesce(v_ref, '$#' || idx), f);
       resolved := resolved || jsonb_strip_nulls(jsonb_build_object('op', 'promote', 'ref', v_ref, 'node_id', v_claim_id,
         'about_edges', op -> 'about_edges', 'props', op -> 'props'));

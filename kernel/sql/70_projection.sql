@@ -86,7 +86,7 @@ BEGIN
     WHEN 'promote' THEN
       INSERT INTO kernel.nodes (id, type, kind, namespace, name, props, belief_status,
                                 claim_id, created_offset, updated_offset, created_at, updated_at)
-      VALUES (op ->> 'node_id', 'Claim', c ->> 'modality', 'core', left(c ->> 'text', 120),
+      VALUES (op ->> 'node_id', 'Claim', c ->> 'modality', 'core', kernel.claim_node_name(c ->> 'text'),
               coalesce(op -> 'props', '{}') || jsonb_build_object(
                 'text', c ->> 'text', 'modality', c ->> 'modality', 'basis', c ->> 'basis',
                 'polarity', (c ->> 'polarity')::int, 'confidence', c ->> 'confidence', 'claim_id', c ->> 'id')

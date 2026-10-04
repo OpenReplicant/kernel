@@ -1,0 +1,39 @@
+name: retrieval-gating
+description: >
+  Three synthetic papers (fictional authors, methods, benchmarks and DOIs under the
+  10.5555 test prefix) on one summarization method: a paper introducing it, a paper
+  that fails to replicate it on long documents and challenges its explanation, and a
+  paper that replicates it and leaves an open question. Exercises the research pack:
+  per-paper findings as Claim nodes, reports and authorship, a duplicate method and an
+  identity-key duplicate caught by resolution, a domain-range rejection fixed on retry,
+  supports and contradicts across papers, a synthesis hypothesis with evidence for and
+  against, an unresolved claim, evidence queries and citations.
+namespaces: [research]
+sources:
+  lima2025:
+    file: sources/lima-2025.md
+    media_type: text/markdown
+    title: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization
+    uri: https://doi.org/10.5555/wmk.rgd.2025
+    collection: doi:10.5555/wmk.rgd.2025
+    metadata: {doi: 10.5555/wmk.rgd.2025, year: 2025}
+  wu2026:
+    file: sources/wu-2026.md
+    media_type: text/markdown
+    title: Does Retrieval Gating Help Long-Document Summarization?
+    uri: https://doi.org/10.5555/wmk.rgd.2026a
+    collection: doi:10.5555/wmk.rgd.2026a
+    metadata: {doi: 10.5555/wmk.rgd.2026a, year: 2026}
+  lima2026:
+    file: sources/lima-2026.md
+    media_type: text/markdown
+    title: Retrieval-Gated Decoding for Clinical Note Summarization
+    uri: https://doi.org/10.5555/wmk.rgd.2026b
+    collection: doi:10.5555/wmk.rgd.2026b
+    metadata: {doi: 10.5555/wmk.rgd.2026b, year: 2026}
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities: {precision: 1.0, recall: 1.0}
+  edges: {precision: 1.0, recall: 1.0}
+  attributes: 1.0

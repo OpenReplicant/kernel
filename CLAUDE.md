@@ -8,24 +8,25 @@ log is append-only and is the source of truth; the graph is its projection.
 Full design: `docs/design-v1.md` (export of "World Model Kernel — Design v1.0").
 Read the relevant section before changing anything architectural.
 
-## Current phase: Phase 1 (MVP)
+## Current phase: Phase 2, research track (approved 2026-10-04)
 
-Build only these:
+Phase 1 (the MVP) is complete: `kernel/sql/`, the gateway's seven tools, `skills/core/`
+(plus `skills/interview/`), `docker-compose.yml`, `evals/`, `profiles/`. Keep all of it
+working; its invariants and tests still apply.
 
-1. `kernel/sql/` — log, claims, assertions, graph (Apache AGE), sources, chunks, cite
-   records, ontology rules, `kernel.write`, `kernel.ingest_source`, `kernel.cite`,
-   belief triggers, roles.
-2. `gateway/` — Python MCP server exposing seven tools: `write`, `lookup_entities`,
-   `get_schema_slice`, `query_graph`, `query_log`, `ingest_source`, `cite`.
-3. `skills/core/` — the core Agent Skill: read the graph first, extract claims,
-   reference entity IDs, handle rejections, cite.
-4. `docker-compose.yml` — `db` + `gateway`; optional `otel` profile (Collector + viewer).
-5. `evals/` — fixtures with expected graphs, plus the replay test.
-6. `profiles/` — two ACP profiles: `interactive.yaml`, `eval.yaml`.
+Research is the first product (ADR 0013). In scope, in this order:
 
-**Out of scope for now** (do not build, do not stub): workers, parser container,
-observer runs, pack installer and registry, workflows, ops loop, vital signs, concept
-formation, habit formation. If a task seems to need one of these, stop and ask.
+1. `packs/research/` — the research pack: ontology, skill, evidence queries, fixtures.
+2. A paper-source pack container (arXiv, OpenAlex, Crossref) exposed as an MCP server.
+   It never gets database credentials. Libraries per `docs/adapters.md`.
+3. A live research eval: a real model maps papers through the eval profile.
+4. The parser container (full text, GROBID or Docling) and workers for bulk extraction,
+   once the live eval shows extraction quality. Workers need an ADR first on how job
+   queues fit invariant 1.
+
+**Out of scope for now** (do not build, do not stub): observer runs, pack installer and
+registry, workflows, ops loop, vital signs, concept formation, habit formation, the BPM
+product. If a task seems to need one of these, stop and ask.
 
 ## Stack
 
@@ -145,4 +146,4 @@ provenance, no ops). Never drop it.
 ## When unsure
 
 Check the design doc. Prefer the smallest change that satisfies the invariants. Do not
-expand scope beyond Phase 1 without asking.
+expand scope beyond the current phase without asking.
