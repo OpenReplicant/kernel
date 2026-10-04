@@ -4,6 +4,9 @@ Every write is `{"claim": {...}, "read_at_offset": n, "ops": [...]}`. Ops run in
 `$name` refs defined by a `create` (or `promote`, or an `assert` with `ref`) can be used
 by later ops in the same payload. Ids from the graph never start with `$`.
 
+Dates are ISO 8601: `2026-03-01` (midnight UTC) or `2026-03-01T14:05:00Z`. Words such as
+"yesterday" or "now" are rejected: resolve them against the source's own date first.
+
 ## create
 
 ```json

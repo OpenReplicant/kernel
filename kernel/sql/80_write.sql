@@ -356,7 +356,8 @@ BEGIN
   IF v_val IS NOT NULL THEN
     PERFORM kernel.reject('payload', NULL, format('unknown payload keys: %s', v_val));
   END IF;
-  IF jsonb_typeof(c) IS DISTINCT FROM 'object' OR coalesce(btrim(c ->> 'text'), '') = '' THEN
+  IF jsonb_typeof(c) IS DISTINCT FROM 'object' OR jsonb_typeof(c -> 'text') IS DISTINCT FROM 'string'
+     OR btrim(c ->> 'text') = '' THEN
     PERFORM kernel.reject('payload', NULL, 'claim.text is required', jsonb_build_object('field', 'claim.text'));
   END IF;
   SELECT string_agg(k, ', ') INTO v_val FROM jsonb_object_keys(c) k
@@ -387,7 +388,8 @@ BEGIN
   IF jsonb_array_length(ops) > 200 THEN
     PERFORM kernel.reject('payload', NULL, 'at most 200 operations per payload; split the claim');
   END IF;
-  IF jsonb_typeof(payload -> 'read_at_offset') IS DISTINCT FROM 'number' THEN
+  IF jsonb_typeof(payload -> 'read_at_offset') IS DISTINCT FROM 'number'
+     OR payload ->> 'read_at_offset' !~ '^\d{1,18}$' THEN
     PERFORM kernel.reject('payload', NULL,
       'read_at_offset is required: the offset returned by your last read of the graph',
       jsonb_build_object('field', 'read_at_offset'));
@@ -410,8 +412,12 @@ BEGIN
   v_claim_id := kernel.new_id('clm');
 
   -- Writing agent --------------------------------------------------------------------------
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(ops) o
+             WHERE jsonb_typeof(o) = 'object' AND o ? 'self' AND jsonb_typeof(o -> 'self') <> 'boolean') THEN
+    PERFORM kernel.reject('payload', NULL, 'self must be true or false');
+  END IF;
   SELECT count(*) INTO v_self_count FROM jsonb_array_elements(ops) o
-  WHERE o ->> 'op' = 'create' AND coalesce((o ->> 'self')::boolean, false);
+  WHERE jsonb_typeof(o) = 'object' AND o ->> 'op' = 'create' AND coalesce((o ->> 'self')::boolean, false);
   IF v_agent IS NULL THEN
     IF v_self_count <> 1 THEN
       PERFORM kernel.reject('agent', NULL,
@@ -528,11 +534,12 @@ BEGIN
             SELECT jsonb_agg(k ORDER BY similarity(k, v_kind) DESC, k)
             FROM jsonb_array_elements_text(v_rule.params -> 'kinds') k)));
       END IF;
-      v_name := btrim(op ->> 'name');
+      v_name := CASE WHEN jsonb_typeof(op -> 'name') = 'string' THEN btrim(op ->> 'name') END;
       IF coalesce(v_name, '') = '' THEN
         PERFORM kernel.reject('payload', NULL, format('ops[%s].name is required', idx), jsonb_build_object('op_index', idx));
       END IF;
-      IF op ? 'aliases' AND jsonb_typeof(op -> 'aliases') <> 'array' THEN
+      IF op ? 'aliases' AND (jsonb_typeof(op -> 'aliases') <> 'array' OR EXISTS (
+           SELECT 1 FROM jsonb_array_elements(op -> 'aliases') a WHERE jsonb_typeof(a) <> 'string')) THEN
         PERFORM kernel.reject('payload', NULL, format('ops[%s].aliases must be a list of names', idx));
       END IF;
       v_props := coalesce(op -> 'props', '{}');
@@ -544,6 +551,13 @@ BEGIN
       v_identity := coalesce(op -> 'identity', '{}');
       IF jsonb_typeof(v_identity) <> 'object' THEN
         PERFORM kernel.reject('payload', NULL, format('ops[%s].identity must be an object', idx));
+      END IF;
+      IF EXISTS (SELECT 1 FROM jsonb_each(v_identity) i WHERE jsonb_typeof(i.value) <> 'string') THEN
+        PERFORM kernel.reject('payload', NULL, format('ops[%s].identity values must be strings', idx));
+      END IF;
+      IF op ? 'distinct_from' AND (jsonb_typeof(op -> 'distinct_from') <> 'array' OR EXISTS (
+           SELECT 1 FROM jsonb_array_elements(op -> 'distinct_from') d WHERE jsonb_typeof(d) <> 'string')) THEN
+        PERFORM kernel.reject('payload', NULL, format('ops[%s].distinct_from must be a list of node ids', idx));
       END IF;
       FOR v_key, v_val IN SELECT * FROM jsonb_each_text(v_identity) LOOP
         SELECT * INTO v_rule FROM kernel.rules
@@ -893,6 +907,10 @@ BEGIN
         f := kernel.ref_node(op ->> 'node', refs, format('ops[%s].node', idx));
         IF (f ->> 'new')::boolean THEN
           PERFORM kernel.reject('payload', NULL, format('ops[%s]: redact applies to existing nodes', idx));
+        END IF;
+        IF op ? 'fields' AND jsonb_typeof(op -> 'fields') <> 'array' THEN
+          PERFORM kernel.reject('payload', NULL,
+            format('ops[%s].fields must list some of name, aliases, identity, props, text', idx));
         END IF;
         v_fields := ARRAY(SELECT jsonb_array_elements_text(coalesce(op -> 'fields', '["name", "aliases", "identity", "props", "text"]')));
         IF v_fields = '{}' OR NOT v_fields <@ ARRAY['name', 'aliases', 'identity', 'props', 'text'] THEN

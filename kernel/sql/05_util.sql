@@ -49,8 +49,10 @@ LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
 $$;
 
 -- Contract: parses a date or timestamp given in a payload. A bare date means
--- midnight UTC; a timestamp without zone is read as UTC. Raises a 'payload'
--- rejection naming the field when the text is not a valid date.
+-- midnight UTC; a timestamp without zone is read as UTC. Only ISO 8601 forms are
+-- accepted: relative words ('now', 'yesterday') would resolve against the write time,
+-- and the model must resolve them against the source. Anything else is a 'payload'
+-- rejection naming the field.
 CREATE FUNCTION kernel.parse_time(value text, field text) RETURNS timestamptz
 LANGUAGE plpgsql STABLE AS $$
 BEGIN
@@ -60,10 +62,15 @@ BEGIN
   IF value ~ '^\d{4}-\d{2}-\d{2}$' THEN
     RETURN (value || 'T00:00:00Z')::timestamptz;
   END IF;
-  IF value ~ '^\d{4}-\d{2}-\d{2}[T ][0-9:.]+$' THEN
+  IF value ~ '^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$' THEN
     RETURN (value || 'Z')::timestamptz;
   END IF;
-  RETURN value::timestamptz;
+  IF value ~ '^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}(:?\d{2})?)$' THEN
+    RETURN value::timestamptz;
+  END IF;
+  PERFORM kernel.reject('payload', NULL, format('%s must be an ISO 8601 date or timestamp (YYYY-MM-DD)', field),
+                        jsonb_build_object('field', field));
+  RETURN NULL;
 EXCEPTION WHEN invalid_datetime_format OR datetime_field_overflow OR invalid_text_representation THEN
   PERFORM kernel.reject('payload', NULL, format('%s is not a valid date or timestamp', field),
                         jsonb_build_object('field', field));
@@ -123,7 +130,7 @@ LANGUAGE plpgsql IMMUTABLE AS $$
 BEGIN
   IF value IS NULL OR value = 'null'::jsonb THEN
     RETURN 'medium';
-  ELSIF jsonb_typeof(value) = 'number' THEN
+  ELSIF jsonb_typeof(value) = 'number' AND value::numeric BETWEEN 0 AND 1 THEN
     RETURN CASE WHEN value::numeric >= 0.8 THEN 'high' WHEN value::numeric >= 0.5 THEN 'medium' ELSE 'low' END;
   ELSIF value #>> '{}' IN ('low', 'medium', 'high') THEN
     RETURN value #>> '{}';

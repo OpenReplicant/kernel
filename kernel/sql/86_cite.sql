@@ -65,13 +65,18 @@ BEGIN
   SELECT coalesce(max(log_offset), 0) INTO v_head FROM kernel.log;
 
   FOR s, i IN SELECT x.value, (x.ordinality - 1)::int FROM jsonb_array_elements(p_cite -> 'sentences') WITH ORDINALITY x LOOP
-    IF coalesce(btrim(s ->> 'text'), '') = '' THEN
+    IF jsonb_typeof(s) <> 'object' OR jsonb_typeof(s -> 'text') IS DISTINCT FROM 'string' OR btrim(s ->> 'text') = '' THEN
       PERFORM kernel.reject('payload', NULL, format('sentences[%s].text is required', i));
     END IF;
     SELECT string_agg(k, ', ') INTO v_keys FROM jsonb_object_keys(s) k
     WHERE k NOT IN ('text', 'assertions', 'edges', 'claims');
     IF v_keys IS NOT NULL THEN
       PERFORM kernel.reject('payload', NULL, format('sentences[%s] has unknown keys: %s', i, v_keys));
+    END IF;
+    IF EXISTS (SELECT 1 FROM unnest(ARRAY['assertions', 'edges', 'claims']) k
+               WHERE s ? k AND (jsonb_typeof(s -> k) <> 'array' OR EXISTS (
+                 SELECT 1 FROM jsonb_array_elements(s -> k) x WHERE jsonb_typeof(x) <> 'string'))) THEN
+      PERFORM kernel.reject('payload', NULL, format('sentences[%s]: assertions, edges and claims are lists of ids', i));
     END IF;
     v_ids := ARRAY(SELECT jsonb_array_elements_text(coalesce(s -> 'assertions', '[]')));
     v_edges := ARRAY(SELECT jsonb_array_elements_text(coalesce(s -> 'edges', '[]')));
