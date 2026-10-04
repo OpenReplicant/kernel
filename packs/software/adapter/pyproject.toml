@@ -1,0 +1,21 @@
+[project]
+name = "wmk-software"
+version = "0.1.0"
+description = "The software pack's adapter: maps a repository's compose files, Dockerfiles, pyproject.toml, CI workflows and git history into the World Model Kernel through its gateway."
+requires-python = ">=3.12"
+dependencies = [
+    "anyio>=4.5,<5",
+    "mcp>=2.3,<3",
+    "pyyaml>=6.0,<7",
+    "packaging>=24,<27",
+]
+
+[project.scripts]
+wmk-software = "wmk_software.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["wmk_software"]

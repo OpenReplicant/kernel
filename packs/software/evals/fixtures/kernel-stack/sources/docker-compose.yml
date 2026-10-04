@@ -1,0 +1,134 @@
+# World Model Kernel: the database and the MCP gateway.
+#   make up                 db, the packs in $WMK_PACKS (default: all) + gateway
+#   make up-otel            also an OpenTelemetry Collector and a trace viewer (Jaeger)
+#   make up-research        also the research pack's paper-source server (arXiv, OpenAlex, Crossref)
+#   make up-ui              also the explorer on http://localhost:8080 (read-only)
+name: wmk
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    image: wmk-db:dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${WMK_DB_PASSWORD:-postgres}
+      POSTGRES_DB: wmk
+      WMK_WRITER_PASSWORD: ${WMK_WRITER_PASSWORD:-writer}
+      WMK_READER_PASSWORD: ${WMK_READER_PASSWORD:-reader}
+    ports:
+      # Published on localhost only: the stack has no authentication.
+      - "127.0.0.1:${WMK_DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      # Ready once initdb has finished: the reader login role is created last.
+      test: ["CMD-SHELL", "psql -U postgres -d wmk -tAc \"select 1 from pg_roles where rolname = 'wmk_reader'\" | grep -q 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  packs:
+    # Installs the packs into the database, then exits; the gateway starts after it.
+    # Installing again is a no-op, and a pack that conflicts or needs another kernel fails it.
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    image: wmk-gateway:dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WMK_ADMIN_DSN: postgresql://postgres:${WMK_DB_PASSWORD:-postgres}@db:5432/postgres
+      WMK_PACKS: ${WMK_PACKS:-}            # empty: every pack in packs/
+    command: ["python", "-m", "kernel.packs", "install", "--database", "wmk"]
+    restart: "no"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    image: wmk-gateway:dev
+    depends_on:
+      db:
+        condition: service_healthy
+      packs:
+        condition: service_completed_successfully
+    environment:
+      WMK_WRITER_DSN: postgresql://wmk_writer:${WMK_WRITER_PASSWORD:-writer}@db:5432/wmk
+      WMK_READER_DSN: postgresql://wmk_reader:${WMK_READER_PASSWORD:-reader}@db:5432/wmk
+      WMK_PROFILE: /app/profiles/${WMK_PROFILE:-interactive}.yaml
+      WMK_TRANSPORT: streamable-http
+      WMK_EMBEDDING_URL: ${WMK_EMBEDDING_URL:-}
+      WMK_EMBEDDING_MODEL: ${WMK_EMBEDDING_MODEL:-}
+      WMK_EMBEDDING_API_KEY: ${WMK_EMBEDDING_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    ports:
+      - "127.0.0.1:${WMK_GATEWAY_PORT:-8000}:8000"
+
+  papers:
+    # The research pack's paper-source MCP server. It has no database credentials: agents
+    # pass the papers it finds to the gateway's ingest_source themselves.
+    profiles: [research]
+    build:
+      context: .
+      dockerfile: packs/research/mcp/Dockerfile
+    image: wmk-papers:dev
+    environment:
+      WMK_PAPERS_OPENALEX_API_KEY: ${WMK_PAPERS_OPENALEX_API_KEY:-}
+      WMK_PAPERS_MAILTO: ${WMK_PAPERS_MAILTO:-}
+    ports:
+      - "127.0.0.1:${WMK_PAPERS_PORT:-8001}:8001"
+
+  api:
+    # The explorer's data: PostgREST over the kernel schema as the reader role, so it sees
+    # exactly what any reader sees and can change nothing. PostgREST 16.4, pinned by digest.
+    profiles: [ui]
+    image: postgrest/postgrest@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgresql://wmk_reader:${WMK_READER_PASSWORD:-reader}@db:5432/wmk
+      PGRST_DB_SCHEMAS: kernel
+      PGRST_DB_ANON_ROLE: kernel_reader
+      PGRST_DB_TX_END: rollback
+      PGRST_DB_MAX_ROWS: "1000"
+      PGRST_SERVER_PORT: "3000"
+      # Critical errors only: request lines carry search terms (invariant 9).
+      PGRST_LOG_LEVEL: crit
+
+  ui:
+    # The explorer: Alpine.js pages served by Caddy, which forwards /api reads to PostgREST.
+    # Caddy 2.11.6, pinned by digest.
+    profiles: [ui]
+    image: caddy@sha256:881bbc60f9986d5ab8e7cfd6cf7e4ef3c9c0439fef2429d035d065577882f028
+    depends_on:
+      - api
+    volumes:
+      - ./ui/site:/srv:ro
+      - ./ui/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:${WMK_UI_PORT:-8080}:8080"
+
+  otel-collector:
+    profiles: [otel]
+    image: otel/opentelemetry-collector-contrib:0.137.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    depends_on:
+      - jaeger
+
+  jaeger:
+    profiles: [otel]
+    image: jaegertracing/jaeger:2.11.0
+    ports:
+      - "127.0.0.1:16686:16686"
+
+volumes:
+  db-data:

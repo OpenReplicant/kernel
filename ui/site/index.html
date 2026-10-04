@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>World Model Kernel</title>
     <link rel="stylesheet" href="style.css" />
+    <script defer src="vendor/cytoscape-3.34.3.min.js"></script>
+    <script defer src="graph.js"></script>
     <script defer src="app.js"></script>
     <script defer src="vendor/alpine-3.17.4.min.js"></script>
   </head>
@@ -13,6 +15,8 @@
       <a class="brand" href="#/">World Model Kernel</a>
       <nav>
         <a href="#/" :class="{ on: view === 'overview' }">Overview</a>
+        <a href="#/models" :class="{ on: view === 'models' }">Models</a>
+        <a href="#/graph" :class="{ on: view === 'graph' }">Graph</a>
         <a href="#/evidence" :class="{ on: view === 'evidence' }">Evidence</a>
         <a href="#/log" :class="{ on: view === 'log' }">Log</a>
         <a href="#/ontology" :class="{ on: view === 'ontology' }">Ontology</a>
@@ -123,6 +127,7 @@
         <section>
           <h1 x-text="data.node.name"></h1>
           <p class="tags">
+            <a class="tag link" :href="`#/graph/${data.node.id}`">Graph</a>
             <span class="tag" x-text="data.node.type"></span>
             <span class="tag" x-text="data.node.kind"></span>
             <span class="tag" x-text="data.node.namespace"></span>
@@ -461,6 +466,146 @@
             </tbody>
           </table>
           <p class="muted" x-show="!claimsShown().length">No claim nodes match.</p>
+        </section>
+      </template>
+
+      <!-- Graph -------------------------------------------------------------------------->
+      <template x-if="view === 'graph'">
+        <section>
+          <h1 x-text="data.title"></h1>
+          <div class="controls">
+            <template x-if="data.center">
+              <span class="hops">
+                Hops:
+                <template x-for="n in [1, 2, 3]" :key="n">
+                  <a :href="`#/graph/${data.center}/${n}`" :class="{ on: data.hops === n }" x-text="n"></a>
+                </template>
+                · <a :href="href(data.center)">Open the node</a> ·
+              </span>
+            </template>
+            <a href="#/graph">Whole graph</a> · <a href="#/models">Areas</a>
+            <label><input type="checkbox" x-model="showRetracted" @change="drawGraph()" /> Show retracted
+              (<span x-text="retractedCount()"></span>)</label>
+            <button type="button" @click="fitGraph()">Fit</button>
+          </div>
+          <p class="muted" x-show="data.truncated">Showing the first edges only; open a node to see its neighbourhood.</p>
+          <p class="muted" x-show="!data.edges.length && !data.nodes.length">Nothing to draw yet.</p>
+          <div class="legend" aria-label="Legend">
+            <span><i class="key entity"></i>Entity</span>
+            <span><i class="key agent"></i>Agent</span>
+            <span><i class="key claim"></i>Claim</span>
+            <span><i class="key event"></i>Event</span>
+            <span><i class="line accepted"></i>believed</span>
+            <span><i class="line contested"></i>contested</span>
+            <span><i class="line rejected"></i>retracted</span>
+          </div>
+          <div class="graph-wrap">
+            <div id="graph" class="graph" role="img" :aria-label="`Graph: ${data.title}`"></div>
+            <div class="tip" x-show="hover" x-text="describe(hover)"
+                 :style="hover ? { left: `${hover.x + 12}px`, top: `${hover.y + 12}px` } : {}"></div>
+          </div>
+          <template x-if="picked">
+            <p class="picked">
+              <span x-text="describe(picked)"></span> ·
+              <a :href="href(picked.id)">Open</a>
+              <template x-if="picked.kind === 'node'">
+                <span> · <a :href="`#/graph/${picked.id}`">Centre the graph here</a></span>
+              </template>
+            </p>
+          </template>
+          <details>
+            <summary class="muted" x-text="`As a table (${data.edges.length} edges)`"></summary>
+            <table>
+              <thead><tr><th>From</th><th>Edge</th><th>To</th><th>Belief</th></tr></thead>
+              <tbody>
+                <template x-for="e in data.edges" :key="e.id">
+                  <tr>
+                    <td><a :href="href(e.from.id)" x-text="e.from.name"></a></td>
+                    <td><a :href="href(e.id)" x-text="e.label"></a></td>
+                    <td><a :href="href(e.to.id)" x-text="e.to.name"></a></td>
+                    <td><span class="belief" :class="e.belief_status" x-text="e.belief_status || 'unknown'"></span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </details>
+        </section>
+      </template>
+
+      <!-- Models ------------------------------------------------------------------------->
+      <template x-if="view === 'models'">
+        <section>
+          <h1>Models</h1>
+          <p class="muted">
+            One world model: an append-only log and the graph projected from it. Each area is the part
+            a namespace covers, and each system is a whole made of parts, each part its own claim.
+          </p>
+          <div class="stats">
+            <div class="stat"><span class="n" x-text="data.totals.nodes"></span><span>Nodes</span></div>
+            <div class="stat"><span class="n" x-text="data.totals.edges"></span><span>Edges</span></div>
+            <div class="stat"><span class="n" x-text="data.totals.sources"></span><span>Sources</span></div>
+            <div class="stat"><span class="n" x-text="data.totals.contested"></span><span>Contested edges</span></div>
+            <div class="stat"><span class="n" x-text="data.totals.open"></span><span>Open hypotheses</span></div>
+            <div class="stat"><span class="n" x-text="data.totals.unresolved"></span><span>Unresolved claims</span></div>
+          </div>
+          <p class="muted">Learned up to offset <a href="#/log" x-text="data.head"></a> · <a href="#/graph">the whole graph</a></p>
+
+          <h2>Areas</h2>
+          <div class="cards">
+            <template x-for="a in data.areas" :key="a.name">
+              <article class="card" :class="{ dim: !a.nodes }">
+                <header>
+                  <strong x-text="a.label"></strong>
+                  <span class="mono muted" x-text="a.name"></span>
+                  <span class="tag" x-text="a.defined_by === 'core' ? 'core' : `${a.defined_by} ${a.version || ''}`"></span>
+                </header>
+                <p class="muted" x-text="a.description"></p>
+                <p class="meta">
+                  <span x-text="`${a.nodes} nodes, ${a.edges} edges`"></span>
+                  <template x-if="a.contested">
+                    <span class="warn-text" x-text="` · ${a.contested} contested`"></span>
+                  </template>
+                  <template x-if="a.latest !== null">
+                    <span> · last learned at offset <a :href="`#/log/${a.latest + 1}`" x-text="a.latest"></a></span>
+                  </template>
+                </p>
+                <p class="kinds">
+                  <template x-for="[kind, n] in a.kinds.slice(0, 8)" :key="kind">
+                    <span class="tag" x-text="`${kind} ${n}`"></span>
+                  </template>
+                </p>
+                <p x-show="a.nodes"><a :href="`#/graph/ns:${a.name}`">Graph of this area →</a></p>
+              </article>
+            </template>
+          </div>
+
+          <h2>Systems and their parts</h2>
+          <p class="muted" x-show="data.systems.length">
+            Where a system ends is a set of claims: a part with low support is one the kernel is less sure of.
+          </p>
+          <p class="muted" x-show="!data.systems.length">
+            No system is mapped yet. <span class="mono">uv run wmk-software map . --self "NAME"</span> maps this
+            kernel's own.
+          </p>
+          <template x-for="sys in data.systems" :key="sys.id">
+            <div>
+              <h3><a :href="href(sys.id)" x-text="sys.name"></a> · <a :href="`#/graph/${sys.id}/1`">graph</a></h3>
+              <table>
+                <thead><tr><th>Part</th><th>Kind</th><th>Belief</th><th>Score</th><th title="weight of the support, set by basis, confidence and trust">Support</th></tr></thead>
+                <tbody>
+                  <template x-for="p in sys.parts" :key="p.id">
+                    <tr>
+                      <td><a :href="href(p.from.id)" x-text="p.from.name"></a></td>
+                      <td x-text="p.from.kind || p.from.type"></td>
+                      <td><a :href="href(p.id)"><span class="belief" :class="p.belief_status" x-text="p.belief_status"></span></a></td>
+                      <td class="num" x-text="score(p.belief_score)"></td>
+                      <td class="num" x-text="score(p.belief_for)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
         </section>
       </template>
 

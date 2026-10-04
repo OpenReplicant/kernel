@@ -1,0 +1,94 @@
+# software: ontology rules, checked inside every write. Categories and params as in
+# kernel.rules (kernel/sql/30_ontology.sql). Rule ids start with one of the pack's namespaces.
+rules:
+- id: software.allowed_kinds
+  category: types
+  namespace: software
+  label: Software kinds
+  description: >-
+    The software namespace allows systems, repositories, packages, images, services, stacks, endpoints, volumes, networks, hosts, pipelines, components and data, and change, deployment and incident events.
+  params:
+    kinds: [system, repository, package, image, service, stack, endpoint, volume, network, host, pipeline,
+            component, data, concept, change, deployment, incident, occurrence]
+- id: software.runs_image
+  category: domain_range
+  label: Services run images
+  description: runs goes from a service to a container image.
+  params: {edge: depends_on, kind: runs, from: {kinds: [service]}, to: {kinds: [image]}}
+- id: software.based_on_image
+  category: domain_range
+  label: Images build on images
+  description: based_on goes from an image to its base image.
+  params: {edge: depends_on, kind: based_on, from: {kinds: [image]}, to: {kinds: [image]}}
+- id: software.built_from_repository
+  category: domain_range
+  label: Images are built from repositories
+  description: built_from goes from an image to the repository it is built from.
+  params: {edge: depends_on, kind: built_from, from: {kinds: [image]}, to: {kinds: [repository]}}
+- id: software.needs_service
+  category: domain_range
+  label: Services need services
+  description: needs goes from a service to a service it waits for.
+  params: {edge: depends_on, kind: needs, from: {kinds: [service]}, to: {kinds: [service]}}
+- id: software.uses_package
+  category: domain_range
+  label: Dependencies are packages
+  description: uses_package goes from a package, pipeline, image or component to a package.
+  params: {edge: depends_on, kind: uses_package, from: {kinds: [package, pipeline, image, component]}, to: {kinds: [package]}}
+- id: software.mounts_volume
+  category: domain_range
+  label: Services mount volumes
+  description: mounts goes from a service to a volume.
+  params: {edge: depends_on, kind: mounts, from: {kinds: [service]}, to: {kinds: [volume]}}
+- id: software.runs_on_host
+  category: domain_range
+  label: Services run on hosts
+  description: runs_on goes from a service to a host.
+  params: {edge: depends_on, kind: runs_on, from: {kinds: [service]}, to: {kinds: [host]}}
+- id: software.attached_to_network
+  category: domain_range
+  label: Services and hosts attach to networks
+  description: attached_to goes from a service or host to a network.
+  params: {edge: part_of, kind: attached_to, from: {kinds: [service, host]}, to: {kinds: [network]}}
+- id: software.endpoint_of_service
+  category: domain_range
+  label: Endpoints belong to services
+  description: exposed_by goes from an endpoint to the service that listens there.
+  params: {edge: part_of, kind: exposed_by, from: {kinds: [endpoint]}, to: {kinds: [service]}}
+- id: software.repository_defines
+  category: domain_range
+  label: Repositories define stacks, packages and pipelines
+  description: defines goes from a repository to a stack, package or pipeline.
+  params: {edge: responsible_for, kind: defines, from: {kinds: [repository]}, to: {kinds: [stack, package, pipeline]}}
+- id: software.pipeline_checks
+  category: domain_range
+  label: Pipelines check code and artefacts
+  description: checks goes from a pipeline to a repository, package, image, service or stack.
+  params: {edge: monitors, kind: checks, from: {kinds: [pipeline]}, to: {kinds: [repository, package, image, service, stack]}}
+- id: software.purl
+  category: identity
+  label: A package URL identifies a package or image
+  description: >-
+    Two packages or images with the same package URL (without a version) are the same, such as pkg:pypi/psycopg or pkg:docker/postgrest/postgrest.
+  params: {node_type: Entity, kinds: [package, image], keys: [purl], patterns: {purl: '^pkg:[a-z0-9.+-]+/[^@?#[:space:]]+$'}}
+- id: software.repository_url
+  category: identity
+  label: A URL identifies a repository
+  description: Two repositories with the same URL are the same repository.
+  params: {node_type: Entity, kinds: [repository], keys: [url], patterns: {url: '^(https?|ssh|git|file)://[^[:space:]]+$'}}
+- id: software.definition_key
+  category: identity
+  label: Where it is defined identifies a stack and its parts
+  description: >-
+    Stacks, services, endpoints, volumes, networks and pipelines defined in the same repository under the same name are the same: the key is <repository URL>#<where>, such as #wmk/gateway or #.github/workflows/ci.yml/lint.
+  params: {node_type: Entity, kinds: [stack, service, endpoint, volume, network, pipeline], keys: [defined_at]}
+- id: software.system_instance
+  category: identity
+  label: An instance key identifies a system
+  description: Two systems with the same instance key are the same system.
+  params: {node_type: Entity, kinds: [system], keys: [instance]}
+- id: software.commit
+  category: identity
+  label: A commit identifies a change
+  description: Two changes with the same commit hash are the same change.
+  params: {node_type: Event, kinds: [change, deployment], keys: [commit], patterns: {commit: '^[0-9a-f]{7,40}$'}}

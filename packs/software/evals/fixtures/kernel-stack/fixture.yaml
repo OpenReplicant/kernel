@@ -1,0 +1,107 @@
+name: kernel-stack
+description: 'This repository at d0dda1b (after #7), mapped by the software pack''s adapter: the first-parent history
+  as change events, the Python packages and their dependencies, the compose stack with its services, images, base
+  images, ports, start order and volume, the CI jobs and the actions they use, and the self boundary (the stack,
+  the repository and the writing agent as parts of this kernel instance, the CI jobs with low confidence). The start
+  of the self-model. Refresh with `uv run wmk-software snapshot . <this folder> --rev <commit> --self "World Model
+  Kernel (this instance)"`, then update expected.yaml by hand.'
+namespaces:
+- software
+packs:
+- software
+repository:
+  url: https://github.com/OpenReplicant/kernel
+  name: OpenReplicant/kernel
+  commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  branch: main
+  self: World Model Kernel (this instance)
+sources:
+  git-history:
+    file: sources/git-history.txt
+    media_type: text/plain
+    title: Git history of OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel
+    collection: https://github.com/OpenReplicant/kernel#git-history
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      branch: main
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  pyproject.toml:
+    file: sources/pyproject.toml
+    media_type: text/plain
+    title: pyproject.toml in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/pyproject.toml
+    collection: https://github.com/OpenReplicant/kernel#pyproject.toml
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: pyproject.toml
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  packs/research/mcp/pyproject.toml:
+    file: sources/packs/research/mcp/pyproject.toml
+    media_type: text/plain
+    title: packs/research/mcp/pyproject.toml in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/packs/research/mcp/pyproject.toml
+    collection: https://github.com/OpenReplicant/kernel#packs/research/mcp/pyproject.toml
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: packs/research/mcp/pyproject.toml
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  docker-compose.yml:
+    file: sources/docker-compose.yml
+    media_type: text/plain
+    title: docker-compose.yml in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/docker-compose.yml
+    collection: https://github.com/OpenReplicant/kernel#docker-compose.yml
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: docker-compose.yml
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  db/Dockerfile:
+    file: sources/db/Dockerfile
+    media_type: text/plain
+    title: db/Dockerfile in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/db/Dockerfile
+    collection: https://github.com/OpenReplicant/kernel#db/Dockerfile
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: db/Dockerfile
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  gateway/Dockerfile:
+    file: sources/gateway/Dockerfile
+    media_type: text/plain
+    title: gateway/Dockerfile in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/gateway/Dockerfile
+    collection: https://github.com/OpenReplicant/kernel#gateway/Dockerfile
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: gateway/Dockerfile
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  packs/research/mcp/Dockerfile:
+    file: sources/packs/research/mcp/Dockerfile
+    media_type: text/plain
+    title: packs/research/mcp/Dockerfile in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/packs/research/mcp/Dockerfile
+    collection: https://github.com/OpenReplicant/kernel#packs/research/mcp/Dockerfile
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: packs/research/mcp/Dockerfile
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+  .github/workflows/ci.yml:
+    file: sources/.github/workflows/ci.yml
+    media_type: text/plain
+    title: .github/workflows/ci.yml in OpenReplicant/kernel
+    uri: https://github.com/OpenReplicant/kernel/blob/HEAD/.github/workflows/ci.yml
+    collection: https://github.com/OpenReplicant/kernel#.github/workflows/ci.yml
+    metadata:
+      repository: https://github.com/OpenReplicant/kernel
+      path: .github/workflows/ci.yml
+      commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities:
+    precision: 1.0
+    recall: 1.0
+  edges:
+    precision: 1.0
+    recall: 1.0

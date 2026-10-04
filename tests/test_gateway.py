@@ -303,3 +303,41 @@ async def test_profile_agent_registration_is_idempotent(gateway: Any) -> None:
     first = await ensure_agents(tools.kernel, profile)
     second = await ensure_agents(tools.kernel, profile)
     assert first == second and first.agent_id == tools.agents.agent_id and first.person_id
+
+
+async def test_query_log_by_collection_spans_every_version_of_a_source(gateway: Any) -> None:
+    """A collection groups versions of one source (a file over time); query_log can ask for all."""
+    sources = []
+    for version in ("Invoices need one approval.", "Invoices need two approvals."):
+        _, src = await call(
+            gateway,
+            "ingest_source",
+            {"content": version, "uri": "policies/approval.md", "collection": "policies#approval"},
+        )
+        sources.append(src)
+        _, head = await call(gateway, "query_log", {"limit": 1})
+        error, _ = await call(
+            gateway,
+            "write",
+            {
+                "claim": {
+                    "text": version,
+                    "source": src["chunks"][0]["id"],
+                    "basis": "reported",
+                    "modality": "normative",
+                },
+                "read_at_offset": head["head_offset"],
+                "ops": [],
+                "unresolved": {"reason": "test"},
+            },
+        )
+        assert not error
+    _, both = await call(gateway, "query_log", {"collection": "policies#approval", "order": "asc"})
+    assert [e["claim"]["text"] for e in both["entries"]] == [
+        "Invoices need one approval.",
+        "Invoices need two approvals.",
+    ]
+    _, first = await call(gateway, "query_log", {"source_id": sources[0]["source_id"]})
+    assert len(first["entries"]) == 1
+    _, none = await call(gateway, "query_log", {"collection": "policies#other"})
+    assert none["entries"] == []

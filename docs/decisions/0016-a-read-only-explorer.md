@@ -39,3 +39,14 @@ page. The smoke check in CI catches that. Whatever the reader role can see, the 
 can show: widening the reader's grants widens the explorer. Editing, accounts, sharing
 beyond localhost and graph drawings are not built; anything that changes the world model
 goes through the gateway's tools.
+
+## Amendment (2026-10-04)
+
+The explorer gained a graph view and an index of models. The graph view draws a node's
+neighbourhood (rings by distance), an area or the whole graph with Cytoscape.js 3.34.3
+(MIT, vendored with its npm integrity hash), with a table of the same edges. Node type is
+shape plus one of three validated hues (events neutral), belief is line style plus
+colour. The content security policy allows one style by hash: the rule Cytoscape injects
+for its container. The Models page lists the whole graph, each namespace as an area (its
+size, contested edges, kinds and when it last learned something) and each `system` with
+its parts and their belief ([ADR 0017](0017-software-pack-and-the-self-boundary.md)).

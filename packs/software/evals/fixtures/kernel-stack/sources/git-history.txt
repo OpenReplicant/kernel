@@ -1,0 +1,14 @@
+Repository: https://github.com/OpenReplicant/kernel
+Branch: main
+
+First-parent commits, newest first:
+
+d0dda1b631e2226b4efbe7959289fdf39fb62a67 2026-10-04T19:35:12Z A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)
+d8caa13d99ed24a4715565ecc75889bfa2811ea5 2026-10-04T17:47:21Z Install packs from manifests; make the research pack self-contained (#6)
+6f5b38cdf8d9999adeef4c60c6323628dca28f3c 2026-10-04T16:46:03Z Research pack, paper-source server and a live research eval (#5)
+0078a8eec0e72addd0bd1ccd4c76a6592a59cbc5 2026-10-04T12:13:32Z Interview skill, speaker trust, resolution eval set and adapter survey (#4)
+d637137e09f01b047ea8c9ba282a5cde992ab184 2026-10-04T10:37:51Z Test the embeddings path and run CI once per pull request (#3)
+56e70eb58313c7dce616e2aab8093968d8103920 2026-10-04T10:31:14Z Add the live-harness check and fix what its first run showed (#2)
+18b2507cc08fa8bcb64cd30fa9af21b12ad2c819 2026-10-04T10:10:55Z Build Phase 1 of the World Model Kernel (#1)
+dcebf5c82310903476d5b44fb2169a81cb3dd17b 2026-10-04T00:17:03Z Add files via upload
+e334f55cea030890881db58d229a61d607229469 2026-10-04T00:14:24Z Empty repository

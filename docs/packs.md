@@ -4,7 +4,8 @@ A pack specialises the kernel for a domain: it adds kinds, edge specialisations 
 teaches agents the domain with a skill, and may ship servers that fetch outside data. The
 kernel enforces its rules; it never adds node types or kernel edges
 ([ADR 0015](decisions/0015-packs-declare-their-ontology.md)). `packs/research/` is the
-worked example; `packs/bpm-reference/` is the kernel's own test pack.
+worked example with a server; `packs/software/` the one with an adapter;
+`packs/bpm-reference/` is the kernel's own test pack.
 
 ## Layout
 
@@ -14,6 +15,7 @@ packs/<name>/
   schema.yaml         namespaces, kinds and edge kinds
   rules.yaml          rules the kernel checks inside every write
   mcp/                optional: servers, each a uv workspace member with its own pyproject.toml
+  adapter/            optional: an adapter that writes through the gateway, also a workspace member
   evals/fixtures/     scripted fixtures with expected graphs (make eval)
   evals/live/         live-harness scenarios (make live SCENARIO=<name>)
   tests/              pytest; conftest.py names the packs its databases get
@@ -124,6 +126,17 @@ A server that wraps an outside service lives in `mcp/` as a uv workspace member 
 own `pyproject.toml`, `Dockerfile` and dependencies, runs beside the gateway, and never
 gets database credentials ([ADR 0014](decisions/0014-pack-servers-run-beside-the-gateway.md)).
 Libraries follow [docs/adapters.md](adapters.md) and [ADR 0012](decisions/0012-dependency-licences.md).
+
+## Adapters
+
+An adapter maps structured data deterministically, without a model: it reads files or
+APIs, builds a plan of sources and claims, and plays it through the gateway's tools as an
+MCP client, so every write goes through `kernel.write` and the adapter needs no database
+credentials. Give each file a `collection` that stays the same across its versions, so a
+newer version supersedes the older one; retract what a changed file no longer says.
+Render the plan as an eval fixture script and score it against a hand-written expected
+graph. `packs/software/adapter/` (`wmk-software`) is the example
+([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md)).
 
 ## Moving a pack out of this repository
 

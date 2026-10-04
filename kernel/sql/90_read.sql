@@ -59,9 +59,9 @@ COMMENT ON VIEW kernel.history IS
   'What was known and how it was used: log entries, source ingestions and cite records merged by time.';
 
 -- Contract: log entries matching the filter, newest first unless order is "asc".
--- filter: {"source_id"?, "chunk_id"?, "agent_id"?, "node_id"?, "edge_id"?, "since"?,
---          "until"? (recorded_at), "after_offset"?, "before_offset"?, "resolution"?,
---          "order"?, "limit"? (default 50, at most 500)}
+-- filter: {"source_id"?, "collection"? (any version of a source), "chunk_id"?, "agent_id"?,
+--          "node_id"?, "edge_id"?, "since"?, "until"? (recorded_at), "after_offset"?,
+--          "before_offset"?, "resolution"?, "order"?, "limit"? (default 50, at most 500)}
 -- Returns {"head_offset", "entries": [...]}.
 CREATE FUNCTION kernel.query_log(p_filter jsonb DEFAULT '{}') RETURNS jsonb
 LANGUAGE sql STABLE AS $$
@@ -72,6 +72,8 @@ LANGUAGE sql STABLE AS $$
     SELECT e.*
     FROM kernel.log_entries e, f
     WHERE (NOT f.f ? 'source_id' OR e.source_id = f.f ->> 'source_id')
+      AND (NOT f.f ? 'collection' OR e.source_id IN (
+            SELECT s.id FROM kernel.sources s WHERE s.collection = f.f ->> 'collection'))
       AND (NOT f.f ? 'chunk_id' OR e.chunk_id = f.f ->> 'chunk_id')
       AND (NOT f.f ? 'agent_id' OR e.agent_id = f.f ->> 'agent_id')
       AND (NOT f.f ? 'resolution' OR e.resolution = f.f ->> 'resolution')

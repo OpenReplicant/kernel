@@ -5,10 +5,11 @@ WMK_DB_PASSWORD ?= postgres
 export WMK_ADMIN_DSN ?= postgresql://postgres:$(WMK_DB_PASSWORD)@localhost:$(WMK_DB_PORT)/postgres
 export WMK_DATABASE ?= wmk
 SCENARIO ?= northwind
+SELF ?= World Model Kernel (this instance)
 # The explorer's browser check (ui/smoke.py); `make ui-browser` installs its Chromium.
 PLAYWRIGHT ?= playwright==1.56.0
 
-.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay eval seed live papers-smoke lint fmt
+.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay eval seed map-self live papers-smoke lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
@@ -21,6 +22,7 @@ help:
 	@echo "make test     unit, SQL and regression tests (starts db)"
 	@echo "make eval     run the eval fixtures through the eval profile"
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
+	@echo "make map-self  map this repository and the kernel's self boundary into the running stack"
 	@echo "make live     a real harness (headless Claude Code) runs evals/live/\$$SCENARIO (northwind, research)"
 	@echo "make papers-smoke  one live lookup per paper source; needs network access to the APIs"
 	@echo "make replay   rebuild the graph from the log of \$$WMK_DATABASE and diff against the live graph"
@@ -59,6 +61,9 @@ eval: db
 
 seed:
 	uv run python -m evals.seed --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+
+map-self:
+	uv run wmk-software map . --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --self "$(SELF)"
 
 live:
 	uv run python -m evals.live $(SCENARIO) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --database $(WMK_DATABASE)

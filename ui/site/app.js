@@ -14,6 +14,7 @@ const EDGE_COLUMNS =
 const EDGE_ROW = `id,edge,kind,valid_from,valid_to,belief_status,belief_score,${ENDPOINTS}`;
 const NODE_TYPES = ["Entity", "Agent", "Claim", "Event"];
 const PAGE = 25;
+const GRAPH_LIMIT = 400;
 
 // --- API ---------------------------------------------------------------------------------
 
@@ -34,7 +35,8 @@ async function get(path) {
 
 async function count(path) {
   const sep = path.includes("?") ? "&" : "?";
-  const res = await fetch(`${API}/${path}${sep}select=id&limit=0`, {
+  const select = /[?&]select=/.test(path) ? "" : "select=id&";
+  const res = await fetch(`${API}/${path}${sep}${select}limit=0`, {
     headers: { Accept: "application/json", Prefer: "count=exact" },
   });
   if (!res.ok) throw new Error(await failure(res));
@@ -227,6 +229,135 @@ const LOADERS = {
     };
   },
 
+  // The graph around a node (`<id>[/<hops>]`), of one area (`ns:<namespace>`) or, capped, of all.
+  async graph(arg) {
+    const [target, hopsText] = arg.split("/");
+    const hops = Math.min(Math.max(Number(hopsText) || 2, 1), 3);
+    let edges = [];
+    let nodes = [];
+    let title = "The graph";
+    let center = null;
+    if (!target) {
+      edges = await get(`edges?select=${EDGE_ROW}&order=updated_offset.desc&limit=${GRAPH_LIMIT}`);
+      title = "The whole graph";
+    } else if (target.startsWith("ns:")) {
+      const ns = enc(target.slice(3));
+      const inner = (end) =>
+        `edges?select=id,edge,kind,valid_from,valid_to,belief_status,belief_score,` +
+        `from:nodes!edges_from_id_fkey${end === "from" ? "!inner" : ""}(id,name,type,kind,namespace),` +
+        `to:nodes!edges_to_id_fkey${end === "to" ? "!inner" : ""}(id,name,type,kind,namespace)` +
+        `&${end}.namespace=eq.${ns}&limit=${GRAPH_LIMIT}`;
+      const [out, inc, own] = await Promise.all([
+        get(inner("from")),
+        get(inner("to")),
+        get(`nodes?select=id,name,type,kind&namespace=eq.${ns}&limit=${GRAPH_LIMIT}`),
+      ]);
+      edges = [...new Map([...out, ...inc].map((e) => [e.id, e])).values()];
+      nodes = own;
+      title = `The ${target.slice(3)} area`;
+    } else {
+      center = target;
+      const node = one(await get(`nodes?select=id,name,type,kind&id=eq.${enc(target)}`), "node");
+      nodes = [node];
+      const found = new Map();
+      const seen = new Set([target]);
+      let frontier = [target];
+      for (let i = 0; i < hops && frontier.length && found.size < GRAPH_LIMIT; i++) {
+        const ids = frontier.map((id) => `"${id}"`).join(",");
+        const rows = await get(
+          `edges?select=${EDGE_ROW}&or=${enc(`(from_id.in.(${ids}),to_id.in.(${ids}))`)}&limit=${GRAPH_LIMIT}`,
+        );
+        const next = [];
+        for (const e of rows) {
+          found.set(e.id, e);
+          for (const end of [e.from.id, e.to.id]) {
+            if (!seen.has(end)) {
+              seen.add(end);
+              next.push(end);
+            }
+          }
+        }
+        frontier = next.slice(0, 150);
+      }
+      edges = [...found.values()];
+      title = `${node.name}, ${hops} hop${hops > 1 ? "s" : ""} out`;
+    }
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    for (const e of edges) {
+      byId.set(e.from.id, e.from);
+      byId.set(e.to.id, e.to);
+    }
+    return {
+      title,
+      target: target || "",
+      center,
+      hops,
+      edges: edges.map((e) => ({ ...e, label: edgeName(e) })),
+      nodes: [...byId.values()],
+      truncated: edges.length >= GRAPH_LIMIT,
+    };
+  },
+
+  // The index of models: the whole graph, each area (namespace) and each system with its parts.
+  async models() {
+    const [namespaces, packs, head, nodes, edges, sources, contested, unresolved, open, systems] =
+      await Promise.all([
+        get("namespaces?order=name"),
+        get("packs?select=name,version&order=install_seq"),
+        rpc("head_offset"),
+        count("nodes"),
+        count("edges"),
+        count("sources"),
+        count("edges?belief_status=eq.contested"),
+        count("claims_view?resolution=eq.unresolved"),
+        count("nodes?type=eq.Claim&kind=eq.hypothetical&status=eq.open"),
+        get(
+          "nodes?select=id,name,parts:edges!edges_to_id_fkey(id,belief_status,belief_score,belief_for," +
+            "from:nodes!edges_from_id_fkey(id,name,type,kind))" +
+            "&parts.edge=eq.part_of&parts.kind=is.null&type=eq.Entity&kind=eq.system&order=name",
+        ),
+      ]);
+    const versions = Object.fromEntries(packs.map((p) => [p.name, p.version]));
+    const areas = await Promise.all(
+      namespaces.map(async (ns) => {
+        const q = enc(ns.name);
+        const fromHere = `edges?select=id,from:nodes!edges_from_id_fkey!inner(namespace)&from.namespace=eq.${q}`;
+        const [size, edgeCount, disputed, latest, kinds] = await Promise.all([
+          count(`nodes?namespace=eq.${q}`),
+          count(fromHere),
+          count(`${fromHere}&belief_status=eq.contested`),
+          get(`nodes?select=updated_offset&namespace=eq.${q}&order=updated_offset.desc&limit=1`),
+          get(`nodes?select=kind&namespace=eq.${q}&limit=1000`),
+        ]);
+        const tally = {};
+        for (const { kind } of kinds) tally[kind] = (tally[kind] || 0) + 1;
+        return {
+          ...ns,
+          version: versions[ns.defined_by],
+          nodes: size,
+          edges: edgeCount,
+          contested: disputed,
+          latest: latest[0]?.updated_offset ?? null,
+          kinds: Object.entries(tally).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+        };
+      }),
+    );
+    for (const system of systems) {
+      system.parts.sort(
+        (a, b) =>
+          (b.belief_score ?? 0) - (a.belief_score ?? 0) ||
+          (b.belief_for ?? 0) - (a.belief_for ?? 0) ||
+          a.from.name.localeCompare(b.from.name),
+      );
+    }
+    return {
+      head,
+      totals: { nodes, edges, sources, contested, unresolved, open },
+      areas: areas.sort((a, b) => b.nodes - a.nodes || a.name.localeCompare(b.name)),
+      systems,
+    };
+  },
+
   async ontology() {
     const [namespaces, kinds, edgeKinds, rules, edgeTypes, nodeTypes, packs] = await Promise.all([
       get("namespaces?order=name"),
@@ -281,6 +412,9 @@ document.addEventListener("alpine:init", () => {
     agents: {},
     seq: 0,
     filter: "",
+    showRetracted: false,
+    picked: null,
+    hover: null,
 
     async init() {
       window.addEventListener("hashchange", () => this.route());
@@ -301,6 +435,9 @@ document.addEventListener("alpine:init", () => {
         const [data, agents] = await Promise.all([load(arg), get("nodes?select=id,name,kind&type=eq.Agent")]);
         if (seq !== this.seq) return;
         if (page !== "search") this.query = "";
+        if (this.view === "graph") window.WmkGraph.destroy();
+        this.picked = null;
+        this.hover = null;
         this.agents = Object.fromEntries(agents.map((a) => [a.id, a]));
         this.data = data;
         this.arg = arg;
@@ -320,6 +457,7 @@ document.addEventListener("alpine:init", () => {
       // Rendered: ui/smoke.py waits for these.
       await this.$nextTick();
       if (seq === this.seq) {
+        if (this.view === "graph") this.drawGraph();
         document.body.dataset.route = location.hash || "#/";
         document.body.dataset.state = this.view === "error" ? "error" : "ready";
       }
@@ -337,6 +475,8 @@ document.addEventListener("alpine:init", () => {
           log: "Log",
           evidence: "Evidence",
           ontology: "Ontology",
+          graph: d.title,
+          models: "Models",
         }[this.view] || "Explorer"
       );
     },
@@ -402,6 +542,39 @@ document.addEventListener("alpine:init", () => {
       return (this.data.claims || []).filter(
         (c) => !f || c.name.toLowerCase().includes(f) || (c.kind || "").includes(f),
       );
+    },
+    // The graph view.
+    drawGraph() {
+      const el = document.getElementById("graph");
+      if (!el) return;
+      const g = Alpine.raw(this.data);
+      const edges = g.edges.filter((e) => this.showRetracted || e.belief_status !== "rejected");
+      window.WmkGraph.draw(
+        el,
+        { nodes: g.nodes, edges },
+        { center: g.center, onPick: (p) => (this.picked = p), onHover: (h) => (this.hover = h) },
+      );
+    },
+    fitGraph() {
+      window.WmkGraph.fit();
+    },
+    graphNode(id) {
+      return this.data.nodes?.find((n) => n.id === id);
+    },
+    graphEdge(id) {
+      return this.data.edges?.find((e) => e.id === id);
+    },
+    describe(p) {
+      if (!p) return "";
+      if (p.kind === "node") {
+        const n = this.graphNode(p.id);
+        return n ? `${n.name} (${n.kind || n.type})` : "";
+      }
+      const e = this.graphEdge(p.id);
+      return e ? `${e.from.name} ${edgeName(e)} ${e.to.name}: ${e.belief_status || "unknown"}` : "";
+    },
+    retractedCount() {
+      return (this.data.edges || []).filter((e) => e.belief_status === "rejected").length;
     },
     countsByType() {
       const c = this.data.counts || {};

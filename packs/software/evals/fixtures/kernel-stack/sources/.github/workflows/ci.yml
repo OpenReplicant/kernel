@@ -34,8 +34,6 @@ jobs:
         run: make eval
       - name: Seed the running stack through its gateway
         run: make seed
-      - name: Map this repository into the stack with the software pack's adapter
-        run: make map-self
       - name: Replay the live log (a non-empty diff fails the build)
         run: make replay
       - name: Start the read-only explorer (Caddy and PostgREST)

@@ -65,6 +65,8 @@ class Player:
     fixture: Fixture
     refs: dict[str, str] = field(default_factory=dict)
     chunks: dict[str, list[str]] = field(default_factory=dict)
+    spans: dict[str, list[tuple[int, int, str]]] = field(default_factory=dict)
+    agent_id: str | None = None
     failures: list[StepFailure] = field(default_factory=list)
     skipped_sources: list[str] = field(default_factory=list)
     calls: int = 0
@@ -93,7 +95,16 @@ class Player:
         if kind == "chunk":
             source, seq = key.rsplit(":", 1)
             return self.chunks[source][int(seq)]
-        raise KeyError(f"unknown template {kind}:{key}")
+        if kind == "at":
+            # The chunk holding a character offset of the source (else the last one before it).
+            source, offset = key.rsplit(":", 1)
+            spans = self.spans[source]
+            held = [c for start, end, c in spans if start <= int(offset) < end]
+            before = [c for start, _, c in spans if start <= int(offset)]
+            return (held or before or [spans[0][2]])[0 if held else -1]
+        if kind == "agent" and key == "self" and self.agent_id:
+            return self.agent_id
+        raise KeyError(f"{kind}:{key}")
 
     async def run(self) -> None:
         for index, step in enumerate(self.fixture.steps):
@@ -114,6 +125,7 @@ class Player:
         if result["skipped"]:
             self.skipped_sources.append(alias)
         self.chunks[alias] = [c["id"] for c in result["chunks"]]
+        self.spans[alias] = [(c["char_start"], c["char_end"], c["id"]) for c in result["chunks"]]
 
     async def _write(self, index: int, step: dict[str, Any]) -> None:
         payload = self.render(step["write"])
@@ -139,6 +151,7 @@ class Player:
             return
         if expected != "accepted":
             self.failures.append(StepFailure(index, "write", f"accepted, expected {expected}"))
+        self.agent_id = result.get("agent_id") or self.agent_id
         self.refs.update({k.lstrip("$"): v for k, v in result["refs"].items()})
 
     async def _query(self, index: int, step: dict[str, Any]) -> None:
