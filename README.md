@@ -21,9 +21,10 @@ make replay    # rebuild the graph from the log and diff it against the live gra
 ```
 
 Connect any MCP harness to `http://localhost:8000/mcp` (streamable HTTP; published on
-localhost only, since the stack has no authentication) and give it the
-core skill in [`skills/core/`](skills/core/SKILL.md). For a stdio harness, run the gateway
-with `WMK_TRANSPORT=stdio uv run wmk-gateway`. `make up-otel` adds an OpenTelemetry
+localhost only, since the stack has no authentication) and give it the core skill in
+[`skills/core/`](skills/core/SKILL.md), plus [`skills/interview/`](skills/interview/SKILL.md)
+when a person is the source. For a stdio harness, run the gateway with
+`WMK_TRANSPORT=stdio uv run wmk-gateway`. `make up-otel` adds an OpenTelemetry
 Collector and Jaeger (http://localhost:16686).
 
 ## The seven tools
@@ -64,7 +65,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | --- | --- |
 | `kernel/sql/` | The kernel, applied in order: log, claims, assertions, sources, chunks, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
-| `skills/core/` | The core Agent Skill |
+| `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
 | `packs/bpm-reference/` | The reference pack: a toy business-process ontology |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the eval runner, the replay check, the seeder |

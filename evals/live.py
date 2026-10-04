@@ -1,7 +1,7 @@
 """`make live`: the MVP check with a real harness and model.
 
 Headless Claude Code is connected to a running gateway (`make up`, interactive profile) with
-the core skill installed and only the seven kernel tools allowed. It maps a document and then
+the core and interview skills installed and only the seven kernel tools allowed. It maps a document and then
 a conversation, one turn at a time, and answers a question with citations. The resulting graph
 is checked loosely (the model's wording varies) and the log is replayed.
 
@@ -43,7 +43,8 @@ TOOLS = [
 DENIED = ["Bash", "Edit", "Write", "Read", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "NotebookEdit"]
 
 HARNESS_NOTES = """You are the assistant in an interactive World Model Kernel session
-(ACP profile `interactive`). Use the world-model-core skill for every turn. The wmk MCP
+(ACP profile `interactive`). Use the world-model-core skill for every turn, and the
+world-model-interview skill while the person talks. The wmk MCP
 server's instructions name your agent id and the person's agent id. This session's
 conversation id is `{session}`.
 Business-process facts go in the `bpm` namespace (reference pack bpm-reference).
@@ -51,12 +52,19 @@ Keep replies to the person short: say what you recorded, and anything that was r
 """
 
 
+def skill_name(folder: Path) -> str:
+    """The skill's name from its SKILL.md frontmatter: harnesses expect it as the folder name."""
+    front = (folder / "SKILL.md").read_text().split("---")[1]
+    return str(yaml.safe_load(front)["name"])
+
+
 def workspace(url: str, session: str) -> Path:
-    """A throwaway project for the harness: the gateway as its only MCP server, the core skill."""
+    """A throwaway project for the harness: the gateway as its only MCP server, the profile's skills."""
     path = Path(tempfile.mkdtemp(prefix="wmk-live-"))
     (path / ".mcp.json").write_text(json.dumps({"mcpServers": {"wmk": {"type": "http", "url": url}}}))
     (path / "CLAUDE.md").write_text(HARNESS_NOTES.format(session=session))
-    shutil.copytree(ROOT / "skills" / "core", path / ".claude" / "skills" / "world-model-core")
+    for folder in (ROOT / "skills" / "core", ROOT / "skills" / "interview"):
+        shutil.copytree(folder, path / ".claude" / "skills" / skill_name(folder))
     return path
 
 

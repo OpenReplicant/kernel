@@ -36,7 +36,8 @@ def instructions(agents: Agents, profile: str) -> str:
     ]
     if agents.person_id:
         lines.append(
-            f"The person you work with is agent {agents.person_id}: ingest their turns with author set to it."
+            f"The person you work with is agent {agents.person_id}: with their consent, ingest their turns "
+            "with author set to it (interview skill)."
         )
     return "\n".join(lines)
 

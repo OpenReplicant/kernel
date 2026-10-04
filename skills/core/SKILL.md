@@ -99,7 +99,8 @@ consent ingest each of their turns as a source: `collection` set to the session 
 `uri` to the turn number, `author` to their agent id (the gateway names it). Claims from
 their turns are `reported` and cite the turn's chunk. If they decline capture, do not
 ingest their turns; claims you write then have no source and must be `observed` or
-`inferred` from your own work.
+`inferred` from your own work. To run an interview (finding gaps, asking, following up),
+use the world-model-interview skill alongside this one.
 
 ## Example
 

@@ -38,3 +38,38 @@ Rules this pack adds:
 - `bpm.approval_needs_report`: `approved_by` needs basis reported or observed.
 
 The ontology is applied by `sql/10_ontology.sql` (there is no pack installer in Phase 1).
+
+## Gaps to ask about in an interview
+
+With the interview skill, run these beside its generic gap queries. `$process` is the
+process id.
+
+Roles nobody holds:
+
+```cypher
+MATCH (role:Entity {kind: 'role'}) WHERE NOT EXISTS((role)<-[:implements]-())
+RETURN role.id, role.name
+```
+
+Steps of the process without an owner:
+
+```cypher
+MATCH (s:Entity)-[:part_of]->(p {id: $process})
+WHERE s.kind IN ['activity', 'gateway'] AND NOT EXISTS((s)<-[:responsible_for]-())
+RETURN s.id, s.name, s.kind
+```
+
+Steps with nothing after them (the end of the process, or a missing handoff):
+
+```cypher
+MATCH (s:Entity)-[:part_of]->(p {id: $process})
+WHERE s.kind IN ['activity', 'gateway'] AND NOT EXISTS((s)-[:flows_to]->())
+RETURN s.id, s.name, s.kind
+```
+
+People with no team:
+
+```cypher
+MATCH (a:Agent {kind: 'human'}) WHERE NOT EXISTS((a)-[:part_of]->())
+RETURN a.id, a.name
+```
