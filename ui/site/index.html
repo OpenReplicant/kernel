@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>World Model Kernel</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="app.js"></script>
+    <script defer src="vendor/alpine-3.17.4.min.js"></script>
+  </head>
+  <body x-data="explorer">
+    <header class="bar">
+      <a class="brand" href="#/">World Model Kernel</a>
+      <nav>
+        <a href="#/" :class="{ on: view === 'overview' }">Overview</a>
+        <a href="#/evidence" :class="{ on: view === 'evidence' }">Evidence</a>
+        <a href="#/log" :class="{ on: view === 'log' }">Log</a>
+        <a href="#/ontology" :class="{ on: view === 'ontology' }">Ontology</a>
+      </nav>
+      <form class="search" role="search" @submit.prevent="search()">
+        <input type="search" x-model="query" placeholder="Find a node, source or id" aria-label="Search" />
+      </form>
+    </header>
+
+    <main :aria-busy="loading">
+      <p class="muted" x-show="view === 'loading'">Loading…</p>
+
+      <!-- Error -------------------------------------------------------------------------->
+      <template x-if="view === 'error'">
+        <section>
+          <h1>Something went wrong</h1>
+          <p class="problem" x-text="error"></p>
+          <p><a href="#/">Back to the overview</a></p>
+        </section>
+      </template>
+
+      <!-- Overview ----------------------------------------------------------------------->
+      <template x-if="view === 'overview'">
+        <section>
+          <h1>Overview</h1>
+          <p class="muted">
+            Kernel <span x-text="data.version"></span> · log head at offset
+            <a href="#/log" x-text="data.head"></a> · packs:
+            <template x-for="(p, i) in data.packs" :key="p.name">
+              <span><span x-text="i ? ', ' : ''"></span><span x-text="`${p.name} ${p.version}`"></span></span>
+            </template>
+            <span x-show="!data.packs.length">none</span>
+          </p>
+
+          <div class="stats">
+            <template x-for="[label, n] in countsByType()" :key="label">
+              <div class="stat"><span class="n" x-text="n"></span><span x-text="label"></span></div>
+            </template>
+          </div>
+
+          <h2>Contested</h2>
+          <p class="muted" x-show="!data.contested.length">Nothing is contested.</p>
+          <table x-show="data.contested.length">
+            <thead><tr><th>From</th><th>Edge</th><th>To</th><th>Valid</th><th>Belief</th></tr></thead>
+            <tbody>
+              <template x-for="e in data.contested" :key="e.id">
+                <tr>
+                  <td><a :href="href(e.from.id)" x-text="e.from.name"></a></td>
+                  <td><a :href="href(e.id)" x-text="edgeName(e)"></a></td>
+                  <td><a :href="href(e.to.id)" x-text="e.to.name"></a></td>
+                  <td x-text="windowOf(e)"></td>
+                  <td><span class="belief" :class="e.belief_status" x-text="e.belief_status"></span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Latest writes</h2>
+          <ol class="entries">
+            <template x-for="e in data.log" :key="e.offset">
+              <li>
+                <a class="offset" :href="`#/log/${e.offset + 1}`" x-text="e.offset"></a>
+                <div>
+                  <p class="claim" x-text="e.claim.text"></p>
+                  <p class="meta">
+                    <span x-text="agentName(e.agent_id)"></span> · <span x-text="day(e.recorded_at)"></span> ·
+                    <span x-show="e.ops.length" x-text="`${e.ops.length} ops`"></span>
+                    <span class="tag warn" x-show="e.claim.resolution === 'unresolved'">unresolved</span>
+                  </p>
+                </div>
+              </li>
+            </template>
+          </ol>
+          <p><a href="#/log">The whole log →</a></p>
+        </section>
+      </template>
+
+      <!-- Search ------------------------------------------------------------------------->
+      <template x-if="view === 'search'">
+        <section>
+          <h1>Search <q x-text="data.term"></q></h1>
+          <p class="muted" x-show="!data.nodes.length && !data.sources.length">No node or source matches.</p>
+          <table x-show="data.nodes.length">
+            <thead><tr><th>Name</th><th>Type</th><th>Kind</th><th>Namespace</th><th>Status</th></tr></thead>
+            <tbody>
+              <template x-for="n in data.nodes" :key="n.id">
+                <tr>
+                  <td><a :href="href(n.id)" x-text="n.name"></a></td>
+                  <td x-text="n.type"></td>
+                  <td x-text="n.kind"></td>
+                  <td x-text="n.namespace"></td>
+                  <td x-text="n.status || ''"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <h2 x-show="data.sources.length">Sources</h2>
+          <ul>
+            <template x-for="s in data.sources" :key="s.id">
+              <li><a :href="href(s.id)" x-text="s.title || s.id"></a> <span class="muted" x-text="s.media_type"></span></li>
+            </template>
+          </ul>
+        </section>
+      </template>
+
+      <!-- Node --------------------------------------------------------------------------->
+      <template x-if="view === 'node'">
+        <section>
+          <h1 x-text="data.node.name"></h1>
+          <p class="tags">
+            <span class="tag" x-text="data.node.type"></span>
+            <span class="tag" x-text="data.node.kind"></span>
+            <span class="tag" x-text="data.node.namespace"></span>
+            <span class="tag" x-show="data.node.status" x-text="data.node.status"></span>
+            <span class="belief" x-show="data.node.belief_status" :class="data.node.belief_status" x-text="data.node.belief_status"></span>
+            <span class="tag warn" x-show="data.node.redacted.length" x-text="`redacted: ${data.node.redacted.join(', ')}`"></span>
+          </p>
+          <dl>
+            <dt>Id</dt><dd class="mono" x-text="data.node.id"></dd>
+            <template x-if="data.node.aliases.length">
+              <div><dt>Aliases</dt><dd x-text="data.node.aliases.join(', ')"></dd></div>
+            </template>
+            <template x-if="!isEmpty(data.node.identity)">
+              <div><dt>Identity</dt><dd class="mono" x-text="Object.entries(data.node.identity).map(([k, v]) => `${k}: ${v}`).join(' · ')"></dd></div>
+            </template>
+            <template x-if="data.node.trust_level">
+              <div><dt>Trust</dt><dd x-text="data.node.trust_level"></dd></div>
+            </template>
+            <template x-if="data.node.belief_status">
+              <div><dt>Belief</dt><dd x-text="`${score(data.node.belief_score)} (for ${score(data.node.belief_for)}, against ${score(data.node.belief_against)})`"></dd></div>
+            </template>
+            <template x-if="data.node.superseded_by?.length">
+              <div>
+                <dt>Superseded by</dt>
+                <dd>
+                  <template x-for="id in data.node.superseded_by" :key="id">
+                    <a class="mono" :href="href(id)" x-text="id"></a>
+                  </template>
+                </dd>
+              </div>
+            </template>
+            <dt>Recorded</dt>
+            <dd>offset <span x-text="data.node.created_offset"></span>, updated at <span x-text="data.node.updated_offset"></span> · <span x-text="day(data.node.created_at)"></span></dd>
+          </dl>
+          <template x-if="data.claim">
+            <div class="learned">
+              <span class="muted">Created by the claim</span>
+              <p class="claim" x-text="data.claim.text"></p>
+              <p class="meta">
+                <span x-text="`${data.claim.basis}, ${data.claim.modality}`"></span>
+                <template x-if="data.claim.source_id">
+                  <span> · from <a :href="href(data.claim.source_id)" x-text="data.titles[data.claim.source_id] || data.claim.source_id"></a></span>
+                </template>
+              </p>
+            </div>
+          </template>
+          <template x-if="!isEmpty(data.node.props)">
+            <div><h2>Properties</h2><pre x-text="json(data.node.props)"></pre></div>
+          </template>
+
+          <h2>Edges out <span class="muted" x-text="data.out.length"></span></h2>
+          <table x-show="data.out.length">
+            <thead><tr><th>Edge</th><th>To</th><th>Valid</th><th>Belief</th></tr></thead>
+            <tbody>
+              <template x-for="e in data.out" :key="e.id">
+                <tr>
+                  <td><a :href="href(e.id)" x-text="edgeName(e)"></a></td>
+                  <td><a :href="href(e.to.id)" x-text="e.to.name"></a> <span class="muted" x-text="e.to.kind || e.to.type"></span></td>
+                  <td x-text="windowOf(e)"></td>
+                  <td><span class="belief" :class="e.belief_status" x-text="`${e.belief_status} ${score(e.belief_score)}`"></span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Edges in <span class="muted" x-text="data.inc.length"></span></h2>
+          <table x-show="data.inc.length">
+            <thead><tr><th>From</th><th>Edge</th><th>Valid</th><th>Belief</th></tr></thead>
+            <tbody>
+              <template x-for="e in data.inc" :key="e.id">
+                <tr>
+                  <td><a :href="href(e.from.id)" x-text="e.from.name"></a> <span class="muted" x-text="e.from.kind || e.from.type"></span></td>
+                  <td><a :href="href(e.id)" x-text="edgeName(e)"></a></td>
+                  <td x-text="windowOf(e)"></td>
+                  <td><span class="belief" :class="e.belief_status" x-text="`${e.belief_status} ${score(e.belief_score)}`"></span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>In the log <span class="muted" x-text="data.log.length"></span></h2>
+          <ol class="entries">
+            <template x-for="e in data.log" :key="e.offset">
+              <li>
+                <span class="offset" x-text="e.offset"></span>
+                <div>
+                  <p class="claim" x-text="e.claim.text"></p>
+                  <ul class="ops">
+                    <template x-for="(op, i) in e.ops" :key="i">
+                      <li><a :href="href(opTarget(op))" x-text="opLine(op)"></a></li>
+                    </template>
+                  </ul>
+                  <p class="meta">
+                    <span x-text="agentName(e.agent_id)"></span> · <span x-text="day(e.recorded_at)"></span>
+                    <template x-if="e.claim.source_id">
+                      <span> · <a :href="href(e.claim.source_id)" x-text="data.titles[e.claim.source_id] || e.claim.source_id"></a></span>
+                    </template>
+                  </p>
+                </div>
+              </li>
+            </template>
+          </ol>
+        </section>
+      </template>
+
+      <!-- Edge --------------------------------------------------------------------------->
+      <template x-if="view === 'edge'">
+        <section>
+          <h1>
+            <a :href="href(data.edge.from.id)" x-text="data.edge.from.name"></a>
+            <span class="rel" x-text="edgeName(data.edge)"></span>
+            <a :href="href(data.edge.to.id)" x-text="data.edge.to.name"></a>
+          </h1>
+          <p class="tags">
+            <span class="tag" x-text="`kernel edge: ${data.edge.edge}`"></span>
+            <span class="tag" x-show="data.edge.kind" x-text="`kind: ${data.edge.kind}`"></span>
+            <span class="belief" :class="data.edge.belief_status" x-text="data.edge.belief_status"></span>
+          </p>
+          <dl>
+            <dt>Id</dt><dd class="mono" x-text="data.edge.id"></dd>
+            <dt>Valid</dt><dd x-text="windowOf(data.edge) || 'no window given'"></dd>
+            <dt>Belief</dt>
+            <dd>
+              <span x-text="score(data.edge.belief_score)"></span>:
+              for <span x-text="score(data.edge.belief_for)"></span> from <span x-text="data.edge.sources_for"></span> source(s),
+              against <span x-text="score(data.edge.belief_against)"></span> from <span x-text="data.edge.sources_against"></span>
+              <span x-show="data.edge.window_agreed === false">· the sources disagree on the window</span>
+            </dd>
+            <dt>Recorded</dt>
+            <dd>offset <span x-text="data.edge.created_offset"></span>, updated at <span x-text="data.edge.updated_offset"></span></dd>
+          </dl>
+          <template x-if="!isEmpty(data.edge.props)">
+            <div><h2>Properties</h2><pre x-text="json(data.edge.props)"></pre></div>
+          </template>
+
+          <template x-if="data.conflicts.length">
+            <div>
+              <h2>Contested with</h2>
+              <ul>
+                <template x-for="c in data.conflicts" :key="`${c.edge_a}${c.edge_b}${c.log_offset}`">
+                  <li x-data="{ r: data.rivals[c.edge_a === data.edge.id ? c.edge_b : c.edge_a] }">
+                    <template x-if="r">
+                      <span>
+                        <a :href="href(r.id)" x-text="`${r.from.name} ${edgeName(r)} ${r.to.name}`"></a>
+                        <span class="muted" x-text="windowOf(r)"></span>
+                      </span>
+                    </template>
+                    <span class="muted"> · rule <span class="mono" x-text="c.rule"></span>, offset <span x-text="c.log_offset"></span></span>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </template>
+
+          <h2>Assertions <span class="muted" x-text="data.assertions.length"></span></h2>
+          <p class="muted">Each source counts once: a source's newer assertion replaces its older one.</p>
+          <table>
+            <thead><tr><th>Offset</th><th>Claim</th><th>Source</th><th>Basis</th><th>Window</th><th>Weight</th><th>Counted</th></tr></thead>
+            <tbody>
+              <template x-for="a in data.assertions" :key="a.id">
+                <tr :class="{ dim: !a.counted }">
+                  <td x-text="a.log_offset"></td>
+                  <td>
+                    <span x-show="a.polarity === -1" class="tag warn">against</span>
+                    <span x-text="a.claim?.text"></span>
+                    <span class="muted" x-text="`by ${agentName(a.agent_id)}`"></span>
+                  </td>
+                  <td>
+                    <template x-if="a.claim?.source_id">
+                      <a :href="href(a.claim.source_id)" x-text="sourceLabel(a.source_key, data.titles)"></a>
+                    </template>
+                    <template x-if="!a.claim?.source_id"><span x-text="sourceLabel(a.source_key, data.titles)"></span></template>
+                  </td>
+                  <td x-text="`${a.basis}, ${a.confidence}${a.claim?.trust ? `, trust ${a.claim.trust}` : ''}`"></td>
+                  <td x-text="windowOf(a)"></td>
+                  <td x-text="score(a.weight)"></td>
+                  <td x-text="a.counted ? 'yes' : 'no'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Belief over the log</h2>
+          <p class="muted">The edge's state as of each offset where something about it was learned.</p>
+          <table>
+            <thead><tr><th>As of offset</th><th>Status</th><th>Score</th><th>Valid</th></tr></thead>
+            <tbody>
+              <template x-for="s in data.timeline" :key="s.offset">
+                <tr>
+                  <td><a :href="`#/log/${s.offset + 1}`" x-text="s.offset"></a></td>
+                  <td><span class="belief" :class="s.belief_status" x-text="s.belief_status || 'unknown'"></span></td>
+                  <td x-text="score(s.belief_score)"></td>
+                  <td x-text="windowOf(s)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </section>
+      </template>
+
+      <!-- Source ------------------------------------------------------------------------->
+      <template x-if="view === 'source'">
+        <section>
+          <h1 x-text="data.source.title || data.source.id"></h1>
+          <dl>
+            <dt>Id</dt><dd class="mono" x-text="data.source.id"></dd>
+            <template x-if="data.source.uri"><div><dt>URI</dt><dd class="mono" x-text="data.source.uri"></dd></div></template>
+            <dt>Type</dt><dd x-text="data.source.media_type"></dd>
+            <template x-if="data.source.collection"><div><dt>Collection</dt><dd x-text="data.source.collection"></dd></div></template>
+            <template x-if="data.source.author_agent_id">
+              <div><dt>Author</dt><dd><a :href="href(data.source.author_agent_id)" x-text="agentName(data.source.author_agent_id)"></a></dd></div>
+            </template>
+            <dt>Ingested</dt><dd x-text="`${day(data.source.recorded_at)} by ${agentName(data.source.agent_id)}`"></dd>
+            <dt>Content hash</dt><dd class="mono" x-text="data.source.content_hash"></dd>
+          </dl>
+          <template x-if="!isEmpty(data.source.metadata)">
+            <div><h2>Metadata</h2><pre x-text="json(data.source.metadata)"></pre></div>
+          </template>
+
+          <h2>Chunks and the claims drawn from them</h2>
+          <p class="muted" x-text="`${data.chunks.length} chunks, ${data.claims.length} claims`"></p>
+          <template x-for="c in data.chunks" :key="c.id">
+            <article class="chunk" :id="c.id">
+              <header>
+                <span class="offset" x-text="c.seq"></span>
+                <strong x-text="c.heading || '(no heading)'"></strong>
+                <span class="muted" x-show="c.page" x-text="`page ${c.page}`"></span>
+              </header>
+              <details>
+                <summary class="muted">Text</summary>
+                <p class="text" x-text="c.text"></p>
+              </details>
+              <ul class="claims">
+                <template x-for="cl in data.byChunk[c.id] || []" :key="cl.id">
+                  <li>
+                    <p class="claim" x-text="cl.text"></p>
+                    <p class="meta">
+                      offset <a :href="`#/log/${cl.log_offset + 1}`" x-text="cl.log_offset"></a> ·
+                      <span x-text="`${cl.basis}, ${cl.modality}, ${cl.confidence}`"></span>
+                      <span class="tag warn" x-show="cl.resolution === 'unresolved'">unresolved</span>
+                    </p>
+                    <ul class="ops">
+                      <template x-for="e in cl.edges" :key="e.id">
+                        <li>
+                          <a :href="href(e.id)" x-text="`${e.from.name} ${e.polarity === -1 ? 'not ' : ''}${edgeName(e)} ${e.to.name}`"></a>
+                          <span class="belief" :class="e.belief_status" x-text="e.belief_status"></span>
+                        </li>
+                      </template>
+                    </ul>
+                  </li>
+                </template>
+              </ul>
+            </article>
+          </template>
+        </section>
+      </template>
+
+      <!-- Log ---------------------------------------------------------------------------->
+      <template x-if="view === 'log'">
+        <section>
+          <h1>Log</h1>
+          <p class="muted">
+            Append-only; the graph is its projection. Head at offset <span x-text="data.head"></span>.
+            <span x-show="arg">Showing entries before offset <span x-text="arg"></span>. <a href="#/log">Newest</a></span>
+          </p>
+          <ol class="entries">
+            <template x-for="e in data.entries" :key="e.offset">
+              <li>
+                <span class="offset" x-text="e.offset"></span>
+                <div>
+                  <p class="claim" x-text="e.claim.text"></p>
+                  <p class="meta">
+                    <span x-text="agentName(e.agent_id)"></span> · <span x-text="day(e.recorded_at)"></span> ·
+                    <span x-text="`${e.claim.basis}, ${e.claim.modality}, ${e.claim.confidence}, trust ${e.claim.trust}`"></span>
+                    · read at <span x-text="e.read_at_offset"></span>
+                    <template x-if="e.claim.source_id">
+                      <span> · <a :href="`${href(e.claim.source_id)}`" x-text="data.titles[e.claim.source_id] || e.claim.source_id"></a></span>
+                    </template>
+                    <span class="tag warn" x-show="e.claim.resolution === 'unresolved'">unresolved</span>
+                  </p>
+                  <ul class="ops">
+                    <template x-for="(op, i) in e.ops" :key="i">
+                      <li><a :href="href(opTarget(op))" x-text="opLine(op)"></a></li>
+                    </template>
+                  </ul>
+                  <template x-if="e.conflicts">
+                    <p class="meta warn-text">
+                      Contests:
+                      <template x-for="c in e.conflicts" :key="c.edge_a + c.edge_b">
+                        <span>
+                          <a :href="href(c.edge_a)" x-text="edgeLine(c.edge_a)"></a> and
+                          <a :href="href(c.edge_b)" x-text="edgeLine(c.edge_b)"></a>
+                          under <span class="mono" x-text="c.rule"></span>
+                        </span>
+                      </template>
+                    </p>
+                  </template>
+                </div>
+              </li>
+            </template>
+          </ol>
+          <p x-show="data.next"><a :href="`#/log/${data.next}`">Older entries →</a></p>
+        </section>
+      </template>
+
+      <!-- Evidence ----------------------------------------------------------------------->
+      <template x-if="view === 'evidence'">
+        <section>
+          <h1>Evidence</h1>
+          <p class="muted">
+            Claim nodes: findings, hypotheses, proposals and rules that other claims support or contradict.
+          </p>
+          <input class="filter" type="search" x-model="filter" placeholder="Filter by text or modality" aria-label="Filter claims" />
+          <table>
+            <thead><tr><th>Claim</th><th>Modality</th><th>About</th><th>From</th><th title="supported by">+</th><th title="contradicted by">−</th><th>Belief</th></tr></thead>
+            <tbody>
+              <template x-for="c in claimsShown()" :key="c.id">
+                <tr>
+                  <td><a :href="href(c.id)" x-text="c.name"></a></td>
+                  <td x-text="c.kind"></td>
+                  <td>
+                    <template x-for="(a, i) in c.about" :key="a.to.id">
+                      <span><span x-text="i ? ', ' : ''"></span><a :href="href(a.to.id)" x-text="a.to.name"></a></span>
+                    </template>
+                  </td>
+                  <td>
+                    <template x-for="(b, i) in c.by" :key="b.from.id">
+                      <span><span x-text="i ? ', ' : ''"></span><a :href="href(b.from.id)" x-text="b.from.name"></a></span>
+                    </template>
+                  </td>
+                  <td class="num" x-text="c.sup"></td>
+                  <td class="num" :class="{ 'warn-text': c.con }" x-text="c.con"></td>
+                  <td><span class="belief" :class="c.belief_status" x-text="c.belief_status"></span></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <p class="muted" x-show="!claimsShown().length">No claim nodes match.</p>
+        </section>
+      </template>
+
+      <!-- Ontology ----------------------------------------------------------------------->
+      <template x-if="view === 'ontology'">
+        <section>
+          <h1>Ontology</h1>
+          <p class="muted">The kernel's four node types and fixed edges, and what each installed pack adds.</p>
+          <h2>Packs</h2>
+          <table>
+            <thead><tr><th>#</th><th>Pack</th><th>Version</th><th>Kernel range</th><th>Installed</th></tr></thead>
+            <tbody>
+              <template x-for="p in data.packs" :key="p.name">
+                <tr><td x-text="p.install_seq"></td><td x-text="p.name"></td><td x-text="p.version"></td><td class="mono" x-text="p.kernel_range"></td><td x-text="day(p.installed_at)"></td></tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Node types</h2>
+          <table>
+            <tbody>
+              <template x-for="t in data.nodeTypes" :key="t.name">
+                <tr><td><strong x-text="t.name"></strong></td><td class="mono" x-text="t.id_prefix"></td><td x-text="t.description"></td></tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Kernel edges</h2>
+          <table>
+            <thead><tr><th>Edge</th><th>Group</th><th>From</th><th>To</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <template x-for="t in data.edgeTypes" :key="t.name">
+                <tr>
+                  <td class="mono" x-text="t.name"></td>
+                  <td x-text="t.edge_group"></td>
+                  <td x-text="(t.from_types || []).join(', ')"></td>
+                  <td x-text="(t.to_types || []).join(', ')"></td>
+                  <td x-text="t.description"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Namespaces</h2>
+          <table>
+            <tbody>
+              <template x-for="n in data.namespaces" :key="n.name">
+                <tr><td class="mono" x-text="n.name"></td><td x-text="n.defined_by"></td><td x-text="n.description"></td></tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Kinds</h2>
+          <table>
+            <thead><tr><th>Kind</th><th>Node type</th><th>Defined by</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <template x-for="k in data.kinds" :key="k.name">
+                <tr><td class="mono" x-text="k.name"></td><td x-text="k.node_type"></td><td x-text="k.defined_by"></td><td x-text="k.description"></td></tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Edge kinds</h2>
+          <table>
+            <thead><tr><th>Kind</th><th>Specialises</th><th>Defined by</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <template x-for="k in data.edgeKinds" :key="k.name">
+                <tr><td class="mono" x-text="k.name"></td><td class="mono" x-text="k.edge"></td><td x-text="k.defined_by"></td><td x-text="k.description"></td></tr>
+              </template>
+            </tbody>
+          </table>
+
+          <h2>Rules</h2>
+          <table>
+            <thead><tr><th>Rule</th><th>Category</th><th>Defined by</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <template x-for="r in data.rules" :key="r.id">
+                <tr>
+                  <td class="mono" x-text="r.id"></td>
+                  <td x-text="r.category"></td>
+                  <td x-text="r.defined_by"></td>
+                  <td>
+                    <span x-text="r.description"></span>
+                    <details><summary class="muted">params</summary><pre x-text="json(r.params)"></pre></details>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </section>
+      </template>
+    </main>
+
+    <footer class="muted">Read-only. Agents change the world model through the gateway's tools.</footer>
+  </body>
+</html>

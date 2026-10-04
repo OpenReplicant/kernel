@@ -36,6 +36,12 @@ jobs:
         run: make seed
       - name: Replay the live log (a non-empty diff fails the build)
         run: make replay
+      - name: Start the read-only explorer (Caddy and PostgREST)
+        run: make up-ui
+      - name: Explorer smoke (refused writes, every page in headless Chromium)
+        run: |
+          make ui-browser
+          make ui-smoke
       - name: Stack logs
         if: failure()
         run: docker compose logs
