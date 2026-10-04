@@ -116,3 +116,28 @@ def test_trigram_threshold_is_pinned_in_any_session(kdb: KernelDB, agent: str, d
     with psycopg.connect(login_dsn(dbname, "wmk_reader")) as strict:
         strict.execute("SET pg_trgm.similarity_threshold = 0.9")
         assert strict.execute(query).fetchall() == [("Invoice approver", "trigram")]
+
+
+@pytest.mark.parametrize(
+    ("name", "normalized"),
+    [
+        ("José Álvarez", "jose alvarez"),
+        ("JOSÉ ÁLVAREZ", "jose alvarez"),
+        ("Straße & Søn", "strasse son"),
+        ("Łódź, Kraków", "lodz krakow"),
+        ("Ærø  Œuvre", "aero oeuvre"),
+        ("SAP S/4HANA", "sap s 4hana"),
+        ("Ελλάδα", "ελλάδα"),
+    ],
+)
+def test_names_fold_latin_accents(kdb: KernelDB, name: str, normalized: str) -> None:
+    assert kdb.one("SELECT kernel.normalize_name(%s)", [name]) == normalized
+    # Under the C locale, where lower() leaves non-ASCII letters alone, Latin ones still fold.
+    if normalized.isascii():
+        assert kdb.one('SELECT kernel.normalize_name(%s COLLATE "C")', [name]) == normalized
+
+
+def test_accents_do_not_hide_a_known_name(kdb: KernelDB, agent: str) -> None:
+    jose = create(kdb, agent, {"type": "Agent", "kind": "human", "name": "José Álvarez"})["refs"]["$n"]
+    rows = kdb.q("SELECT node_id, stage, band FROM kernel.resolve_candidates('Jose Alvarez', 'Agent')")
+    assert rows == [(jose, "normalized", "high")]

@@ -1,0 +1,85 @@
+# Resolution eval set: a known world, and mentions to resolve against it with lookup_entities.
+#
+# expect: the key of the node the mention denotes; `new` when it denotes something not in
+# the known world; `unclear` (with `among`) when the mention alone cannot say which node
+# it means, so the model must decide.
+#
+# Scoring (evals/resolution.py): the kernel acts on the certain and high bands by itself
+# (a create with such a candidate is rejected), so an auto-band candidate that is wrong is
+# the costly error. Floors guard against regressions; raise them as resolution improves.
+name: names
+floors:
+  auto_precision: 1.0     # every certain/high top candidate is the right node
+  new_clean: 1.0          # no new or unclear mention gets a certain/high candidate
+  candidate_recall: 0.85  # the right node is among the candidates (any band)
+  auto_recall: 0.5        # the right node is the top candidate in an auto band
+
+known:
+  - {key: jane, type: Agent, kind: human, name: Jane Smith, identity: {email: jane.smith@northwind.test}}
+  - {key: john, type: Agent, kind: human, name: John Smith}
+  - {key: jose, type: Agent, kind: human, name: José Álvarez}
+  - {key: robert, type: Agent, kind: human, name: Robert Brown, aliases: [Bob Brown]}
+  - {key: northwind, kind: org_unit, namespace: bpm, name: Northwind Foods, aliases: [Northwind]}
+  - {key: northwind_log, kind: org_unit, namespace: bpm, name: Northwind Logistics}
+  - {key: acme, kind: org_unit, namespace: bpm, name: Acme Inc.}
+  - {key: sap, kind: component, name: SAP S/4HANA, aliases: [SAP]}
+  - {key: coupa, kind: component, name: Coupa}
+  - {key: approver, kind: role, namespace: bpm, name: Invoice approver}
+  - {key: approval, kind: activity, namespace: bpm, name: Invoice approval}
+  - {key: receive, kind: activity, namespace: bpm, name: Receive invoice}
+  - {key: ap, kind: org_unit, namespace: bpm, name: Accounts payable}
+  - {key: ar, kind: org_unit, namespace: bpm, name: Accounts receivable}
+  - {key: p2p, kind: process, namespace: bpm, name: Procure to pay, aliases: [P2P]}
+
+mentions:
+  # People: formatting, identity keys, aliases, typos, accents
+  - {name: Jane Smith, type: Agent, expect: jane}
+  - {name: JANE SMITH, type: Agent, expect: jane}
+  - {name: "Smith, Jane", type: Agent, expect: jane}
+  - {name: Jane, type: Agent, identity: {email: Jane.Smith@Northwind.TEST}, expect: jane}
+  - {name: J. Smith, type: Agent, expect: unclear, among: [jane, john]}
+  - {name: Jon Smith, type: Agent, expect: john}
+  - {name: José Álvarez, type: Agent, expect: jose}
+  - {name: Jose Alvarez, type: Agent, expect: jose}
+  - {name: Bob Brown, type: Agent, expect: robert}
+  - {name: Rob Brown, type: Agent, expect: robert}
+  - {name: Robert Green, type: Agent, expect: new}
+  - {name: Jane Smithson, type: Agent, expect: new}
+  - {name: Dana Lee, type: Agent, expect: new}
+  - {name: Coupa, type: Agent, expect: new}
+
+  # Organisations: aliases, legal suffixes, near neighbours
+  - {name: Northwind Foods, type: Entity, kind: org_unit, expect: northwind}
+  - {name: Northwind, type: Entity, expect: northwind}
+  - {name: Northwind Foods Ltd, type: Entity, kind: org_unit, expect: northwind}
+  - {name: Northwind Logistics, type: Entity, kind: org_unit, expect: northwind_log}
+  - {name: Northwind Logistic, type: Entity, expect: northwind_log}
+  - {name: Acme, type: Entity, kind: org_unit, expect: acme}
+  - {name: ACME Incorporated, type: Entity, expect: acme}
+  - {name: Apex Inc., type: Entity, kind: org_unit, expect: new}
+
+  # Systems
+  - {name: SAP, type: Entity, kind: component, expect: sap}
+  - {name: SAP S4HANA, type: Entity, expect: sap}
+  - {name: S/4HANA, type: Entity, kind: component, expect: sap}
+  - {name: Coupa, type: Entity, kind: component, expect: coupa}
+  - {name: Coupa Procurement, type: Entity, expect: coupa}
+  - {name: Oracle ERP, type: Entity, kind: component, expect: new}
+
+  # Process structure: plurals, word forms, synonyms, abbreviations
+  - {name: Invoice approver, type: Entity, kind: role, expect: approver}
+  - {name: invoice approvers, type: Entity, kind: role, expect: approver}
+  - {name: Invoice approval, type: Entity, kind: activity, expect: approval}
+  - {name: Approve invoice, type: Entity, kind: activity, expect: approval}
+  - {name: Receive invoices, type: Entity, kind: activity, expect: receive}
+  - {name: Invoice receipt, type: Entity, kind: activity, expect: receive}
+  - {name: Pay invoice, type: Entity, kind: activity, expect: new}
+  - {name: Accounts payable, type: Entity, kind: org_unit, expect: ap}
+  - {name: Accounts Payable team, type: Entity, expect: ap}
+  - {name: Account payables, type: Entity, kind: org_unit, expect: ap}
+  - {name: AP, type: Entity, kind: org_unit, expect: ap}
+  - {name: Accounts receivable, type: Entity, kind: org_unit, expect: ar}
+  - {name: P2P, type: Entity, kind: process, expect: p2p}
+  - {name: Procure-to-pay, type: Entity, kind: process, expect: p2p}
+  - {name: Purchase to pay process, type: Entity, expect: p2p}
+  - {name: Order to cash, type: Entity, kind: process, expect: new}

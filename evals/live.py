@@ -5,8 +5,8 @@ the core and interview skills installed and only the seven kernel tools allowed.
 a conversation, one turn at a time, and answers a question with citations. The resulting graph
 is checked loosely (the model's wording varies) and the log is replayed.
 
-Needs the `claude` CLI with model access. Each run costs model usage (about one US dollar for
-the northwind scenario), so it is not part of CI.
+Needs the `claude` CLI with model access. Each run costs model usage (about three US dollars for
+the northwind scenario with the interview skill), so it is not part of CI.
 """
 
 from __future__ import annotations

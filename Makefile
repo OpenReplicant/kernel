@@ -35,6 +35,7 @@ test: db
 
 eval: db
 	uv run python -m evals.run
+	uv run python -m evals.resolution
 
 seed:
 	uv run python -m evals.seed --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
