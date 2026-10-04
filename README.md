@@ -19,6 +19,7 @@ Phase 1: [`docs/decisions/`](docs/decisions/). Libraries to adopt for later adap
 make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
 make seed      # optional: write the eval fixtures (two BPM, one research) through the gateway
 make replay    # rebuild the graph from the log and diff it against the live graph
+make up-ui     # optional: the read-only explorer on http://localhost:8080
 ```
 
 Connect any MCP harness to `http://localhost:8000/mcp` (streamable HTTP; published on
@@ -33,6 +34,11 @@ For research, `make up-research` adds the research pack's paper-source server on
 give the harness [`packs/research/`](packs/research/SKILL.md) as a skill. Set
 `WMK_PAPERS_MAILTO` to a contact email for the APIs' polite pools, and
 `WMK_PAPERS_OPENALEX_API_KEY` (free) to search OpenAlex.
+
+The explorer (`make up-ui`) shows what agents wrote: the log, nodes and edges with their
+belief and assertions, each source with the claims drawn from its passages, the evidence
+between claims, and the installed ontology. It reads through the reader role and
+cannot change anything ([ADR 0016](docs/decisions/0016-a-read-only-explorer.md)).
 
 ## The seven tools
 
@@ -77,6 +83,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
 | `tests/` | Unit, SQL, invariant and regression tests; the shared test kit is `kernel/testing.py` |
+| `ui/` | The read-only explorer: Alpine.js pages in `site/`, the Caddy config, the smoke check |
 | `db/`, `docker-compose.yml` | The database image and the stack |
 
 ## Development
@@ -91,6 +98,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
+| `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused and that every page loads in headless Chromium (after `make seed`) |
 | `uv run python -m kernel.packs check` | Validate every pack's manifests ([ADR 0015](docs/decisions/0015-packs-declare-their-ontology.md)) |
 | `make lint` | `ruff check` and `ruff format --check` |
 
@@ -109,6 +117,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | `WMK_EMBEDDING_URL`, `WMK_EMBEDDING_MODEL`, `WMK_EMBEDDING_API_KEY` | unset | gateway: optional OpenAI-compatible embeddings |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | gateway: export spans and metrics |
 | `WMK_PAPERS_MAILTO`, `WMK_PAPERS_OPENALEX_API_KEY` | unset | papers: contact email for the APIs; OpenAlex search |
+| `WMK_UI_PORT` | `8080` | compose: the explorer's port on localhost |
 
 ## Guarantees
 

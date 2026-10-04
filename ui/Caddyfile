@@ -1,0 +1,48 @@
+# The explorer: static pages, and /api forwarded to PostgREST running as the reader role.
+{
+	admin off
+	auto_https off
+	# No request logs: URLs carry search terms and ids (invariant 9). Caddy logs only its own
+	# start-up and configuration messages.
+	log default {
+		exclude http.log.error
+	}
+}
+
+:8080 {
+	encode gzip
+
+	# Only reads reach the API: GET for tables and views, POST only for /rpc/ functions
+	# (PostgREST also rolls back every transaction, and the reader role cannot write).
+	@reads {
+		path /api/*
+		method GET HEAD
+	}
+	@rpc {
+		path /api/rpc/*
+		method POST
+	}
+	handle @reads {
+		uri strip_prefix /api
+		reverse_proxy api:3000
+	}
+	handle @rpc {
+		uri strip_prefix /api
+		reverse_proxy api:3000
+	}
+	handle /api/* {
+		respond "The explorer's API is read-only." 405
+	}
+
+	handle {
+		root * /srv
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		# Alpine.js evaluates its directives with Function(), hence unsafe-eval for scripts.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'"
+	}
+}

@@ -2,6 +2,7 @@
 #   make up                 db, the packs in $WMK_PACKS (default: all) + gateway
 #   make up-otel            also an OpenTelemetry Collector and a trace viewer (Jaeger)
 #   make up-research        also the research pack's paper-source server (arXiv, OpenAlex, Crossref)
+#   make up-ui              also the explorer on http://localhost:8080 (read-only)
 name: wmk
 
 services:
@@ -79,6 +80,37 @@ services:
       WMK_PAPERS_MAILTO: ${WMK_PAPERS_MAILTO:-}
     ports:
       - "127.0.0.1:${WMK_PAPERS_PORT:-8001}:8001"
+
+  api:
+    # The explorer's data: PostgREST over the kernel schema as the reader role, so it sees
+    # exactly what any reader sees and can change nothing. PostgREST 16.4, pinned by digest.
+    profiles: [ui]
+    image: postgrest/postgrest@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgresql://wmk_reader:${WMK_READER_PASSWORD:-reader}@db:5432/wmk
+      PGRST_DB_SCHEMAS: kernel
+      PGRST_DB_ANON_ROLE: kernel_reader
+      PGRST_DB_TX_END: rollback
+      PGRST_DB_MAX_ROWS: "1000"
+      PGRST_SERVER_PORT: "3000"
+      # Critical errors only: request lines carry search terms (invariant 9).
+      PGRST_LOG_LEVEL: crit
+
+  ui:
+    # The explorer: Alpine.js pages served by Caddy, which forwards /api reads to PostgREST.
+    # Caddy 2.11.6, pinned by digest.
+    profiles: [ui]
+    image: caddy@sha256:881bbc60f9986d5ab8e7cfd6cf7e4ef3c9c0439fef2429d035d065577882f028
+    depends_on:
+      - api
+    volumes:
+      - ./ui/site:/srv:ro
+      - ./ui/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:${WMK_UI_PORT:-8080}:8080"
 
   otel-collector:
     profiles: [otel]

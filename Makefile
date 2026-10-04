@@ -5,13 +5,18 @@ WMK_DB_PASSWORD ?= postgres
 export WMK_ADMIN_DSN ?= postgresql://postgres:$(WMK_DB_PASSWORD)@localhost:$(WMK_DB_PORT)/postgres
 export WMK_DATABASE ?= wmk
 SCENARIO ?= northwind
+# The explorer's browser check (ui/smoke.py); `make ui-browser` installs its Chromium.
+PLAYWRIGHT ?= playwright==1.56.0
 
-.PHONY: help up up-otel up-research down db test replay eval seed live papers-smoke lint fmt
+.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay eval seed live papers-smoke lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
 	@echo "make up-otel  also start the OTel Collector and Jaeger (http://localhost:16686)"
 	@echo "make up-research  also start the research pack's paper-source server (http://localhost:8001/mcp)"
+	@echo "make up-ui    also start the read-only explorer (http://localhost:8080)"
+	@echo "make ui-smoke  check the explorer: refused writes, every page in Chromium (after up-ui, seed)"
+	@echo "make ui-browser  install the Chromium that ui-smoke drives (CI; needs apt for its libraries)"
 	@echo "make down     stop the stack and remove volumes"
 	@echo "make test     unit, SQL and regression tests (starts db)"
 	@echo "make eval     run the eval fixtures through the eval profile"
@@ -30,8 +35,17 @@ up-otel:
 up-research:
 	$(COMPOSE) --profile research up -d --build --wait
 
+up-ui:
+	$(COMPOSE) --profile ui up -d --build --wait
+
+ui-smoke:
+	uv run --with $(PLAYWRIGHT) python ui/smoke.py --url http://localhost:$${WMK_UI_PORT:-8080}
+
+ui-browser:
+	uv run --with $(PLAYWRIGHT) playwright install --with-deps chromium
+
 down:
-	$(COMPOSE) --profile otel --profile research down -v
+	$(COMPOSE) --profile otel --profile research --profile ui down -v
 
 db:
 	$(COMPOSE) up -d --build --wait db

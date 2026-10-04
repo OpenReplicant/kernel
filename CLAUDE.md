@@ -26,6 +26,10 @@ Research is the first product (ADR 0013). In scope, in this order:
    once the live eval shows extraction quality. Workers need an ADR first on how job
    queues fit invariant 1.
 
+Also approved: `ui/`, a read-only explorer (ADR 0016): Alpine.js pages served by Caddy,
+data from PostgREST running as the reader role. It never writes; keep `make ui-smoke`
+passing when kernel views or columns change.
+
 **Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
 fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
 habit formation, the BPM product. If a task seems to need one of these, stop and ask.
@@ -48,6 +52,7 @@ Create these as Makefile targets early; keep them working.
 - `make replay` — rebuild the graph from the log and diff against the live graph
 - `make eval` — run the eval fixtures through the eval profile
 - `make lint` — ruff check and format check
+- `make up-ui`, `make ui-smoke` — the read-only explorer and its smoke check
 
 ## Invariants — never violate these
 

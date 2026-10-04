@@ -230,6 +230,9 @@ def main() -> None:
             for pack in packs:
                 print(f"{pack.name} {pack.version}: ok (kernel {pack.kernel_range})")
             return
+        if not packs:
+            print(f"no packs to install into {args.database}")
+            return
         with psycopg.connect(admin.dsn_for(admin.admin_dsn(), args.database)) as conn:
             for pack in packs:
                 print(json.dumps(install(conn, pack)))
