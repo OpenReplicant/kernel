@@ -166,6 +166,7 @@
             <div class="learned">
               <span class="muted">Created by the claim</span>
               <p class="claim" x-text="data.claim.text"></p>
+              <blockquote class="quote" x-show="data.claim.quote" x-text="data.claim.quote"></blockquote>
               <p class="meta">
                 <span x-text="`${data.claim.basis}, ${data.claim.modality}`"></span>
                 <template x-if="data.claim.source_id">
@@ -215,6 +216,7 @@
                 <span class="offset" x-text="e.offset"></span>
                 <div>
                   <p class="claim" x-text="e.claim.text"></p>
+                  <blockquote class="quote" x-show="e.claim.quote" x-text="e.claim.quote"></blockquote>
                   <ul class="ops">
                     <template x-for="(op, i) in e.ops" :key="i">
                       <li><a :href="href(opTarget(op))" x-text="opLine(op)"></a></li>
@@ -294,6 +296,7 @@
                     <span x-show="a.polarity === -1" class="tag warn">against</span>
                     <span x-text="a.claim?.text"></span>
                     <span class="muted" x-text="`by ${agentName(a.agent_id)}`"></span>
+                    <blockquote class="quote" x-show="a.claim?.quote" x-text="a.claim?.quote"></blockquote>
                   </td>
                   <td>
                     <template x-if="a.claim?.source_id">
@@ -364,6 +367,7 @@
                 <template x-for="cl in data.byChunk[c.id] || []" :key="cl.id">
                   <li>
                     <p class="claim" x-text="cl.text"></p>
+                    <blockquote class="quote" x-show="cl.quote" x-text="cl.quote"></blockquote>
                     <p class="meta">
                       offset <a :href="`#/log/${cl.log_offset + 1}`" x-text="cl.log_offset"></a> ·
                       <span x-text="`${cl.basis}, ${cl.modality}, ${cl.confidence}`"></span>
@@ -399,6 +403,7 @@
                 <span class="offset" x-text="e.offset"></span>
                 <div>
                   <p class="claim" x-text="e.claim.text"></p>
+                  <blockquote class="quote" x-show="e.claim.quote" x-text="e.claim.quote"></blockquote>
                   <p class="meta">
                     <span x-text="agentName(e.agent_id)"></span> · <span x-text="day(e.recorded_at)"></span> ·
                     <span x-text="`${e.claim.basis}, ${e.claim.modality}, ${e.claim.confidence}, trust ${e.claim.trust}`"></span>

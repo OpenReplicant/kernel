@@ -39,6 +39,11 @@ class Claim(BaseModel):
         None,
         description="Chunk id the claim was read from (from ingest_source). Required for basis reported.",
     )
+    quote: str | None = Field(
+        None,
+        description="The exact words of that chunk the claim rests on, 8 to 1,000 characters (spacing, quote "
+        "marks and dashes may differ). Required for basis reported; the kernel checks they are there.",
+    )
     basis: Literal["observed", "reported", "inferred"] = Field(
         description="observed: seen directly; reported: someone said or wrote it; inferred: derived."
     )
@@ -51,6 +56,11 @@ class Claim(BaseModel):
     )
     confidence: Literal["low", "medium", "high"] | None = Field(
         None, description="How strongly the source commits to the claim. Default medium."
+    )
+    run: str | None = Field(
+        None,
+        description="The extraction run this claim belongs to (an Event of kind extraction you started) "
+        "when you are extracting a whole source; close it with a close_run op when done.",
     )
 
 
@@ -129,8 +139,14 @@ class Tools:
         - {"op": "promote", "about"?: [ids], "about_edges"?: [edge ids]}          make this claim a Claim node
         - {"op": "transition", "node": id, "status": ...}                          lifecycle status
         - {"op": "redact", "node": id, "fields"?: [...]} or {"op": "redact", "claim": claim id}
+        - {"op": "close_run", "run": run id}   finish an extraction run over this claim's source: what older
+           runs over the source found and this run did not is retracted
         Dates are YYYY-MM-DD or ISO 8601; windows are [valid_from, valid_to). There is no delete:
         retract with polarity "negative" or a supersedes edge.
+
+        Reported claims quote the words they rest on (claim.quote). To extract a whole source, start a
+        run with a claim citing it: {"op": "create", "type": "Event", "kind": "extraction", "name": ...,
+        "props": {"skill", "model"}}; give its id as claim.run on every claim, then close_run.
 
         The result's "edges" give each touched edge's state afterwards. A contested edge is an
         outcome, not a failure: another source disagrees, and both stay on record.

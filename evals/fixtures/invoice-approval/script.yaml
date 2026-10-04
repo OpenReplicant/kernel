@@ -8,7 +8,7 @@
 
 # Process document: the process and its owner
 - write:
-    claim: {text: "The invoice approval process is owned by the Finance department.", source: "{{chunk:process:0}}",
+    claim: {text: "The invoice approval process is owned by the Finance department.", source: "{{chunk:process:0}}", quote: "Acme Tools pays supplier invoices through one invoice approval process, owned by the Finance department",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $process, kind: process, namespace: bpm, name: Invoice approval}
@@ -17,7 +17,7 @@
 
 # Steps
 - write:
-    claim: {text: "Accounts payable receives supplier invoices by email.", source: "{{chunk:process:1}}",
+    claim: {text: "Accounts payable receives supplier invoices by email.", source: "{{chunk:process:1}}", quote: "Accounts payable receives supplier invoices by email",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $receive, kind: activity, namespace: bpm, name: Receive invoice}
@@ -28,7 +28,7 @@
       - {op: assert, edge: reads_from, from: $receive, to: $invoice}
 
 - write:
-    claim: {text: "An AP clerk enters each invoice into the ERP system.", source: "{{chunk:process:1}}",
+    claim: {text: "An AP clerk enters each invoice into the ERP system.", source: "{{chunk:process:1}}", quote: "An AP clerk enters each invoice into the ERP system",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $enter, kind: activity, namespace: bpm, name: Enter invoice}
@@ -41,7 +41,7 @@
       - {op: assert, edge: flows_to, from: "{{ref:receive}}", to: $enter}
 
 - write:
-    claim: {text: "The clerk checks the invoice against its purchase order.", source: "{{chunk:process:1}}",
+    claim: {text: "The clerk checks the invoice against its purchase order.", source: "{{chunk:process:1}}", quote: "The clerk checks the invoice against its purchase order",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $check, kind: activity, namespace: bpm, name: Check invoice against purchase order}
@@ -53,7 +53,7 @@
 
 # A first attempt sends the flow to the role instead of a step: rejected, then fixed.
 - write:
-    claim: {text: "If the amounts match, the invoice goes to the invoice approver.", source: "{{chunk:process:1}}",
+    claim: {text: "If the amounts match, the invoice goes to the invoice approver.", source: "{{chunk:process:1}}", quote: "If the amounts match, the invoice goes to the invoice approver",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $match, kind: gateway, namespace: bpm, name: "Amounts match?"}
@@ -63,7 +63,7 @@
 
 - write:
     claim: {text: "If the amounts match, the invoice goes to the invoice approver, who approves it.",
-            source: "{{chunk:process:1}}", basis: reported, modality: descriptive}
+            source: "{{chunk:process:1}}", quote: "If the amounts match, the invoice goes to the invoice approver", basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $match, kind: gateway, namespace: bpm, name: "Amounts match?"}
       - {op: create, ref: $approver, kind: role, namespace: bpm, name: Invoice approver}
@@ -75,7 +75,7 @@
       - {op: assert, edge: responsible_for, from: $approver, to: $approve}
 
 - write:
-    claim: {text: "Finance pays approved invoices in the Friday payment run.", source: "{{chunk:process:1}}",
+    claim: {text: "Finance pays approved invoices in the Friday payment run.", source: "{{chunk:process:1}}", quote: "Finance pays approved invoices in the Friday payment run",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $pay, kind: activity, namespace: bpm, name: Pay invoice}
@@ -84,14 +84,14 @@
       - {op: assert, edge: responsible_for, from: "{{ref:finance}}", to: $pay}
 
 - write:
-    claim: {text: "Only approved invoices may be paid.", source: "{{chunk:process:1}}",
+    claim: {text: "Only approved invoices may be paid.", source: "{{chunk:process:1}}", quote: "Only approved invoices may be paid",
             basis: reported, modality: normative}
     ops:
       - {op: promote, ref: $policy, about: ["{{ref:pay}}"]}
 
 # Roles
 - write:
-    claim: {text: "Dana Ruiz has been the invoice approver since 1 January 2025.", source: "{{chunk:process:2}}",
+    claim: {text: "Dana Ruiz has been the invoice approver since 1 January 2025.", source: "{{chunk:process:2}}", quote: "Dana Ruiz (dana@acme.test) has been the invoice approver since 1 January 2025",
             basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $dana, type: Agent, kind: human, name: Dana Ruiz, identity: {email: dana@acme.test}}
@@ -99,7 +99,7 @@
          valid_from: "2025-01-01"}
 
 - write:
-    claim: {text: "Lee Park is the AP clerk.", source: "{{chunk:process:2}}", basis: reported, modality: descriptive}
+    claim: {text: "Lee Park is the AP clerk.", source: "{{chunk:process:2}}", quote: "Lee Park (lee@acme.test) is the AP clerk", basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $lee, type: Agent, kind: human, name: Lee Park, identity: {email: lee@acme.test}}
       - {op: assert, edge: implements, from: $lee, to: "{{ref:clerk}}"}
@@ -107,7 +107,7 @@
 # Interview: Sam took over. A careless create of Dana is caught by resolution.
 - write:
     claim: {text: "Sam Ortiz took over invoice approval from Dana at the start of March 2026.",
-            source: "{{chunk:interview:0}}", basis: reported, modality: descriptive}
+            source: "{{chunk:interview:0}}", quote: "I took over invoice approval from Dana at the start of March 2026, when she moved to the treasury team", basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $sam, type: Agent, kind: human, name: Sam Ortiz}
       - {op: create, ref: $dana2, type: Agent, kind: human, name: Dana Ruiz}
@@ -115,7 +115,7 @@
 
 - write:
     claim: {text: "Sam Ortiz took over invoice approval from Dana at the start of March 2026.",
-            source: "{{chunk:interview:0}}", basis: reported, modality: descriptive}
+            source: "{{chunk:interview:0}}", quote: "I took over invoice approval from Dana at the start of March 2026, when she moved to the treasury team", basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $sam, type: Agent, kind: human, name: Sam Ortiz}
       - {op: assert, ref: $sam_approver, edge: implements, from: $sam, to: "{{ref:approver}}",
@@ -123,14 +123,14 @@
       - {op: assert, edge_id: "{{ref:dana_approver}}", valid_to: "2026-03-01"}
 
 - write:
-    claim: {text: "Invoices under 500 euros are often paid without any approval.", source: "{{chunk:interview:0}}",
+    claim: {text: "Invoices under 500 euros are often paid without any approval.", source: "{{chunk:interview:0}}", quote: "Invoices under 500 euros are often paid without any approval",
             basis: reported, modality: descriptive}
     ops:
       - {op: promote, ref: $practice, about: ["{{ref:pay}}", "{{ref:approve}}"]}
       - {op: assert, edge: contradicts, from: $practice, to: "{{ref:policy}}"}
 
 - write:
-    claim: {text: "The invoice process feels slow and nobody likes the ERP screens.", source: "{{chunk:interview:0}}",
+    claim: {text: "The invoice process feels slow and nobody likes the ERP screens.", source: "{{chunk:interview:0}}", quote: "Sam: Honestly, it feels slow, and nobody likes the ERP screens",
             basis: reported, modality: descriptive}
     ops: []
     unresolved: {reason: "a perceived quality of the process; no kind or edge for sentiment"}
@@ -138,7 +138,7 @@
 # Email: Dana still signs off. A third source, siding with the process document.
 - write:
     claim: {text: "Dana Ruiz still signs off all supplier invoices before the Friday payment run.",
-            source: "{{chunk:email:0}}", basis: reported, modality: descriptive}
+            source: "{{chunk:email:0}}", quote: "Reminder: Dana Ruiz still signs off all supplier invoices before the Friday payment run", basis: reported, modality: descriptive}
     ops:
       - {op: assert, edge_id: "{{ref:dana_approver}}", valid_to: null}
 

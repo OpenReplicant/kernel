@@ -27,6 +27,14 @@ paper's full record with `ingest`: the exact `ingest_source` arguments described
 Pass them to the kernel's `ingest_source` unchanged. Without it, build the same arguments
 from whatever text you were given.
 
+## One run per paper
+
+Map each paper in an extraction run (core skill, step 7): start it citing the paper's
+first chunk, put its id in `claim.run`, and close it after the last finding. Re-reading a
+paper later (the full text after the abstract, or a better model) then replaces what the
+earlier run found instead of adding to it. Quote the paper's own words for every finding
+(`claim.quote`): the sentence with the numbers, not your paraphrase.
+
 ## Ingest a paper
 
 One source per paper. `content`: the title, an authors line, venue and year, the DOI or

@@ -106,6 +106,7 @@ def test_unresolved_claim_is_kept_without_ops(kdb: KernelDB, agent: str) -> None
             "claim": {
                 "text": "The approval process feels slow",
                 "source": chunk,
+                "quote": "The approval process feels slow",
                 "basis": "reported",
                 "modality": "descriptive",
             },

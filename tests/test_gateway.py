@@ -41,6 +41,7 @@ async def seed(client: Any) -> dict[str, Any]:
             "claim": {
                 "text": "Sam took over invoice approval from Dana in March 2026",
                 "source": chunk,
+                "quote": "Sam took over in March 2026",
                 "basis": "reported",
                 "modality": "descriptive",
             },
@@ -136,6 +137,7 @@ async def test_rejections_are_rfc9457_problem_documents(gateway: Any) -> None:
             "claim": {
                 "text": "Dana still approves",
                 "source": written["chunk"],
+                "quote": "Dana approved invoices from 2025",
                 "basis": "reported",
                 "modality": "descriptive",
             },
@@ -155,6 +157,24 @@ async def test_rejections_are_rfc9457_problem_documents(gateway: Any) -> None:
     assert doc["type"] == "urn:wmk:rule:cardinality" and doc["title"] == "Single-valued edge conflict"
     assert doc["status"] == 409 and doc["rule"] == "bpm.approver_cardinality"
     assert written["refs"]["$role"] in doc["detail"] and doc["candidates"] == []
+    # A quote that is not in the cited chunk is refused, with the sentence it most resembles.
+    error, doc = await call(
+        gateway,
+        "write",
+        {
+            "claim": {
+                "text": "Sam took over in April 2026",
+                "source": written["chunk"],
+                "quote": "Sam took over in April 2026",
+                "basis": "reported",
+                "modality": "descriptive",
+            },
+            "read_at_offset": written["offset"],
+            "ops": [],
+        },
+    )
+    assert error and doc["type"] == "urn:wmk:rule:provenance" and doc["rule"] == "kernel.quote_in_source"
+    assert doc["nearest"] == "Sam took over in March 2026." and doc["field"] == "claim.quote"
     error, doc = await call(
         gateway,
         "write",
@@ -233,6 +253,7 @@ async def test_no_personal_data_in_telemetry(gateway: Any, spans: InMemorySpanEx
             "claim": {
                 "text": f"{secret} approves invoices",
                 "source": src["chunks"][0]["id"],
+                "quote": f"{secret} lives at 9 Elm Road and approves invoices",
                 "basis": "reported",
                 "modality": "descriptive",
             },
@@ -323,6 +344,7 @@ async def test_query_log_by_collection_spans_every_version_of_a_source(gateway: 
                 "claim": {
                     "text": version,
                     "source": src["chunks"][0]["id"],
+                    "quote": version,
                     "basis": "reported",
                     "modality": "normative",
                 },

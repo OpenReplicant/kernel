@@ -130,7 +130,7 @@ const LOADERS = {
     ]);
     const node = one(rows, "node");
     const claim = node.claim_id
-      ? (await get(`claims_view?select=id,text,source_id,chunk_id,basis,modality,log_offset&id=eq.${enc(node.claim_id)}`))[0]
+      ? (await get(`claims_view?select=id,text,quote,run_id,source_id,chunk_id,basis,modality,log_offset&id=eq.${enc(node.claim_id)}`))[0]
       : null;
     const titles = await titlesOf([claim?.source_id, ...log.entries.map((e) => e.claim.source_id)]);
     return { node, out, inc, log: log.entries, claim, titles, names: await namesOf(log.entries.flatMap((e) => e.ops.flatMap(opIds))) };
@@ -141,7 +141,7 @@ const LOADERS = {
       get(`edges?select=${EDGE_COLUMNS},${ENDPOINTS}&id=eq.${enc(id)}`),
       get(
         `assertions?select=id,log_offset,agent_id,source_key,polarity,valid_from,valid_to,basis,modality,confidence,weight,recorded_at,` +
-          `claim:claims_view(id,text,source_id,chunk_id,trust,redacted)&target_type=eq.edge&target_id=eq.${enc(id)}&order=log_offset`,
+          `claim:claims_view(id,text,quote,run_id,source_id,chunk_id,trust,redacted)&target_type=eq.edge&target_id=eq.${enc(id)}&order=log_offset`,
       ),
       get(`conflicts?or=${enc(`(edge_a.eq.${id},edge_b.eq.${id})`)}&order=log_offset`),
       rpc("head_offset"),
@@ -177,7 +177,7 @@ const LOADERS = {
     const [rows, chunks, claims] = await Promise.all([
       get(`sources?select=id,title,uri,collection,media_type,author_agent_id,agent_id,metadata,content_hash,recorded_at&id=eq.${enc(id)}`),
       get(`chunks?select=id,seq,page,heading,text&source_id=eq.${enc(id)}&order=seq`),
-      get(`claims_view?select=id,text,chunk_id,basis,modality,confidence,trust,resolution,log_offset,redacted&source_id=eq.${enc(id)}&order=log_offset`),
+      get(`claims_view?select=id,text,quote,run_id,chunk_id,basis,modality,confidence,trust,resolution,log_offset,redacted&source_id=eq.${enc(id)}&order=log_offset`),
     ]);
     const source = one(rows, "source");
     const backed = claims.length

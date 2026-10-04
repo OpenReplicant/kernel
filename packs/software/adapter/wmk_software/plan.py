@@ -7,6 +7,7 @@ live kernel instead, reusing nodes that already exist.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import unicodedata
@@ -15,6 +16,8 @@ from typing import Any
 
 # The agent that writes the claims, known from the gateway's write results.
 SELF = "agent:self"
+EXTRACTOR = "wmk-software"
+EXTRACTOR_VERSION = "0.2.0"
 
 
 @dataclass(frozen=True)
@@ -65,7 +68,7 @@ class Fact:
         """Node keys in order of first mention."""
         seen: dict[str, None] = {}
         for op in self.ops:
-            for k in (op.get("node"), op.get("from"), op.get("to")):
+            for k in (op.get("node"), op.get("run"), op.get("from"), op.get("to")):
                 if k and k != SELF:
                     seen.setdefault(k)
         return list(seen)
@@ -119,6 +122,55 @@ class Plan:
         """Facts whose every assertion was already made by an earlier fact say nothing new."""
         self.facts = [f for f in self.facts if f.ops]
 
+    # Extraction runs ------------------------------------------------------------------------
+
+    def timeline(self) -> list[tuple[Fact, str | None]]:
+        """Facts in writing order, each with the run its claim belongs to. Every source that is
+        not append-only is mapped in a run: a fact starting it before its first claim, and one
+        closing it after its last, so the kernel retracts what an older run over the same file
+        found and this one did not."""
+        sources = {s.alias: s for s in self.sources if not s.append_only}
+        first: dict[str, int] = {}
+        last: dict[str, int] = {}
+        for i, fact in enumerate(self.facts):
+            if fact.source in sources:
+                first.setdefault(fact.source, i)
+                last[fact.source] = i
+        out: list[tuple[Fact, str | None]] = []
+        for i, fact in enumerate(self.facts):
+            alias = fact.source
+            run = self.run_key(sources[alias]) if alias in first else None
+            if run and alias and first[alias] == i:
+                out.append((self.start_fact(sources[alias], run), None))
+            out.append((fact, run))
+            if run and alias and last[alias] == i:
+                out.append((self.close_fact(sources[alias], run), None))
+        return out
+
+    def run_key(self, source: Source) -> str:
+        digest = hashlib.sha256(source.content.encode()).hexdigest()[:12]
+        return self.node(
+            f"run:{source.alias}",
+            type="Event",
+            kind="extraction",
+            name=f"{EXTRACTOR} over {source.alias} @ {digest}",
+            props={"extractor": EXTRACTOR, "version": EXTRACTOR_VERSION, "source": source.alias},
+        )
+
+    def start_fact(self, source: Source, run: str) -> Fact:
+        fact = Fact(f"{EXTRACTOR} {EXTRACTOR_VERSION} maps {source.alias}.", source=source.alias)
+        self.mention(fact, run)
+        return fact
+
+    def close_fact(self, source: Source, run: str) -> Fact:
+        fact = Fact(f"{EXTRACTOR} has mapped all of {source.alias}.", source=source.alias)
+        fact.ops.append({"op": "close_run", "run": run})
+        return fact
+
+    @staticmethod
+    def is_run(key: str) -> bool:
+        return key.startswith("run:")
+
     # Rendering as an eval fixture -----------------------------------------------------------
 
     def script(self) -> list[dict[str, Any]]:
@@ -128,7 +180,7 @@ class Plan:
         steps: list[dict[str, Any]] = [{"ingest": s.alias} for s in self.sources]
         slugs = Slugs()
         created: dict[str, str] = {}
-        for fact in self.facts:
+        for fact, run in self.timeline():
             local: set[str] = set()
             ops: list[dict[str, Any]] = []
 
@@ -151,12 +203,15 @@ class Plan:
             for op in fact.ops:
                 if op["op"] == "create":
                     ref(op["node"])
-                    continue
-                rendered = {**op, "from": ref(op["from"]), "to": ref(op["to"])}
-                ops.append(rendered)
+                elif op["op"] == "close_run":
+                    ops.append({"op": "close_run", "run": ref(op["run"])})
+                else:
+                    ops.append({**op, "from": ref(op["from"]), "to": ref(op["to"])})
             claim = fact.claim()
             if fact.source is not None:
                 claim["source"] = f"{{{{at:{fact.source}:{fact.at}}}}}"
+            if run is not None:
+                claim["run"] = ref(run)
             steps.append({"write": {"claim": claim, "ops": ops}})
         return steps
 

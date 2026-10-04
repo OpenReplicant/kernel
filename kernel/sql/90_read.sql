@@ -32,15 +32,23 @@ CREATE VIEW kernel.claims_view AS
 SELECT c.id, c.log_offset,
        CASE WHEN r.claim_id IS NULL THEN c.text ELSE '[redacted]' END AS text,
        c.chunk_id, c.source_id, c.source_key, c.agent_id, c.basis, c.modality, c.polarity, c.confidence,
-       c.trust, c.resolution, c.unresolved, c.recorded_at, c.trace_id, c.span_id, r.claim_id IS NOT NULL AS redacted
+       c.trust, c.resolution, c.unresolved, c.recorded_at, c.trace_id, c.span_id, r.claim_id IS NOT NULL AS redacted,
+       CASE WHEN r.claim_id IS NULL THEN c.quote_start END AS quote_start,
+       CASE WHEN r.claim_id IS NULL THEN c.quote_end END AS quote_end,
+       CASE WHEN r.claim_id IS NULL AND c.quote_start IS NOT NULL THEN
+         (SELECT substring(s.content FROM c.quote_start + 1 FOR c.quote_end - c.quote_start)
+          FROM kernel.sources s WHERE s.id = c.source_id) END AS quote,
+       c.run_id
 FROM kernel.claims c
 LEFT JOIN kernel.claim_redactions r ON r.claim_id = c.id;
-COMMENT ON VIEW kernel.claims_view IS 'Claims with redacted text masked. Readers use this view, not kernel.claims.';
+COMMENT ON VIEW kernel.claims_view IS
+  'Claims with redacted text masked, and the quoted words of the source each rests on. Readers use this view, not kernel.claims.';
 
 CREATE VIEW kernel.log_entries AS
 SELECT l.log_offset, l.entry_id, l.recorded_at, l.agent_id, l.read_at_offset, l.trace_id, l.span_id,
        c.id AS claim_id, c.text AS claim_text, c.chunk_id, c.source_id, c.source_key, c.basis, c.modality,
-       c.polarity, c.confidence, c.trust, c.resolution, c.unresolved, kernel.mask_ops(l.ops) AS ops, l.conflicts
+       c.polarity, c.confidence, c.trust, c.resolution, c.unresolved, kernel.mask_ops(l.ops) AS ops, l.conflicts,
+       c.quote, c.run_id
 FROM kernel.log l
 JOIN kernel.claims_view c ON c.log_offset = l.log_offset;
 COMMENT ON VIEW kernel.log_entries IS 'Log entries with their claim, redaction applied.';
@@ -99,7 +107,7 @@ LANGUAGE sql STABLE AS $$
                                     'source_id', h.source_id, 'basis', h.basis, 'modality', h.modality,
                                     'polarity', CASE h.polarity WHEN 1 THEN 'positive' ELSE 'negative' END,
                                     'confidence', h.confidence, 'trust', h.trust, 'resolution', h.resolution,
-                                    'unresolved', h.unresolved),
+                                    'unresolved', h.unresolved, 'quote', h.quote, 'run', h.run_id),
         'ops', h.ops,
         'conflicts', CASE WHEN h.conflicts <> '[]' THEN h.conflicts END)))
       FROM hits h), '[]'))

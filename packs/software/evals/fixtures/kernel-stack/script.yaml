@@ -59,100 +59,120 @@
       - {op: create, ref: $commit_d0dda1b631e2, type: Event, kind: change, namespace: software, name: 'A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)', identity: {commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67}, start: '2026-10-04T19:35:12Z', props: {pr: 7}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_d0dda1b631e2, props: {role: changed}}
 - write:
-    claim: {text: pyproject.toml defines the Python package world-model-kernel 0.2.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:10}}'}
+    claim: {text: wmk-software 0.2.0 maps pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:0}}'}
+    ops:
+      - {op: create, ref: $run_pyproject_toml, type: Event, kind: extraction, name: wmk-software over pyproject.toml @ 94526960d835, props: {extractor: wmk-software, version: 0.2.0, source: pyproject.toml}}
+- write:
+    claim: {text: pyproject.toml defines the Python package world-model-kernel 0.2.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:10}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_world_model_kernel, type: Entity, kind: package, namespace: software, name: world-model-kernel, identity: {purl: 'pkg:pypi/world-model-kernel'}}
       - {op: assert, edge: defines, from: '{{ref:repo}}', to: $pkg_pypi_world_model_kernel, props: {path: pyproject.toml, version: 0.2.0}}
 - write:
-    claim: {text: 'world-model-kernel depends on mcp >=2.3,<3.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:260}}'}
+    claim: {text: 'world-model-kernel depends on mcp >=2.3,<3.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:260}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_mcp, type: Entity, kind: package, namespace: software, name: mcp, identity: {purl: 'pkg:pypi/mcp'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_mcp, props: {group: main, constraint: '>=2.3,<3'}}
 - write:
-    claim: {text: 'world-model-kernel depends on psycopg[binary] >=3.3,<4.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:279}}'}
+    claim: {text: 'world-model-kernel depends on psycopg[binary] >=3.3,<4.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:279}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_psycopg, type: Entity, kind: package, namespace: software, name: psycopg, identity: {purl: 'pkg:pypi/psycopg'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_psycopg, props: {group: main, constraint: '>=3.3,<4', extras: [binary]}}
 - write:
-    claim: {text: 'world-model-kernel depends on psycopg-pool >=3.3,<4.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:310}}'}
+    claim: {text: 'world-model-kernel depends on psycopg-pool >=3.3,<4.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:310}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_psycopg_pool, type: Entity, kind: package, namespace: software, name: psycopg-pool, identity: {purl: 'pkg:pypi/psycopg-pool'}, distinct_from: ['{{ref:pkg_pypi_psycopg}}']}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_psycopg_pool, props: {group: main, constraint: '>=3.3,<4'}}
 - write:
-    claim: {text: 'world-model-kernel depends on httpx >=0.28,<1.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:338}}'}
+    claim: {text: 'world-model-kernel depends on httpx >=0.28,<1.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:338}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_httpx, type: Entity, kind: package, namespace: software, name: httpx, identity: {purl: 'pkg:pypi/httpx'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_httpx, props: {group: main, constraint: '>=0.28,<1'}}
 - write:
-    claim: {text: 'world-model-kernel depends on pyyaml >=6.0,<7.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:360}}'}
+    claim: {text: 'world-model-kernel depends on pyyaml >=6.0,<7.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:360}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_pyyaml, type: Entity, kind: package, namespace: software, name: pyyaml, identity: {purl: 'pkg:pypi/pyyaml'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_pyyaml, props: {group: main, constraint: '>=6.0,<7'}}
 - write:
-    claim: {text: 'world-model-kernel depends on opentelemetry-api >=1.45,<2.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:382}}'}
+    claim: {text: 'world-model-kernel depends on opentelemetry-api >=1.45,<2.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:382}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_opentelemetry_api, type: Entity, kind: package, namespace: software, name: opentelemetry-api, identity: {purl: 'pkg:pypi/opentelemetry-api'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_opentelemetry_api, props: {group: main, constraint: '>=1.45,<2'}}
 - write:
-    claim: {text: 'world-model-kernel depends on opentelemetry-sdk >=1.45,<2.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:416}}'}
+    claim: {text: 'world-model-kernel depends on opentelemetry-sdk >=1.45,<2.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:416}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_opentelemetry_sdk, type: Entity, kind: package, namespace: software, name: opentelemetry-sdk, identity: {purl: 'pkg:pypi/opentelemetry-sdk'}, distinct_from: ['{{ref:pkg_pypi_opentelemetry_api}}']}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_opentelemetry_sdk, props: {group: main, constraint: '>=1.45,<2'}}
 - write:
-    claim: {text: 'world-model-kernel depends on opentelemetry-exporter-otlp-proto-http >=1.45,<2.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:450}}'}
+    claim: {text: 'world-model-kernel depends on opentelemetry-exporter-otlp-proto-http >=1.45,<2.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:450}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_opentelemetry_exporter_otlp_proto_http, type: Entity, kind: package, namespace: software, name: opentelemetry-exporter-otlp-proto-http, identity: {purl: 'pkg:pypi/opentelemetry-exporter-otlp-proto-http'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_opentelemetry_exporter_otlp_proto_http, props: {group: main, constraint: '>=1.45,<2'}}
 - write:
-    claim: {text: 'world-model-kernel depends on packaging >=24,<27.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:505}}'}
+    claim: {text: 'world-model-kernel depends on packaging >=24,<27.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:505}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_packaging, type: Entity, kind: package, namespace: software, name: packaging, identity: {purl: 'pkg:pypi/packaging'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_packaging, props: {group: main, constraint: '>=24,<27'}}
 - write:
-    claim: {text: 'world-model-kernel depends on pytest >=9.1,<10 in its dev group.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:561}}'}
+    claim: {text: 'world-model-kernel depends on pytest >=9.1,<10 in its dev group.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:561}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_pytest, type: Entity, kind: package, namespace: software, name: pytest, identity: {purl: 'pkg:pypi/pytest'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_pytest, props: {group: dev, constraint: '>=9.1,<10'}}
 - write:
-    claim: {text: 'world-model-kernel depends on ruff >=0.16,<1 in its dev group.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:584}}'}
+    claim: {text: 'world-model-kernel depends on ruff >=0.16,<1 in its dev group.', basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:584}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_ruff, type: Entity, kind: package, namespace: software, name: ruff, identity: {purl: 'pkg:pypi/ruff'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_ruff, props: {group: dev, constraint: '>=0.16,<1'}}
 - write:
-    claim: {text: world-model-kernel depends on wmk-papers in its dev group., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:666}}'}
+    claim: {text: world-model-kernel depends on wmk-papers in its dev group., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:666}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_wmk_papers, type: Entity, kind: package, namespace: software, name: wmk-papers, identity: {purl: 'pkg:pypi/wmk-papers'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_world_model_kernel}}', to: $pkg_pypi_wmk_papers, props: {group: dev}}
 - write:
-    claim: {text: packs/research/mcp/pyproject.toml defines the Python package wmk-papers 0.1.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:10}}'}
+    claim: {text: wmk-software has mapped all of pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_pyproject_toml}}'}
+- write:
+    claim: {text: wmk-software 0.2.0 maps packs/research/mcp/pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:0}}'}
+    ops:
+      - {op: create, ref: $run_packs_research_mcp_pyproject_toml, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/pyproject.toml @ ffa636c20a40, props: {extractor: wmk-software, version: 0.2.0, source: packs/research/mcp/pyproject.toml}}
+- write:
+    claim: {text: packs/research/mcp/pyproject.toml defines the Python package wmk-papers 0.1.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:10}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
       - {op: assert, edge: defines, from: '{{ref:repo}}', to: '{{ref:pkg_pypi_wmk_papers}}', props: {path: packs/research/mcp/pyproject.toml, version: 0.1.0}}
 - write:
-    claim: {text: 'wmk-papers depends on mcp >=2.3,<3.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:215}}'}
+    claim: {text: 'wmk-papers depends on mcp >=2.3,<3.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:215}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_wmk_papers}}', to: '{{ref:pkg_pypi_mcp}}', props: {group: main, constraint: '>=2.3,<3'}}
 - write:
-    claim: {text: 'wmk-papers depends on arxiv >=4.0,<5.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:234}}'}
+    claim: {text: 'wmk-papers depends on arxiv >=4.0,<5.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:234}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_arxiv, type: Entity, kind: package, namespace: software, name: arxiv, identity: {purl: 'pkg:pypi/arxiv'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_wmk_papers}}', to: $pkg_pypi_arxiv, props: {group: main, constraint: '>=4.0,<5'}}
 - write:
-    claim: {text: 'wmk-papers depends on habanero >=2.9,<3.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:255}}'}
+    claim: {text: 'wmk-papers depends on habanero >=2.9,<3.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:255}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_habanero, type: Entity, kind: package, namespace: software, name: habanero, identity: {purl: 'pkg:pypi/habanero'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_wmk_papers}}', to: $pkg_pypi_habanero, props: {group: main, constraint: '>=2.9,<3'}}
 - write:
-    claim: {text: 'wmk-papers depends on pyalex >=0.21,<1.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:279}}'}
+    claim: {text: 'wmk-papers depends on pyalex >=0.21,<1.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:279}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
       - {op: create, ref: $pkg_pypi_pyalex, type: Entity, kind: package, namespace: software, name: pyalex, identity: {purl: 'pkg:pypi/pyalex'}}
       - {op: assert, edge: uses_package, from: '{{ref:pkg_pypi_wmk_papers}}', to: $pkg_pypi_pyalex, props: {group: main, constraint: '>=0.21,<1'}}
 - write:
-    claim: {text: docker-compose.yml defines the Compose stack wmk., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:409}}'}
+    claim: {text: wmk-software has mapped all of packs/research/mcp/pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
+- write:
+    claim: {text: wmk-software 0.2.0 maps docker-compose.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:0}}'}
+    ops:
+      - {op: create, ref: $run_docker_compose_yml, type: Event, kind: extraction, name: wmk-software over docker-compose.yml @ 16c5ecc308d7, props: {extractor: wmk-software, version: 0.2.0, source: docker-compose.yml}}
+- write:
+    claim: {text: docker-compose.yml defines the Compose stack wmk., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:409}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $stack_wmk, type: Entity, kind: stack, namespace: software, name: wmk, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk'}}
       - {op: assert, edge: defines, from: '{{ref:repo}}', to: $stack_wmk, props: {path: docker-compose.yml}}
 - write:
-    claim: {text: 'The wmk stack has the service db, which runs the image wmk-db:dev, built from db/Dockerfile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:432}}'}
+    claim: {text: 'The wmk stack has the service db, which runs the image wmk-db:dev, built from db/Dockerfile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:432}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_db, type: Entity, kind: service, namespace: software, name: wmk/db, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/db'}}
       - {op: assert, edge: part_of, from: $svc_wmk_db, to: '{{ref:stack_wmk}}'}
@@ -160,7 +180,7 @@
       - {op: assert, edge: runs, from: $svc_wmk_db, to: $img_wmk_db, props: {tag: dev}}
       - {op: assert, edge: built_from, from: $img_wmk_db, to: '{{ref:repo}}', props: {dockerfile: db/Dockerfile, context: .}}
 - write:
-    claim: {text: 'The wmk stack has the service packs, which runs the image wmk-gateway:dev, built from gateway/Dockerfile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1214}}'}
+    claim: {text: 'The wmk stack has the service packs, which runs the image wmk-gateway:dev, built from gateway/Dockerfile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1214}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_packs, type: Entity, kind: service, namespace: software, name: wmk/packs, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/packs'}}
       - {op: assert, edge: part_of, from: $svc_wmk_packs, to: '{{ref:stack_wmk}}'}
@@ -168,13 +188,13 @@
       - {op: assert, edge: runs, from: $svc_wmk_packs, to: $img_wmk_gateway, props: {tag: dev}}
       - {op: assert, edge: built_from, from: $img_wmk_gateway, to: '{{ref:repo}}', props: {dockerfile: gateway/Dockerfile, context: .}}
 - write:
-    claim: {text: 'The wmk stack has the service gateway, which runs the image wmk-gateway:dev, built from gateway/Dockerfile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1832}}'}
+    claim: {text: 'The wmk stack has the service gateway, which runs the image wmk-gateway:dev, built from gateway/Dockerfile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1832}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_gateway, type: Entity, kind: service, namespace: software, name: wmk/gateway, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/gateway'}}
       - {op: assert, edge: part_of, from: $svc_wmk_gateway, to: '{{ref:stack_wmk}}'}
       - {op: assert, edge: runs, from: $svc_wmk_gateway, to: '{{ref:img_wmk_gateway}}', props: {tag: dev}}
 - write:
-    claim: {text: 'The wmk stack has the service papers, which runs the image wmk-papers:dev, built from packs/research/mcp/Dockerfile; it starts only with the research profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:2644}}'}
+    claim: {text: 'The wmk stack has the service papers, which runs the image wmk-papers:dev, built from packs/research/mcp/Dockerfile; it starts only with the research profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:2644}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_papers, type: Entity, kind: service, namespace: software, name: wmk/papers, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/papers'}}
       - {op: assert, edge: part_of, from: $svc_wmk_papers, to: '{{ref:stack_wmk}}', props: {profiles: [research]}}
@@ -182,118 +202,150 @@
       - {op: assert, edge: runs, from: $svc_wmk_papers, to: $img_wmk_papers, props: {tag: dev}}
       - {op: assert, edge: built_from, from: $img_wmk_papers, to: '{{ref:repo}}', props: {dockerfile: packs/research/mcp/Dockerfile, context: .}}
 - write:
-    claim: {text: 'The wmk stack has the service api, which runs the image postgrest/postgrest@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df; it starts only with the ui profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3140}}'}
+    claim: {text: 'The wmk stack has the service api, which runs the image postgrest/postgrest@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df; it starts only with the ui profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3140}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_api, type: Entity, kind: service, namespace: software, name: wmk/api, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/api'}}
       - {op: assert, edge: part_of, from: $svc_wmk_api, to: '{{ref:stack_wmk}}', props: {profiles: [ui]}}
       - {op: create, ref: $img_postgrest_postgrest, type: Entity, kind: image, namespace: software, name: postgrest/postgrest, identity: {purl: 'pkg:docker/postgrest/postgrest'}}
       - {op: assert, edge: runs, from: $svc_wmk_api, to: $img_postgrest_postgrest, props: {digest: 'sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df'}}
 - write:
-    claim: {text: 'The wmk stack has the service ui, which runs the image caddy@sha256:881bbc60f9986d5ab8e7cfd6cf7e4ef3c9c0439fef2429d035d065577882f028; it starts only with the ui profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3892}}'}
+    claim: {text: 'The wmk stack has the service ui, which runs the image caddy@sha256:881bbc60f9986d5ab8e7cfd6cf7e4ef3c9c0439fef2429d035d065577882f028; it starts only with the ui profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3892}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_ui, type: Entity, kind: service, namespace: software, name: wmk/ui, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/ui'}}
       - {op: assert, edge: part_of, from: $svc_wmk_ui, to: '{{ref:stack_wmk}}', props: {profiles: [ui]}}
       - {op: create, ref: $img_caddy, type: Entity, kind: image, namespace: software, name: caddy, identity: {purl: 'pkg:docker/caddy'}}
       - {op: assert, edge: runs, from: $svc_wmk_ui, to: $img_caddy, props: {digest: 'sha256:881bbc60f9986d5ab8e7cfd6cf7e4ef3c9c0439fef2429d035d065577882f028'}}
 - write:
-    claim: {text: 'The wmk stack has the service otel-collector, which runs the image otel/opentelemetry-collector-contrib:0.137.0; it starts only with the otel profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4309}}'}
+    claim: {text: 'The wmk stack has the service otel-collector, which runs the image otel/opentelemetry-collector-contrib:0.137.0; it starts only with the otel profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4309}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_otel_collector, type: Entity, kind: service, namespace: software, name: wmk/otel-collector, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/otel-collector'}}
       - {op: assert, edge: part_of, from: $svc_wmk_otel_collector, to: '{{ref:stack_wmk}}', props: {profiles: [otel]}}
       - {op: create, ref: $img_otel_opentelemetry_collector_contrib, type: Entity, kind: image, namespace: software, name: otel/opentelemetry-collector-contrib, identity: {purl: 'pkg:docker/otel/opentelemetry-collector-contrib'}}
       - {op: assert, edge: runs, from: $svc_wmk_otel_collector, to: $img_otel_opentelemetry_collector_contrib, props: {tag: 0.137.0}}
 - write:
-    claim: {text: 'The wmk stack has the service jaeger, which runs the image jaegertracing/jaeger:2.11.0; it starts only with the otel profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4629}}'}
+    claim: {text: 'The wmk stack has the service jaeger, which runs the image jaegertracing/jaeger:2.11.0; it starts only with the otel profile.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4629}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $svc_wmk_jaeger, type: Entity, kind: service, namespace: software, name: wmk/jaeger, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/jaeger'}}
       - {op: assert, edge: part_of, from: $svc_wmk_jaeger, to: '{{ref:stack_wmk}}', props: {profiles: [otel]}}
       - {op: create, ref: $img_jaegertracing_jaeger, type: Entity, kind: image, namespace: software, name: jaegertracing/jaeger, identity: {purl: 'pkg:docker/jaegertracing/jaeger'}}
       - {op: assert, edge: runs, from: $svc_wmk_jaeger, to: $img_jaegertracing_jaeger, props: {tag: 2.11.0}}
 - write:
-    claim: {text: 'wmk/db publishes container port 5432 on 127.0.0.1:5432 (set by WMK_DB_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:847}}'}
+    claim: {text: 'wmk/db publishes container port 5432 on 127.0.0.1:5432 (set by WMK_DB_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:847}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_db_5432, type: Entity, kind: endpoint, namespace: software, name: 'wmk/db:5432', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/db:5432'}}
       - {op: assert, edge: exposed_by, from: $ep_wmk_db_5432, to: '{{ref:svc_wmk_db}}', props: {target: 5432, published: '127.0.0.1:5432', variables: [WMK_DB_PORT]}}
 - write:
-    claim: {text: wmk/db mounts the volume wmk_db-data at /var/lib/postgresql., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:906}}'}
+    claim: {text: wmk/db mounts the volume wmk_db-data at /var/lib/postgresql., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:906}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $vol_wmk_db_data, type: Entity, kind: volume, namespace: software, name: wmk_db-data, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/volumes/db-data'}}
       - {op: assert, edge: mounts, from: '{{ref:svc_wmk_db}}', to: $vol_wmk_db_data, props: {target: /var/lib/postgresql}}
 - write:
-    claim: {text: wmk/packs needs wmk/db to be healthy before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1515}}'}
+    claim: {text: wmk/packs needs wmk/db to be healthy before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1515}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: assert, edge: needs, from: '{{ref:svc_wmk_packs}}', to: '{{ref:svc_wmk_db}}', props: {condition: service_healthy}}
 - write:
-    claim: {text: wmk/gateway needs wmk/db to be healthy before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1955}}'}
+    claim: {text: wmk/gateway needs wmk/db to be healthy before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:1955}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: assert, edge: needs, from: '{{ref:svc_wmk_gateway}}', to: '{{ref:svc_wmk_db}}', props: {condition: service_healthy}}
 - write:
-    claim: {text: wmk/gateway needs wmk/packs to have finished successfully before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:2000}}'}
+    claim: {text: wmk/gateway needs wmk/packs to have finished successfully before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:2000}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: assert, edge: needs, from: '{{ref:svc_wmk_gateway}}', to: '{{ref:svc_wmk_packs}}', props: {condition: service_completed_successfully}}
 - write:
-    claim: {text: 'wmk/gateway publishes container port 8000 on 127.0.0.1:8000 (set by WMK_GATEWAY_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:2598}}'}
+    claim: {text: 'wmk/gateway publishes container port 8000 on 127.0.0.1:8000 (set by WMK_GATEWAY_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:2598}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_gateway_8000, type: Entity, kind: endpoint, namespace: software, name: 'wmk/gateway:8000', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/gateway:8000'}}
       - {op: assert, edge: exposed_by, from: $ep_wmk_gateway_8000, to: '{{ref:svc_wmk_gateway}}', props: {target: 8000, published: '127.0.0.1:8000', variables: [WMK_GATEWAY_PORT]}}
 - write:
-    claim: {text: 'wmk/papers publishes container port 8001 on 127.0.0.1:8001 (set by WMK_PAPERS_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3095}}'}
+    claim: {text: 'wmk/papers publishes container port 8001 on 127.0.0.1:8001 (set by WMK_PAPERS_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3095}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_papers_8001, type: Entity, kind: endpoint, namespace: software, name: 'wmk/papers:8001', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/papers:8001'}}
       - {op: assert, edge: exposed_by, from: $ep_wmk_papers_8001, to: '{{ref:svc_wmk_papers}}', props: {target: 8001, published: '127.0.0.1:8001', variables: [WMK_PAPERS_PORT]}}
 - write:
-    claim: {text: wmk/api needs wmk/db to be healthy before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3473}}'}
+    claim: {text: wmk/api needs wmk/db to be healthy before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:3473}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: assert, edge: needs, from: '{{ref:svc_wmk_api}}', to: '{{ref:svc_wmk_db}}', props: {condition: service_healthy}}
 - write:
-    claim: {text: wmk/ui needs wmk/api to have started before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4139}}'}
+    claim: {text: wmk/ui needs wmk/api to have started before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4139}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: assert, edge: needs, from: '{{ref:svc_wmk_ui}}', to: '{{ref:svc_wmk_api}}', props: {condition: service_started}}
 - write:
-    claim: {text: 'wmk/ui publishes container port 8080 on 127.0.0.1:8080 (set by WMK_UI_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4268}}'}
+    claim: {text: 'wmk/ui publishes container port 8080 on 127.0.0.1:8080 (set by WMK_UI_PORT).', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4268}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_ui_8080, type: Entity, kind: endpoint, namespace: software, name: 'wmk/ui:8080', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/ui:8080'}}
       - {op: assert, edge: exposed_by, from: $ep_wmk_ui_8080, to: '{{ref:svc_wmk_ui}}', props: {target: 8080, published: '127.0.0.1:8080', variables: [WMK_UI_PORT]}}
 - write:
-    claim: {text: wmk/otel-collector needs wmk/jaeger to have started before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4599}}'}
+    claim: {text: wmk/otel-collector needs wmk/jaeger to have started before it starts., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4599}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: assert, edge: needs, from: '{{ref:svc_wmk_otel_collector}}', to: '{{ref:svc_wmk_jaeger}}', props: {condition: service_started}}
 - write:
-    claim: {text: 'wmk/otel-collector publishes container port 4317 on 127.0.0.1:4317.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4543}}'}
+    claim: {text: 'wmk/otel-collector publishes container port 4317 on 127.0.0.1:4317.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4543}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_otel_collector_4317, type: Entity, kind: endpoint, namespace: software, name: 'wmk/otel-collector:4317', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/otel-collector:4317'}}
       - {op: assert, edge: exposed_by, from: $ep_wmk_otel_collector_4317, to: '{{ref:svc_wmk_otel_collector}}', props: {target: 4317, published: '127.0.0.1:4317'}}
 - write:
-    claim: {text: 'wmk/otel-collector publishes container port 4318 on 127.0.0.1:4318.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4573}}'}
+    claim: {text: 'wmk/otel-collector publishes container port 4318 on 127.0.0.1:4318.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4573}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_otel_collector_4318, type: Entity, kind: endpoint, namespace: software, name: 'wmk/otel-collector:4318', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/otel-collector:4318'}, distinct_from: ['{{ref:ep_wmk_otel_collector_4317}}']}
       - {op: assert, edge: exposed_by, from: $ep_wmk_otel_collector_4318, to: '{{ref:svc_wmk_otel_collector}}', props: {target: 4318, published: '127.0.0.1:4318'}}
 - write:
-    claim: {text: 'wmk/jaeger publishes container port 16686 on 127.0.0.1:16686.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4716}}'}
+    claim: {text: 'wmk/jaeger publishes container port 16686 on 127.0.0.1:16686.', basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:4716}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
       - {op: create, ref: $ep_wmk_jaeger_16686, type: Entity, kind: endpoint, namespace: software, name: 'wmk/jaeger:16686', identity: {defined_at: 'https://github.com/OpenReplicant/kernel#wmk/jaeger:16686'}}
       - {op: assert, edge: exposed_by, from: $ep_wmk_jaeger_16686, to: '{{ref:svc_wmk_jaeger}}', props: {target: 16686, published: '127.0.0.1:16686'}}
 - write:
-    claim: {text: 'db/Dockerfile builds wmk-db on the base image pgvector/pgvector:0.8.7-pg18-trixie in its pgvector stage.', basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:164}}'}
+    claim: {text: wmk-software has mapped all of docker-compose.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_docker_compose_yml}}'}
+- write:
+    claim: {text: wmk-software 0.2.0 maps db/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:0}}'}
+    ops:
+      - {op: create, ref: $run_db_dockerfile, type: Event, kind: extraction, name: wmk-software over db/Dockerfile @ e37de45e2c52, props: {extractor: wmk-software, version: 0.2.0, source: db/Dockerfile}}
+- write:
+    claim: {text: 'db/Dockerfile builds wmk-db on the base image pgvector/pgvector:0.8.7-pg18-trixie in its pgvector stage.', basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:164}}', run: '{{ref:run_db_dockerfile}}'}
     ops:
       - {op: create, ref: $img_pgvector_pgvector, type: Entity, kind: image, namespace: software, name: pgvector/pgvector, identity: {purl: 'pkg:docker/pgvector/pgvector'}}
       - {op: assert, edge: based_on, from: '{{ref:img_wmk_db}}', to: $img_pgvector_pgvector, props: {tag: 0.8.7-pg18-trixie, stage: pgvector}}
 - write:
-    claim: {text: 'db/Dockerfile builds wmk-db on the base image apache/age:release_PG18_1.8.0.', basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:218}}'}
+    claim: {text: 'db/Dockerfile builds wmk-db on the base image apache/age:release_PG18_1.8.0.', basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:218}}', run: '{{ref:run_db_dockerfile}}'}
     ops:
       - {op: create, ref: $img_apache_age, type: Entity, kind: image, namespace: software, name: apache/age, identity: {purl: 'pkg:docker/apache/age'}}
       - {op: assert, edge: based_on, from: '{{ref:img_wmk_db}}', to: $img_apache_age, props: {tag: release_PG18_1.8.0}}
 - write:
-    claim: {text: 'gateway/Dockerfile builds wmk-gateway on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:104}}'}
+    claim: {text: wmk-software has mapped all of db/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_db_dockerfile}}'}
+- write:
+    claim: {text: wmk-software 0.2.0 maps gateway/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:0}}'}
+    ops:
+      - {op: create, ref: $run_gateway_dockerfile, type: Event, kind: extraction, name: wmk-software over gateway/Dockerfile @ bbc371d646b1, props: {extractor: wmk-software, version: 0.2.0, source: gateway/Dockerfile}}
+- write:
+    claim: {text: 'gateway/Dockerfile builds wmk-gateway on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:104}}', run: '{{ref:run_gateway_dockerfile}}'}
     ops:
       - {op: create, ref: $img_python, type: Entity, kind: image, namespace: software, name: python, identity: {purl: 'pkg:docker/python'}}
       - {op: assert, edge: based_on, from: '{{ref:img_wmk_gateway}}', to: $img_python, props: {tag: 3.12-slim}}
 - write:
-    claim: {text: 'packs/research/mcp/Dockerfile builds wmk-papers on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:158}}'}
+    claim: {text: wmk-software has mapped all of gateway/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_gateway_dockerfile}}'}
+- write:
+    claim: {text: wmk-software 0.2.0 maps packs/research/mcp/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:0}}'}
+    ops:
+      - {op: create, ref: $run_packs_research_mcp_dockerfile, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/Dockerfile @ 52b7c225bf89, props: {extractor: wmk-software, version: 0.2.0, source: packs/research/mcp/Dockerfile}}
+- write:
+    claim: {text: 'packs/research/mcp/Dockerfile builds wmk-papers on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:158}}', run: '{{ref:run_packs_research_mcp_dockerfile}}'}
     ops:
       - {op: assert, edge: based_on, from: '{{ref:img_wmk_papers}}', to: '{{ref:img_python}}', props: {tag: 3.12-slim}}
 - write:
-    claim: {text: 'The ci workflow''s job lint checks OpenReplicant/kernel on push to main and pull_request; it runs uv sync --frozen; make lint; it uses actions/checkout@v4, astral-sh/setup-uv@v6.', basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:136}}'}
+    claim: {text: wmk-software has mapped all of packs/research/mcp/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_packs_research_mcp_dockerfile}}'}
+- write:
+    claim: {text: wmk-software 0.2.0 maps .github/workflows/ci.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:0}}'}
+    ops:
+      - {op: create, ref: $run_github_workflows_ci_yml, type: Event, kind: extraction, name: wmk-software over .github/workflows/ci.yml @ 1047c93a1324, props: {extractor: wmk-software, version: 0.2.0, source: .github/workflows/ci.yml}}
+- write:
+    claim: {text: 'The ci workflow''s job lint checks OpenReplicant/kernel on push to main and pull_request; it runs uv sync --frozen; make lint; it uses actions/checkout@v4, astral-sh/setup-uv@v6.', basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:136}}', run: '{{ref:run_github_workflows_ci_yml}}'}
     ops:
       - {op: create, ref: $pipe_github_workflows_ci_yml_lint, type: Entity, kind: pipeline, namespace: software, name: ci/lint, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#.github/workflows/ci.yml/lint'}}
       - {op: assert, edge: defines, from: '{{ref:repo}}', to: $pipe_github_workflows_ci_yml_lint, props: {path: .github/workflows/ci.yml}}
@@ -303,7 +355,7 @@
       - {op: create, ref: $pkg_github_astral_sh_setup_uv, type: Entity, kind: package, namespace: software, name: astral-sh/setup-uv, identity: {purl: 'pkg:github/astral-sh/setup-uv'}}
       - {op: assert, edge: uses_package, from: $pipe_github_workflows_ci_yml_lint, to: $pkg_github_astral_sh_setup_uv, props: {version: v6}}
 - write:
-    claim: {text: 'The ci workflow''s job kernel checks OpenReplicant/kernel on push to main and pull_request; it runs uv sync --frozen; make up; make test; make eval; make seed; make replay; make up-ui; make ui-browser; make ui-smoke; docker compose logs (if failure()); it uses actions/checkout@v4, astral-sh/setup-uv@v6, actions/upload-artifact@v4.', basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:353}}'}
+    claim: {text: 'The ci workflow''s job kernel checks OpenReplicant/kernel on push to main and pull_request; it runs uv sync --frozen; make up; make test; make eval; make seed; make replay; make up-ui; make ui-browser; make ui-smoke; docker compose logs (if failure()); it uses actions/checkout@v4, astral-sh/setup-uv@v6, actions/upload-artifact@v4.', basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:353}}', run: '{{ref:run_github_workflows_ci_yml}}'}
     ops:
       - {op: create, ref: $pipe_github_workflows_ci_yml_kernel, type: Entity, kind: pipeline, namespace: software, name: ci/kernel, identity: {defined_at: 'https://github.com/OpenReplicant/kernel#.github/workflows/ci.yml/kernel'}}
       - {op: assert, edge: defines, from: '{{ref:repo}}', to: $pipe_github_workflows_ci_yml_kernel, props: {path: .github/workflows/ci.yml}}
@@ -312,6 +364,10 @@
       - {op: assert, edge: uses_package, from: $pipe_github_workflows_ci_yml_kernel, to: '{{ref:pkg_github_astral_sh_setup_uv}}', props: {version: v6}}
       - {op: create, ref: $pkg_github_actions_upload_artifact, type: Entity, kind: package, namespace: software, name: actions/upload-artifact, identity: {purl: 'pkg:github/actions/upload-artifact'}}
       - {op: assert, edge: uses_package, from: $pipe_github_workflows_ci_yml_kernel, to: $pkg_github_actions_upload_artifact, props: {version: v4}}
+- write:
+    claim: {text: wmk-software has mapped all of .github/workflows/ci.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:0}}'}
+    ops:
+      - {op: close_run, run: '{{ref:run_github_workflows_ci_yml}}'}
 - write:
     claim: {text: 'World Model Kernel (this instance) is the system this kernel instance runs as, and the agent writing these claims is part of it.', basis: inferred, modality: descriptive, confidence: medium}
     ops:

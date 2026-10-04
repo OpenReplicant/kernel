@@ -157,3 +157,70 @@ BEGIN
   RETURN NULL;
 END
 $$;
+
+-- Contract: a case-insensitive regular expression for finding `quote` in a text whose
+-- spacing and typography may differ: a run of whitespace matches any run of whitespace;
+-- straight and curly apostrophes match each other, as do straight and curly double quotes,
+-- and hyphens and dashes; every other character matches itself. NULL for a quote with no
+-- visible characters. Pure.
+CREATE FUNCTION kernel.quote_pattern(quote text) RETURNS text
+LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+  pattern text := '';
+  ch text;
+  in_space boolean := false;
+BEGIN
+  FOREACH ch IN ARRAY regexp_split_to_array(btrim(coalesce(quote, ''), E' \t\r\n'), '') LOOP
+    IF ch ~ '\s' THEN
+      IF NOT in_space THEN
+        pattern := pattern || '\s+';
+        in_space := true;
+      END IF;
+      CONTINUE;
+    END IF;
+    in_space := false;
+    pattern := pattern || CASE
+      WHEN ch IN ('''', '‘', '’', '`', '´') THEN '[''‘’`´]'
+      WHEN ch IN ('"', '“', '”', '„') THEN '["“”„]'
+      WHEN ch IN ('-', '‐', '‑', '–', '—') THEN '[-‐‑–—]'
+      WHEN ch ~ '[[:alnum:]]' THEN ch
+      ELSE '\' || ch
+    END;
+  END LOOP;
+  RETURN NULLIF(pattern, '');
+END
+$$;
+
+-- Contract: the first place at or after character `from_pos` (0-based) where `quote`
+-- occurs in `content` by kernel.quote_pattern: (q_start, q_end) as 0-based character
+-- offsets into content, or no row. Pure.
+CREATE FUNCTION kernel.find_quote(content text, quote text, from_pos int DEFAULT 0)
+RETURNS TABLE (q_start int, q_end int)
+LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+  pattern text := kernel.quote_pattern(quote);
+  pos int;
+BEGIN
+  IF pattern IS NULL OR content IS NULL THEN
+    RETURN;
+  END IF;
+  pos := regexp_instr(content, pattern, greatest(from_pos, 0) + 1, 1, 0, 'i');
+  IF pos = 0 THEN
+    RETURN;
+  END IF;
+  q_start := pos - 1;
+  q_end := regexp_instr(content, pattern, pos, 1, 1, 'i') - 1;
+  RETURN NEXT;
+END
+$$;
+
+-- Contract: the sentence or line of `body` most like `quote` (trigram similarity, at most
+-- 300 characters), shown to a writer whose quote was not found. NULL for an empty body. Pure.
+CREATE FUNCTION kernel.nearest_sentence(body text, quote text) RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT left(btrim(s), 300)
+  FROM regexp_split_to_table(coalesce(body, ''), '(?<=[.!?])\s+|\n+') AS s
+  WHERE btrim(s) <> ''
+  ORDER BY similarity(lower(s), lower(coalesce(quote, ''))) DESC, length(s)
+  LIMIT 1
+$$;

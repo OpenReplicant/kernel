@@ -99,17 +99,24 @@ Create these as Makefile targets early; keep them working.
 ## The write payload
 
 ```json
-{"claim": {"text": "...", "source": "<chunk id>", "basis": "reported",
-           "modality": "descriptive"},
+{"claim": {"text": "...", "source": "<chunk id>", "quote": "<the chunk's words>",
+           "basis": "reported", "modality": "descriptive", "run": "<extraction run>"?},
  "read_at_offset": 48210, "trace_id": "...",
  "ops": [{"op": "assert", "edge": "implements", "from": "agt_sam",
           "to": "role_approver", "valid_from": "2026-03-01"}]}
 ```
 
-Operations: `create`, `assert`, `link`, `unlink`, `promote`, `transition`, `redact`.
+Operations: `create`, `assert`, `link`, `unlink`, `promote`, `transition`, `redact`. A
+payload may also send `close_run`, which `kernel.write` resolves into negative assertions
+and a transition before logging (ADR 0020): the log only ever holds the seven.
+
+A reported claim quotes the words of its chunk it rests on; the kernel finds them in the
+source and records their span, or refuses the claim. Extraction of a whole source happens
+in a run (an Event of kind `extraction`); closing it retracts what older runs over the
+same source found and it did not.
 
 `kernel.write` steps, in order: take the append lock and assign the next offset →
-validate every op against ontology rules → reject if any touched node changed after
+check provenance (source, quote, run) → validate every op against ontology rules → reject if any touched node changed after
 `read_at_offset` → run the resolution cascade on every `create` → append the log entry
 and apply graph changes → update belief.
 

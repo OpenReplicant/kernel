@@ -62,7 +62,8 @@ async def test_the_fixture_maps_to_the_expected_graph_and_again_to_nothing(gatew
     plan = fixture.plan_for(FIXTURE)
     first = await apply(gateway, plan)
     assert first.failures == []
-    assert first.claims == len(plan.facts)
+    # Every fact, plus a claim starting and one closing the run over each mapped file.
+    assert first.claims == len(plan.timeline()) and first.runs == 7
     expected = yaml.safe_load((FIXTURE / "expected.yaml").read_text())
     result = compare(expected, produced_graph(admin.dsn_for(admin.admin_dsn(), dbname)))
     assert (result.entities.precision, result.entities.recall) == (1.0, 1.0), result.entities
@@ -94,12 +95,14 @@ async def test_a_changed_file_supersedes_what_it_no_longer_says(gateway: Any, kd
     # History is append-only: the first commit is not retracted by a history that grew.
     changed = kdb.q("SELECT belief_status FROM kernel.edges WHERE edge = 'participates_in'")
     assert [s for (s,) in changed] == ["accepted", "accepted"]
-    # The retraction is one observed claim citing the new version of the file.
-    claim = kdb.q("SELECT text, basis FROM kernel.claims_view ORDER BY log_offset DESC LIMIT 1")[0]
-    assert claim == (
-        "The current compose.yaml no longer states 4 facts that an earlier version did.",
-        "observed",
-    )
+    # The retraction is the claim closing the second run, citing the new version of the file;
+    # both runs are completed.
+    claim = kdb.q("SELECT text, basis, run_id FROM kernel.claims_view ORDER BY log_offset DESC LIMIT 1")[0]
+    assert claim == ("wmk-software has mapped all of compose.yaml.", "observed", None)
+    assert kdb.q("SELECT status FROM kernel.nodes WHERE kind = 'extraction'") == [
+        ("completed",),
+        ("completed",),
+    ]
 
     third = await apply(gateway, build(toy(V2, ["a", "b"])))
     assert (third.claims, third.retracted) == (0, 0)
@@ -162,3 +165,18 @@ async def test_the_self_agent_comes_from_the_gateway_before_any_write(gateway: A
 def test_trigram_similarity_mirrors_postgres(kdb: KernelDB, a: str, b: str) -> None:
     pg = kdb.one("SELECT similarity(kernel.normalize_name(%s), kernel.normalize_name(%s))", [a, b])
     assert similarity(a, b) == pytest.approx(float(pg), abs=1e-4)
+
+
+async def test_a_pass_with_a_refused_claim_cancels_its_run_and_retracts_nothing(
+    gateway: Any, kdb: KernelDB
+) -> None:
+    assert (await apply(gateway, build(toy(V1, ["a"])))).failures == []
+    partial = build(toy(V2, ["a", "b"]))
+    service = next(f for f in partial.facts if f.source == "compose.yaml" and "service web" in f.text)
+    service.ops.append({"op": "assert", "edge": "flies_to", "from": "svc:toy/web", "to": "img:nginx"})
+    report = await apply(gateway, partial)
+    assert len(report.failures) == 1 and report.retracted == 0
+    statuses = kdb.q("SELECT status FROM kernel.nodes WHERE kind = 'extraction' ORDER BY created_offset")
+    assert statuses == [("completed",), ("cancelled",)]
+    # What the first version said still stands: nothing was retracted on a partial pass.
+    assert kdb.one("SELECT count(*) FROM kernel.edges WHERE belief_status = 'rejected'") == 0

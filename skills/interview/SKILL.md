@@ -74,7 +74,8 @@ answer is recorded with the core skill's loop: ingest the turn, extract claims, 
 2. Otherwise `ingest_source` the turn: `collection` = the session id, `uri` =
    `turn:<n>`, `author` = their agent id, `media_type` = `text/plain`.
 3. Extract and write with the core skill: `basis: reported`, `claim.source` = the
-   turn's chunk id. Your questions and summaries are not claims.
+   turn's chunk id, `claim.quote` = their words that say it. Your questions and
+   summaries are not claims.
 4. Reply in one or two sentences: what you recorded, anything contested (both sides) or
    rejected, then your next question.
 

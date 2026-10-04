@@ -184,7 +184,7 @@ def test_non_overlapping_windows_never_collapse(kdb: KernelDB, agent: str, world
 
 
 def bulk_payloads(world: dict, chunk: str, read_at: int) -> list[dict[str, Any]]:
-    base = {"source": chunk, "basis": "reported", "modality": "descriptive"}
+    base = {"source": chunk, "quote": "Bulk import batch", "basis": "reported", "modality": "descriptive"}
     return [
         {
             "claim": {**base, "text": "Approve invoice flows to Finance"},
@@ -215,6 +215,12 @@ def bulk_payloads(world: dict, chunk: str, read_at: int) -> list[dict[str, Any]]
                     "valid_to": "2025-01-01",
                 },
             ],
+        },
+        {
+            "claim": {**base, "text": "Gizmo ships monthly", "quote": "Gizmo ships monthly"},
+            "read_at_offset": read_at,
+            "ops": [],
+            "unresolved": {"reason": "test"},
         },
         {
             "claim": {**base, "text": "Dana again", "source": None},
@@ -255,6 +261,7 @@ def test_bulk_writes_pass_the_same_rule_checks(kdb: KernelDB, agent: str, world:
         ("types", "kernel.known_kind"),
         ("domain_range", "core.implements_role"),
         ("time", "core.window_order"),
+        ("provenance", "kernel.quote_in_source"),
         ("provenance", "core.reported_needs_source"),
         (None, None),
     ]

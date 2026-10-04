@@ -5,15 +5,15 @@
   content) is skipped with its claims, so mapping an unchanged repository writes nothing.
 - Nodes that exist are reused: by identity key when the node has one, else by normalised
   name. New nodes are created, listing near-namesakes in `distinct_from`.
-- When a file changed, edges an earlier version asserted and this one no longer states are
-  retracted by a negative assertion from the same collection, which supersedes the old one.
+- A changed file is mapped in an extraction run (ADR 0020). Closing the run makes the kernel
+  retract what an older run over the file found and this one did not; a run with a refused
+  claim is cancelled instead, so a partial pass retracts nothing.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,14 +31,15 @@ class Report:
     claims: int = 0
     created: int = 0
     reused: int = 0
+    runs: int = 0
     retracted: int = 0
     failures: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
         return (
-            f"{self.sources} sources ({self.unchanged} unchanged), {self.claims} claims written, "
-            f"{self.created} nodes created, {self.reused} reused, {self.retracted} edges retracted, "
-            f"{len(self.failures)} failures"
+            f"{self.sources} sources ({self.unchanged} unchanged), {self.claims} claims written in "
+            f"{self.runs} runs, {self.created} nodes created, {self.reused} reused, "
+            f"{self.retracted} retracted, {len(self.failures)} failures"
         )
 
 
@@ -64,7 +65,6 @@ class Applier:
         self.spans: dict[str, list[tuple[int, int, str]]] = {}
         self.changed: set[str] = set()
         self.failed: set[str] = set()
-        self.touched: dict[str, set[str]] = defaultdict(set)
         self.head = 0
         self.agent: str | None = None
         self.slugs = Slugs()
@@ -76,11 +76,8 @@ class Applier:
     async def run(self) -> Report:
         for source in self.plan.sources:
             await self.ingest(source)
-        for fact in self.plan.facts:
-            await self.write(fact)
-        for source in self.plan.sources:
-            if source.alias in self.changed and not source.append_only and source.alias not in self.failed:
-                await self.retract(source)
+        for fact, run in self.plan.timeline():
+            await self.write(fact, run)
         return self.report
 
     async def ingest(self, source: Source) -> None:
@@ -97,7 +94,11 @@ class Applier:
 
     async def resolve(self, keys: list[str]) -> dict[str, list[str]]:
         """Map existing nodes into self.ids; return distinct_from ids for the nodes to create."""
-        unknown = [k for k in keys if k not in self.ids]
+        unknown = [k for k in keys if k not in self.ids and not self.plan.is_run(k)]
+        fresh = [k for k in keys if k not in self.ids and self.plan.is_run(k)]
+        if fresh:
+            # A run is never reused: each pass over a file is a run of its own.
+            unknown += fresh
         if not unknown:
             return {}
         queries = [
@@ -119,7 +120,7 @@ class Applier:
                 ),
                 None,
             )
-            if same:
+            if same and not self.plan.is_run(key):
                 self.ids[key] = same["node_id"]
                 self.existing.add(key)
                 self.report.reused += 1
@@ -129,9 +130,19 @@ class Applier:
                 ]
         return distinct
 
-    async def write(self, fact: Fact) -> None:
+    async def write(self, fact: Fact, run: str | None = None) -> None:
         if fact.source is not None and fact.source not in self.changed:
             return
+        closing = any(op["op"] == "close_run" for op in fact.ops)
+        if closing and fact.source in self.failed:
+            # Some claims of this pass were refused: cancel the run rather than close it.
+            run_key = fact.ops[0]["run"]
+            fact = type(fact)(
+                f"{fact.text.split(' has ')[0]} stopped mapping {fact.source}: some claims were refused, "
+                "so nothing is retracted.",
+                source=fact.source,
+                ops=[{"op": "transition", "node": run_key, "status": "cancelled"}],
+            )
         keys = fact.node_keys()
         distinct = await self.resolve(keys)
         if fact.once and all(k in self.existing for k in keys):
@@ -141,6 +152,11 @@ class Applier:
         claim = fact.claim()
         if fact.source is not None:
             claim["source"] = chunk_at(self.spans[fact.source], fact.at)
+        if run is not None:
+            if run not in self.ids:
+                self.fail(fact.source, f"{fact.text[:90]}: its run was not started")
+                return
+            claim["run"] = self.ids[run]
         payload = {"claim": claim, "read_at_offset": self.head, "ops": ops}
         error, result = await self.call("write", payload)
         if error and str(result.get("type", "")).endswith("/stale"):
@@ -155,9 +171,14 @@ class Applier:
         self.head = int(result["offset"])
         for key, slug in created.items():
             self.ids[key] = result["refs"][f"${slug}"]
-            self.report.created += 1
-        if fact.source is not None:
-            self.touched[fact.source].update(e["edge_id"] for e in result.get("edges", []))
+            if self.plan.is_run(key):
+                self.report.runs += 1
+            else:
+                self.report.created += 1
+        if closing:
+            self.report.retracted += sum(
+                1 for op in result["ops"] if op["op"] == "assert" and op.get("polarity") == -1
+            )
 
     def render(
         self, fact: Fact, distinct: dict[str, list[str]], created: dict[str, str]
@@ -180,6 +201,10 @@ class Applier:
         for op in fact.ops:
             if op["op"] == "create":
                 ref(op["node"])
+            elif op["op"] == "close_run":
+                ops.append({"op": "close_run", "run": ref(op["run"])})
+            elif op["op"] == "transition":
+                ops.append({**op, "node": ref(op["node"])})
             else:
                 ops.append({**op, "from": ref(op["from"]), "to": ref(op["to"])})
         return ops
@@ -198,50 +223,6 @@ class Applier:
         if error:
             raise ApplyError(f"query_log: {result.get('detail')}")
         return int(result["head_offset"])
-
-    async def retract(self, source: Source) -> None:
-        """Retract the edges earlier versions of `source` asserted and this version does not."""
-        latest: dict[str, int] = {}
-        before: int | None = None
-        while True:
-            query: dict[str, Any] = {"collection": source.collection, "limit": 500}
-            if before is not None:
-                query["before_offset"] = before
-            error, result = await self.call("query_log", query)
-            if error:
-                raise ApplyError(f"query_log: {result.get('detail')}")
-            entries = result["entries"]
-            for entry in entries:  # newest first: the first polarity seen per edge is the latest
-                for op in entry.get("ops", []):
-                    if op.get("op") == "assert" and op.get("target") == "edge":
-                        latest.setdefault(op["edge_id"], int(op.get("polarity", 1)))
-            if len(entries) < 500:
-                break
-            before = int(entries[-1]["offset"])
-        stale = sorted(
-            e for e, polarity in latest.items() if polarity > 0 and e not in self.touched[source.alias]
-        )
-        if not stale:
-            return
-        payload = {
-            "claim": {
-                "text": f"The current {source.alias} no longer states {len(stale)} "
-                f"fact{'s' if len(stale) != 1 else ''} that an earlier version did.",
-                "source": self.spans[source.alias][0][2],
-                "basis": "observed",
-                "modality": "descriptive",
-                "confidence": "high",
-            },
-            "read_at_offset": await self.head_offset(),
-            "ops": [{"op": "assert", "edge_id": e, "polarity": "negative"} for e in stale],
-        }
-        error, result = await self.call("write", payload)
-        if error:
-            self.fail(source.alias, f"retracting from {source.alias}: {result.get('detail')}")
-            return
-        self.report.claims += 1
-        self.report.retracted += len(stale)
-        self.head = int(result["offset"])
 
     def fail(self, source: str | None, message: str) -> None:
         self.report.failures.append(message)
