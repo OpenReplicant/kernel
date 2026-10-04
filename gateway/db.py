@@ -124,7 +124,7 @@ class Kernel:
             "find_agent",
             "SELECT id FROM kernel.nodes WHERE type = 'Agent' AND identity @> %s "
             "ORDER BY created_offset LIMIT 1",
-            [Jsonb(identity)],
+            [Jsonb({k: v.lower() for k, v in identity.items()})],
         )
 
     async def cypher(

@@ -579,6 +579,8 @@ BEGIN
                                 jsonb_build_object('op_index', idx));
         END IF;
       END LOOP;
+      -- Identity keys match case-insensitively: they are stored lower-case.
+      v_identity := (SELECT coalesce(jsonb_object_agg(k, lower(v)), '{}') FROM jsonb_each_text(v_identity) AS i(k, v));
 
       -- lifecycle status
       v_status := coalesce(op ->> 'status', (SELECT status FROM kernel.statuses WHERE node_type = v_type AND is_default));

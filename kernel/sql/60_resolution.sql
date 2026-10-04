@@ -23,34 +23,46 @@ CREATE FUNCTION kernel.resolve_candidates(
   p_limit int DEFAULT 5
 )
 RETURNS TABLE (node_id text, name text, type text, kind text, namespace text, stage text, score numeric, band text)
-LANGUAGE sql STABLE AS $$
-  WITH q AS (
-    SELECT kernel.normalize_name(coalesce(p_name, '')) AS norm
-  ),
-  hits AS (
-    -- 1. identity keys
+LANGUAGE sql STABLE
+-- Trigram matches use the % operator at this threshold. Every stage has an index (identity
+-- GIN, name btree, alias GIN, trigram GIN).
+SET pg_trgm.similarity_threshold = 0.45
+AS $$
+  -- The normalised name is written as an expression of the parameter in every stage, not
+  -- joined from a CTE, so the planner can use the name, alias and trigram indexes.
+  WITH hits AS (
+    -- 1. identity keys (stored lower-case by kernel.write)
     SELECT n.id, 'identity'::text AS stage, 1.0::numeric AS score, 'certain'::text AS band
     FROM kernel.nodes n, jsonb_each_text(coalesce(p_identity, '{}')) AS k(key, value)
     WHERE (p_type IS NULL OR n.type = p_type)
-      AND n.identity ->> k.key IS NOT NULL
-      AND lower(n.identity ->> k.key) = lower(k.value)
+      AND n.identity @> jsonb_build_object(k.key, lower(k.value))
     UNION ALL
-    -- 2. normalized exact, on the name or an alias
+    -- 2. normalized exact, on the name
     SELECT n.id, 'normalized', 1.0, 'high'
-    FROM kernel.nodes n, q
-    WHERE q.norm <> ''
+    FROM kernel.nodes n
+    WHERE kernel.normalize_name(coalesce(p_name, '')) <> ''
       AND (p_type IS NULL OR n.type = p_type) AND (p_kind IS NULL OR n.kind = p_kind)
       AND NOT ('name' = ANY (n.redacted))
-      AND (n.name_norm = q.norm OR q.norm = ANY (n.aliases_norm))
+      AND n.name_norm = kernel.normalize_name(coalesce(p_name, ''))
     UNION ALL
-    -- 3. trigram similarity on the name
-    SELECT n.id, 'trigram', round(similarity(n.name_norm, q.norm)::numeric, 4),
-           CASE WHEN similarity(n.name_norm, q.norm) >= 0.85 THEN 'high' ELSE 'ambiguous' END
-    FROM kernel.nodes n, q
-    WHERE q.norm <> ''
+    -- 2b. normalized exact, on an alias
+    SELECT n.id, 'normalized', 1.0, 'high'
+    FROM kernel.nodes n
+    WHERE kernel.normalize_name(coalesce(p_name, '')) <> ''
       AND (p_type IS NULL OR n.type = p_type) AND (p_kind IS NULL OR n.kind = p_kind)
       AND NOT ('name' = ANY (n.redacted))
-      AND similarity(n.name_norm, q.norm) >= 0.45
+      AND n.aliases_norm @> ARRAY[kernel.normalize_name(coalesce(p_name, ''))]
+    UNION ALL
+    -- 3. trigram similarity on the name (at least 0.45, the threshold set above)
+    SELECT t.id, 'trigram', round(t.sim::numeric, 4), CASE WHEN t.sim >= 0.85 THEN 'high' ELSE 'ambiguous' END
+    FROM (
+      SELECT n.id, similarity(n.name_norm, kernel.normalize_name(coalesce(p_name, ''))) AS sim
+      FROM kernel.nodes n
+      WHERE kernel.normalize_name(coalesce(p_name, '')) <> ''
+        AND (p_type IS NULL OR n.type = p_type) AND (p_kind IS NULL OR n.kind = p_kind)
+        AND NOT ('name' = ANY (n.redacted))
+        AND n.name_norm % kernel.normalize_name(coalesce(p_name, ''))
+    ) t
     UNION ALL
     -- 4. embedding cosine similarity, when both sides have vectors of the same size
     SELECT n.id, 'vector', round((1 - (n.embedding <=> p_embedding))::numeric, 4),
