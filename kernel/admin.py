@@ -47,11 +47,11 @@ def drop_database(name: str, *, base_dsn: str | None = None) -> None:
 
 
 def apply(dbname: str, *, base_dsn: str | None = None, include_packs: bool = True) -> None:
-    """Apply every SQL file in order, each in its own transaction."""
-    with psycopg.connect(dsn_for(base_dsn or admin_dsn(), dbname)) as conn:
-        for path in sql_files(include_packs):
+    """Apply every SQL file in order, each in its own session and transaction, as db/initdb does:
+    a file must not depend on session state (loaded modules, settings) left by an earlier one."""
+    for path in sql_files(include_packs):
+        with psycopg.connect(dsn_for(base_dsn or admin_dsn(), dbname)) as conn:
             conn.execute(path.read_text())
-            conn.commit()
 
 
 def ensure_login_roles(writer_password: str, reader_password: str, *, base_dsn: str | None = None) -> None:
