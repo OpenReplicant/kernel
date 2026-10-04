@@ -26,9 +26,21 @@ Research is the first product (ADR 0013). In scope, in this order:
    once the live eval shows extraction quality. Workers need an ADR first on how job
    queues fit invariant 1.
 
-Also approved: `ui/`, a read-only explorer (ADR 0016): Alpine.js pages served by Caddy,
-data from PostgREST running as the reader role. It never writes; keep `make ui-smoke`
-passing when kernel views or columns change.
+Also approved (2026-10-04):
+
+- `ui/`, a read-only explorer (ADR 0016): Alpine.js pages served by Caddy, data from
+  PostgREST running as the reader role, with a graph view (Cytoscape.js) and an index of
+  models (learned areas computed from namespaces and sources). It never writes; keep
+  `make ui-smoke` passing when kernel views or columns change.
+- `packs/software/`, the software pack: repositories, packages, images, services,
+  stacks, endpoints, pipelines and changes. Its structured-data adapter maps compose
+  files, Dockerfiles, `pyproject.toml`, CI workflows and git merges into observed claims
+  through the gateway, never with database credentials. Its first fixture is this
+  repository's own stack: the start of the self-model, where the self boundary is
+  `part_of` edges into a `system` node, each a claim with its own belief.
+- Next, as ADRs only (no code until reviewed): sub-models as lenses and forks; the
+  approval channel (a human-held role, approvals only from agents outside the self,
+  protected instruments: rules, evals, CI and setpoints).
 
 **Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
 fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
@@ -116,8 +128,8 @@ provenance, no ops). Never drop it.
 - **Decisions:** anything that changes the design gets a short ADR in `docs/decisions/`.
 - **Packs:** self-contained folders (`docs/packs.md`): ontology in `schema.yaml` and
   `rules.yaml`, never SQL; their tests, fixtures, live scenarios and servers inside the
-  folder; servers are uv workspace members. The kernel never depends on a pack; its own
-  tests use only `bpm-reference`.
+  folder; servers and adapters are uv workspace members. The kernel never depends on a
+  pack; its own tests use only `bpm-reference`.
 
 ## Testing
 

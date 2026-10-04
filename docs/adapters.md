@@ -8,7 +8,9 @@ Items marked † rest on secondary sources; re-check them before adopting. Licen
 
 Adopted so far: `arxiv`, `pyalex` and `habanero` in the research pack's paper-source server
 ([ADR 0014](decisions/0014-pack-servers-run-beside-the-gateway.md)). habanero uses `httpx2`,
-the continuation of httpx under Pydantic's stewardship (BSD-3).
+the continuation of httpx under Pydantic's stewardship (BSD-3). The software pack's
+repository adapter needs nothing new: PyYAML, `tomllib`, `packaging` and the `git` command
+line ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md)).
 
 ## Recommendations
 

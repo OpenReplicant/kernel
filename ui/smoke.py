@@ -89,7 +89,12 @@ class Smoke:
         source = self.get("sources?select=id&order=recorded_at&limit=1")
         head = int(self.get("rpc/head_offset"))
         self.check(bool(entity and claim and edge and source), "the stack has data (run make seed)")
+        if not entity:
+            return []
+        area = self.get(f"nodes?select=namespace&id=eq.{entity[0]['id']}")[0]["namespace"]
         pages = ["#/", "#/search/a", "#/log", f"#/log/{max(head - 5, 1)}", "#/evidence", "#/ontology"]
+        pages += ["#/models", "#/graph", f"#/graph/ns:{area}"]
+        pages += [f"#/graph/{n['id']}" for n in entity] + [f"#/graph/{n['id']}/1" for n in claim]
         pages += [f"#/node/{n['id']}" for n in entity + claim]
         pages += [f"#/edge/{e['id']}" for e in edge + contested]
         pages += [f"#/source/{s['id']}" for s in source]
@@ -136,6 +141,8 @@ class Smoke:
                     state = page.evaluate("document.body.dataset.state")
                     if not page.locator("h1").first.inner_text().strip():
                         problems.append("empty heading")
+                    if route.startswith("#/graph") and not page.locator("#graph canvas").count():
+                        problems.append("no graph drawn")
                     self.check(
                         state == expected and not problems,
                         f"{scheme:<5} {route} -> {state}{'; ' + '; '.join(problems) if problems else ''}",

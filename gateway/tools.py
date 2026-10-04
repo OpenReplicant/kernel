@@ -349,6 +349,9 @@ class Tools:
     async def query_log(
         self,
         source_id: str | None = None,
+        collection: Annotated[
+            str | None, Field(description="Entries citing any version of the sources in this collection.")
+        ] = None,
         chunk_id: str | None = None,
         agent_id: str | None = None,
         node_id: Annotated[str | None, Field(description="Entries that touched this node.")] = None,
@@ -361,12 +364,13 @@ class Tools:
         order: Literal["asc", "desc"] = "desc",
         limit: Annotated[int, Field(ge=1, le=500)] = 50,
     ) -> CallToolResult:
-        """Log entries (claim, provenance and the operations applied) by source, agent, node, edge, record
-        time or offset. Use resolution="unresolved" to find claims still waiting to be placed."""
+        """Log entries (claim, provenance and the operations applied) by source or collection, agent, node,
+        edge, record time or offset. Use resolution="unresolved" to find claims still waiting to be placed."""
         filters = {
             k: v
             for k, v in {
                 "source_id": source_id,
+                "collection": collection,
                 "chunk_id": chunk_id,
                 "agent_id": agent_id,
                 "node_id": node_id,

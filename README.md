@@ -20,6 +20,7 @@ make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
 make seed      # optional: write the eval fixtures (two BPM, one research) through the gateway
 make replay    # rebuild the graph from the log and diff it against the live graph
 make up-ui     # optional: the read-only explorer on http://localhost:8080
+make map-self  # optional: map this repository and the kernel's own boundary (software pack)
 ```
 
 Connect any MCP harness to `http://localhost:8000/mcp` (streamable HTTP; published on
@@ -37,8 +38,16 @@ give the harness [`packs/research/`](packs/research/SKILL.md) as a skill. Set
 
 The explorer (`make up-ui`) shows what agents wrote: the log, nodes and edges with their
 belief and assertions, each source with the claims drawn from its passages, the evidence
-between claims, and the installed ontology. It reads through the reader role and
-cannot change anything ([ADR 0016](docs/decisions/0016-a-read-only-explorer.md)).
+between claims, a graph view, an index of models (each area of the graph, and each system
+with its parts) and the installed ontology. It reads through the reader role and cannot
+change anything ([ADR 0016](docs/decisions/0016-a-read-only-explorer.md)).
+
+For software and operations, the software pack's adapter maps a repository's compose file,
+Dockerfiles, `pyproject.toml`, CI workflows and git history through the gateway:
+`uv run wmk-software map <repo> --url http://localhost:8000/mcp`. Mapping again writes only
+what changed and retracts what a file no longer says. `make map-self` maps this repository
+with the self boundary: the system this kernel instance is, and its parts, each a claim
+with its own belief ([ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)).
 
 ## The seven tools
 
@@ -79,7 +88,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `kernel/sql/` | The kernel, applied in order: log, claims, assertions, sources, chunks, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
-| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
+| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
 | `tests/` | Unit, SQL, invariant and regression tests; the shared test kit is `kernel/testing.py` |
@@ -98,6 +107,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
+| `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused and that every page loads in headless Chromium (after `make seed`) |
 | `uv run python -m kernel.packs check` | Validate every pack's manifests ([ADR 0015](docs/decisions/0015-packs-declare-their-ontology.md)) |
 | `make lint` | `ruff check` and `ruff format --check` |
@@ -134,8 +144,10 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 
 Research is the first product pack: papers are found with the paper-source server and
 mapped from their abstracts by any MCP harness following the core and research skills.
-Not yet built: the parser container for full text, workers, observer runs, and the pack
-registry (packs are installed from this repository by the stack's `packs` service; pack
+The software pack maps what a repository declares, not what is running; its self
+boundary is a set of claims, and changing the system stays with people (the approval
+channel is the next ADR). Not yet built: the parser container for full text, workers,
+observer runs, and the pack registry (packs are installed from this repository by the stack's `packs` service; pack
 servers run beside the gateway,
 [ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Redaction masks the graph and read
 paths but does not yet erase source content

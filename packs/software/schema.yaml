@@ -1,0 +1,124 @@
+# software: the pack's ontology. Applied by the kernel's pack installer (kernel/packs.py,
+# kernel.install_pack); every entry has a label and a description for schema slicing.
+namespaces:
+- name: software
+  label: Software
+  description: >-
+    Software systems and how they run: repositories, packages, container images, services, stacks, endpoints, volumes, networks, hosts and pipelines, and the changes, deployments and incidents that happen to them.
+kinds:
+- name: system
+  node_type: Entity
+  label: System
+  description: >-
+    A software system as a whole: the services, code, configuration and agents that work as one, such as a product or a running instance of this kernel. Its parts are linked to it with part_of.
+- name: repository
+  node_type: Entity
+  label: Repository
+  description: >-
+    A version-controlled code repository, identified by its URL.
+- name: package
+  node_type: Entity
+  label: Package
+  description: >-
+    A software package from a registry, such as a PyPI package or a GitHub Action, identified by its package URL (purl) without a version; the version in use belongs on the edge that uses it.
+- name: image
+  node_type: Entity
+  label: Container image
+  description: >-
+    A container image, identified by its package URL without a tag or digest (pkg:docker/...) when it comes from a registry; the tag or digest in use belongs on the edge that uses it.
+- name: service
+  node_type: Entity
+  label: Service
+  description: >-
+    A process or job defined to run in a stack, such as a database server, an API or a one-shot installer, named <stack>/<service>.
+- name: stack
+  node_type: Entity
+  label: Stack
+  description: >-
+    A set of services deployed together, such as a Docker Compose project or a Kubernetes namespace.
+- name: endpoint
+  node_type: Entity
+  label: Endpoint
+  description: >-
+    An address where a service listens or is published, such as a container port mapped to 127.0.0.1:8000, or a URL.
+- name: volume
+  node_type: Entity
+  label: Volume
+  description: >-
+    Persistent storage mounted into services, such as a named Docker volume.
+- name: network
+  node_type: Entity
+  label: Network
+  description: >-
+    A network that services or hosts attach to.
+- name: host
+  node_type: Entity
+  label: Host
+  description: >-
+    A physical or virtual machine, or a cluster node, that runs services.
+- name: pipeline
+  node_type: Entity
+  label: Pipeline
+  description: >-
+    A CI or CD job that builds, tests or deploys code, named <workflow>/<job>.
+- name: deployment
+  node_type: Event
+  label: Deployment
+  description: >-
+    A rollout of a version of a system, service or image to an environment.
+edge_kinds:
+- name: runs
+  edge: depends_on
+  label: runs
+  description: >-
+    A service runs a container image; props.tag or props.digest name the version.
+- name: based_on
+  edge: depends_on
+  label: based on
+  description: >-
+    An image is built on a base image (a FROM line); props.tag or props.digest name its version and props.stage the build stage.
+- name: built_from
+  edge: depends_on
+  label: built from
+  description: >-
+    An image is built from a repository; props.dockerfile and props.context say how.
+- name: needs
+  edge: depends_on
+  label: needs
+  description: >-
+    A service needs another service to have started, be healthy or have finished before it starts; props.condition says which.
+- name: uses_package
+  edge: depends_on
+  label: uses package
+  description: >-
+    A package, pipeline, image or component depends on a software package; props.constraint is the declared range, props.version the version in use, props.group the dependency group.
+- name: mounts
+  edge: depends_on
+  label: mounts
+  description: >-
+    A service mounts a volume; props.target is the path inside the container.
+- name: runs_on
+  edge: depends_on
+  label: runs on
+  description: >-
+    A service runs on a host.
+- name: attached_to
+  edge: part_of
+  label: attached to
+  description: >-
+    A service or host is attached to a network.
+- name: exposed_by
+  edge: part_of
+  label: exposed by
+  description: >-
+    An endpoint is where a service listens or is published; props.target is the container port and props.published the host address.
+- name: defines
+  edge: responsible_for
+  label: defines
+  description: >-
+    A repository holds the definition of a stack, package or pipeline; props.path is the file.
+- name: checks
+  edge: monitors
+  label: checks
+  description: >-
+    A pipeline checks the target on the events in props.on, such as pushes and pull requests.

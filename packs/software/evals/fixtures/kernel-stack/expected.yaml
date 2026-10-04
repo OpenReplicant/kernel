@@ -1,0 +1,164 @@
+# The graph a reading of this repository at d0dda1b should give, written by hand from the
+# files in sources/. Entities match on type, kind and name; edges on edge, kind and endpoint
+# names. The machine agent that writes is left out of the entities (the eval profile's
+# wmk-eval appears as an edge endpoint only).
+entities:
+  - {type: Entity, kind: repository, name: OpenReplicant/kernel}
+  # First-parent history of main
+  - {type: Event, kind: change, name: Empty repository, status: completed}
+  - {type: Event, kind: change, name: Add files via upload}
+  - {type: Event, kind: change, name: "Build Phase 1 of the World Model Kernel (#1)"}
+  - {type: Event, kind: change, name: "Add the live-harness check and fix what its first run showed (#2)"}
+  - {type: Event, kind: change, name: "Test the embeddings path and run CI once per pull request (#3)"}
+  - {type: Event, kind: change, name: "Interview skill, speaker trust, resolution eval set and adapter survey (#4)"}
+  - {type: Event, kind: change, name: "Research pack, paper-source server and a live research eval (#5)"}
+  - {type: Event, kind: change, name: "Install packs from manifests; make the research pack self-contained (#6)"}
+  - {type: Event, kind: change, name: "A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)"}
+  # Python packages (pyproject.toml, packs/research/mcp/pyproject.toml)
+  - {type: Entity, kind: package, name: world-model-kernel}
+  - {type: Entity, kind: package, name: wmk-papers}
+  - {type: Entity, kind: package, name: mcp}
+  - {type: Entity, kind: package, name: psycopg}
+  - {type: Entity, kind: package, name: psycopg-pool}
+  - {type: Entity, kind: package, name: httpx}
+  - {type: Entity, kind: package, name: pyyaml}
+  - {type: Entity, kind: package, name: opentelemetry-api}
+  - {type: Entity, kind: package, name: opentelemetry-sdk}
+  - {type: Entity, kind: package, name: opentelemetry-exporter-otlp-proto-http}
+  - {type: Entity, kind: package, name: packaging}
+  - {type: Entity, kind: package, name: pytest}
+  - {type: Entity, kind: package, name: ruff}
+  - {type: Entity, kind: package, name: arxiv}
+  - {type: Entity, kind: package, name: habanero}
+  - {type: Entity, kind: package, name: pyalex}
+  # GitHub Actions the CI jobs use
+  - {type: Entity, kind: package, name: actions/checkout}
+  - {type: Entity, kind: package, name: astral-sh/setup-uv}
+  - {type: Entity, kind: package, name: actions/upload-artifact}
+  # The compose stack
+  - {type: Entity, kind: stack, name: wmk}
+  - {type: Entity, kind: service, name: wmk/db}
+  - {type: Entity, kind: service, name: wmk/packs}
+  - {type: Entity, kind: service, name: wmk/gateway}
+  - {type: Entity, kind: service, name: wmk/papers}
+  - {type: Entity, kind: service, name: wmk/api}
+  - {type: Entity, kind: service, name: wmk/ui}
+  - {type: Entity, kind: service, name: wmk/otel-collector}
+  - {type: Entity, kind: service, name: wmk/jaeger}
+  - {type: Entity, kind: image, name: wmk-db}
+  - {type: Entity, kind: image, name: wmk-gateway}
+  - {type: Entity, kind: image, name: wmk-papers}
+  - {type: Entity, kind: image, name: postgrest/postgrest}
+  - {type: Entity, kind: image, name: caddy}
+  - {type: Entity, kind: image, name: otel/opentelemetry-collector-contrib}
+  - {type: Entity, kind: image, name: jaegertracing/jaeger}
+  - {type: Entity, kind: image, name: pgvector/pgvector}
+  - {type: Entity, kind: image, name: apache/age}
+  - {type: Entity, kind: image, name: python}
+  - {type: Entity, kind: endpoint, name: "wmk/db:5432"}
+  - {type: Entity, kind: endpoint, name: "wmk/gateway:8000"}
+  - {type: Entity, kind: endpoint, name: "wmk/papers:8001"}
+  - {type: Entity, kind: endpoint, name: "wmk/ui:8080"}
+  - {type: Entity, kind: endpoint, name: "wmk/otel-collector:4317"}
+  - {type: Entity, kind: endpoint, name: "wmk/otel-collector:4318"}
+  - {type: Entity, kind: endpoint, name: "wmk/jaeger:16686"}
+  - {type: Entity, kind: volume, name: wmk_db-data}
+  # CI
+  - {type: Entity, kind: pipeline, name: ci/lint}
+  - {type: Entity, kind: pipeline, name: ci/kernel}
+  # The self
+  - {type: Entity, kind: system, name: World Model Kernel (this instance), status: active}
+
+edges:
+  # History: every first-parent commit changed the repository
+  - {edge: participates_in, from: OpenReplicant/kernel, to: Empty repository}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: Add files via upload}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "Build Phase 1 of the World Model Kernel (#1)"}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "Add the live-harness check and fix what its first run showed (#2)"}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "Test the embeddings path and run CI once per pull request (#3)"}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "Interview skill, speaker trust, resolution eval set and adapter survey (#4)"}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "Research pack, paper-source server and a live research eval (#5)"}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "Install packs from manifests; make the research pack self-contained (#6)"}
+  - {edge: participates_in, from: OpenReplicant/kernel, to: "A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)"}
+
+  # What the repository defines
+  - {edge: responsible_for, kind: defines, from: OpenReplicant/kernel, to: world-model-kernel, belief_status: accepted}
+  - {edge: responsible_for, kind: defines, from: OpenReplicant/kernel, to: wmk-papers}
+  - {edge: responsible_for, kind: defines, from: OpenReplicant/kernel, to: wmk}
+  - {edge: responsible_for, kind: defines, from: OpenReplicant/kernel, to: ci/lint}
+  - {edge: responsible_for, kind: defines, from: OpenReplicant/kernel, to: ci/kernel}
+
+  # Dependencies (runtime and dev group)
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: mcp}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: psycopg}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: psycopg-pool}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: httpx}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: pyyaml}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: opentelemetry-api}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: opentelemetry-sdk}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: opentelemetry-exporter-otlp-proto-http}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: packaging}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: pytest}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: ruff}
+  - {edge: depends_on, kind: uses_package, from: world-model-kernel, to: wmk-papers}
+  - {edge: depends_on, kind: uses_package, from: wmk-papers, to: mcp}
+  - {edge: depends_on, kind: uses_package, from: wmk-papers, to: arxiv}
+  - {edge: depends_on, kind: uses_package, from: wmk-papers, to: habanero}
+  - {edge: depends_on, kind: uses_package, from: wmk-papers, to: pyalex}
+  - {edge: depends_on, kind: uses_package, from: ci/lint, to: actions/checkout}
+  - {edge: depends_on, kind: uses_package, from: ci/lint, to: astral-sh/setup-uv}
+  - {edge: depends_on, kind: uses_package, from: ci/kernel, to: actions/checkout}
+  - {edge: depends_on, kind: uses_package, from: ci/kernel, to: astral-sh/setup-uv}
+  - {edge: depends_on, kind: uses_package, from: ci/kernel, to: actions/upload-artifact}
+
+  # The stack's services and the images they run
+  - {edge: part_of, from: wmk/db, to: wmk}
+  - {edge: part_of, from: wmk/packs, to: wmk}
+  - {edge: part_of, from: wmk/gateway, to: wmk}
+  - {edge: part_of, from: wmk/papers, to: wmk}
+  - {edge: part_of, from: wmk/api, to: wmk}
+  - {edge: part_of, from: wmk/ui, to: wmk}
+  - {edge: part_of, from: wmk/otel-collector, to: wmk}
+  - {edge: part_of, from: wmk/jaeger, to: wmk}
+  - {edge: depends_on, kind: runs, from: wmk/db, to: wmk-db}
+  - {edge: depends_on, kind: runs, from: wmk/packs, to: wmk-gateway}
+  - {edge: depends_on, kind: runs, from: wmk/gateway, to: wmk-gateway}
+  - {edge: depends_on, kind: runs, from: wmk/papers, to: wmk-papers}
+  - {edge: depends_on, kind: runs, from: wmk/api, to: postgrest/postgrest}
+  - {edge: depends_on, kind: runs, from: wmk/ui, to: caddy}
+  - {edge: depends_on, kind: runs, from: wmk/otel-collector, to: otel/opentelemetry-collector-contrib}
+  - {edge: depends_on, kind: runs, from: wmk/jaeger, to: jaegertracing/jaeger}
+  - {edge: depends_on, kind: built_from, from: wmk-db, to: OpenReplicant/kernel}
+  - {edge: depends_on, kind: built_from, from: wmk-gateway, to: OpenReplicant/kernel}
+  - {edge: depends_on, kind: built_from, from: wmk-papers, to: OpenReplicant/kernel}
+  - {edge: depends_on, kind: based_on, from: wmk-db, to: pgvector/pgvector}
+  - {edge: depends_on, kind: based_on, from: wmk-db, to: apache/age}
+  - {edge: depends_on, kind: based_on, from: wmk-gateway, to: python}
+  - {edge: depends_on, kind: based_on, from: wmk-papers, to: python}
+
+  # Start order, ports and storage
+  - {edge: depends_on, kind: needs, from: wmk/packs, to: wmk/db}
+  - {edge: depends_on, kind: needs, from: wmk/gateway, to: wmk/db}
+  - {edge: depends_on, kind: needs, from: wmk/gateway, to: wmk/packs}
+  - {edge: depends_on, kind: needs, from: wmk/api, to: wmk/db}
+  - {edge: depends_on, kind: needs, from: wmk/ui, to: wmk/api}
+  - {edge: depends_on, kind: needs, from: wmk/otel-collector, to: wmk/jaeger}
+  - {edge: part_of, kind: exposed_by, from: "wmk/db:5432", to: wmk/db}
+  - {edge: part_of, kind: exposed_by, from: "wmk/gateway:8000", to: wmk/gateway}
+  - {edge: part_of, kind: exposed_by, from: "wmk/papers:8001", to: wmk/papers}
+  - {edge: part_of, kind: exposed_by, from: "wmk/ui:8080", to: wmk/ui}
+  - {edge: part_of, kind: exposed_by, from: "wmk/otel-collector:4317", to: wmk/otel-collector}
+  - {edge: part_of, kind: exposed_by, from: "wmk/otel-collector:4318", to: wmk/otel-collector}
+  - {edge: part_of, kind: exposed_by, from: "wmk/jaeger:16686", to: wmk/jaeger}
+  - {edge: depends_on, kind: mounts, from: wmk/db, to: wmk_db-data}
+
+  # CI
+  - {edge: monitors, kind: checks, from: ci/lint, to: OpenReplicant/kernel}
+  - {edge: monitors, kind: checks, from: ci/kernel, to: OpenReplicant/kernel}
+
+  # The self boundary: each part is its own inferred claim, the pipelines with low confidence
+  - {edge: part_of, from: wmk-eval, to: World Model Kernel (this instance), belief_status: accepted}
+  - {edge: part_of, from: wmk, to: World Model Kernel (this instance), belief_status: accepted}
+  - {edge: part_of, from: OpenReplicant/kernel, to: World Model Kernel (this instance), belief_status: accepted}
+  - {edge: part_of, from: ci/lint, to: World Model Kernel (this instance)}
+  - {edge: part_of, from: ci/kernel, to: World Model Kernel (this instance)}

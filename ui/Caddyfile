@@ -42,7 +42,8 @@
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
-		# Alpine.js evaluates its directives with Function(), hence unsafe-eval for scripts.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'"
+		# Alpine.js evaluates its directives with Function(), hence unsafe-eval for scripts. The one
+		# style hash is the rule Cytoscape.js injects for its container (position: relative).
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'sha256-pgvDUBa4IjFA2yuSJ2cqcyxmNYJMborsd0ORcRv9vw8='; img-src 'self' data:; frame-ancestors 'none'"
 	}
 }

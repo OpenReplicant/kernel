@@ -1,0 +1,22 @@
+# The research pack's paper-source MCP server. Build context: the repository root.
+# It reads public paper metadata only: no database, no kernel credentials.
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir uv==0.8.17
+
+WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
+
+# Only this pack's package and its dependencies: wmk-papers is a uv workspace member.
+COPY pyproject.toml uv.lock README.md ./
+COPY packs ./packs
+RUN uv sync --frozen --package wmk-papers --no-default-groups
+
+EXPOSE 8001
+HEALTHCHECK --interval=5s --timeout=3s --retries=20 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=2)"
+CMD ["wmk-papers"]
