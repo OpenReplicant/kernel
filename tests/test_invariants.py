@@ -330,3 +330,25 @@ def test_nothing_acts_on_the_outside_world() -> None:
                 re.MULTILINE,
             ), path.name
         assert "os.system" not in text and "subprocess" not in text, path.name
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "cypher",
+    [
+        "CREATE (n:Entity {id: 'ent_x', name: 'smuggled'}) RETURN n",
+        "MATCH (n:Agent) SET n.trust_level = 'high' RETURN n",
+        "MATCH (n:Agent) DETACH DELETE n RETURN 1",
+    ],
+)
+async def test_graph_queries_cannot_write_even_past_the_lexical_check(dbname: str, cypher: str) -> None:
+    """query_graph refuses write clauses by parsing; the database refuses them again: the reader
+    role may only select and the transaction is read-only."""
+    from tests.conftest import gateway_client
+
+    async with gateway_client(dbname) as client:
+        kernel = client.tools.kernel
+        before = await kernel.cypher("MATCH (n) RETURN n", {}, ["n"], 100)
+        with pytest.raises(psycopg.Error):
+            await kernel.cypher(cypher, {}, ["n"], 10)
+        assert await kernel.cypher("MATCH (n) RETURN n", {}, ["n"], 100) == before

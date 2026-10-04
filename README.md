@@ -10,7 +10,8 @@ Every fact keeps who said it and where, when it was true in the world and when t
 kernel learned it, and whether credible sources agree (accepted) or disagree (contested).
 
 Design: [`docs/design-v1.md`](docs/design-v1.md). Decisions taken while building
-Phase 1: [`docs/decisions/`](docs/decisions/).
+Phase 1: [`docs/decisions/`](docs/decisions/). Libraries to adopt for later adapters:
+[`docs/adapters.md`](docs/adapters.md).
 
 ## Quick start
 
@@ -21,9 +22,10 @@ make replay    # rebuild the graph from the log and diff it against the live gra
 ```
 
 Connect any MCP harness to `http://localhost:8000/mcp` (streamable HTTP; published on
-localhost only, since the stack has no authentication) and give it the
-core skill in [`skills/core/`](skills/core/SKILL.md). For a stdio harness, run the gateway
-with `WMK_TRANSPORT=stdio uv run wmk-gateway`. `make up-otel` adds an OpenTelemetry
+localhost only, since the stack has no authentication) and give it the core skill in
+[`skills/core/`](skills/core/SKILL.md), plus [`skills/interview/`](skills/interview/SKILL.md)
+when a person is the source. For a stdio harness, run the gateway with
+`WMK_TRANSPORT=stdio uv run wmk-gateway`. `make up-otel` adds an OpenTelemetry
 Collector and Jaeger (http://localhost:16686).
 
 ## The seven tools
@@ -64,10 +66,10 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | --- | --- |
 | `kernel/sql/` | The kernel, applied in order: log, claims, assertions, sources, chunks, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
-| `skills/core/` | The core Agent Skill |
+| `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
 | `packs/bpm-reference/` | The reference pack: a toy business-process ontology |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
-| `evals/` | Fixtures with expected graphs, the eval runner, the replay check, the seeder |
+| `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
 | `tests/` | Unit, SQL, invariant and regression tests |
 | `db/`, `docker-compose.yml` | The database image and the stack |
 
@@ -79,9 +81,9 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | --- | --- |
 | `make up` / `make down` | Start the stack / stop it and remove volumes |
 | `make test` | Unit, SQL and regression tests (starts the database) |
-| `make eval` | Every fixture through the eval profile; precision and recall for entities and edges |
+| `make eval` | Every fixture through the eval profile (precision and recall for entities and edges), then the resolution set (auto-band precision and recall, candidate recall, clean new names) |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
-| `make live` | The MVP check with a real harness: headless Claude Code, the core skill and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$1 a run); not in CI |
+| `make live` | The MVP check with a real harness: headless Claude Code, the core and interview skills and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$3 a run); not in CI |
 | `make lint` | `ruff check` and `ruff format --check` |
 
 Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default

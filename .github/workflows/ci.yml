@@ -30,7 +30,7 @@ jobs:
         run: make up
       - name: Unit, SQL and regression tests
         run: make test
-      - name: Eval fixtures through the eval profile
+      - name: Eval fixtures and the resolution set through the eval profile
         run: make eval
       - name: Seed the running stack through its gateway
         run: make seed
@@ -43,5 +43,7 @@ jobs:
         if: always()
         with:
           name: eval-report
-          path: evals/out/report.json
+          path: |
+            evals/out/report.json
+            evals/out/resolution.json
           if-no-files-found: ignore

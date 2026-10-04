@@ -67,6 +67,9 @@ CREATE TABLE kernel.claims (
   modality    text NOT NULL CHECK (modality IN ('descriptive', 'predictive', 'normative', 'proposed', 'hypothetical')),
   polarity    smallint NOT NULL CHECK (polarity IN (1, -1)),
   confidence  text NOT NULL CHECK (confidence IN ('low', 'medium', 'high')),
+  -- The trust level that weighs this claim's assertions: the writer's, or for a reported
+  -- claim citing a source with an author, the lower of the writer's and the author's.
+  trust       text NOT NULL CHECK (trust IN ('low', 'medium', 'high')),
   resolution  text NOT NULL CHECK (resolution IN ('resolved', 'unresolved')),
   unresolved  jsonb,
   recorded_at timestamptz NOT NULL,

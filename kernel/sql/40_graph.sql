@@ -37,9 +37,11 @@ CREATE TABLE kernel.nodes (
 COMMENT ON TABLE kernel.nodes IS
   'Projection: one row per node. status is the agreed lifecycle status or ''contested'' with status_options; belief_* is set for Claim nodes.';
 CREATE INDEX nodes_lookup_idx ON kernel.nodes (type, kind, name_norm);
-CREATE INDEX nodes_trgm_idx ON kernel.nodes USING gin (name_norm gin_trgm_ops);
-CREATE INDEX nodes_aliases_idx ON kernel.nodes USING gin (aliases_norm);
-CREATE INDEX nodes_identity_idx ON kernel.nodes USING gin (identity jsonb_path_ops);
+-- GIN indexes here have fastupdate off: every create looks up names right after earlier
+-- inserts, and a pending list would make each lookup scan it linearly until a vacuum.
+CREATE INDEX nodes_trgm_idx ON kernel.nodes USING gin (name_norm gin_trgm_ops) WITH (fastupdate = off);
+CREATE INDEX nodes_aliases_idx ON kernel.nodes USING gin (aliases_norm) WITH (fastupdate = off);
+CREATE INDEX nodes_identity_idx ON kernel.nodes USING gin (identity jsonb_path_ops) WITH (fastupdate = off);
 
 CREATE TABLE kernel.edges (
   id               text PRIMARY KEY,
@@ -114,7 +116,9 @@ DECLARE
   label text;
 BEGIN
   FOR label IN SELECT name FROM kernel.node_types UNION ALL SELECT name FROM kernel.edge_types LOOP
+    -- GIN serves Cypher property matches; the btree on id serves the mirror's own lookups.
     EXECUTE format('CREATE INDEX ON world.%I USING gin (properties)', label);
+    EXECUTE format('CREATE INDEX ON world.%I (ag_catalog.agtype_access_operator(VARIADIC ARRAY[properties, ''"id"''::ag_catalog.agtype]))', label);
   END LOOP;
 END
 $$;
@@ -170,8 +174,8 @@ BEGIN
   IF TG_OP = 'INSERT' THEN
     EXECUTE format('INSERT INTO world.%I (properties) VALUES ($1)', NEW.type) USING props;
   ELSE
-    EXECUTE format('UPDATE world.%I SET properties = $1 WHERE properties OPERATOR(ag_catalog.@>) $2', NEW.type)
-      USING props, jsonb_build_object('id', NEW.id)::text::ag_catalog.agtype;
+    EXECUTE format('UPDATE world.%I SET properties = $1 WHERE ag_catalog.agtype_access_operator(VARIADIC ARRAY[properties, ''"id"''::ag_catalog.agtype]) OPERATOR(ag_catalog.=) $2', NEW.type)
+      USING props, to_jsonb(NEW.id)::text::ag_catalog.agtype;
   END IF;
   RETURN NULL;
 END
@@ -191,14 +195,14 @@ BEGIN
     SELECT type INTO to_type FROM kernel.nodes WHERE id = NEW.to_id;
     EXECUTE format(
       'INSERT INTO world.%I (start_id, end_id, properties)
-       SELECT s.id, t.id, $1 FROM world.%I s, world.%I t WHERE s.properties OPERATOR(ag_catalog.@>) $2 AND t.properties OPERATOR(ag_catalog.@>) $3',
+       SELECT s.id, t.id, $1 FROM world.%I s, world.%I t
+       WHERE ag_catalog.agtype_access_operator(VARIADIC ARRAY[s.properties, ''"id"''::ag_catalog.agtype]) OPERATOR(ag_catalog.=) $2
+         AND ag_catalog.agtype_access_operator(VARIADIC ARRAY[t.properties, ''"id"''::ag_catalog.agtype]) OPERATOR(ag_catalog.=) $3',
       NEW.edge, from_type, to_type)
-    USING props,
-          jsonb_build_object('id', NEW.from_id)::text::ag_catalog.agtype,
-          jsonb_build_object('id', NEW.to_id)::text::ag_catalog.agtype;
+    USING props, to_jsonb(NEW.from_id)::text::ag_catalog.agtype, to_jsonb(NEW.to_id)::text::ag_catalog.agtype;
   ELSE
-    EXECUTE format('UPDATE world.%I SET properties = $1 WHERE properties OPERATOR(ag_catalog.@>) $2', NEW.edge)
-      USING props, jsonb_build_object('id', NEW.id)::text::ag_catalog.agtype;
+    EXECUTE format('UPDATE world.%I SET properties = $1 WHERE ag_catalog.agtype_access_operator(VARIADIC ARRAY[properties, ''"id"''::ag_catalog.agtype]) OPERATOR(ag_catalog.=) $2', NEW.edge)
+      USING props, to_jsonb(NEW.id)::text::ag_catalog.agtype;
   END IF;
   RETURN NULL;
 END

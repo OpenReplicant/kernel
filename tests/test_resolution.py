@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import psycopg
 import pytest
 
-from tests.conftest import KernelDB, Rejected
+from tests.conftest import KernelDB, Rejected, login_dsn
 
 
 def create(kdb: KernelDB, agent: str, op: dict, **kw) -> dict:
@@ -103,3 +104,40 @@ def test_duplicate_creates_in_one_payload(kdb: KernelDB, agent: str) -> None:
             basis="observed",
         )
     assert err.value.problem == "duplicate"
+
+
+def test_trigram_threshold_is_pinned_in_any_session(kdb: KernelDB, agent: str, dbname: str) -> None:
+    """resolve_candidates uses its own trigram threshold (0.45): in a fresh session that has not
+    loaded pg_trgm yet, and in one whose caller set a stricter threshold."""
+    create(kdb, agent, {"kind": "role", "namespace": "bpm", "name": "Invoice approver"})
+    query = "SELECT name, stage FROM kernel.resolve_candidates('Invoice approval', 'Entity')"
+    with psycopg.connect(login_dsn(dbname, "wmk_reader")) as fresh:
+        assert fresh.execute(query).fetchall() == [("Invoice approver", "trigram")]
+    with psycopg.connect(login_dsn(dbname, "wmk_reader")) as strict:
+        strict.execute("SET pg_trgm.similarity_threshold = 0.9")
+        assert strict.execute(query).fetchall() == [("Invoice approver", "trigram")]
+
+
+@pytest.mark.parametrize(
+    ("name", "normalized"),
+    [
+        ("José Álvarez", "jose alvarez"),
+        ("JOSÉ ÁLVAREZ", "jose alvarez"),
+        ("Straße & Søn", "strasse son"),
+        ("Łódź, Kraków", "lodz krakow"),
+        ("Ærø  Œuvre", "aero oeuvre"),
+        ("SAP S/4HANA", "sap s 4hana"),
+        ("Ελλάδα", "ελλάδα"),
+    ],
+)
+def test_names_fold_latin_accents(kdb: KernelDB, name: str, normalized: str) -> None:
+    assert kdb.one("SELECT kernel.normalize_name(%s)", [name]) == normalized
+    # Under the C locale, where lower() leaves non-ASCII letters alone, Latin ones still fold.
+    if normalized.isascii():
+        assert kdb.one('SELECT kernel.normalize_name(%s COLLATE "C")', [name]) == normalized
+
+
+def test_accents_do_not_hide_a_known_name(kdb: KernelDB, agent: str) -> None:
+    jose = create(kdb, agent, {"type": "Agent", "kind": "human", "name": "José Álvarez"})["refs"]["$n"]
+    rows = kdb.q("SELECT node_id, stage, band FROM kernel.resolve_candidates('Jose Alvarez', 'Agent')")
+    assert rows == [(jose, "normalized", "high")]

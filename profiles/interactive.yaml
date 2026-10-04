@@ -22,6 +22,7 @@ permissions:
 
 skills:
   - core
+  - interview         # needs core; used when the person is the source
 
 transcript_capture:
   enabled: true

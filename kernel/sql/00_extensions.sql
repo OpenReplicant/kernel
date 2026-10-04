@@ -21,6 +21,11 @@ BEGIN
 END
 $$;
 
+-- kernel.resolve_candidates pins the trigram threshold with a SET clause. In a session that
+-- has not loaded pg_trgm yet the setting is an unknown placeholder, which only a superuser
+-- or a holder of this privilege may attach to a function.
+GRANT SET ON PARAMETER pg_trgm.similarity_threshold TO kernel_owner;
+
 CREATE SCHEMA IF NOT EXISTS kernel AUTHORIZATION kernel_owner;
 COMMENT ON SCHEMA kernel IS
   'World Model Kernel: append-only log, its graph projection, ontology and the three write functions.';

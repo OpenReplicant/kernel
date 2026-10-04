@@ -12,7 +12,8 @@ counted sources disagree on the window, or when the sides tie; else `accepted` o
 `rejected` by the heavier side. Score = for / (for + against).
 
 Raw confidence numbers map to bands (>= 0.8 high, >= 0.5 medium, else low) before use.
-Trust is taken from the writing agent at write time and recorded in the log entry. No
+Trust is taken from the writing agent at write time and recorded in the log entry (see
+ADR 0011 for reported claims). No
 term depends on time. The version is stored on each log entry (`belief_version`).
 
 ## Consequences

@@ -303,6 +303,7 @@ DECLARE
   v_source_key text;
   v_agent text := p_agent_id;
   v_trust text;
+  v_claim_trust text;
   v_self_count int;
   ops jsonb := coalesce(payload -> 'ops', '[]');
   op jsonb;
@@ -466,6 +467,15 @@ BEGIN
     PERFORM kernel.reject('provenance', v_rule.id, v_rule.description);
   END LOOP;
 
+  -- Trust: a report is no more credible than its speaker or its transcriber. Observed and
+  -- inferred claims are the writer's own; a reported claim citing a source with an author
+  -- weighs the lower of the two. Recorded in the entry, so replay never reads agents' state.
+  v_claim_trust := v_trust;
+  IF v_basis = 'reported' AND v_source.author_agent_id IS NOT NULL THEN
+    SELECT CASE WHEN kernel.level_weight(trust_level) < kernel.level_weight(v_trust) THEN trust_level ELSE v_trust END
+    INTO v_claim_trust FROM kernel.nodes WHERE id = v_source.author_agent_id;
+  END IF;
+
   -- 2-4. Operations: validate, resolve references, run the resolution cascade ---------------
   FOR op, idx IN SELECT o.value, (o.ordinality - 1)::int FROM jsonb_array_elements(ops) WITH ORDINALITY AS o LOOP
     IF jsonb_typeof(op) <> 'object' THEN
@@ -579,6 +589,8 @@ BEGIN
                                 jsonb_build_object('op_index', idx));
         END IF;
       END LOOP;
+      -- Identity keys match case-insensitively: they are stored lower-case.
+      v_identity := (SELECT coalesce(jsonb_object_agg(k, lower(v)), '{}') FROM jsonb_each_text(v_identity) AS i(k, v));
 
       -- lifecycle status
       v_status := coalesce(op ->> 'status', (SELECT status FROM kernel.statuses WHERE node_type = v_type AND is_default));
@@ -943,7 +955,7 @@ BEGIN
     jsonb_strip_nulls(jsonb_build_object(
       'id', v_claim_id, 'text', c ->> 'text', 'chunk_id', v_chunk.id, 'source_id', v_source.id,
       'source_key', v_source_key, 'basis', v_basis, 'modality', v_modality, 'polarity', v_polarity,
-      'confidence', v_confidence,
+      'confidence', v_confidence, 'trust', v_claim_trust,
       'resolution', CASE WHEN jsonb_array_length(resolved) = 0 THEN 'unresolved' ELSE 'resolved' END,
       'unresolved', CASE WHEN jsonb_array_length(resolved) = 0 THEN coalesce(v_unresolved, '{}') END)),
     resolved, '[]'::jsonb, v_read, payload ->> 'trace_id', payload ->> 'span_id', v_at, 1

@@ -27,11 +27,18 @@ LANGUAGE sql VOLATILE AS $$
   SELECT prefix || '_' || kernel.crockford32(uuidv7())
 $$;
 
--- Contract: canonical form of a name for exact matching: lower case, every run of
--- non-alphanumeric characters replaced by one space, trimmed. Pure.
+-- Contract: canonical form of a name for exact matching: Latin letters folded to ASCII
+-- (José -> jose, Straße -> strasse) by a fixed table, lower case, every run of
+-- non-alphanumeric characters replaced by one space, trimmed. Pure and locale-independent
+-- for these letters, so stored normalized names replay identically.
 CREATE FUNCTION kernel.normalize_name(name text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
-  SELECT btrim(regexp_replace(lower(name), '[^[:alnum:]]+', ' ', 'g'))
+  SELECT btrim(regexp_replace(
+    translate(
+      replace(replace(replace(replace(replace(replace(replace(replace(replace(lower(name), 'ß', 'ss'), 'æ', 'ae'), 'œ', 'oe'), 'þ', 'th'), 'ĳ', 'ij'), 'Æ', 'ae'), 'Œ', 'oe'), 'Þ', 'th'), 'Ĳ', 'ij'),
+      'ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝàáâãäåçèéêëìíîïðñòóôõöøùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ',
+      'aaaaaaceeeeiiiidnoooooouuuuyaaaaaaceeeeiiiidnoooooouuuuyyaaaaaaccccccccddddeeeeeeeeeegggggggghhhhiiiiiiiiiijjkkkllllllllllnnnnnnnnnoooooorrrrrrssssssssttttttuuuuuuuuuuuuwwyyyzzzzzzs'),
+    '[^[:alnum:]]+', ' ', 'g'))
 $$;
 
 -- Contract: normalize_name applied to every element, order kept. Pure.
