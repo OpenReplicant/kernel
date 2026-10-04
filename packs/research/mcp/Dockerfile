@@ -11,14 +11,10 @@ ENV UV_COMPILE_BYTECODE=1 \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
+# Only this pack's package and its dependencies: wmk-papers is a uv workspace member.
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-default-groups --group papers --no-install-project
-
-COPY kernel ./kernel
-COPY gateway ./gateway
-COPY evals ./evals
 COPY packs ./packs
-RUN uv sync --frozen --no-default-groups --group papers
+RUN uv sync --frozen --package wmk-papers --no-default-groups
 
 EXPOSE 8001
 HEALTHCHECK --interval=5s --timeout=3s --retries=20 \

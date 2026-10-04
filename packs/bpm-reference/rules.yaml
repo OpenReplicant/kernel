@@ -1,0 +1,40 @@
+# bpm-reference: ontology rules, checked inside every write. Categories and params as in
+# kernel.rules (kernel/sql/30_ontology.sql). Rule ids start with one of the pack's namespaces.
+rules:
+- id: bpm.allowed_kinds
+  category: types
+  namespace: bpm
+  label: Business-process kinds
+  description: >-
+    The bpm namespace allows processes, activities, gateways, roles and organisational units.
+  params: {kinds: [process, activity, gateway, role, org_unit]}
+- id: bpm.approval_needs_report
+  category: provenance
+  label: Approvals are reported or observed
+  description: 'An approval may not be inferred: approved_by needs basis reported or observed.'
+  params: {edge: approved_by, min_basis: reported}
+- id: bpm.approver_cardinality
+  category: cardinality
+  namespace: bpm
+  label: One holder per role at a time
+  description: >-
+    A bpm role has one holder at a time: implements windows into the same role may not overlap.
+  params: {edge: implements, key: to, key_kinds: [role], max: 1}
+- id: bpm.flows_between_steps
+  category: domain_range
+  namespace: bpm
+  label: Flows connect steps
+  description: flows_to connects activities and gateways.
+  params: {edge: flows_to, from: {kinds: [activity, gateway]}, to: {kinds: [activity, gateway]}}
+- id: bpm.reads_from_data
+  category: domain_range
+  namespace: bpm
+  label: Activities read data
+  description: reads_from goes from an activity to a data entity.
+  params: {edge: depends_on, kind: reads_from, from: {kinds: [activity]}, to: {kinds: [data]}}
+- id: bpm.uses_component
+  category: domain_range
+  namespace: bpm
+  label: Activities use systems
+  description: uses goes from an activity to a component.
+  params: {edge: depends_on, kind: uses, from: {kinds: [activity]}, to: {kinds: [component]}}

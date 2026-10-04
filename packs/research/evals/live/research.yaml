@@ -20,19 +20,19 @@ document_prompt: |
 
   {content}
 documents:
-  - file: evals/fixtures/retrieval-gating/sources/lima-2025.md
+  - file: ../fixtures/retrieval-gating/sources/lima-2025.md
     title: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization
     media_type: text/markdown
     uri: https://doi.org/10.5555/wmk.rgd.2025
     collection: doi:10.5555/wmk.rgd.2025
     metadata: {doi: 10.5555/wmk.rgd.2025, year: 2025}
-  - file: evals/fixtures/retrieval-gating/sources/wu-2026.md
+  - file: ../fixtures/retrieval-gating/sources/wu-2026.md
     title: Does Retrieval Gating Help Long-Document Summarization?
     media_type: text/markdown
     uri: https://doi.org/10.5555/wmk.rgd.2026a
     collection: doi:10.5555/wmk.rgd.2026a
     metadata: {doi: 10.5555/wmk.rgd.2026a, year: 2026}
-  - file: evals/fixtures/retrieval-gating/sources/lima-2026.md
+  - file: ../fixtures/retrieval-gating/sources/lima-2026.md
     title: Retrieval-Gated Decoding for Clinical Note Summarization
     media_type: text/markdown
     uri: https://doi.org/10.5555/wmk.rgd.2026b

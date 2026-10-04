@@ -4,6 +4,8 @@ description: >
   dependencies, events with times and participants, cause and order between events,
   a proposed change kept as a Claim node, and a wrong kind fixed on retry.
 namespaces: [core]
+# The packs the fixture's database gets (core only when empty).
+packs: []
 sources:
   report: {file: sources/incident.md, media_type: text/markdown, title: Checkout outage incident report}
 script: script.yaml

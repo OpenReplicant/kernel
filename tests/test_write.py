@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.conftest import KernelDB, Rejected
+from kernel.testing import KernelDB, Rejected
 
 
 def role(kdb: KernelDB, agent: str, name: str = "Invoice approver", chunk: str | None = None) -> str:
@@ -252,8 +252,7 @@ def test_identity_rules(kdb: KernelDB, agent: str) -> None:
             [{"op": "create", "type": "Agent", "kind": "human", "name": "Sam", "identity": {"badge": "42"}}],
             basis="observed",
         )
-    # The research pack adds ORCID as a person's identity key beside the core email.
-    assert err.value.rule == "kernel.declared_identity" and err.value.detail["nearest"] == ["email", "orcid"]
+    assert err.value.rule == "kernel.declared_identity" and err.value.detail["nearest"] == ["email"]
 
 
 def test_provenance_rules(kdb: KernelDB, agent: str) -> None:

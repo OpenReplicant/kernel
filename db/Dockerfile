@@ -14,4 +14,3 @@ RUN echo "session_preload_libraries = 'age'" >> /usr/share/postgresql/postgresql
 
 COPY db/initdb/ /docker-entrypoint-initdb.d/
 COPY kernel/sql/ /opt/wmk/kernel/sql/
-COPY packs/ /opt/wmk/packs/

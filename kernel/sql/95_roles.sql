@@ -22,7 +22,7 @@ GRANT EXECUTE ON FUNCTION kernel.write(jsonb, text), kernel.ingest_source(jsonb,
 GRANT SELECT ON kernel.sources, kernel.chunks, kernel.assertions, kernel.cites,
   kernel.node_types, kernel.edge_types, kernel.namespaces, kernel.kinds, kernel.edge_kinds, kernel.statuses,
   kernel.rules, kernel.nodes, kernel.edges, kernel.conflicts, kernel.node_touches, kernel.claim_redactions,
-  kernel.claims_view, kernel.log_entries, kernel.history
+  kernel.claims_view, kernel.log_entries, kernel.history, kernel.packs
   TO kernel_reader;
 GRANT SELECT (log_offset, entry_id, kind, agent_id, agent_trust, conflicts, read_at_offset, trace_id, span_id,
               recorded_at, belief_version) ON kernel.log TO kernel_reader;
@@ -31,6 +31,7 @@ GRANT SELECT (id, log_offset, chunk_id, source_id, source_key, agent_id, basis, 
 
 GRANT EXECUTE ON FUNCTION
   kernel.head_offset(),
+  kernel.version(),
   kernel.query_log(jsonb),
   kernel.schema_slice(text, text[], int),
   kernel.resolve_candidates(text, text, text, jsonb, vector, int),

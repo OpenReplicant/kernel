@@ -6,7 +6,8 @@ description: >
   activities and decision gateways, the roles and units responsible, the systems and data
   they use, and who holds each role over time.
 metadata:
-  kernel: ">=0.1 <1.0"
+  version: "0.1.0"
+  kernel: ">=0.2 <1.0"
   namespace: bpm
 ---
 
@@ -37,7 +38,8 @@ Rules this pack adds:
 - `bpm.flows_between_steps`: `flows_to` connects activities and gateways, never roles.
 - `bpm.approval_needs_report`: `approved_by` needs basis reported or observed.
 
-The ontology is applied by `sql/10_ontology.sql` (there is no pack installer in Phase 1).
+The ontology is declared in `schema.yaml` and `rules.yaml` and applied by the kernel's pack
+installer.
 
 ## Gaps to ask about in an interview
 

@@ -10,7 +10,10 @@ from typing import Any
 
 import yaml
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
+ROOT = Path(__file__).resolve().parent.parent
+# Fixtures live with what they test: the kernel's in evals/fixtures, each pack's in its own
+# evals/fixtures.
+FIXTURE_ROOTS = [ROOT / "evals" / "fixtures", *sorted(ROOT.glob("packs/*/evals/fixtures"))]
 _TEMPLATE = re.compile(r"\{\{(\w+):([^}]+)\}\}")
 
 
@@ -23,6 +26,7 @@ class Fixture:
     expected: dict[str, Any]
     thresholds: dict[str, Any]
     namespaces: list[str] | None = None
+    packs: list[str] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path) -> Fixture:
@@ -35,11 +39,15 @@ class Fixture:
             expected=yaml.safe_load((path / meta.get("expected", "expected.yaml")).read_text()),
             thresholds=meta.get("thresholds", {}),
             namespaces=meta.get("namespaces"),
+            packs=list(meta.get("packs") or []),
         )
 
 
 def fixtures(names: list[str] | None = None) -> list[Fixture]:
-    found = sorted(p for p in FIXTURES.iterdir() if (p / "fixture.yaml").exists())
+    found = sorted(
+        (p for root in FIXTURE_ROOTS for p in root.iterdir() if (p / "fixture.yaml").exists()),
+        key=lambda p: p.name,
+    )
     loaded = [Fixture.load(p) for p in found]
     return [f for f in loaded if not names or f.name in names]
 

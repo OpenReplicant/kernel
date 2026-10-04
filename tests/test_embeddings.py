@@ -17,7 +17,7 @@ import pytest
 
 from gateway.embeddings import HttpEmbedder
 from kernel import admin
-from tests.conftest import gateway_client
+from kernel.testing import gateway_client
 
 pytestmark = pytest.mark.anyio
 

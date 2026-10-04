@@ -5,7 +5,7 @@ from __future__ import annotations
 import psycopg
 import pytest
 
-from tests.conftest import KernelDB, Rejected, login_dsn
+from kernel.testing import KernelDB, Rejected, login_dsn
 
 
 def create(kdb: KernelDB, agent: str, op: dict, **kw) -> dict:

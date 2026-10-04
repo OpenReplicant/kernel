@@ -1,0 +1,49 @@
+# research: the pack's ontology. Applied by the kernel's pack installer (kernel/packs.py,
+# kernel.install_pack); every entry has a label and a description for schema slicing.
+namespaces:
+- name: research
+  label: Research
+  description: >-
+    Scholarly research: papers, the methods, data and measures they study, their authors, and the findings, hypotheses and open questions they report.
+kinds:
+- name: measure
+  node_type: Entity
+  label: Measure
+  description: >-
+    A metric, outcome or variable on which results are reported, such as accuracy, mortality or factual consistency.
+- name: method
+  node_type: Entity
+  label: Method
+  description: >-
+    A method, model, algorithm, intervention, instrument or experimental technique that a study proposes, applies or compares.
+- name: paper
+  node_type: Entity
+  label: Paper
+  description: >-
+    A scholarly publication such as an article, preprint, thesis or report, identified by its DOI or arXiv id when it has one.
+edge_kinds:
+- name: authored
+  edge: responsible_for
+  label: authored
+  description: A person is an author of a paper.
+- name: builds_on
+  edge: depends_on
+  label: builds on
+  description: A method extends, adapts or is a variant of another method.
+- name: cites
+  edge: depends_on
+  label: cites
+  description: A paper cites another paper.
+- name: introduces
+  edge: responsible_for
+  label: introduces
+  description: A paper first proposes a method, data set or measure.
+- name: reports
+  edge: responsible_for
+  label: reports
+  description: >-
+    A paper reports a finding, hypothesis or open question, recorded as a Claim node.
+- name: uses_data
+  edge: depends_on
+  label: uses data
+  description: A paper or method uses a data set, corpus, benchmark or cohort.

@@ -73,10 +73,10 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `kernel/sql/` | The kernel, applied in order: log, claims, assertions, sources, chunks, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
-| `packs/` | `research`: papers, methods, data, measures, per-paper findings and evidence queries ([ADR 0013](docs/decisions/0013-research-findings-are-claims.md)); `bpm-reference`: a toy business-process ontology |
+| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
-| `tests/` | Unit, SQL, invariant and regression tests |
+| `tests/` | Unit, SQL, invariant and regression tests; the shared test kit is `kernel/testing.py` |
 | `db/`, `docker-compose.yml` | The database image and the stack |
 
 ## Development
@@ -91,6 +91,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
+| `uv run python -m kernel.packs check` | Validate every pack's manifests ([ADR 0015](docs/decisions/0015-packs-declare-their-ontology.md)) |
 | `make lint` | `ruff check` and `ruff format --check` |
 
 Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
@@ -102,6 +103,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | --- | --- | --- |
 | `WMK_DB_PASSWORD`, `WMK_WRITER_PASSWORD`, `WMK_READER_PASSWORD` | `postgres`, `writer`, `reader` | compose |
 | `WMK_PROFILE` | `interactive` | compose: which profile the gateway runs |
+| `WMK_PACKS` | every pack | compose and `kernel.packs install`: which packs the database gets |
 | `WMK_WRITER_DSN`, `WMK_READER_DSN` | set by compose | gateway |
 | `WMK_TRANSPORT`, `WMK_HOST`, `WMK_PORT` | `streamable-http`, `0.0.0.0`, `8000` | gateway |
 | `WMK_EMBEDDING_URL`, `WMK_EMBEDDING_MODEL`, `WMK_EMBEDDING_API_KEY` | unset | gateway: optional OpenAI-compatible embeddings |
@@ -124,7 +126,8 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 Research is the first product pack: papers are found with the paper-source server and
 mapped from their abstracts by any MCP harness following the core and research skills.
 Not yet built: the parser container for full text, workers, observer runs, and the pack
-installer (packs are applied with the kernel SQL; pack servers run beside the gateway,
+registry (packs are installed from this repository by the stack's `packs` service; pack
+servers run beside the gateway,
 [ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Redaction masks the graph and read
 paths but does not yet erase source content
 ([ADR 0006](docs/decisions/0006-redaction-in-phase-1.md)). CI drives the eval profile with

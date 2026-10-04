@@ -6,6 +6,8 @@ description: >
   sources, a rejection fixed on retry, a duplicate caught by resolution, a normative
   claim contradicted by observed practice, an unresolved claim and citations.
 namespaces: [bpm]
+# The packs the fixture's database gets (core only when empty).
+packs: [bpm-reference]
 sources:
   process: {file: sources/process.md, media_type: text/markdown, title: Invoice approval process}
   interview: {file: sources/interview-sam.txt, title: Interview with Sam Ortiz, uri: interviews/2026-09-14-sam}

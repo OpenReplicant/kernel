@@ -9,7 +9,7 @@ import psycopg
 import pytest
 from psycopg.types.json import Jsonb
 
-from tests.conftest import KernelDB, Rejected, login_dsn
+from kernel.testing import KernelDB, Rejected, login_dsn
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG_TABLES = ["log", "claims", "assertions", "sources", "chunks", "cites"]
@@ -46,7 +46,7 @@ def test_reader_role_can_only_select(kdb: KernelDB, agent: str, dbname: str) -> 
         "WHERE n.nspname = 'kernel' AND has_function_privilege('kernel_reader', p.oid, 'EXECUTE')"
     )
     assert not WRITE_FUNCTIONS & {r[0] for r in rows}
-    assert not {"project_ops", "rebuild", "touch", "new_id"} & {r[0] for r in rows}
+    assert not {"project_ops", "rebuild", "touch", "new_id", "install_pack"} & {r[0] for r in rows}
     with psycopg.connect(login_dsn(dbname, "wmk_reader"), autocommit=True) as conn:
         for statement in (
             "INSERT INTO kernel.nodes (id) VALUES ('x')",
@@ -344,7 +344,7 @@ def test_nothing_acts_on_the_outside_world() -> None:
 async def test_graph_queries_cannot_write_even_past_the_lexical_check(dbname: str, cypher: str) -> None:
     """query_graph refuses write clauses by parsing; the database refuses them again: the reader
     role may only select and the transaction is read-only."""
-    from tests.conftest import gateway_client
+    from kernel.testing import gateway_client
 
     async with gateway_client(dbname) as client:
         kernel = client.tools.kernel

@@ -6,6 +6,12 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 
+[manifest]
+members = [
+    "wmk-papers",
+    "world-model-kernel",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -1352,8 +1358,27 @@ wheels = [
 ]
 
 [[package]]
-name = "world-model-kernel"
+name = "wmk-papers"
 version = "0.1.0"
+source = { editable = "packs/research/mcp" }
+dependencies = [
+    { name = "arxiv" },
+    { name = "habanero" },
+    { name = "mcp" },
+    { name = "pyalex" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "arxiv", specifier = ">=4.0,<5" },
+    { name = "habanero", specifier = ">=2.9,<3" },
+    { name = "mcp", specifier = ">=2.3,<3" },
+    { name = "pyalex", specifier = ">=0.21,<1" },
+]
+
+[[package]]
+name = "world-model-kernel"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -1361,6 +1386,7 @@ dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
+    { name = "packaging" },
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
     { name = "pyyaml" },
@@ -1370,11 +1396,7 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
-]
-papers = [
-    { name = "arxiv" },
-    { name = "habanero" },
-    { name = "pyalex" },
+    { name = "wmk-papers" },
 ]
 
 [package.metadata]
@@ -1384,6 +1406,7 @@ requires-dist = [
     { name = "opentelemetry-api", specifier = ">=1.45,<2" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45,<2" },
     { name = "opentelemetry-sdk", specifier = ">=1.45,<2" },
+    { name = "packaging", specifier = ">=24,<27" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3,<4" },
     { name = "psycopg-pool", specifier = ">=3.3,<4" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
@@ -1393,9 +1416,5 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = ">=9.1,<10" },
     { name = "ruff", specifier = ">=0.16,<1" },
-]
-papers = [
-    { name = "arxiv", specifier = ">=4.0,<5" },
-    { name = "habanero", specifier = ">=2.9,<3" },
-    { name = "pyalex", specifier = ">=0.21,<1" },
+    { name = "wmk-papers", editable = "packs/research/mcp" },
 ]

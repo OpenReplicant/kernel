@@ -8,7 +8,7 @@ from typing import Any
 import psycopg
 import pytest
 
-from tests.conftest import KernelDB, Rejected
+from kernel.testing import KernelDB, Rejected
 
 
 @pytest.fixture

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# First start only: apply the kernel SQL, then the reference pack SQL, then create the
-# gateway's login roles (writer: the three write functions; reader: select only).
+# First start only: apply the kernel SQL, then create the gateway's login roles (writer:
+# the three write functions; reader: select only). Packs are installed afterwards by the
+# stack's `packs` service (kernel/packs.py), so the database image holds no pack.
 set -euo pipefail
 
 psql_db=(psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --quiet)
 
-for f in /opt/wmk/kernel/sql/*.sql /opt/wmk/packs/*/sql/*.sql; do
+for f in /opt/wmk/kernel/sql/*.sql; do
   echo "wmk: applying ${f#/opt/wmk/}"
   "${psql_db[@]}" -f "$f"
 done
