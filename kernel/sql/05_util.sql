@@ -41,6 +41,16 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
     '[^[:alnum:]]+', ' ', 'g'))
 $$;
 
+-- Contract: the name of a Claim node made from a claim's text: the whole text up to 500
+-- characters (one sentence, per the skills), else cut at the last word boundary before
+-- 500 with an ellipsis, so a name never ends mid-word and never hides a negation. The cap
+-- keeps names within index row limits. Pure.
+CREATE FUNCTION kernel.claim_node_name(p_text text) RETURNS text
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+  SELECT CASE WHEN length(p_text) <= 500 THEN p_text
+              ELSE regexp_replace(left(p_text, 500), '[[:space:]]+[^[:space:]]*$', '') || '…' END
+$$;
+
 -- Contract: normalize_name applied to every element, order kept. Pure.
 CREATE FUNCTION kernel.normalize_names(names text[]) RETURNS text[]
 LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$

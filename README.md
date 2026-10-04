@@ -17,7 +17,7 @@ Phase 1: [`docs/decisions/`](docs/decisions/). Libraries to adopt for later adap
 
 ```sh
 make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
-make seed      # optional: write the two eval fixtures through the gateway
+make seed      # optional: write the eval fixtures (two BPM, one research) through the gateway
 make replay    # rebuild the graph from the log and diff it against the live graph
 ```
 
@@ -27,6 +27,12 @@ localhost only, since the stack has no authentication) and give it the core skil
 when a person is the source. For a stdio harness, run the gateway with
 `WMK_TRANSPORT=stdio uv run wmk-gateway`. `make up-otel` adds an OpenTelemetry
 Collector and Jaeger (http://localhost:16686).
+
+For research, `make up-research` adds the research pack's paper-source server on
+`http://localhost:8001/mcp` (arXiv, OpenAlex, Crossref): connect it beside the gateway and
+give the harness [`packs/research/`](packs/research/SKILL.md) as a skill. Set
+`WMK_PAPERS_MAILTO` to a contact email for the APIs' polite pools, and
+`WMK_PAPERS_OPENALEX_API_KEY` (free) to search OpenAlex.
 
 ## The seven tools
 
@@ -67,7 +73,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `kernel/sql/` | The kernel, applied in order: log, claims, assertions, sources, chunks, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
-| `packs/bpm-reference/` | The reference pack: a toy business-process ontology |
+| `packs/` | `research`: papers, methods, data, measures, per-paper findings and evidence queries ([ADR 0013](docs/decisions/0013-research-findings-are-claims.md)); `bpm-reference`: a toy business-process ontology |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
 | `tests/` | Unit, SQL, invariant and regression tests |
@@ -83,7 +89,8 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make test` | Unit, SQL and regression tests (starts the database) |
 | `make eval` | Every fixture through the eval profile (precision and recall for entities and edges), then the resolution set (auto-band precision and recall, candidate recall, clean new names) |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
-| `make live` | The MVP check with a real harness: headless Claude Code, the core and interview skills and the gateway map a document and a five-turn interview, answer with citations, then replay. Needs the `claude` CLI and model access (about US$3 a run); not in CI |
+| `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
+| `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make lint` | `ruff check` and `ruff format --check` |
 
 Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
@@ -99,6 +106,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | `WMK_TRANSPORT`, `WMK_HOST`, `WMK_PORT` | `streamable-http`, `0.0.0.0`, `8000` | gateway |
 | `WMK_EMBEDDING_URL`, `WMK_EMBEDDING_MODEL`, `WMK_EMBEDDING_API_KEY` | unset | gateway: optional OpenAI-compatible embeddings |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | gateway: export spans and metrics |
+| `WMK_PAPERS_MAILTO`, `WMK_PAPERS_OPENALEX_API_KEY` | unset | papers: contact email for the APIs; OpenAlex search |
 
 ## Guarantees
 
@@ -111,10 +119,14 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
   between sources are shown as contested, never overwritten.
 - Telemetry carries IDs, never claim text, source content or message content.
 
-## Phase 1 limits
+## Current limits
 
-No workers, parser container, observer runs, pack installer or registry. Redaction masks
-the graph and read paths but does not yet erase source content
+Research is the first product pack: papers are found with the paper-source server and
+mapped from their abstracts by any MCP harness following the core and research skills.
+Not yet built: the parser container for full text, workers, observer runs, and the pack
+installer (packs are applied with the kernel SQL; pack servers run beside the gateway,
+[ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Redaction masks the graph and read
+paths but does not yet erase source content
 ([ADR 0006](docs/decisions/0006-redaction-in-phase-1.md)). CI drives the eval profile with
-scripted extraction until a harness is chosen
-([ADR 0008](docs/decisions/0008-eval-profile-runs-scripted-extraction.md)).
+scripted extraction ([ADR 0008](docs/decisions/0008-eval-profile-runs-scripted-extraction.md));
+`make live` runs a real model.

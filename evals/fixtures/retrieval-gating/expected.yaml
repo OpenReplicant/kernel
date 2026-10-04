@@ -1,0 +1,124 @@
+# The graph the fixture should produce. Entities match on type, kind and name; edges on
+# edge, kind and endpoint names. Claim nodes are named by their text, kind = modality.
+entities:
+  - {type: Entity, kind: paper, name: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization}
+  - {type: Entity, kind: paper, name: "Does Retrieval Gating Help Long-Document Summarization?"}
+  - {type: Entity, kind: paper, name: Retrieval-Gated Decoding for Clinical Note Summarization}
+  - {type: Agent, kind: human, name: Ana Lima}
+  - {type: Agent, kind: human, name: Ben Okafor}
+  - {type: Agent, kind: human, name: Chen Wu}
+  - {type: Agent, kind: human, name: Dev Patel}
+  - {type: Entity, kind: method, name: Retrieval-gated decoding}
+  - {type: Entity, kind: method, name: Sentence-level gating}
+  - {type: Entity, kind: data, name: NewsSum-2}
+  - {type: Entity, kind: data, name: GovLong}
+  - {type: Entity, kind: data, name: MedNotes}
+  - {type: Entity, kind: measure, name: Factual consistency}
+  - {type: Entity, kind: measure, name: ROUGE-L}
+  # Findings, one per paper and result
+  - {type: Claim, kind: descriptive, name: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.",
+     belief_status: accepted}
+  - {type: Claim, kind: descriptive, name: "On NewsSum-2, ROUGE-L drops by 0.4 points with RGD.", belief_status: accepted}
+  - {type: Claim, kind: descriptive, name: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).",
+     belief_status: accepted}
+  - {type: Claim, kind: descriptive,
+     name: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
+     belief_status: accepted}
+  - {type: Claim, kind: descriptive,
+     name: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
+     belief_status: accepted}
+  # Hypotheses: one a paper states, one an open question, one the extractor's synthesis
+  - {type: Claim, kind: hypothetical,
+     name: "Gating at the token level, rather than the sentence level, drives RGD's gain in factual consistency.",
+     belief_status: accepted}
+  - {type: Claim, kind: hypothetical,
+     name: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question.",
+     belief_status: accepted}
+  - {type: Claim, kind: hypothetical, name: Retrieval-gated decoding improves the factual consistency of abstractive summaries.,
+     belief_status: accepted}
+
+edges:
+  # Authorship and citations
+  - {edge: responsible_for, kind: authored, from: Ana Lima, to: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization}
+  - {edge: responsible_for, kind: authored, from: Ben Okafor, to: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization}
+  - {edge: responsible_for, kind: authored, from: Chen Wu, to: "Does Retrieval Gating Help Long-Document Summarization?"}
+  - {edge: responsible_for, kind: authored, from: Ana Lima, to: Retrieval-Gated Decoding for Clinical Note Summarization}
+  - {edge: responsible_for, kind: authored, from: Dev Patel, to: Retrieval-Gated Decoding for Clinical Note Summarization}
+  - {edge: depends_on, kind: cites, from: "Does Retrieval Gating Help Long-Document Summarization?",
+     to: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization}
+  # Methods and data
+  - {edge: responsible_for, kind: introduces, from: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization,
+     to: Retrieval-gated decoding}
+  - {edge: responsible_for, kind: introduces, from: "Does Retrieval Gating Help Long-Document Summarization?",
+     to: Sentence-level gating}
+  - {edge: depends_on, kind: builds_on, from: Sentence-level gating, to: Retrieval-gated decoding}
+  - {edge: depends_on, kind: uses_data, from: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization, to: NewsSum-2}
+  - {edge: depends_on, kind: uses_data, from: "Does Retrieval Gating Help Long-Document Summarization?", to: GovLong}
+  - {edge: depends_on, kind: uses_data, from: Retrieval-Gated Decoding for Clinical Note Summarization, to: MedNotes}
+  # What each paper reports
+  - {edge: responsible_for, kind: reports, from: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization,
+     to: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%."}
+  - {edge: responsible_for, kind: reports, from: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization,
+     to: "On NewsSum-2, ROUGE-L drops by 0.4 points with RGD."}
+  - {edge: responsible_for, kind: reports, from: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization,
+     to: "Gating at the token level, rather than the sentence level, drives RGD's gain in factual consistency."}
+  - {edge: responsible_for, kind: reports, from: "Does Retrieval Gating Help Long-Document Summarization?",
+     to: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without)."}
+  - {edge: responsible_for, kind: reports, from: "Does Retrieval Gating Help Long-Document Summarization?",
+     to: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level."}
+  - {edge: responsible_for, kind: reports, from: Retrieval-Gated Decoding for Clinical Note Summarization,
+     to: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries."}
+  - {edge: responsible_for, kind: reports, from: Retrieval-Gated Decoding for Clinical Note Summarization,
+     to: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question."}
+  # What each claim is about
+  - {edge: about, from: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.", to: Retrieval-gated decoding}
+  - {edge: about, from: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.", to: NewsSum-2}
+  - {edge: about, from: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.", to: Factual consistency}
+  - {edge: about, from: "On NewsSum-2, ROUGE-L drops by 0.4 points with RGD.", to: Retrieval-gated decoding}
+  - {edge: about, from: "On NewsSum-2, ROUGE-L drops by 0.4 points with RGD.", to: NewsSum-2}
+  - {edge: about, from: "On NewsSum-2, ROUGE-L drops by 0.4 points with RGD.", to: ROUGE-L}
+  - {edge: about, from: "Gating at the token level, rather than the sentence level, drives RGD's gain in factual consistency.",
+     to: Retrieval-gated decoding}
+  - {edge: about, from: "Gating at the token level, rather than the sentence level, drives RGD's gain in factual consistency.",
+     to: Factual consistency}
+  - {edge: about, from: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).", to: Retrieval-gated decoding}
+  - {edge: about, from: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).", to: GovLong}
+  - {edge: about, from: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).", to: Factual consistency}
+  - {edge: about, from: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
+     to: Sentence-level gating}
+  - {edge: about, from: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
+     to: GovLong}
+  - {edge: about, from: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
+     to: Factual consistency}
+  - {edge: about, from: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
+     to: Retrieval-gated decoding}
+  - {edge: about, from: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
+     to: MedNotes}
+  - {edge: about, from: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
+     to: Factual consistency}
+  - {edge: about, from: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question.",
+     to: Retrieval-gated decoding}
+  - {edge: about, from: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question.",
+     to: Factual consistency}
+  - {edge: about, from: Retrieval-gated decoding improves the factual consistency of abstractive summaries., to: Retrieval-gated decoding}
+  - {edge: about, from: Retrieval-gated decoding improves the factual consistency of abstractive summaries., to: Factual consistency}
+  # Agreement and disagreement: stated by a paper (accepted on its report) or inferred
+  - {edge: contradicts,
+     from: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
+     to: "Gating at the token level, rather than the sentence level, drives RGD's gain in factual consistency.",
+     belief_status: accepted}
+  - {edge: supports,
+     from: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
+     to: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.", belief_status: accepted}
+  - {edge: supports, from: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.",
+     to: Retrieval-gated decoding improves the factual consistency of abstractive summaries., belief_status: accepted}
+  - {edge: supports,
+     from: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
+     to: Retrieval-gated decoding improves the factual consistency of abstractive summaries., belief_status: accepted}
+  - {edge: contradicts, from: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).",
+     to: Retrieval-gated decoding improves the factual consistency of abstractive summaries., belief_status: accepted}
+  - {edge: contradicts, from: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).",
+     to: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question.",
+     belief_status: accepted}
+
+unresolved_claims: 1

@@ -1,0 +1,82 @@
+# A live-harness scenario for the research pack: the model maps the three synthetic papers
+# of the retrieval-gating CI fixture, then answers a question about the field. The entity
+# graph is scored against that fixture's expected graph; findings are judged by the checks,
+# since the model words them itself.
+name: research
+session: research-live
+# Runs as the eval profile's machine agent: no person takes part.
+profile: eval
+skills: [skills/core, packs/research]
+notes: |
+  You are mapping papers into a World Model Kernel for a research field map. Use the
+  world-model-core skill and the research skill for every paper. Papers, methods, data and
+  measures go in the `research` namespace. The wmk MCP server's instructions name your
+  agent id. Keep replies short: what you recorded, what was rejected, and what you related
+  across papers.
+document_prompt: |
+  Map this paper into the world model with the research skill. Ingest it with exactly these
+  ingest_source arguments (as the papers server's get_paper returns them) and the content
+  below as `content`: {ingest}
+
+  {content}
+documents:
+  - file: evals/fixtures/retrieval-gating/sources/lima-2025.md
+    title: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization
+    media_type: text/markdown
+    uri: https://doi.org/10.5555/wmk.rgd.2025
+    collection: doi:10.5555/wmk.rgd.2025
+    metadata: {doi: 10.5555/wmk.rgd.2025, year: 2025}
+  - file: evals/fixtures/retrieval-gating/sources/wu-2026.md
+    title: Does Retrieval Gating Help Long-Document Summarization?
+    media_type: text/markdown
+    uri: https://doi.org/10.5555/wmk.rgd.2026a
+    collection: doi:10.5555/wmk.rgd.2026a
+    metadata: {doi: 10.5555/wmk.rgd.2026a, year: 2026}
+  - file: evals/fixtures/retrieval-gating/sources/lima-2026.md
+    title: Retrieval-Gated Decoding for Clinical Note Summarization
+    media_type: text/markdown
+    uri: https://doi.org/10.5555/wmk.rgd.2026b
+    collection: doi:10.5555/wmk.rgd.2026b
+    metadata: {doi: 10.5555/wmk.rgd.2026b, year: 2026}
+turn_prefix: ""
+turns:
+  - >-
+    Across the papers you mapped: what is the evidence that retrieval-gated decoding improves
+    factual consistency, where do the papers disagree, and what is still open? Record any
+    synthesis you draw as the research skill describes, then answer from the world model and
+    cite what each sentence relied on.
+score_against: retrieval-gating
+score_floors:
+  entities: {recall: 0.8}
+  edges: {recall: 0.6}
+checks:
+  sql:
+    - name: three papers identified by DOI
+      sql: "SELECT count(*) FROM kernel.nodes WHERE kind = 'paper' AND identity ? 'doi'"
+      eq: 3
+    - name: one node for retrieval-gated decoding
+      sql: >-
+        SELECT count(*) FROM kernel.nodes WHERE kind = 'method'
+        AND (name_norm IN ('retrieval gated decoding', 'rgd') OR 'rgd' = ANY (aliases_norm))
+      eq: 1
+    - name: one node for Ana Lima across her two papers
+      sql: "SELECT count(*) FROM kernel.nodes WHERE type = 'Agent' AND name_norm = 'ana lima'"
+      eq: 1
+    - name: results reported by papers
+      sql: >-
+        SELECT count(*) FROM kernel.edges e JOIN kernel.nodes c ON c.id = e.to_id
+        WHERE e.kind = 'reports' AND c.type = 'Claim' AND c.kind = 'descriptive'
+      min: 4
+    - name: hypotheses and open questions reported by papers
+      sql: >-
+        SELECT count(*) FROM kernel.edges e JOIN kernel.nodes c ON c.id = e.to_id
+        WHERE e.kind = 'reports' AND c.type = 'Claim' AND c.kind = 'hypothetical'
+      min: 2
+    - name: findings that disagree are related
+      sql: "SELECT count(*) FROM kernel.edges WHERE edge = 'contradicts'"
+      min: 1
+    - name: findings that agree are related
+      sql: "SELECT count(*) FROM kernel.edges WHERE edge = 'supports'"
+      min: 1
+  # The answer may mark one sentence untraced (what the graph does not show).
+  min_traced_share: 0.8

@@ -1,0 +1,18 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message": {
+    "DOI": "10.5555/wmk.rgd.2026b",
+    "URL": "https://doi.org/10.5555/wmk.rgd.2026b",
+    "title": ["Retrieval-Gated Decoding for Clinical Note Summarization"],
+    "author": [
+      {"given": "Ana", "family": "Lima", "ORCID": "http://orcid.org/0000-0002-1825-0097", "sequence": "first"},
+      {"given": "Dev", "family": "Patel", "sequence": "additional"}
+    ],
+    "issued": {"date-parts": [[2026, 5, 2]]},
+    "container-title": ["Synthetic Workshop on Clinical Text"],
+    "abstract": "<jats:title>Abstract</jats:title><jats:p>We apply retrieval-gated decoding to summaries of clinical notes &amp; report\n  factual consistency.</jats:p>",
+    "is-referenced-by-count": 1,
+    "reference": [{"key": "ref1", "DOI": "10.5555/WMK.RGD.2025"}, {"key": "ref2", "unstructured": "A book"}]
+  }
+}

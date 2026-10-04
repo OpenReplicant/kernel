@@ -252,7 +252,8 @@ def test_identity_rules(kdb: KernelDB, agent: str) -> None:
             [{"op": "create", "type": "Agent", "kind": "human", "name": "Sam", "identity": {"badge": "42"}}],
             basis="observed",
         )
-    assert err.value.rule == "kernel.declared_identity" and err.value.detail["nearest"] == ["email"]
+    # The research pack adds ORCID as a person's identity key beside the core email.
+    assert err.value.rule == "kernel.declared_identity" and err.value.detail["nearest"] == ["email", "orcid"]
 
 
 def test_provenance_rules(kdb: KernelDB, agent: str) -> None:
@@ -594,3 +595,20 @@ def test_agents_can_be_part_of_a_team(kdb: KernelDB, agent: str) -> None:
             basis="observed",
         )
     assert err.value.rule == "kernel.edge_range"
+
+
+def test_claim_node_names_keep_the_whole_sentence(kdb: KernelDB, agent: str) -> None:
+    """A finding's name is its full text, so a negation at the end is never cut off; only
+    text past 500 characters is shortened, at a word boundary, with an ellipsis."""
+    chunk = kdb.source(agent, "Findings.")
+    sentence = (
+        "Sentence-level gating scored the same as token-level gating on GovLong, which suggests "
+        "the gain reported on news does not come from gating at the token level."
+    )
+    node = kdb.node(kdb.claim(agent, sentence, [{"op": "promote", "ref": "$c"}], source=chunk)["claim_id"])
+    assert node["name"] == sentence and node["name"].endswith("does not come from gating at the token level.")
+    long_text = "word " * 150 + "end."
+    name = kdb.node(kdb.claim(agent, long_text, [{"op": "promote", "ref": "$c"}], source=chunk)["claim_id"])[
+        "name"
+    ]
+    assert name.endswith("…") and len(name) <= 501 and name[:-1].endswith("word")
