@@ -38,9 +38,12 @@ Also approved (2026-10-04):
   through the gateway, never with database credentials. Its first fixture is this
   repository's own stack: the start of the self-model, where the self boundary is
   `part_of` edges into a `system` node, each a claim with its own belief.
-- Next, as ADRs only (no code until reviewed): sub-models as lenses and forks; the
-  approval channel (a human-held role, approvals only from agents outside the self,
-  protected instruments: rules, evals, CI and setpoints).
+- Proposed, not built (no code until reviewed): sub-models as lenses and forks
+  (ADR 0018); the approval channel (ADR 0019): approvals written only by an authenticated
+  person outside the self, never by a machine or the proposer; instruments (evals, CI,
+  rules, setpoints) in a two-person tier; the actuator (branch protection, required
+  reviews) enforces, the kernel records. Until 0019 is built, an `approved_by` edge in the
+  graph is a claim, not a decision.
 
 **Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
 fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
