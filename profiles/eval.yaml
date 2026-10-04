@@ -1,0 +1,37 @@
+# ACP profile: eval
+# CI runs of the core skill against the eval fixtures. One machine agent, kernel
+# tools only, no transcript capture, strict limits.
+name: eval
+purpose: CI runs of the core skill against eval fixtures
+
+agent:
+  name: wmk-eval
+  kind: machine
+  trust_level: medium
+
+permissions:
+  mode: policy            # requests are answered by policy, never passed to a person
+  allow:
+    - mcp:wmk/*           # the seven kernel tools
+  deny:
+    - "*"                 # no shell, files, network or other servers
+
+skills:
+  - core
+task: |
+  Map the fixture's sources into the world model with the core skill. Ingest each
+  source, read the schema slice and existing entities, write one claim at a time and
+  handle rejections. Stop when every chunk has been processed.
+
+transcript_capture:
+  enabled: false
+
+limits:
+  timeout_seconds: 600
+  max_turns: 60
+  budget_usd: 2.00
+
+mcp_servers:
+  - name: wmk
+    transport: streamable-http
+    url: http://localhost:8000/mcp

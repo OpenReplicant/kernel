@@ -1,0 +1,18 @@
+name: invoice-approval
+description: >
+  A synthetic company's invoice approval process from a process document, an interview
+  that contradicts it (a handover of the approver role) and an email that sides with
+  the document. Exercises the bpm reference pack, a single-valued conflict across
+  sources, a rejection fixed on retry, a duplicate caught by resolution, a normative
+  claim contradicted by observed practice, an unresolved claim and citations.
+namespaces: [bpm]
+sources:
+  process: {file: sources/process.md, media_type: text/markdown, title: Invoice approval process}
+  interview: {file: sources/interview-sam.txt, title: Interview with Sam Ortiz, uri: interviews/2026-09-14-sam}
+  email: {file: sources/email-payments.txt, title: Friday payment run email}
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities: {precision: 1.0, recall: 1.0}
+  edges: {precision: 1.0, recall: 1.0}
+  attributes: 1.0

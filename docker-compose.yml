@@ -1,0 +1,69 @@
+# World Model Kernel: the database and the MCP gateway.
+#   make up                 db + gateway
+#   make up-otel            also an OpenTelemetry Collector and a trace viewer (Jaeger)
+name: wmk
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    image: wmk-db:dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${WMK_DB_PASSWORD:-postgres}
+      POSTGRES_DB: wmk
+      WMK_WRITER_PASSWORD: ${WMK_WRITER_PASSWORD:-writer}
+      WMK_READER_PASSWORD: ${WMK_READER_PASSWORD:-reader}
+    ports:
+      # Published on localhost only: the stack has no authentication.
+      - "127.0.0.1:${WMK_DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      # Ready once initdb has finished: the reader login role is created last.
+      test: ["CMD-SHELL", "psql -U postgres -d wmk -tAc \"select 1 from pg_roles where rolname = 'wmk_reader'\" | grep -q 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    image: wmk-gateway:dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WMK_WRITER_DSN: postgresql://wmk_writer:${WMK_WRITER_PASSWORD:-writer}@db:5432/wmk
+      WMK_READER_DSN: postgresql://wmk_reader:${WMK_READER_PASSWORD:-reader}@db:5432/wmk
+      WMK_PROFILE: /app/profiles/${WMK_PROFILE:-interactive}.yaml
+      WMK_TRANSPORT: streamable-http
+      WMK_EMBEDDING_URL: ${WMK_EMBEDDING_URL:-}
+      WMK_EMBEDDING_MODEL: ${WMK_EMBEDDING_MODEL:-}
+      WMK_EMBEDDING_API_KEY: ${WMK_EMBEDDING_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    ports:
+      - "127.0.0.1:${WMK_GATEWAY_PORT:-8000}:8000"
+
+  otel-collector:
+    profiles: [otel]
+    image: otel/opentelemetry-collector-contrib:0.137.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    depends_on:
+      - jaeger
+
+  jaeger:
+    profiles: [otel]
+    image: jaegertracing/jaeger:2.11.0
+    ports:
+      - "127.0.0.1:16686:16686"
+
+volumes:
+  db-data:

@@ -1,0 +1,65 @@
+# Tool calls for the checkout incident report (chunks: 0 title, 1 summary, 2 timeline, 3 follow-up).
+
+- ingest: report
+
+- write:
+    claim: {text: "The checkout service depends on the payments API, which depends on the main Postgres cluster.",
+            source: "{{chunk:report:1}}", basis: reported, modality: descriptive}
+    ops:
+      - {op: create, ref: $checkout, kind: component, name: Checkout service}
+      - {op: create, ref: $payments, kind: component, name: Payments API}
+      - {op: create, ref: $pg, kind: component, name: Main Postgres cluster}
+      - {op: assert, edge: depends_on, from: $checkout, to: $payments}
+      - {op: assert, edge: depends_on, from: $payments, to: $pg}
+
+# "outage" is not an Event kind: the rejection names the nearest kinds, the retry uses incident.
+- write:
+    claim: {text: "From 14:05 to 14:50 UTC on 12 September 2026, customers could not complete checkout.",
+            source: "{{chunk:report:1}}", basis: reported, modality: descriptive}
+    ops:
+      - {op: create, ref: $outage, type: Event, kind: outage, name: Checkout outage,
+         start: "2026-09-12T14:05:00Z", end: "2026-09-12T14:50:00Z"}
+  expect: {rejected: "urn:wmk:rule:types"}
+
+- write:
+    claim: {text: "From 14:05 to 14:50 UTC on 12 September 2026, customers could not complete checkout.",
+            source: "{{chunk:report:1}}", basis: reported, modality: descriptive}
+    ops:
+      - {op: create, ref: $outage, type: Event, kind: incident, name: Checkout outage,
+         start: "2026-09-12T14:05:00Z", end: "2026-09-12T14:50:00Z", status: completed}
+      - {op: assert, edge: participates_in, from: "{{ref:checkout}}", to: $outage, props: {role: affected}}
+
+- write:
+    claim: {text: "At 13:58 UTC a configuration change to the payments API lowered its connection pool size.",
+            source: "{{chunk:report:2}}", basis: reported, modality: descriptive}
+    ops:
+      - {op: create, ref: $change, type: Event, kind: change, name: Payments API pool size change,
+         start: "2026-09-12T13:58:00Z", status: completed}
+      - {op: assert, edge: participates_in, from: "{{ref:payments}}", to: $change, props: {role: changed}}
+
+- write:
+    claim: {text: "The change caused the outage: the payments API ran out of database connections.",
+            source: "{{chunk:report:2}}", basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: causes, from: "{{ref:change}}", to: "{{ref:outage}}"}
+      - {op: assert, edge: precedes, from: "{{ref:change}}", to: "{{ref:outage}}"}
+
+- write:
+    claim: {text: "Priya Shah, the on-call engineer, responded and rolled the change back at 14:47 UTC.",
+            source: "{{chunk:report:2}}", basis: reported, modality: descriptive}
+    ops:
+      - {op: create, ref: $priya, type: Agent, kind: human, name: Priya Shah, identity: {email: priya@shop.test}}
+      - {op: create, ref: $rollback, type: Event, kind: change, name: Rollback of the pool size change,
+         start: "2026-09-12T14:47:00Z", status: completed}
+      - {op: assert, edge: participates_in, from: $priya, to: "{{ref:outage}}", props: {role: responder}}
+      - {op: assert, edge: participates_in, from: $priya, to: $rollback, props: {role: actor}}
+
+- write:
+    claim: {text: "We propose adding a canary stage before configuration changes reach the payments API.",
+            source: "{{chunk:report:3}}", basis: reported, modality: proposed}
+    ops:
+      - {op: promote, ref: $canary, about: ["{{ref:payments}}"]}
+
+- query:
+    cypher: "MATCH (c:Event)-[:causes]->(i:Event {kind: 'incident'}) RETURN c.name AS cause"
+    expect_rows: 1
