@@ -31,7 +31,8 @@ from evals.replay import replay
 from kernel import admin
 
 ROOT = Path(__file__).resolve().parent.parent
-SCENARIOS = ROOT / "evals" / "live"
+# Scenarios live with what they test: the kernel's in evals/live, each pack's in its evals/live.
+SCENARIO_ROOTS = [ROOT / "evals" / "live", *sorted(ROOT.glob("packs/*/evals/live"))]
 REPORT = ROOT / "evals" / "out" / "live.json"
 TOOLS = [
     "mcp__wmk__write",
@@ -221,7 +222,15 @@ def main() -> None:
     if not shutil.which("claude"):
         sys.exit("the claude CLI is required for the live check")
 
-    scenario = yaml.safe_load((SCENARIOS / f"{args.scenario}.yaml").read_text())
+    found = [
+        root / f"{args.scenario}.yaml" for root in SCENARIO_ROOTS if (root / f"{args.scenario}.yaml").exists()
+    ]
+    if not found:
+        sys.exit(
+            f"no scenario {args.scenario} under {', '.join(str(r.relative_to(ROOT)) for r in SCENARIO_ROOTS)}"
+        )
+    scenario_path = found[0]
+    scenario = yaml.safe_load(scenario_path.read_text())
     dsn = admin.dsn_for(admin.admin_dsn(), args.database)
     with psycopg.connect(dsn) as conn:
         row = conn.execute("SELECT count(*) FROM kernel.nodes WHERE type <> 'Agent'").fetchone()
@@ -246,7 +255,8 @@ def main() -> None:
     turn_prefix = scenario.get("turn_prefix", "[Turn {n} from the person]\n")
     for document in scenario.get("documents", []):
         if "file" in document:
-            document["content"] = (ROOT / document.pop("file")).read_text()
+            # Relative to the scenario's own folder, so a pack's scenario moves with the pack.
+            document["content"] = (scenario_path.parent / document.pop("file")).read_text()
     prompts = [document_prompt(scenario, d) for d in scenario.get("documents", [])] + [
         turn_prefix.format(n=i) + text for i, text in enumerate(scenario.get("turns", []), start=1)
     ]

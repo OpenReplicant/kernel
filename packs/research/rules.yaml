@@ -1,0 +1,52 @@
+# research: ontology rules, checked inside every write. Categories and params as in
+# kernel.rules (kernel/sql/30_ontology.sql). Rule ids start with one of the pack's namespaces.
+rules:
+- id: research.allowed_kinds
+  category: types
+  namespace: research
+  label: Research kinds
+  description: >-
+    The research namespace allows papers, methods, measures, data sets, concepts and software components.
+  params: {kinds: [paper, method, measure, data, concept, component]}
+- id: research.authored_paper
+  category: domain_range
+  label: People author papers
+  description: authored goes from a person to a paper.
+  params: {edge: responsible_for, kind: authored, from: {kinds: [human], types: [Agent]}, to: {kinds: [paper]}}
+- id: research.builds_on_method
+  category: domain_range
+  label: Methods build on methods
+  description: builds_on goes from a method to the method it extends.
+  params: {edge: depends_on, kind: builds_on, from: {kinds: [method]}, to: {kinds: [method]}}
+- id: research.cites_paper
+  category: domain_range
+  label: Papers cite papers
+  description: cites goes from a paper to a paper.
+  params: {edge: depends_on, kind: cites, from: {kinds: [paper]}, to: {kinds: [paper]}}
+- id: research.introduces_artefact
+  category: domain_range
+  label: Papers introduce methods, data and measures
+  description: introduces goes from a paper to a method, data set or measure.
+  params: {edge: responsible_for, kind: introduces, from: {kinds: [paper]}, to: {kinds: [method, data, measure]}}
+- id: research.orcid
+  category: identity
+  label: ORCID identifies a researcher
+  description: Two people with the same ORCID iD are the same person.
+  params: {node_type: Agent, kinds: [human], keys: [orcid], patterns: {orcid: '^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9Xx]$'}}
+- id: research.paper_ids
+  category: identity
+  label: DOI and arXiv id identify a paper
+  description: >-
+    Two papers with the same DOI or arXiv id are the same paper. Give the id without a version suffix when it applies to every version.
+  params: {node_type: Entity, kinds: [paper], keys: [doi, arxiv], patterns: {arxiv: '^([0-9]{4}\.[0-9]{4,5}|[a-zA-Z.-]+/[0-9]{7})(v[0-9]+)?$', doi: '^10\.[0-9]{4,9}/[^[:space:]]+$'}}
+- id: research.reports_claim
+  category: domain_range
+  label: Papers report claims
+  description: >-
+    reports goes from a paper to a Claim node: a finding, hypothesis or open question.
+  params: {edge: responsible_for, kind: reports, from: {kinds: [paper]}, to: {types: [Claim]}}
+- id: research.uses_data
+  category: domain_range
+  label: Papers and methods use data
+  description: uses_data goes from a paper or method to a data set.
+  params: {edge: depends_on, kind: uses_data, from: {kinds: [paper, method]}, to: {kinds: [data]}}

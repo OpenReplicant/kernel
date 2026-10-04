@@ -8,6 +8,8 @@
 # (a create with such a candidate is rejected), so an auto-band candidate that is wrong is
 # the costly error. Floors guard against regressions; raise them as resolution improves.
 name: names
+# Organisational units and roles come from the reference pack.
+packs: [bpm-reference]
 floors:
   auto_precision: 1.0     # every certain/high top candidate is the right node
   new_clean: 1.0          # no new or unclear mention gets a certain/high candidate

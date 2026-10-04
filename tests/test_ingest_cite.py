@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.conftest import KernelDB, Rejected
+from kernel.testing import KernelDB, Rejected
 
 MARKDOWN = """# Invoice approval
 

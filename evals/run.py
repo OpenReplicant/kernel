@@ -47,7 +47,7 @@ def login(dbname: str, role: str, password: str) -> str:
 async def run_fixture(fixture: Fixture, keep: bool) -> dict[str, Any]:
     dbname = f"wmk_eval_{fixture.name.replace('-', '_')}"
     admin.create_database(dbname)
-    admin.apply(dbname)
+    admin.apply(dbname, packs=fixture.packs)
     kernel = Kernel(
         login(dbname, "wmk_writer", WRITER_PASSWORD), login(dbname, "wmk_reader", READER_PASSWORD)
     )

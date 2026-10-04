@@ -1,0 +1,22 @@
+# bpm-reference: the pack's ontology. Applied by the kernel's pack installer (kernel/packs.py,
+# kernel.install_pack); every entry has a label and a description for schema slicing.
+namespaces:
+- name: bpm
+  label: Business processes
+  description: >-
+    How work flows through an organisation: processes, their activities and gateways, the roles that perform them and the units that own them.
+kinds:
+- name: org_unit
+  node_type: Entity
+  label: Organisational unit
+  description: >-
+    A department, team or other unit of an organisation that owns processes or roles.
+edge_kinds:
+- name: reads_from
+  edge: depends_on
+  label: reads from
+  description: An activity reads a data set or business object, such as an invoice.
+- name: uses
+  edge: depends_on
+  label: uses
+  description: An activity is carried out in a system or tool.

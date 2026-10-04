@@ -6,7 +6,8 @@ description: >
   evidence across papers. Use with the core skill when reading abstracts or papers, or
   when asked what a field knows, where findings disagree, or what is still open.
 metadata:
-  kernel: ">=0.1 <1.0"
+  version: "0.1.0"
+  kernel: ">=0.2 <1.0"
   namespace: research
   requires: world-model-core
 ---
@@ -163,4 +164,5 @@ RETURN m.id, m.name, p.name, base.name
   same id is refused as a duplicate.
 - `research.orcid`: an ORCID iD identifies a person.
 
-The ontology is applied by `sql/10_ontology.sql`; the reasoning is in ADR 0013.
+The ontology is declared in `schema.yaml` and `rules.yaml` and applied by the kernel's pack
+installer; the reasoning is in ADR 0013.

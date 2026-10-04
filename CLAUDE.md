@@ -17,6 +17,8 @@ working; its invariants and tests still apply.
 Research is the first product (ADR 0013). In scope, in this order:
 
 1. `packs/research/` — the research pack: ontology, skill, evidence queries, fixtures.
+   Packs declare their ontology in `schema.yaml`/`rules.yaml`; the kernel installs them
+   (`kernel/packs.py`, `kernel.install_pack`, ADR 0015). See `docs/packs.md`.
 2. A paper-source pack container (arXiv, OpenAlex, Crossref) exposed as an MCP server.
    It never gets database credentials. Libraries per `docs/adapters.md`.
 3. A live research eval: a real model maps papers through the eval profile.
@@ -24,9 +26,9 @@ Research is the first product (ADR 0013). In scope, in this order:
    once the live eval shows extraction quality. Workers need an ADR first on how job
    queues fit invariant 1.
 
-**Out of scope for now** (do not build, do not stub): observer runs, pack installer and
-registry, workflows, ops loop, vital signs, concept formation, habit formation, the BPM
-product. If a task seems to need one of these, stop and ask.
+**Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
+fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
+habit formation, the BPM product. If a task seems to need one of these, stop and ask.
 
 ## Stack
 
@@ -107,6 +109,10 @@ provenance, no ops). Never drop it.
 - **Two clocks:** `valid_from`/`valid_to` (true in the world) and `recorded_at` plus
   offset (when learned). Keep them separate in every query and test.
 - **Decisions:** anything that changes the design gets a short ADR in `docs/decisions/`.
+- **Packs:** self-contained folders (`docs/packs.md`): ontology in `schema.yaml` and
+  `rules.yaml`, never SQL; their tests, fixtures, live scenarios and servers inside the
+  folder; servers are uv workspace members. The kernel never depends on a pack; its own
+  tests use only `bpm-reference`.
 
 ## Testing
 

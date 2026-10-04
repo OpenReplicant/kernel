@@ -27,7 +27,7 @@ from wmk_papers.records import (
 from wmk_papers.server import Papers, build_server
 from wmk_papers.sources import ArxivSource, CrossrefSource, NotFound, OpenAlexSource, Throttle
 
-RECORDED = Path(__file__).resolve().parent / "papers"
+RECORDED = Path(__file__).resolve().parent / "recorded"
 
 
 @pytest.mark.parametrize(
@@ -98,7 +98,7 @@ def test_ingest_arguments_follow_the_research_skill() -> None:
 
 @pytest.mark.anyio
 async def test_the_kernel_accepts_a_paper_as_two_chunks(dbname: str) -> None:
-    from tests.conftest import gateway_client
+    from kernel.testing import gateway_client
 
     async with gateway_client(dbname) as client:
         result = await client.call_tool("ingest_source", paper().ingest_arguments())

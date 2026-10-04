@@ -1,6 +1,6 @@
 [project]
 name = "world-model-kernel"
-version = "0.1.0"
+version = "0.2.0"
 description = "A lightweight world model any agent can plug into: an append-only claim log, its graph projection and an MCP gateway."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,36 +13,36 @@ dependencies = [
     "opentelemetry-api>=1.45,<2",
     "opentelemetry-sdk>=1.45,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.45,<2",
+    "packaging>=24,<27",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.1,<10",
     "ruff>=0.16,<1",
-]
-papers = [
-    "arxiv>=4.0,<5",
-    "habanero>=2.9,<3",
-    "pyalex>=0.21,<1",
+    # Pack packages, so `make test` runs every pack's tests.
+    "wmk-papers",
 ]
 
 [project.scripts]
 wmk-gateway = "gateway.server:main"
-wmk-papers = "wmk_papers.server:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["gateway", "kernel", "evals", "packs/research/mcp/wmk_papers"]
+packages = ["gateway", "kernel", "evals"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "kernel/sql" = "kernel/sql"
 
-[tool.uv]
-# The papers group is the research pack's paper-source server; images opt in to it.
-default-groups = ["dev", "papers"]
+[tool.uv.workspace]
+# Packs that ship Python (servers, adapters) are workspace members with their own pyproject.
+members = ["packs/*/mcp"]
+
+[tool.uv.sources]
+wmk-papers = { workspace = true }
 
 [tool.ruff]
 line-length = 110
@@ -55,5 +55,5 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 known-first-party = ["gateway", "kernel", "evals", "tests", "wmk_papers"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "packs"]
 addopts = "-ra"

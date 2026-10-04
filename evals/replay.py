@@ -1,9 +1,10 @@
 """The replay test: rebuild the graph from the log and diff it against the live graph.
 
-A scratch database gets the kernel SQL, a copy of the log, sources and chunks, and
-then kernel.rebuild(), which projects every entry in offset order. Claims,
-assertions, nodes, edges, conflicts, touches, redactions and the AGE graph must come
-out identical. A non-empty diff exits with status 1.
+A scratch database gets the kernel SQL, the pack manifests the live database recorded
+(in install order), a copy of the log, sources and chunks, and then kernel.rebuild(),
+which projects every entry in offset order. The ontology, claims, assertions, nodes,
+edges, conflicts, touches, redactions and the AGE graph must come out identical. A
+non-empty diff exits with status 1.
 """
 
 from __future__ import annotations
@@ -15,13 +16,19 @@ from typing import Any
 
 import psycopg
 
-from kernel import admin
+from kernel import admin, packs
 
 # Tables copied from the live database: the log and what it cites.
 SOURCE_OF_TRUTH = ("kernel.sources", "kernel.chunks", "kernel.log")
 
 # Everything projected from the log, as canonical rows.
 SNAPSHOTS: dict[str, str] = {
+    "packs": "SELECT jsonb_build_object('name', name, 'version', version, 'hash', manifest_hash) "
+    "FROM kernel.packs",
+    "ontology": "SELECT to_jsonb(x) FROM kernel.namespaces x "
+    "UNION ALL SELECT to_jsonb(x) FROM kernel.kinds x "
+    "UNION ALL SELECT to_jsonb(x) FROM kernel.edge_kinds x "
+    "UNION ALL SELECT to_jsonb(x) FROM kernel.rules x",
     "claims": "SELECT to_jsonb(x) FROM kernel.claims x ORDER BY id",
     "assertions": "SELECT to_jsonb(x) FROM kernel.assertions x ORDER BY id",
     "nodes": "SELECT to_jsonb(x) - 'embedding' || jsonb_build_object('embedding', x.embedding::text) "
@@ -69,8 +76,10 @@ def replay(database: str, *, base_dsn: str | None = None, keep: bool = False) ->
     scratch_dsn = admin.dsn_for(base, scratch)
     admin.create_database(scratch, base_dsn=base)
     try:
-        admin.apply(scratch, base_dsn=base)
+        admin.apply(scratch, base_dsn=base, packs=[])
         with psycopg.connect(live_dsn) as src, psycopg.connect(scratch_dsn) as dst:
+            for (manifest,) in src.execute("SELECT manifest FROM kernel.packs ORDER BY install_seq"):
+                packs.install_manifest(dst, manifest)
             for table in SOURCE_OF_TRUTH:
                 with (
                     src.cursor().copy(f"COPY {table} TO STDOUT (FORMAT BINARY)") as out,

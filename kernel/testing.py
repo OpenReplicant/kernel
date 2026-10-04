@@ -1,16 +1,22 @@
-"""Test fixtures. Tests need a Postgres with AGE and pgvector: `make db` (or `make test`) starts one.
+"""The kernel's test kit, a pytest plugin: throwaway kernel databases, SQL-level and MCP-level
+access, and the fixtures the kernel's own tests and every pack's tests use.
 
-Each test gets a fresh database cloned from a template that has the kernel SQL and the
-reference pack applied.
+Enable it with `pytest_plugins = ["kernel.testing"]` in the root conftest.py. Each test gets a
+fresh database cloned from a template with the kernel SQL and the packs named by the
+`wmk_packs` fixture (default: the reference pack); a pack's test folder overrides
+`wmk_packs` in its own conftest.py. Needs a Postgres with AGE and pgvector at
+WMK_ADMIN_DSN (`make db`).
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -22,7 +28,7 @@ from kernel import admin
 
 WRITER_PASSWORD = os.environ.get("WMK_WRITER_PASSWORD", "writer")
 READER_PASSWORD = os.environ.get("WMK_READER_PASSWORD", "reader")
-TEMPLATE = "wmk_test_template"
+ROOT = Path(__file__).resolve().parent.parent
 
 
 class Rejected(Exception):
@@ -130,18 +136,37 @@ class KernelDB:
 
 
 @pytest.fixture(scope="session")
-def template_db() -> Iterator[str]:
+def wmk_packs() -> tuple[str, ...]:
+    """The packs a test database gets. The kernel's tests use the reference pack; a pack's
+    tests override this fixture in their conftest.py with their own pack (and any it needs)."""
+    return ("bpm-reference",)
+
+
+@pytest.fixture(scope="session")
+def _wmk_templates() -> Iterator[dict[tuple[str, ...], str]]:
+    """Template databases, one per pack set, created on first use and dropped at the end."""
     try:
         psycopg.connect(admin.admin_dsn(), connect_timeout=3).close()
     except psycopg.OperationalError as exc:
         pytest.exit(
             f"no database at WMK_ADMIN_DSN ({exc.__class__.__name__}); run `make db` first", returncode=2
         )
-    admin.create_database(TEMPLATE)
-    admin.apply(TEMPLATE)
     admin.ensure_login_roles(WRITER_PASSWORD, READER_PASSWORD)
-    yield TEMPLATE
-    admin.drop_database(TEMPLATE)
+    templates: dict[tuple[str, ...], str] = {}
+    yield templates
+    for name in templates.values():
+        admin.drop_database(name)
+
+
+@pytest.fixture
+def template_db(wmk_packs: tuple[str, ...], _wmk_templates: dict[tuple[str, ...], str]) -> str:
+    packs = tuple(sorted(wmk_packs))
+    if packs not in _wmk_templates:
+        name = "wmk_test_template_" + hashlib.sha1(",".join(packs).encode()).hexdigest()[:10]
+        admin.create_database(name)
+        admin.apply(name, packs=list(packs))
+        _wmk_templates[packs] = name
+    return _wmk_templates[packs]
 
 
 @pytest.fixture
@@ -182,8 +207,6 @@ def anyio_backend() -> str:
 @asynccontextmanager
 async def gateway_client(dbname: str, embedder: Any = None) -> AsyncIterator[Any]:
     """An MCP client connected in-process to a gateway running the eval profile on `dbname`."""
-    from pathlib import Path
-
     from mcp import Client
 
     from gateway import profiles
@@ -196,7 +219,7 @@ async def gateway_client(dbname: str, embedder: Any = None) -> AsyncIterator[Any
     kernel = Kernel(login_dsn(dbname, "wmk_writer"), login_dsn(dbname, "wmk_reader"), max_size=2)
     await kernel.open()
     try:
-        profile = profiles.load(Path(__file__).resolve().parent.parent / "profiles" / "eval.yaml")
+        profile = profiles.load(ROOT / "profiles" / "eval.yaml")
         agents = await ensure_agents(kernel, profile)
         tools = Tools(kernel, embedder or NoEmbedder(), agents, profile.name)
         async with Client(build_server(tools)) as client:

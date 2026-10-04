@@ -8,7 +8,7 @@ from decimal import Decimal
 import pytest
 from psycopg.types.json import Jsonb
 
-from tests.conftest import KernelDB, Rejected
+from kernel.testing import KernelDB, Rejected
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 # World Model Kernel: the database and the MCP gateway.
-#   make up                 db + gateway
+#   make up                 db, the packs in $WMK_PACKS (default: all) + gateway
 #   make up-otel            also an OpenTelemetry Collector and a trace viewer (Jaeger)
 #   make up-research        also the research pack's paper-source server (arXiv, OpenAlex, Crossref)
 name: wmk
@@ -28,6 +28,22 @@ services:
       timeout: 5s
       retries: 60
 
+  packs:
+    # Installs the packs into the database, then exits; the gateway starts after it.
+    # Installing again is a no-op, and a pack that conflicts or needs another kernel fails it.
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    image: wmk-gateway:dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WMK_ADMIN_DSN: postgresql://postgres:${WMK_DB_PASSWORD:-postgres}@db:5432/postgres
+      WMK_PACKS: ${WMK_PACKS:-}            # empty: every pack in packs/
+    command: ["python", "-m", "kernel.packs", "install", "--database", "wmk"]
+    restart: "no"
+
   gateway:
     build:
       context: .
@@ -36,6 +52,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      packs:
+        condition: service_completed_successfully
     environment:
       WMK_WRITER_DSN: postgresql://wmk_writer:${WMK_WRITER_PASSWORD:-writer}@db:5432/wmk
       WMK_READER_DSN: postgresql://wmk_reader:${WMK_READER_PASSWORD:-reader}@db:5432/wmk

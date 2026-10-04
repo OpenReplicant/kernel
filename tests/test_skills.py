@@ -12,7 +12,7 @@ import pytest
 import yaml
 
 from gateway import profiles
-from tests.conftest import KernelDB
+from kernel.testing import KernelDB
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = sorted((ROOT / "skills").glob("*/SKILL.md")) + sorted((ROOT / "packs").glob("*/SKILL.md"))
@@ -77,7 +77,7 @@ async def test_every_cypher_example_runs(dbname: str) -> None:
     finally:
         kdb.close()
 
-    from tests.conftest import gateway_client
+    from kernel.testing import gateway_client
 
     async with gateway_client(dbname) as client:
         for where, cypher in examples:

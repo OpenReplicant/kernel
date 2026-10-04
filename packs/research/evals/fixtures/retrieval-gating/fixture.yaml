@@ -9,6 +9,8 @@ description: >
   supports and contradicts across papers, a synthesis hypothesis with evidence for and
   against, an unresolved claim, evidence queries and citations.
 namespaces: [research]
+# The packs the fixture's database gets (core only when empty).
+packs: [research]
 sources:
   lima2025:
     file: sources/lima-2025.md

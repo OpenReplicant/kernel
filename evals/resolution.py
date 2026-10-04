@@ -149,7 +149,7 @@ async def run_set(path: Path, embedder: Embedder, keep: bool) -> dict[str, Any]:
     spec = yaml.safe_load(path.read_text())
     dbname = f"wmk_resolution_{spec['name']}"
     admin.create_database(dbname)
-    admin.apply(dbname)
+    admin.apply(dbname, packs=spec.get("packs", []))
     kernel = Kernel(
         login(dbname, "wmk_writer", WRITER_PASSWORD), login(dbname, "wmk_reader", READER_PASSWORD)
     )
