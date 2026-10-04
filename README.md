@@ -10,7 +10,8 @@ Every fact keeps who said it and where, when it was true in the world and when t
 kernel learned it, and whether credible sources agree (accepted) or disagree (contested).
 
 Design: [`docs/design-v1.md`](docs/design-v1.md). Decisions taken while building
-Phase 1: [`docs/decisions/`](docs/decisions/).
+Phase 1: [`docs/decisions/`](docs/decisions/). Libraries to adopt for later adapters:
+[`docs/adapters.md`](docs/adapters.md).
 
 ## Quick start
 
