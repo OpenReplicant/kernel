@@ -37,6 +37,11 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
    - `text`: the statement in one sentence, close to the source's wording.
    - `basis`: `observed` (you or a system saw it), `reported` (someone said or wrote it:
      needs `source`), `inferred` (you derived it).
+   - `quote`: for a reported claim, the exact words of the cited chunk that say it,
+     copied, not paraphrased: usually the sentence, 8 to 1,000 characters. The kernel
+     checks they are in the chunk (spacing, quote marks, dashes and case may differ) and
+     refuses the claim otherwise, naming the sentence that comes closest. If no words in
+     the chunk say it, it is not reported: it is `inferred`, with no source.
    - `modality`: `descriptive` (is/was), `predictive` (will), `normative` (should, must,
      policy), `proposed` (a suggestion), `hypothetical` (if/maybe).
    - `confidence`: how firmly the source commits (`low`, `medium`, `high`), not how sure
@@ -70,7 +75,16 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
    After **two** failed retries, write the claim with `ops: []` and
    `unresolved: {"reason": "..."}`. Nothing true is thrown away for failing to fit.
    A claim that maps to no ontology term at all goes straight to unresolved.
-7. **Answer with receipts.** Answer from `query_graph` and `query_log`, then call `cite`
+7. **Whole documents run in an extraction run.** When you map all of a source (not a
+   passage in conversation), start a run: a claim citing the source's first chunk with
+   `{"op": "create", "type": "Event", "kind": "extraction", "name": "<you> over <title>",
+   "props": {"skill": "...", "model": "..."}}`. Put its id in `claim.run` on every claim
+   you write from that source. When you have been through all of it, write
+   `{"op": "close_run", "run": <id>}` (citing the source): the kernel retracts what an
+   older run over the same source found and yours did not, so re-reading a document with
+   a better skill or model replaces the old reading instead of piling on top of it. If you
+   stop early, transition the run to `cancelled` instead: nothing is retracted.
+8. **Answer with receipts.** Answer from `query_graph` and `query_log`, then call `cite`
    with each answer sentence and the edge or claim ids it relied on. A sentence that
    relied on nothing in the graph is still cited, with no ids: that marks it untraced.
 
@@ -110,7 +124,9 @@ Dana's edge (`edg_01J...E1`), and nothing for Sam:
 
 ```json
 {"claim": {"text": "Sam took over invoice approval from Dana in March 2026",
-           "source": "chk_..._0002", "basis": "reported", "modality": "descriptive"},
+           "source": "chk_..._0002",
+           "quote": "Sam took over invoice approval from Dana in March 2026",
+           "basis": "reported", "modality": "descriptive"},
  "read_at_offset": 48210,
  "ops": [{"op": "create", "ref": "$sam", "type": "Agent", "kind": "human", "name": "Sam"},
          {"op": "assert", "edge": "implements", "from": "$sam", "to": "ent_01J...ROLE",

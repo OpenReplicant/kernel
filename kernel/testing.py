@@ -49,6 +49,7 @@ class KernelDB:
         self.admin.execute('SET search_path = ag_catalog, "$user", public')
         self.writer = psycopg.connect(self.dsn, autocommit=True)
         self.writer.execute("SET ROLE kernel_writer")
+        self.chunk_text: dict[str, str] = {}
 
     def close(self) -> None:
         self.admin.close()
@@ -68,7 +69,9 @@ class KernelDB:
         return self._call("write", payload, agent)
 
     def ingest(self, source: dict[str, Any], agent: str) -> dict[str, Any]:
-        return self._call("ingest_source", source, agent)
+        result = self._call("ingest_source", source, agent)
+        self.chunk_text.update({c["id"]: c["text"] for c in result["chunks"]})
+        return result
 
     def cite(self, cite: dict[str, Any], agent: str) -> dict[str, Any]:
         return self._call("cite", cite, agent)
@@ -124,6 +127,10 @@ class KernelDB:
         claim: dict[str, Any] = {"text": text, "basis": basis, "modality": modality, **claim_extra}
         if source:
             claim["source"] = source
+            # Tests cite one-sentence sources: unless a test passes its own quote, a reported
+            # claim quotes the whole chunk it cites (kit only; agents quote the words they use).
+            if basis == "reported" and "quote" not in claim and source in self.chunk_text:
+                claim["quote"] = self.chunk_text[source][:1000]
         return self.write(
             {"claim": claim, "read_at_offset": self.head() if read_at is None else read_at, "ops": ops}, agent
         )

@@ -139,6 +139,12 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 - Belief is a pure function of assertions: each source counts once, no decay, conflicts
   between sources are shown as contested, never overwritten.
 - Telemetry carries IDs, never claim text, source content or message content.
+- A reported claim quotes the words of its source it rests on; the kernel finds them and
+  records their span, or refuses the claim. A quote proves the words exist, not that they
+  entail the claim.
+- A source read in an extraction run is read as a whole: closing the run retracts what an
+  older run over the same source found and this one did not
+  ([ADR 0020](docs/decisions/0020-quotes-and-extraction-runs.md)).
 
 ## Current limits
 

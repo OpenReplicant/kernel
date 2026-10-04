@@ -133,7 +133,9 @@ An adapter maps structured data deterministically, without a model: it reads fil
 APIs, builds a plan of sources and claims, and plays it through the gateway's tools as an
 MCP client, so every write goes through `kernel.write` and the adapter needs no database
 credentials. Give each file a `collection` that stays the same across its versions, so a
-newer version supersedes the older one; retract what a changed file no longer says.
+newer version supersedes the older one, and map each changed file in an extraction run:
+closing the run retracts what the previous run found and this one did not
+([ADR 0020](decisions/0020-quotes-and-extraction-runs.md)).
 Render the plan as an eval fixture script and score it against a hand-written expected
 graph. `packs/software/adapter/` (`wmk-software`) is the example
 ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md)).

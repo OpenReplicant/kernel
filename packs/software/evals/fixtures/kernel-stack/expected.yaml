@@ -68,6 +68,15 @@ entities:
   - {type: Entity, kind: pipeline, name: ci/kernel}
   # The self
   - {type: Entity, kind: system, name: World Model Kernel (this instance), status: active}
+  # One extraction run per mapped file, each closed when its claims are written (ADR 0020);
+  # the history is append-only and mapped outside runs.
+  - {type: Event, kind: extraction, name: "wmk-software over pyproject.toml @ 94526960d835", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-software over packs/research/mcp/pyproject.toml @ ffa636c20a40", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-software over docker-compose.yml @ 16c5ecc308d7", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-software over db/Dockerfile @ e37de45e2c52", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-software over gateway/Dockerfile @ bbc371d646b1", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-software over packs/research/mcp/Dockerfile @ 52b7c225bf89", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-software over .github/workflows/ci.yml @ 1047c93a1324", status: completed}
 
 edges:
   # History: every first-parent commit changed the repository

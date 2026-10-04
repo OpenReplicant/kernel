@@ -27,7 +27,7 @@ GRANT SELECT ON kernel.sources, kernel.chunks, kernel.assertions, kernel.cites,
 GRANT SELECT (log_offset, entry_id, kind, agent_id, agent_trust, conflicts, read_at_offset, trace_id, span_id,
               recorded_at, belief_version) ON kernel.log TO kernel_reader;
 GRANT SELECT (id, log_offset, chunk_id, source_id, source_key, agent_id, basis, modality, polarity, confidence,
-              trust, resolution, unresolved, recorded_at, trace_id, span_id) ON kernel.claims TO kernel_reader;
+              trust, resolution, unresolved, recorded_at, trace_id, span_id, run_id) ON kernel.claims TO kernel_reader;
 
 GRANT EXECUTE ON FUNCTION
   kernel.head_offset(),

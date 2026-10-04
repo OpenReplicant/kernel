@@ -45,3 +45,10 @@ state, OTel) is a separate source that can contest it. Python versions are decla
 until the lock file is read. A repository without git is not mapped. Changing the self
 boundary, like any change to the system, stays a proposal for people to approve (the
 approval-channel ADR, next).
+
+## Amendment (2026-10-04)
+
+The adapter no longer retracts with its own reading of the log: it maps each changed file
+in an extraction run, and closing the run makes the kernel retract what an older run over
+the file found and this one did not ([ADR 0020](0020-quotes-and-extraction-runs.md)). A run
+with a refused claim is cancelled, so a partial pass retracts nothing.

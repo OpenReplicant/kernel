@@ -7,7 +7,7 @@
 | `urn:wmk:rule:cardinality` | This source would give a single-valued edge two holders at once | Close the other edge (`edge_id` in `conflicting_edges`) with `valid_to` in the same payload, or deny it |
 | `urn:wmk:rule:time` | `valid_from` not before `valid_to`, or an event ending before it starts | Fix the dates |
 | `urn:wmk:rule:identity` | Identity key malformed or not declared for that kind | Fix the value; use a key from `nearest` |
-| `urn:wmk:rule:provenance` | Basis too weak for this edge, or a reported claim without a source | Cite the chunk; do not infer what must be reported or observed |
+| `urn:wmk:rule:provenance` | Basis too weak for this edge, a reported claim without a source or quote (`core.reported_needs_quote`), a quote not in the chunk (`kernel.quote_in_source`, with `nearest`: the chunk's closest sentence), or a claim outside its run's source (`kernel.run_source`) | Cite the chunk and copy its words exactly; if no words say it, the claim is `inferred`, not reported |
 | `urn:wmk:write:duplicate` | The node probably exists (`candidates`) | Use the candidate's id; if it is truly different, add it to `distinct_from` (not possible for identity-key matches) |
 | `urn:wmk:write:stale-read` | Nodes you touch changed since `read_at_offset` (`changed`) | Read them again, rethink, resubmit with the new `head_offset` |
 | `urn:wmk:write:unknown-reference` | An id or `$ref` does not exist (`candidates` may suggest ids for a name) | Look the name up; define refs before using them |

@@ -87,7 +87,7 @@ domain_range {"edge", "kind"?, "from": {"types"?, "kinds"?}, "to": {...}}   allo
 cardinality  {"edge", "key": "from"|"to", "key_kinds": [...], "max"}       single-valued edges; windows may not overlap
 time         {"check": "window_order"|"event_order"} or {"edge", "require_valid_from": true}
 identity     {"node_type", "kinds": [...], "keys": [...], "patterns"?: {key: regex}}
-provenance   {"edge"?, "modality"?, "min_basis"?, "requires_source"?, "basis"?}$c$;
+provenance   {"edge"?, "modality"?, "min_basis"?, "requires_source"?, "requires_quote"?, "basis"?}$c$;
 
 -- Node types --------------------------------------------------------------------
 
@@ -143,7 +143,10 @@ INSERT INTO kernel.kinds (name, node_type, label, description, defined_by) VALUE
   ('occurrence', 'Event', 'Occurrence', 'Something that happened or will happen, when no more specific kind fits.', 'core'),
   ('meeting', 'Event', 'Meeting', 'A gathering of participants, such as an interview or review.', 'core'),
   ('change', 'Event', 'Change', 'A change to a system, process, organisation or role assignment.', 'core'),
-  ('incident', 'Event', 'Incident', 'An unplanned disruption or failure.', 'core');
+  ('incident', 'Event', 'Incident', 'An unplanned disruption or failure.', 'core'),
+  ('extraction', 'Event', 'Extraction run',
+   'One pass of an extractor (an agent with a skill and a model) over one source. Claims written in it name it; closing it retracts what older runs over the same source found and it did not.',
+   'core');
 
 INSERT INTO kernel.statuses (node_type, status, label, description, is_default) VALUES
   ('Entity', 'active', 'Active', 'The entity exists and is in use.', true),
@@ -178,6 +181,11 @@ INSERT INTO kernel.rules (id, category, namespace, params, label, description, d
   ('core.reported_needs_source', 'provenance', NULL,
    '{"basis": "reported", "requires_source": true}',
    'Reported claims cite a source', 'A claim with basis reported must name the chunk it was read from.', 'core'),
+  ('core.reported_needs_quote', 'provenance', NULL,
+   '{"basis": "reported", "requires_quote": true}',
+   'Reported claims quote their source',
+   'A claim with basis reported must quote the words of the cited chunk it rests on (claim.quote); the kernel checks they are there.',
+   'core'),
   ('core.human_email', 'identity', NULL,
    '{"node_type": "Agent", "kinds": ["human"], "keys": ["email"], "patterns": {"email": "^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$"}}',
    'Email identifies a person', 'Two human agents with the same email are the same person.', 'core'),

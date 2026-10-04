@@ -269,14 +269,57 @@ BEGIN
 END
 $$;
 
+-- Contract: the extraction run p_run, when p_agent may write in it citing p_source: an Event
+-- of kind extraction, still ongoing, started by p_agent with a claim citing the same source
+-- (the same collection, or the same source when it has none). Otherwise a rejection that
+-- names p_field. Reads only.
+CREATE FUNCTION kernel.open_run(p_run text, p_agent text, p_source kernel.sources, p_field text)
+RETURNS kernel.nodes
+LANGUAGE plpgsql STABLE AS $$
+DECLARE
+  v_run kernel.nodes;
+  v_started kernel.claims;
+BEGIN
+  SELECT * INTO v_run FROM kernel.nodes WHERE id = p_run;
+  IF v_run.id IS NULL OR v_run.type <> 'Event' OR v_run.kind <> 'extraction' THEN
+    PERFORM kernel.reject('reference', NULL,
+      format('%s %s is not an extraction run; start one with an Event of kind extraction', p_field,
+             coalesce(p_run, 'null')),
+      jsonb_build_object('field', p_field));
+  END IF;
+  IF v_run.status IS DISTINCT FROM 'ongoing' THEN
+    PERFORM kernel.reject('payload', 'kernel.run_open',
+      format('run %s is %s, not ongoing; start a new run', v_run.id, coalesce(v_run.status, 'unknown')),
+      jsonb_build_object('field', p_field));
+  END IF;
+  SELECT * INTO v_started FROM kernel.claims WHERE id = v_run.claim_id;
+  IF v_started.agent_id IS DISTINCT FROM p_agent THEN
+    PERFORM kernel.reject('agent', 'kernel.run_agent',
+      format('only the agent that started run %s writes in it', v_run.id), jsonb_build_object('field', p_field));
+  END IF;
+  IF p_source.id IS NULL OR coalesce(p_source.collection, p_source.id) IS DISTINCT FROM v_started.source_key THEN
+    PERFORM kernel.reject('provenance', 'kernel.run_source',
+      format('writes in run %s cite a chunk of the source it runs over', v_run.id),
+      jsonb_build_object('field', 'claim.source'));
+  END IF;
+  RETURN v_run;
+END
+$$;
+
 -- Contract: kernel.write(payload, agent_id) validates a claim and the graph operations it
 -- justifies, and commits the claim, the log entry and the graph change together, or
 -- rejects with SQLSTATE WMK01 and writes nothing.
 --
--- payload: {"claim": {"text", "source"?: chunk id, "basis", "modality", "polarity"?,
---           "confidence"?}, "read_at_offset", "ops": [...], "trace_id"?, "span_id"?,
+-- payload: {"claim": {"text", "source"?: chunk id, "quote"?: words of that chunk, "basis",
+--           "modality", "polarity"?, "confidence"?, "run"?: extraction run id},
+--           "read_at_offset", "ops": [...], "trace_id"?, "span_id"?,
 --           "unresolved"?: {"reason", "rule"?}}
 -- An empty ops list stores an unresolved claim: text and provenance, no graph change.
+-- A quote must occur in the cited chunk (spacing, quote marks and dashes may differ); its
+-- span is recorded with the claim. A claim in a run cites the run's source and comes from
+-- the agent that started it. {"op": "close_run", "run"} completes a run and retracts, as
+-- negative assertions from the same source, what older runs over that source asserted and
+-- this run did not; the log stores those assertions, never the close_run op itself.
 -- p_agent_id is the writing agent, set by the gateway, never by the model. It may be
 -- NULL only for self-registration: one create of an Agent with "self": true.
 --
@@ -349,6 +392,11 @@ DECLARE
   entry jsonb;
   v_conflicts jsonb;
   v_unresolved jsonb;
+  v_quote_start int;
+  v_quote_end int;
+  v_run kernel.nodes;
+  v_run_claim kernel.claims;
+  v_target record;
 BEGIN
   -- Shape ------------------------------------------------------------------------------
   IF jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN
@@ -364,7 +412,7 @@ BEGIN
     PERFORM kernel.reject('payload', NULL, 'claim.text is required', jsonb_build_object('field', 'claim.text'));
   END IF;
   SELECT string_agg(k, ', ') INTO v_val FROM jsonb_object_keys(c) k
-  WHERE k NOT IN ('text', 'source', 'basis', 'modality', 'polarity', 'confidence');
+  WHERE k NOT IN ('text', 'source', 'quote', 'basis', 'modality', 'polarity', 'confidence', 'run');
   IF v_val IS NOT NULL THEN
     PERFORM kernel.reject('payload', NULL, format('unknown claim keys: %s', v_val));
   END IF;
@@ -467,6 +515,47 @@ BEGIN
     PERFORM kernel.reject('provenance', v_rule.id, v_rule.description);
   END LOOP;
 
+  -- Quote: the words of the cited chunk the claim rests on, found in the source (a quote
+  -- that runs over the chunk's edge is found in the source's full text).
+  IF c ? 'quote' THEN
+    IF jsonb_typeof(c -> 'quote') <> 'string' OR length(btrim(c ->> 'quote')) < 8
+       OR length(c ->> 'quote') > 1000 THEN
+      PERFORM kernel.reject('payload', NULL,
+        'claim.quote must be the exact words (8 to 1,000 characters) of the cited chunk that the claim rests on',
+        jsonb_build_object('field', 'claim.quote'));
+    END IF;
+    IF v_chunk.id IS NULL THEN
+      PERFORM kernel.reject('payload', NULL, 'claim.quote needs claim.source: the chunk it is quoted from',
+                            jsonb_build_object('field', 'claim.source'));
+    END IF;
+    SELECT q.q_start, q.q_end INTO v_quote_start, v_quote_end
+    FROM kernel.find_quote(v_source.content, c ->> 'quote',
+                           greatest(v_chunk.char_start - length(c ->> 'quote'), 0)) q
+    WHERE q.q_start < v_chunk.char_end;
+    IF v_quote_start IS NULL THEN
+      PERFORM kernel.reject('provenance', 'kernel.quote_in_source',
+        format('the quote is not in chunk %s: quote its words exactly (spacing, quote marks and dashes may differ)',
+               v_chunk.id),
+        jsonb_build_object('field', 'claim.quote', 'nearest', kernel.nearest_sentence(v_chunk.text, c ->> 'quote')));
+    END IF;
+  END IF;
+  FOR v_rule IN
+    SELECT * FROM kernel.rules
+    WHERE category = 'provenance' AND coalesce((params ->> 'requires_quote')::boolean, false)
+      AND (NOT params ? 'basis' OR params ->> 'basis' = v_basis)
+      AND (NOT params ? 'modality' OR params ->> 'modality' = v_modality)
+    ORDER BY id
+  LOOP
+    IF v_quote_start IS NULL THEN
+      PERFORM kernel.reject('provenance', v_rule.id, v_rule.description, jsonb_build_object('field', 'claim.quote'));
+    END IF;
+  END LOOP;
+
+  -- Extraction run: an ongoing run over the same source, started by this agent.
+  IF c ? 'run' THEN
+    v_run := kernel.open_run(c ->> 'run', v_agent, v_source, 'claim.run');
+  END IF;
+
   -- Trust: a report is no more credible than its speaker or its transcriber. Observed and
   -- inferred claims are the writer's own; a reported claim citing a source with an author
   -- weighs the lower of the two. Recorded in the entry, so replay never reads agents' state.
@@ -492,10 +581,12 @@ BEGIN
       WHEN 'promote' THEN ARRAY['op', 'ref', 'about', 'about_edges', 'props']
       WHEN 'transition' THEN ARRAY['op', 'node', 'status']
       WHEN 'redact' THEN ARRAY['op', 'node', 'claim', 'fields']
+      WHEN 'close_run' THEN ARRAY['op', 'run']
       ELSE ARRAY[]::text[] END));
-    IF op ->> 'op' IS NULL OR op ->> 'op' NOT IN ('create', 'assert', 'link', 'unlink', 'promote', 'transition', 'redact') THEN
+    IF op ->> 'op' IS NULL OR op ->> 'op' NOT IN ('create', 'assert', 'link', 'unlink', 'promote', 'transition', 'redact',
+                                                  'close_run') THEN
       PERFORM kernel.reject('payload', NULL,
-        format('ops[%s].op must be create, assert, link, unlink, promote, transition or redact', idx),
+        format('ops[%s].op must be create, assert, link, unlink, promote, transition, redact or close_run', idx),
         jsonb_build_object('op_index', idx));
     END IF;
     IF v_val IS NOT NULL THEN
@@ -592,8 +683,16 @@ BEGIN
       -- Identity keys match case-insensitively: they are stored lower-case.
       v_identity := (SELECT coalesce(jsonb_object_agg(k, lower(v)), '{}') FROM jsonb_each_text(v_identity) AS i(k, v));
 
+      -- An extraction run starts with a claim citing the source it runs over, and is ongoing.
+      IF v_type = 'Event' AND v_kind = 'extraction' AND v_chunk.id IS NULL THEN
+        PERFORM kernel.reject('provenance', 'kernel.run_source',
+          'an extraction run starts with a claim citing a chunk of the source it runs over',
+          jsonb_build_object('op_index', idx, 'field', 'claim.source'));
+      END IF;
+
       -- lifecycle status
-      v_status := coalesce(op ->> 'status', (SELECT status FROM kernel.statuses WHERE node_type = v_type AND is_default));
+      v_status := coalesce(op ->> 'status', CASE WHEN v_type = 'Event' AND v_kind = 'extraction' THEN 'ongoing' END,
+                           (SELECT status FROM kernel.statuses WHERE node_type = v_type AND is_default));
       IF NOT EXISTS (SELECT 1 FROM kernel.statuses WHERE node_type = v_type AND status = v_status) THEN
         PERFORM kernel.reject('types', 'kernel.known_status', format('%s is not a status of %s', v_status, v_type),
           jsonb_build_object('op_index', idx, 'nearest',
@@ -934,6 +1033,38 @@ BEGIN
         touched := touched || (f ->> 'id');
         resolved := resolved || jsonb_build_object('op', 'redact', 'node', f ->> 'id', 'fields', to_jsonb(v_fields));
       END IF;
+
+    -- close_run: complete a run, retracting what older runs over its source found and it did not
+    WHEN 'close_run' THEN
+      v_run := kernel.open_run(op ->> 'run', v_agent, v_source, format('ops[%s].run', idx));
+      SELECT * INTO v_run_claim FROM kernel.claims WHERE id = v_run.claim_id;
+      FOR v_target IN
+        WITH latest AS (
+          -- The source's latest assertion on each edge and claim, and the run it came from.
+          SELECT DISTINCT ON (a.target_type, a.target_id) a.target_type, a.target_id, a.polarity, cl.run_id
+          FROM kernel.assertions a JOIN kernel.claims cl ON cl.id = a.claim_id
+          WHERE a.source_key = v_run_claim.source_key AND a.target_type IN ('edge', 'claim')
+          ORDER BY a.target_type, a.target_id, a.log_offset DESC, a.op_index DESC
+        )
+        SELECT l.target_type, l.target_id
+        FROM latest l JOIN kernel.nodes r ON r.id = l.run_id
+        WHERE l.polarity = 1 AND r.created_offset < v_run.created_offset
+        ORDER BY l.target_type, l.target_id
+      LOOP
+        IF v_target.target_type = 'claim' THEN
+          resolved := resolved || jsonb_build_object('op', 'assert', 'target', 'claim', 'claim_node', v_target.target_id,
+                                                     'polarity', -1);
+        ELSE
+          SELECT * INTO v_edge_row FROM kernel.edges WHERE id = v_target.target_id;
+          SELECT sw.valid_from, sw.valid_to INTO v_vf, v_vt
+          FROM kernel.source_window(v_edge_row.id, v_run_claim.source_key) sw;
+          resolved := resolved || (jsonb_strip_nulls(jsonb_build_object(
+            'op', 'assert', 'target', 'edge', 'edge_id', v_edge_row.id, 'new_edge', false, 'edge', v_edge_row.edge,
+            'kind', v_edge_row.kind, 'from', v_edge_row.from_id, 'to', v_edge_row.to_id, 'polarity', -1))
+            || jsonb_build_object('valid_from', to_jsonb(v_vf), 'valid_to', to_jsonb(v_vt)));
+        END IF;
+      END LOOP;
+      resolved := resolved || jsonb_build_object('op', 'transition', 'node', v_run.id, 'status', 'completed');
     END CASE;
   END LOOP;
 
@@ -956,6 +1087,7 @@ BEGIN
       'id', v_claim_id, 'text', c ->> 'text', 'chunk_id', v_chunk.id, 'source_id', v_source.id,
       'source_key', v_source_key, 'basis', v_basis, 'modality', v_modality, 'polarity', v_polarity,
       'confidence', v_confidence, 'trust', v_claim_trust,
+      'quote_start', v_quote_start, 'quote_end', v_quote_end, 'run', c ->> 'run',
       'resolution', CASE WHEN jsonb_array_length(resolved) = 0 THEN 'unresolved' ELSE 'resolved' END,
       'unresolved', CASE WHEN jsonb_array_length(resolved) = 0 THEN coalesce(v_unresolved, '{}') END)),
     resolved, '[]'::jsonb, v_read, payload ->> 'trace_id', payload ->> 'span_id', v_at, 1

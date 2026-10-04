@@ -9,7 +9,7 @@
 # Lima and Okafor (2025) ----------------------------------------------------------------
 - write:
     claim: {text: "Ana Lima and Ben Okafor wrote Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization (2025).",
-            source: "{{chunk:lima2025:0}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2025:0}}", quote: "Ana Lima, Ben Okafor. 2025. Synthetic Proceedings of Summarization 12. doi:10.5555/wmk.rgd.2025", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $paper_a, kind: paper, namespace: research,
          name: Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization,
@@ -21,14 +21,14 @@
 
 - write:
     claim: {text: "Lima and Okafor introduce retrieval-gated decoding (RGD), which blocks a token when no retrieved passage of the source supports it.",
-            source: "{{chunk:lima2025:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2025:1}}", quote: "We introduce retrieval-gated decoding (RGD), which blocks a token when no retrieved passage of the source supports it", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $rgd, kind: method, namespace: research, name: Retrieval-gated decoding, aliases: [RGD]}
       - {op: assert, edge: introduces, from: "{{ref:paper_a}}", to: $rgd}
 
 - write:
     claim: {text: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%.",
-            source: "{{chunk:lima2025:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2025:1}}", quote: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%, while ROUGE-L drops by 0.4 points", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $newssum, kind: data, namespace: research, name: NewsSum-2}
       - {op: create, ref: $fc, kind: measure, namespace: research, name: Factual consistency}
@@ -38,7 +38,7 @@
 
 - write:
     claim: {text: "On NewsSum-2, ROUGE-L drops by 0.4 points with RGD.",
-            source: "{{chunk:lima2025:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2025:1}}", quote: "On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%, while ROUGE-L drops by 0.4 points", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $rouge, kind: measure, namespace: research, name: ROUGE-L}
       - {op: promote, ref: $f2, about: ["{{ref:rgd}}", "{{ref:newssum}}", $rouge]}
@@ -46,7 +46,7 @@
 
 - write:
     claim: {text: "Gating at the token level, rather than the sentence level, drives RGD's gain in factual consistency.",
-            source: "{{chunk:lima2025:1}}", basis: reported, modality: hypothetical, confidence: medium}
+            source: "{{chunk:lima2025:1}}", quote: "We hypothesize that gating at the token level, rather than the sentence level, drives the gain", basis: reported, modality: hypothetical, confidence: medium}
     ops:
       - {op: promote, ref: $h1, about: ["{{ref:rgd}}", "{{ref:fc}}"]}
       - {op: assert, edge: reports, from: "{{ref:paper_a}}", to: $h1}
@@ -54,7 +54,7 @@
 # Wu (2026) -------------------------------------------------------------------------------
 - write:
     claim: {text: "Chen Wu wrote Does Retrieval Gating Help Long-Document Summarization? (2026).",
-            source: "{{chunk:wu2026:0}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:wu2026:0}}", quote: "Chen Wu. 2026. Synthetic Journal of Text Generation 4. doi:10.5555/wmk.rgd.2026a", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $paper_b, kind: paper, namespace: research,
          name: "Does Retrieval Gating Help Long-Document Summarization?",
@@ -66,20 +66,20 @@
 # the paper's own contribution is that it cites the earlier paper.
 - write:
     claim: {text: "Retrieval-gated decoding was reported to improve the factual consistency of news summaries.",
-            source: "{{chunk:wu2026:1}}", basis: reported, modality: descriptive}
+            source: "{{chunk:wu2026:1}}", quote: "Retrieval-gated decoding (RGD; Lima and Okafor, 2025) was reported to improve the factual consistency of news summaries", basis: reported, modality: descriptive}
     ops:
       - {op: create, ref: $rgd_again, kind: method, namespace: research, name: Retrieval-gated decoding}
   expect: {rejected: "urn:wmk:write:duplicate"}
 
 - write:
     claim: {text: "Wu cites Lima and Okafor (2025) for retrieval-gated decoding.",
-            source: "{{chunk:wu2026:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:wu2026:1}}", quote: "Retrieval-gated decoding (RGD; Lima and Okafor, 2025) was reported to improve the factual consistency of news summaries", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: assert, edge: cites, from: "{{ref:paper_b}}", to: "{{ref:paper_a}}"}
 
 - write:
     claim: {text: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without).",
-            source: "{{chunk:wu2026:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:wu2026:1}}", quote: "RGD did not improve factual consistency on GovLong (78% with gating, 77% without)", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $govlong, kind: data, namespace: research, name: GovLong}
       - {op: assert, edge: uses_data, from: "{{ref:paper_b}}", to: $govlong}
@@ -88,7 +88,7 @@
 
 - write:
     claim: {text: "Wu introduces sentence-level gating, a variant of RGD that gates whole sentences.",
-            source: "{{chunk:wu2026:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:wu2026:1}}", quote: "We also introduce sentence-level gating, a variant of RGD that gates whole sentences: it scored the same as token-level gating, which suggests that the gain reported on news does not come from gating at the token level", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $slg, kind: method, namespace: research, name: Sentence-level gating}
       - {op: assert, edge: builds_on, from: $slg, to: "{{ref:rgd}}"}
@@ -97,7 +97,7 @@
 # A first attempt credits the finding to the author instead of the paper: rejected, then fixed.
 - write:
     claim: {text: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
-            source: "{{chunk:wu2026:1}}", basis: reported, modality: descriptive, confidence: low}
+            source: "{{chunk:wu2026:1}}", quote: "We also introduce sentence-level gating, a variant of RGD that gates whole sentences: it scored the same as token-level gating, which suggests that the gain reported on news does not come from gating at the token level", basis: reported, modality: descriptive, confidence: low}
     ops:
       - {op: promote, ref: $f4, about: ["{{ref:slg}}", "{{ref:govlong}}", "{{ref:fc}}"]}
       - {op: assert, edge: reports, from: "{{ref:wu}}", to: $f4}
@@ -105,7 +105,7 @@
 
 - write:
     claim: {text: "Sentence-level gating scored the same as token-level gating on GovLong, which suggests the gain reported on news does not come from gating at the token level.",
-            source: "{{chunk:wu2026:1}}", basis: reported, modality: descriptive, confidence: low}
+            source: "{{chunk:wu2026:1}}", quote: "We also introduce sentence-level gating, a variant of RGD that gates whole sentences: it scored the same as token-level gating, which suggests that the gain reported on news does not come from gating at the token level", basis: reported, modality: descriptive, confidence: low}
     ops:
       - {op: promote, ref: $f4, about: ["{{ref:slg}}", "{{ref:govlong}}", "{{ref:fc}}"]}
       - {op: assert, edge: reports, from: "{{ref:paper_b}}", to: $f4}
@@ -115,7 +115,7 @@
 # Ana Lima is recognised by her ORCID iD: a new person with it is refused.
 - write:
     claim: {text: "Ana Lima and Dev Patel wrote Retrieval-Gated Decoding for Clinical Note Summarization (2026).",
-            source: "{{chunk:lima2026:0}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2026:0}}", quote: "Ana Lima, Dev Patel. 2026. Synthetic Workshop on Clinical Text 3. doi:10.5555/wmk.rgd.2026b", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $paper_c, kind: paper, namespace: research,
          name: Retrieval-Gated Decoding for Clinical Note Summarization,
@@ -125,7 +125,7 @@
 
 - write:
     claim: {text: "Ana Lima and Dev Patel wrote Retrieval-Gated Decoding for Clinical Note Summarization (2026).",
-            source: "{{chunk:lima2026:0}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2026:0}}", quote: "Ana Lima, Dev Patel. 2026. Synthetic Workshop on Clinical Text 3. doi:10.5555/wmk.rgd.2026b", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $paper_c, kind: paper, namespace: research,
          name: Retrieval-Gated Decoding for Clinical Note Summarization,
@@ -136,7 +136,7 @@
 
 - write:
     claim: {text: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries.",
-            source: "{{chunk:lima2026:1}}", basis: reported, modality: descriptive, confidence: high}
+            source: "{{chunk:lima2026:1}}", quote: "On the MedNotes corpus, RGD raised factual consistency from 64% to 79%, in line with earlier results on news summaries", basis: reported, modality: descriptive, confidence: high}
     ops:
       - {op: create, ref: $mednotes, kind: data, namespace: research, name: MedNotes}
       - {op: assert, edge: uses_data, from: "{{ref:paper_c}}", to: $mednotes}
@@ -145,14 +145,14 @@
       - {op: assert, edge: supports, from: $f5, to: "{{ref:f1}}"}
 
 - write:
-    claim: {text: "Our code is released under the MIT license.", source: "{{chunk:lima2026:1}}",
+    claim: {text: "Our code is released under the MIT license.", source: "{{chunk:lima2026:1}}", quote: "Our code is released under the MIT license",
             basis: reported, modality: descriptive}
     ops: []
     unresolved: {reason: "the licence of a paper's code; no kind or edge for software licences"}
 
 - write:
     claim: {text: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question.",
-            source: "{{chunk:lima2026:1}}", basis: reported, modality: hypothetical, confidence: low}
+            source: "{{chunk:lima2026:1}}", quote: "Whether RGD improves factual consistency on documents longer than 4,000 tokens remains an open question", basis: reported, modality: hypothetical, confidence: low}
     ops:
       - {op: promote, ref: $q1, about: ["{{ref:rgd}}", "{{ref:fc}}"]}
       - {op: assert, edge: reports, from: "{{ref:paper_c}}", to: $q1}

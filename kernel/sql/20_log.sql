@@ -74,11 +74,19 @@ CREATE TABLE kernel.claims (
   unresolved  jsonb,
   recorded_at timestamptz NOT NULL,
   trace_id    text,
-  span_id     text
+  span_id     text,
+  -- The words of the source the claim rests on: 0-based character offsets into the
+  -- source's content, found by kernel.find_quote when the claim was written.
+  quote_start int CHECK (quote_start >= 0),
+  quote_end   int CHECK (quote_end > quote_start),
+  -- The extraction run (an Event of kind extraction) the claim was written in.
+  run_id      text,
+  CHECK ((quote_start IS NULL) = (quote_end IS NULL))
 );
 COMMENT ON TABLE kernel.claims IS
   'One claim per log entry. Unresolved claims keep text and provenance with no operations. Append-only.';
 CREATE INDEX claims_source_idx ON kernel.claims (source_id);
+CREATE INDEX claims_run_idx ON kernel.claims (run_id) WHERE run_id IS NOT NULL;
 CREATE INDEX claims_unresolved_idx ON kernel.claims (log_offset) WHERE resolution = 'unresolved';
 
 CREATE TABLE kernel.assertions (

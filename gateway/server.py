@@ -29,7 +29,8 @@ def instructions(agents: Agents, profile: str) -> str:
     lines = [
         "World Model Kernel: a sourced, versioned world model. Follow the core skill:",
         "read first (get_schema_slice, lookup_entities, query_graph), then write one claim at a time with",
-        "the ops it justifies and the head_offset of your last read as read_at_offset. Fix rejected writes",
+        "the ops it justifies and the head_offset of your last read as read_at_offset. A reported claim",
+        "quotes the exact words of its chunk (claim.quote). Fix rejected writes",
         "using the problem document; after two failed retries write the claim with empty ops (unresolved).",
         "Ingest sources before citing them, and cite the edges and claims each answer sentence relied on.",
         f"You write as agent {agents.agent_id} (profile {profile}).",
