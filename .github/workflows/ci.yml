@@ -1,7 +1,9 @@
 name: ci
 
 on:
+  # Pull requests run CI once; main runs it again after each merge.
   push:
+    branches: [main]
   pull_request:
 
 jobs:

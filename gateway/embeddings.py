@@ -27,9 +27,16 @@ class NoEmbedder:
 
 
 class HttpEmbedder:
-    def __init__(self, url: str, model: str, api_key: str | None = None, timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        url: str,
+        model: str,
+        api_key: str | None = None,
+        timeout: float = 10.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-        self._client = httpx.AsyncClient(timeout=timeout, headers=headers)
+        self._client = httpx.AsyncClient(timeout=timeout, headers=headers, transport=transport)
         self._url = url
         self._model = model
 
@@ -41,7 +48,10 @@ class HttpEmbedder:
                 response = await self._client.post(self._url, json={"model": self._model, "input": texts})
                 response.raise_for_status()
                 data = sorted(response.json()["data"], key=lambda d: d["index"])
-                return [list(map(float, d["embedding"])) for d in data]
+                vectors = [list(map(float, d["embedding"])) for d in data]
+                if len(vectors) != len(texts) or len({len(v) for v in vectors}) != 1:
+                    raise ValueError("the endpoint returned the wrong number or shape of vectors")
+                return vectors
             except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
                 # The texts are never logged; only the failure type.
                 log.warning("embedding endpoint failed (%s); falling back to names", type(exc).__name__)

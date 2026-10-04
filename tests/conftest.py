@@ -10,6 +10,7 @@ import json
 import os
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import psycopg
@@ -178,9 +179,9 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-@pytest.fixture
-async def gateway(dbname: str) -> AsyncIterator[Any]:
-    """An MCP client connected in-process to a gateway running the eval profile on a fresh database."""
+@asynccontextmanager
+async def gateway_client(dbname: str, embedder: Any = None) -> AsyncIterator[Any]:
+    """An MCP client connected in-process to a gateway running the eval profile on `dbname`."""
     from pathlib import Path
 
     from mcp import Client
@@ -194,10 +195,19 @@ async def gateway(dbname: str) -> AsyncIterator[Any]:
 
     kernel = Kernel(login_dsn(dbname, "wmk_writer"), login_dsn(dbname, "wmk_reader"), max_size=2)
     await kernel.open()
-    profile = profiles.load(Path(__file__).resolve().parent.parent / "profiles" / "eval.yaml")
-    agents = await ensure_agents(kernel, profile)
-    tools = Tools(kernel, NoEmbedder(), agents, profile.name)
-    async with Client(build_server(tools)) as client:
-        client.tools = tools  # type: ignore[attr-defined]
+    try:
+        profile = profiles.load(Path(__file__).resolve().parent.parent / "profiles" / "eval.yaml")
+        agents = await ensure_agents(kernel, profile)
+        tools = Tools(kernel, embedder or NoEmbedder(), agents, profile.name)
+        async with Client(build_server(tools)) as client:
+            client.tools = tools  # type: ignore[attr-defined]
+            yield client
+    finally:
+        await kernel.close()
+
+
+@pytest.fixture
+async def gateway(dbname: str) -> AsyncIterator[Any]:
+    """An MCP client connected in-process to a gateway running the eval profile on a fresh database."""
+    async with gateway_client(dbname) as client:
         yield client
-    await kernel.close()
