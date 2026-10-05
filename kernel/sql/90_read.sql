@@ -11,12 +11,16 @@ LANGUAGE sql STABLE AS $$
   SELECT coalesce(max(log_offset), 0) FROM kernel.log
 $$;
 
--- Contract: resolved operations as shown to readers: embeddings dropped and the redacted
--- fields of created nodes masked as they are in the graph.
+-- Contract: resolved operations as shown to readers: embeddings dropped, the redacted
+-- fields of created nodes masked as they are in the graph, and the sealed fields of a human
+-- agent's create shown as its node holds them (opened, redacted or erased).
 CREATE FUNCTION kernel.mask_ops(p_ops jsonb) RETURNS jsonb
 LANGUAGE sql STABLE AS $$
   SELECT coalesce(jsonb_agg(
-    CASE WHEN o ->> 'op' = 'create' AND n.redacted <> '{}' THEN
+    CASE WHEN o ->> 'op' = 'create' AND o ? 'sealed' THEN
+      (o - 'sealed' - 'embedding')
+      || jsonb_build_object('name', n.name, 'aliases', to_jsonb(n.aliases), 'identity', n.identity, 'props', n.props)
+    WHEN o ->> 'op' = 'create' AND n.redacted <> '{}' THEN
       (o - 'embedding')
       || CASE WHEN 'name' = ANY (n.redacted) THEN jsonb_build_object('name', '[redacted]') ELSE '{}' END
       || CASE WHEN 'aliases' = ANY (n.redacted) THEN jsonb_build_object('aliases', '[]'::jsonb) ELSE '{}' END
@@ -30,19 +34,48 @@ $$;
 
 CREATE VIEW kernel.claims_view AS
 SELECT c.id, c.log_offset,
-       CASE WHEN r.claim_id IS NULL THEN c.text ELSE '[redacted]' END AS text,
+       CASE WHEN r.claim_id IS NOT NULL THEN '[redacted]'
+            WHEN c.text_key IS NOT NULL THEN coalesce(kernel.unseal(c.text), '[erased]')
+            ELSE c.text END AS text,
        c.chunk_id, c.source_id, c.source_key, c.agent_id, c.basis, c.modality, c.polarity, c.confidence,
        c.trust, c.resolution, c.unresolved, c.recorded_at, c.trace_id, c.span_id, r.claim_id IS NOT NULL AS redacted,
        CASE WHEN r.claim_id IS NULL THEN c.quote_start END AS quote_start,
        CASE WHEN r.claim_id IS NULL THEN c.quote_end END AS quote_end,
        CASE WHEN r.claim_id IS NULL AND c.quote_start IS NOT NULL THEN
-         (SELECT substring(s.content FROM c.quote_start + 1 FOR c.quote_end - c.quote_start)
+         (SELECT substring(CASE WHEN s.subjects = '{}' THEN s.content ELSE kernel.unseal(s.content) END
+                           FROM c.quote_start + 1 FOR c.quote_end - c.quote_start)
           FROM kernel.sources s WHERE s.id = c.source_id) END AS quote,
-       c.run_id, c.origins
+       c.run_id, c.origins,
+       c.text_key IS NOT NULL AND NOT EXISTS (SELECT 1 FROM kernel.data_keys k WHERE k.id = c.text_key) AS erased
 FROM kernel.claims c
 LEFT JOIN kernel.claim_redactions r ON r.claim_id = c.id;
 COMMENT ON VIEW kernel.claims_view IS
-  'Claims with redacted text masked, and the quoted words of the source each rests on. Readers use this view, not kernel.claims.';
+  'Claims with sealed text opened, erased text as [erased] (quote NULL), redacted text masked, and the quoted words of the source each rests on. Readers use this view, not kernel.claims.';
+
+CREATE VIEW kernel.sources_view AS
+SELECT s.id, s.content_hash, s.media_type,
+       CASE WHEN s.subjects = '{}' OR s.title IS NULL THEN s.title ELSE coalesce(kernel.unseal(s.title), '[erased]') END
+         AS title,
+       s.uri, s.collection, s.author_agent_id, s.origins, s.subjects,
+       CASE WHEN s.subjects = '{}' THEN s.content ELSE coalesce(kernel.unseal(s.content), '[erased]') END AS content,
+       CASE WHEN s.subjects = '{}' THEN s.metadata ELSE coalesce(kernel.unseal_json(s.metadata ->> 'sealed'), '{}') END
+         AS metadata,
+       s.agent_id, s.recorded_at, s.trace_id, s.span_id,
+       s.subjects <> '{}' AS sealed,
+       s.subjects <> '{}' AND NOT EXISTS (SELECT 1 FROM kernel.data_keys k WHERE k.id = s.id) AS erased
+FROM kernel.sources s;
+COMMENT ON VIEW kernel.sources_view IS
+  'Sources with sealed content, title and metadata opened, or [erased] once their key is gone. Readers use this view, not kernel.sources.';
+
+CREATE VIEW kernel.chunks_view AS
+SELECT ch.id, ch.source_id, ch.seq, ch.page, ch.char_start, ch.char_end,
+       CASE WHEN s.subjects = '{}' OR ch.heading IS NULL THEN ch.heading
+            ELSE coalesce(kernel.unseal(ch.heading), '[erased]') END AS heading,
+       CASE WHEN s.subjects = '{}' THEN ch.text ELSE coalesce(kernel.unseal(ch.text), '[erased]') END AS text
+FROM kernel.chunks ch
+JOIN kernel.sources s ON s.id = ch.source_id;
+COMMENT ON VIEW kernel.chunks_view IS
+  'Chunks with sealed text and headings opened, or [erased] once their source''s key is gone. Readers use this view, not kernel.chunks.';
 
 CREATE VIEW kernel.log_entries AS
 SELECT l.log_offset, l.entry_id, l.recorded_at, l.agent_id, l.read_at_offset, l.trace_id, l.span_id,

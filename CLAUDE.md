@@ -58,9 +58,15 @@ Also approved (2026-10-05), from the review of ingestion:
 - Research item 4's parser container: GROBID (CRF models) beside the papers server, whose
   `get_full_text` returns a paper's full text as Markdown in the abstract's collection
   (ADR 0025). Workers stay a proposal.
-- Proposed, not built: erasing personal data by destroying per-subject keys (ADR 0022),
-  which must exist before real personal data is ingested; extraction workers with a queue
-  outside the kernel (ADR 0024), gated on the annotated eval's floors.
+- Erasing personal data by destroying keys (ADR 0022), built in kernel 0.5.0: sources with
+  subjects, claim text from them and human agents' fields are sealed when written;
+  `kernel.erase`, run only by an operator as `kernel_eraser` (standing in for ADR 0019's
+  approval channel), destroys a person's keys, re-projects what they sealed and records the
+  erasure in an append-only ledger. Data ingested before 0.5.0 is in the clear.
+- Proposed, not built: extraction workers (ADR 0024, revised): a script moves documents from
+  existing parser servers (the papers server, docling-mcp, markitdown-mcp) to the gateway
+  with no model in between, then a headless session writes the claims; job state in a JSONL
+  manifest. Gated on the annotated eval's floors.
 
 **Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
 fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
@@ -86,18 +92,24 @@ Create these as Makefile targets early; keep them working.
 - `make lint` — ruff check and format check
 - `make up-ui`, `make ui-smoke` — the read-only explorer and its smoke check
 - `make annotated` — a real model maps and judges the SciFact sample (costs model usage)
+- `make erase-scope SUBJECT=…`, `make erase SUBJECT=… REQUESTED_BY=… APPROVED_BY=… YES=1` —
+  review and carry out an approved erasure (operators only)
 
 ## Invariants — never violate these
 
 1. **One write path.** Only `kernel.write`, `kernel.ingest_source` and `kernel.cite`
-   change data. Gateway code never issues INSERT, UPDATE or DELETE directly. Bulk
-   loading is many payloads through `kernel.write`, never a direct import.
+   change data, plus `kernel.erase`, which destroys data keys and is run only by an operator
+   as `kernel_eraser`, never by an agent (ADR 0022). Gateway code never issues INSERT,
+   UPDATE or DELETE directly. Bulk loading is many payloads through `kernel.write`, never a
+   direct import.
 2. **The log is append-only.** No UPDATE or DELETE on log tables, enforced by
    permissions and a trigger. There is no delete operation; retraction is a new
-   assertion with opposite polarity, or a `supersedes`.
+   assertion with opposite polarity, or a `supersedes`. The only rows ever deleted are data
+   keys, by `kernel.erase`; erasure never touches the log.
 3. **Projection is deterministic.** Triggers and projection functions make no network
-   calls, never call `now()` (use the entry's `recorded_at`), use no randomness.
-   Replaying the log must reproduce the graph exactly.
+   calls, never call `now()` (use the entry's `recorded_at`), use no randomness; they may
+   unseal, never seal. Replaying the log with the data keys that remain must reproduce the
+   graph exactly.
 4. **The log stores operations in kernel vocabulary.** Never Cypher, never SQL, never
    an instruction to call a model.
 5. **No model calls inside the database or inside a transaction.**
@@ -197,6 +209,9 @@ provenance, no ops). Never drop it.
 - **Unresolved claim:** a claim kept without graph ops until it can be placed.
 - **Origin:** who a source's content comes from (authors, a speaker, a publisher, a
   repository); belief counts each once, however many sources repeat it.
+- **Data subject:** a person the kernel holds data about, named by their Agent id; a source
+  lists its subjects, and a human agent is its own.
+- **Sealed:** stored encrypted under a data key so that destroying the key erases it.
 - **Schema slice:** the kinds, edges and rules most relevant to one passage.
 
 ## When unsure

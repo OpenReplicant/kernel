@@ -59,7 +59,7 @@ with its own belief ([ADR 0017](docs/decisions/0017-software-pack-and-the-self-b
 | `get_schema_slice` | Read | The kinds, edges and rules most relevant to a passage |
 | `query_graph` | Read | Read-only Cypher, with belief status, `valid_at` and `known_at_offset` |
 | `query_log` | Read | Log entries by source, agent, node, edge, time or offset |
-| `ingest_source` | Write | Stores text or Markdown, chunks it with spans, skips known content |
+| `ingest_source` | Write | Stores text or Markdown, chunks it with spans, skips known content; seals what is about people (`subjects`) so it can be erased |
 | `cite` | Write | Records which assertions each answer sentence relied on |
 
 A write:
@@ -86,7 +86,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 
 | Path | Contents |
 | --- | --- |
-| `kernel/sql/` | The kernel, applied in order: log, claims, assertions, sources, chunks, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, roles |
+| `kernel/sql/` | The kernel, applied in order: sources, chunks, data keys and the erasure ledger, log, claims, assertions, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, `kernel.erase`, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
 | `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
@@ -106,6 +106,8 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make test` | Unit, SQL and regression tests (starts the database) |
 | `make eval` | Every fixture through the eval profile (precision and recall for entities and edges), then the resolution set (auto-band precision and recall, candidate recall, clean new names) |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
+| `make erase-scope SUBJECT=agt_…` | What erasing a person would destroy, and what keys cannot reach (claims in the clear about them) |
+| `make erase SUBJECT=agt_… REQUESTED_BY=… APPROVED_BY=… YES=1` | Destroy the person's keys, re-project, record the erasure, compact the tables; for operators ([ADR 0022](docs/decisions/0022-erasing-personal-data.md)) |
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make annotated` | Extraction measured against annotators we are not: a real harness maps 30 SciFact abstracts blind, then judges a claim against each from the graph alone. Reports verdict accuracy, evidence capture, rationale precision and recall and calibration, with 95% intervals (about US$15 with Sonnet; `MODEL=` picks the model; results in [evals/annotated/RESULTS.md](evals/annotated/RESULTS.md)). Not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
@@ -135,7 +137,12 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 ## Guarantees
 
 - One write path: the gateway's writer role may only execute `kernel.write`,
-  `kernel.ingest_source` and `kernel.cite`; its reader role may only select.
+  `kernel.ingest_source` and `kernel.cite`; its reader role may only select. Only an
+  operator's `kernel_eraser` role may call `kernel.erase`.
+- Personal data is sealed when written: sources about people, the claims drawn from them and
+  the fields of human agents are encrypted under per-subject keys. Erasing a person destroys
+  their keys; the log is untouched, everything they sealed reads `[erased]`, and replay
+  reproduces the erased graph ([ADR 0022](docs/decisions/0022-erasing-personal-data.md)).
 - The log tables refuse UPDATE, DELETE and TRUNCATE for every role.
 - Projection makes no clock, random or network calls; CI replays the log and diffs.
 - No model calls in the database or in a transaction: embeddings come from the gateway.
@@ -159,13 +166,14 @@ The software pack maps what a repository declares, not what is running; its self
 boundary is a set of claims, and changing the system stays with people (the approval
 channel is the next ADR). Full text comes from open-access PDFs parsed by GROBID
 ([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers
-([ADR 0024](docs/decisions/0024-extraction-workers.md), proposed), observer runs, and the
+([ADR 0024](docs/decisions/0024-extraction-workers.md), proposed: a script moving documents
+from parser servers to the gateway with no model in between), observer runs, and the
 pack registry (packs are installed from this repository by the stack's `packs` service; pack
 servers run beside the gateway,
-[ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Redaction masks the graph and read
-paths but does not yet erase source content
-([ADR 0006](docs/decisions/0006-redaction-in-phase-1.md); the design for erasure is
-[ADR 0022](docs/decisions/0022-erasing-personal-data.md), proposed): do not ingest real
-personal data yet. CI drives the eval profile with scripted extraction
+[ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Erasure reaches
+what was sealed: claims about a person that cite unsealed sources, entities named from
+sealed ones, and copies in WAL archives and backups are outside it until redacted, retracted
+or expired, and an operator role stands in for the approval channel
+([ADR 0022](docs/decisions/0022-erasing-personal-data.md)). CI drives the eval profile with scripted extraction
 ([ADR 0008](docs/decisions/0008-eval-profile-runs-scripted-extraction.md)); `make live` and
 `make annotated` run a real model.

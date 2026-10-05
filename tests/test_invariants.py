@@ -46,7 +46,17 @@ def test_reader_role_can_only_select(kdb: KernelDB, agent: str, dbname: str) -> 
         "WHERE n.nspname = 'kernel' AND has_function_privilege('kernel_reader', p.oid, 'EXECUTE')"
     )
     assert not WRITE_FUNCTIONS & {r[0] for r in rows}
-    assert not {"project_ops", "rebuild", "touch", "new_id", "install_pack"} & {r[0] for r in rows}
+    assert not {
+        "project_ops",
+        "rebuild",
+        "touch",
+        "new_id",
+        "install_pack",
+        "erase",
+        "erase_nodes",
+        "seal",
+        "new_data_key",
+    } & {r[0] for r in rows}
     with psycopg.connect(login_dsn(dbname, "wmk_reader"), autocommit=True) as conn:
         for statement in (
             "INSERT INTO kernel.nodes (id) VALUES ('x')",
@@ -129,10 +139,16 @@ PROJECTION_FUNCTIONS = [
     "edge_graph_props",
     "belief_v1",
     "belief_status_v1",
+    # Opening sealed values and re-projecting erased ones (ADR 0022).
+    "open_op",
+    "unseal",
+    "unseal_json",
+    "erase_nodes",
 ]
 FORBIDDEN = re.compile(
     r"\b(now|clock_timestamp|statement_timestamp|transaction_timestamp|timeofday|random|"
-    r"gen_random_uuid|uuidv4|uuidv7|new_id|setseed|pg_sleep|dblink\w*|http\w*)\s*\(|"
+    r"gen_random_uuid|gen_random_bytes|uuidv4|uuidv7|new_id|new_data_key|seal|setseed|pg_sleep|"
+    r"dblink\w*|http\w*)\s*\(|"
     r"current_(timestamp|date|time)\b|localtime(stamp)?\b",
     re.IGNORECASE,
 )
@@ -260,7 +276,8 @@ def test_written_log_entries_are_kernel_vocabulary(kdb: KernelDB, agent: str) ->
 
 def test_database_has_no_network_or_untrusted_language_extensions(kdb: KernelDB) -> None:
     extensions = {r[0] for r in kdb.q("SELECT extname FROM pg_extension")}
-    assert extensions <= {"plpgsql", "age", "vector", "pg_trgm"}
+    # pgcrypto seals personal data (ADR 0022); it makes no network calls.
+    assert extensions <= {"plpgsql", "age", "vector", "pg_trgm", "pgcrypto"}
     languages = {
         r[0]
         for r in kdb.q(

@@ -7,7 +7,7 @@ description: >
   one question at a time, turn vague answers into specific ones, and record each answer
   with the world-model-core skill. Requires the core skill.
 metadata:
-  kernel: ">=0.1 <1.0"
+  kernel: ">=0.5 <1.0"
   requires: world-model-core
   tools: query_graph, query_log, lookup_entities, get_schema_slice, ingest_source, write, cite
 ---
@@ -22,7 +22,10 @@ answer is recorded with the core skill's loop: ingest the turn, extract claims, 
 
 - **Consent.** Say what is kept: their answers, word for word, as sources in a permanent
   log, with the facts drawn from them attributed to them. Corrections are added, never
-  overwritten; anything they want withdrawn can be redacted. Ask for a yes.
+  overwritten; anything they want withdrawn can be redacted. Their answers are stored
+  encrypted under a key of theirs: if they ask to be forgotten, an operator destroys the
+  key and their answers, and what was drawn from them, can no longer be read. Ask for a
+  yes.
   - Yes: ingest each of their turns (below).
   - No: ingest nothing and write no claims from what they say. You can still answer
     their questions from the graph. If they later say "record that", capture that answer.

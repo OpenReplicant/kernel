@@ -40,7 +40,8 @@ class Rejected(Exception):
 
 
 class KernelDB:
-    """SQL-level access: write functions called as kernel_writer, queries as superuser."""
+    """SQL-level access: write functions called as kernel_writer, erasures as kernel_eraser,
+    queries as superuser."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -49,15 +50,22 @@ class KernelDB:
         self.admin.execute('SET search_path = ag_catalog, "$user", public')
         self.writer = psycopg.connect(self.dsn, autocommit=True)
         self.writer.execute("SET ROLE kernel_writer")
+        self.eraser = psycopg.connect(self.dsn, autocommit=True)
+        self.eraser.execute("SET ROLE kernel_eraser")
         self.chunk_text: dict[str, str] = {}
 
     def close(self) -> None:
         self.admin.close()
         self.writer.close()
+        self.eraser.close()
 
     def _call(self, function: str, payload: dict[str, Any], agent: str | None) -> dict[str, Any]:
+        return self._run(self.writer, f"SELECT kernel.{function}(%s, %s)", [Jsonb(payload), agent])
+
+    @staticmethod
+    def _run(conn: psycopg.Connection[Any], query: str, params: list[Any]) -> dict[str, Any]:
         try:
-            row = self.writer.execute(f"SELECT kernel.{function}(%s, %s)", [Jsonb(payload), agent]).fetchone()
+            row = conn.execute(query, params).fetchone()
         except psycopg.Error as exc:
             if exc.sqlstate == "WMK01" and exc.diag.message_detail:
                 raise Rejected(json.loads(exc.diag.message_detail)) from None
@@ -75,6 +83,13 @@ class KernelDB:
 
     def cite(self, cite: dict[str, Any], agent: str) -> dict[str, Any]:
         return self._call("cite", cite, agent)
+
+    def erase(self, request: dict[str, Any]) -> dict[str, Any]:
+        """kernel.erase as kernel_eraser (ADR 0022)."""
+        return self._run(self.eraser, "SELECT kernel.erase(%s)", [Jsonb(request)])
+
+    def erasure_scope(self, subject: str) -> dict[str, Any]:
+        return self._run(self.eraser, "SELECT kernel.erasure_scope(%s)", [subject])
 
     def q(self, query: str, params: list[Any] | None = None) -> list[tuple[Any, ...]]:
         return self.admin.execute(query, params or []).fetchall()

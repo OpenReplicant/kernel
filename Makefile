@@ -9,7 +9,7 @@ SELF ?= World Model Kernel (this instance)
 # The explorer's browser check (ui/smoke.py); `make ui-browser` installs its Chromium.
 PLAYWRIGHT ?= playwright==1.56.0
 
-.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay eval seed map-self live annotated papers-smoke lint fmt
+.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self live annotated papers-smoke lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
@@ -27,6 +27,8 @@ help:
 	@echo "make annotated  a real harness maps and judges the SciFact sample; scores against its annotators (\$$MODEL)"
 	@echo "make papers-smoke  one live lookup per paper source; needs network access to the APIs"
 	@echo "make replay   rebuild the graph from the log of \$$WMK_DATABASE and diff against the live graph"
+	@echo "make erase-scope SUBJECT=agt_...  what erasing a person would destroy and what it would leave"
+	@echo "make erase SUBJECT=agt_... REQUESTED_BY=... APPROVED_BY=... YES=1  destroy their keys (operators only)"
 	@echo "make lint     ruff check and format check"
 
 up:
@@ -78,6 +80,13 @@ papers-smoke:
 
 replay:
 	uv run python -m evals.replay --database $(WMK_DATABASE)
+
+erase-scope:
+	uv run python -m kernel.erase --database $(WMK_DATABASE) scope $(SUBJECT)
+
+erase:
+	uv run python -m kernel.erase --database $(WMK_DATABASE) run $(SUBJECT) \
+		--requested-by "$(REQUESTED_BY)" --approved-by "$(APPROVED_BY)" $(if $(YES),--yes)
 
 lint:
 	uv run ruff check .

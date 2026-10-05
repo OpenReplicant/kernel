@@ -8,6 +8,7 @@
 --   4. run the resolution cascade on every create;
 --   5. append the log entry and apply the graph changes;
 --   6. belief follows through deterministic triggers.
+-- Personal data is sealed before it is logged (ADR 0022, 12_keys.sql).
 -- Rejections abort with SQLSTATE WMK01 (kernel.reject); nothing is written.
 
 SET ROLE kernel_owner;
@@ -320,6 +321,10 @@ $$;
 -- the agent that started it. {"op": "close_run", "run"} completes a run and retracts, as
 -- negative assertions from the same source, what older runs over that source asserted and
 -- this run did not; the log stores those assertions, never the close_run op itself.
+-- Sealing (ADR 0022): a create of a human agent logs its name, aliases, identity, props and
+-- embedding sealed under a new data key of the agent's own. The claim's text is sealed under
+-- its source's key when the source has subjects, else under the key of the first human agent
+-- it creates. A sealed source whose key was destroyed cannot be cited.
 -- p_agent_id is the writing agent, set by the gateway, never by the model. It may be
 -- NULL only for self-registration: one create of an Agent with "self": true.
 --
@@ -398,6 +403,12 @@ DECLARE
   v_run kernel.nodes;
   v_run_claim kernel.claims;
   v_target record;
+  -- the cited source and chunk in the clear (sealed sources are opened), and sealing
+  v_content text;
+  v_chunk_text text;
+  v_text_key text;
+  v_human_keys text[] := '{}';
+  v_personal jsonb;
 BEGIN
   -- Shape ------------------------------------------------------------------------------
   IF jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN
@@ -495,6 +506,17 @@ BEGIN
         jsonb_build_object('field', 'claim.source'));
     END IF;
     SELECT * INTO v_source FROM kernel.sources WHERE id = v_chunk.source_id;
+    v_content := v_source.content;
+    v_chunk_text := v_chunk.text;
+    IF cardinality(v_source.subjects) > 0 THEN
+      v_content := kernel.unseal(v_source.content);
+      v_chunk_text := kernel.unseal(v_chunk.text);
+      IF v_content IS NULL THEN
+        PERFORM kernel.reject('provenance', 'kernel.source_erased',
+          format('source %s was erased; its chunks cannot be cited', v_source.id),
+          jsonb_build_object('field', 'claim.source'));
+      END IF;
+    END IF;
   END IF;
   FOR v_rule IN
     SELECT * FROM kernel.rules
@@ -530,14 +552,14 @@ BEGIN
                             jsonb_build_object('field', 'claim.source'));
     END IF;
     SELECT q.q_start, q.q_end INTO v_quote_start, v_quote_end
-    FROM kernel.find_quote(v_source.content, c ->> 'quote',
+    FROM kernel.find_quote(v_content, c ->> 'quote',
                            greatest(v_chunk.char_start - length(c ->> 'quote'), 0)) q
     WHERE q.q_start < v_chunk.char_end;
     IF v_quote_start IS NULL THEN
       PERFORM kernel.reject('provenance', 'kernel.quote_in_source',
         format('the quote is not in chunk %s: quote its words exactly (spacing, quote marks and dashes may differ)',
                v_chunk.id),
-        jsonb_build_object('field', 'claim.quote', 'nearest', kernel.nearest_sentence(v_chunk.text, c ->> 'quote')));
+        jsonb_build_object('field', 'claim.quote', 'nearest', kernel.nearest_sentence(v_chunk_text, c ->> 'quote')));
     END IF;
   END IF;
   FOR v_rule IN
@@ -769,13 +791,20 @@ BEGIN
         refs := refs || jsonb_build_object('$#' || idx, jsonb_build_object('id', v_id, 'type', v_type, 'kind', v_kind,
                                                                             'namespace', v_ns, 'name', v_name, 'new', true));
       END IF;
-      resolved := resolved || jsonb_strip_nulls(jsonb_build_object(
-        'op', 'create', 'id', v_id, 'ref', v_ref, 'type', v_type, 'kind', v_kind, 'namespace', v_ns, 'name', v_name,
-        'aliases', coalesce(op -> 'aliases', '[]'), 'identity', v_identity, 'props', v_props, 'status', v_status,
+      v_personal := jsonb_strip_nulls(jsonb_build_object(
+        'name', v_name, 'aliases', coalesce(op -> 'aliases', '[]'), 'identity', v_identity, 'props', v_props,
+        'embedding', CASE WHEN v_emb IS NOT NULL THEN (v_emb::text)::jsonb END));
+      IF v_type = 'Agent' AND v_kind = 'human' THEN
+        -- A person: their fields are logged sealed under a key of their own.
+        v_human_keys := v_human_keys || kernel.new_data_key(v_id, ARRAY[v_id]);
+        v_personal := jsonb_build_object('sealed', kernel.seal(v_personal::text, v_id));
+      END IF;
+      resolved := resolved || (jsonb_strip_nulls(jsonb_build_object(
+        'op', 'create', 'id', v_id, 'ref', v_ref, 'type', v_type, 'kind', v_kind, 'namespace', v_ns,
+        'status', v_status,
         'trust_level', CASE WHEN v_type = 'Agent' THEN coalesce(op ->> 'trust_level', 'medium') END,
-        'embedding', CASE WHEN v_emb IS NOT NULL THEN (v_emb::text)::jsonb END,
         'self', CASE WHEN coalesce((op ->> 'self')::boolean, false) THEN true END,
-        'distinct_from', op -> 'distinct_from'));
+        'distinct_from', op -> 'distinct_from')) || v_personal);
 
     -- assert ---------------------------------------------------------------------------
     WHEN 'assert' THEN
@@ -1090,10 +1119,13 @@ BEGIN
     WHEN cardinality(v_source.origins) > 0 THEN v_source.origins
     WHEN v_source.author_agent_id IS NOT NULL THEN ARRAY[kernel.normalize_origin('agent:' || v_source.author_agent_id)]
     ELSE ARRAY['source:' || v_source_key] END;
+  -- Sealed text: under the source's key when it has subjects, else a person's this entry creates.
+  v_text_key := CASE WHEN cardinality(v_source.subjects) > 0 THEN v_source.id ELSE v_human_keys[1] END;
   v_row := ROW(
     v_offset, uuidv7(), 'write', v_agent, v_trust,
     jsonb_strip_nulls(jsonb_build_object(
-      'id', v_claim_id, 'text', c ->> 'text', 'chunk_id', v_chunk.id, 'source_id', v_source.id,
+      'id', v_claim_id, 'text', CASE WHEN v_text_key IS NULL THEN c ->> 'text' ELSE kernel.seal(c ->> 'text', v_text_key) END,
+      'text_key', v_text_key, 'chunk_id', v_chunk.id, 'source_id', v_source.id,
       'source_key', v_source_key, 'basis', v_basis, 'modality', v_modality, 'polarity', v_polarity,
       'confidence', v_confidence, 'trust', v_claim_trust,
       'quote_start', v_quote_start, 'quote_end', v_quote_end, 'run', c ->> 'run', 'origins', to_jsonb(v_origins),
@@ -1116,7 +1148,7 @@ BEGIN
     'recorded_at', kernel.iso(v_at),
     'resolution', entry -> 'claim' ->> 'resolution',
     'refs', (SELECT coalesce(jsonb_object_agg(k, v ->> 'id'), '{}') FROM jsonb_each(refs) AS r(k, v) WHERE k NOT LIKE '$#%'),
-    'ops', (SELECT coalesce(jsonb_agg(o - 'embedding'), '[]') FROM jsonb_array_elements(resolved) o),
+    'ops', (SELECT coalesce(jsonb_agg(kernel.open_op(o) - 'embedding'), '[]') FROM jsonb_array_elements(resolved) o),
     'conflicts', v_conflicts,
     'ambiguous', ambiguous,
     'edges', (

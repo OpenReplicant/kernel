@@ -1,10 +1,11 @@
 """The replay test: rebuild the graph from the log and diff it against the live graph.
 
 A scratch database gets the kernel SQL, the pack manifests the live database recorded
-(in install order), a copy of the log, sources and chunks, and then kernel.rebuild(),
-which projects every entry in offset order. The ontology, claims, assertions, nodes,
-edges, conflicts, touches, redactions and the AGE graph must come out identical. A
-non-empty diff exits with status 1.
+(in install order), a copy of the log, sources, chunks, data keys and erasure ledger, and
+then kernel.rebuild(), which projects every entry in offset order: what a destroyed key
+sealed projects as erased (ADR 0022). The ontology, claims, assertions, nodes, edges,
+conflicts, touches, redactions and the AGE graph must come out identical. A non-empty diff
+exits with status 1.
 """
 
 from __future__ import annotations
@@ -18,8 +19,8 @@ import psycopg
 
 from kernel import admin, packs
 
-# Tables copied from the live database: the log and what it cites.
-SOURCE_OF_TRUTH = ("kernel.sources", "kernel.chunks", "kernel.log")
+# Tables copied from the live database: the log, what it cites, and the keys that remain.
+SOURCE_OF_TRUTH = ("kernel.sources", "kernel.chunks", "kernel.data_keys", "kernel.erasures", "kernel.log")
 
 # Everything projected from the log, as canonical rows.
 SNAPSHOTS: dict[str, str] = {

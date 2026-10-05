@@ -19,7 +19,7 @@ from gateway.tools import Tools
 
 log = logging.getLogger(__name__)
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 _READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 _WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
@@ -39,7 +39,8 @@ def instructions(agents: Agents, profile: str) -> str:
     if agents.person_id:
         lines.append(
             f"The person you work with is agent {agents.person_id}: with their consent, ingest their turns "
-            "with author set to it (interview skill)."
+            "with author set to it (interview skill). Turns they author are stored sealed, so they can be "
+            "erased."
         )
     return "\n".join(lines)
 
