@@ -75,11 +75,27 @@ services:
       context: .
       dockerfile: packs/research/mcp/Dockerfile
     image: wmk-papers:dev
+    depends_on:
+      grobid:
+        condition: service_healthy
     environment:
       WMK_PAPERS_OPENALEX_API_KEY: ${WMK_PAPERS_OPENALEX_API_KEY:-}
       WMK_PAPERS_MAILTO: ${WMK_PAPERS_MAILTO:-}
+      WMK_PAPERS_GROBID_URL: http://grobid:8070
     ports:
       - "127.0.0.1:${WMK_PAPERS_PORT:-8001}:8001"
+
+  grobid:
+    # The research pack's parser: GROBID turns a paper's PDF into TEI XML for the papers
+    # server's get_full_text. 0.9.1 with its CRF models only (no GPU, about 500 MB), pinned by
+    # digest. Not published on the host: only the papers server talks to it.
+    profiles: [research]
+    image: grobid/grobid@sha256:223957791ac2bbe48609dcc58a689b16b60baeae13a8734ef440ae6bfb38f4cd
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8070/api/isalive"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
 
   api:
     # The explorer's data: PostgREST over the kernel schema as the reader role, so it sees

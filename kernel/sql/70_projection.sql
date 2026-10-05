@@ -31,15 +31,20 @@ DECLARE
   v_node kernel.nodes;
   v_fields text[];
   v_redacted constant text := '[redacted]';
+  -- Entries from before kernel 0.4 carry no origins: each of their sources was its own.
+  v_origins text[] := CASE
+    WHEN c ? 'origins' THEN ARRAY(SELECT jsonb_array_elements_text(c -> 'origins'))
+    WHEN c ->> 'source_id' IS NOT NULL THEN ARRAY['source:' || (c ->> 'source_key')]
+    ELSE ARRAY[kernel.normalize_origin(c ->> 'source_key')] END;
 BEGIN
   INSERT INTO kernel.claims (id, log_offset, text, chunk_id, source_id, source_key, agent_id, basis, modality,
                              polarity, confidence, trust, resolution, unresolved, recorded_at, trace_id, span_id,
-                             quote_start, quote_end, run_id)
+                             quote_start, quote_end, run_id, origins)
   VALUES (c ->> 'id', v_offset, c ->> 'text', c ->> 'chunk_id', c ->> 'source_id', c ->> 'source_key', v_agent,
           c ->> 'basis', c ->> 'modality', (c ->> 'polarity')::smallint, c ->> 'confidence',
           coalesce(c ->> 'trust', entry ->> 'agent_trust'), c ->> 'resolution',
           c -> 'unresolved', v_at, entry ->> 'trace_id', entry ->> 'span_id',
-          (c ->> 'quote_start')::int, (c ->> 'quote_end')::int, c ->> 'run');
+          (c ->> 'quote_start')::int, (c ->> 'quote_end')::int, c ->> 'run', v_origins);
 
   v_weight := kernel.level_weight(coalesce(c ->> 'trust', entry ->> 'agent_trust'))
               * kernel.basis_weight(c ->> 'basis') * kernel.level_weight(c ->> 'confidence');
@@ -56,17 +61,17 @@ BEGIN
               coalesce(op -> 'identity', '{}'), coalesce(op -> 'props', '{}'),
               CASE WHEN op ? 'embedding' THEN (op ->> 'embedding')::vector END,
               op ->> 'trust_level', c ->> 'id', v_offset, v_offset, v_at, v_at);
-      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, target_type, target_id,
+      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, value, basis, modality, confidence, weight, recorded_at)
-      VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', 'status', op ->> 'id',
+      VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status', op ->> 'id',
               1, op ->> 'status', c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
       PERFORM kernel.touch(op ->> 'id', v_offset, v_agent);
 
     WHEN 'assert', 'link', 'unlink' THEN
       IF op ->> 'target' = 'claim' THEN
-        INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, target_type, target_id,
+        INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                        polarity, basis, modality, confidence, weight, recorded_at)
-        VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', 'claim', op ->> 'claim_node',
+        VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'claim', op ->> 'claim_node',
                 (op ->> 'polarity')::smallint, c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
         PERFORM kernel.touch(op ->> 'claim_node', v_offset, v_agent);
       ELSE
@@ -76,9 +81,9 @@ BEGIN
           VALUES (op ->> 'edge_id', coalesce(op ->> 'edge', 'same_as'), op ->> 'kind', op ->> 'from', op ->> 'to',
                   coalesce(op -> 'props', '{}'), c ->> 'id', v_offset, v_offset, v_at, v_at);
         END IF;
-        INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, target_type, target_id,
+        INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                        polarity, valid_from, valid_to, basis, modality, confidence, weight, recorded_at)
-        VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', 'edge', op ->> 'edge_id',
+        VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'edge', op ->> 'edge_id',
                 (op ->> 'polarity')::smallint, (op ->> 'valid_from')::timestamptz, (op ->> 'valid_to')::timestamptz,
                 c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
         PERFORM kernel.touch(op ->> 'from', v_offset, v_agent);
@@ -95,20 +100,20 @@ BEGIN
               || CASE WHEN jsonb_array_length(coalesce(op -> 'about_edges', '[]')) > 0
                       THEN jsonb_build_object('about_edges', op -> 'about_edges') ELSE '{}' END,
               'unknown', c ->> 'id', v_offset, v_offset, v_at, v_at);
-      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, target_type, target_id,
+      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, value, basis, modality, confidence, weight, recorded_at)
-      VALUES (v_asr || idx || 's', v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', 'status', op ->> 'node_id',
+      VALUES (v_asr || idx || 's', v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status', op ->> 'node_id',
               1, 'open', c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
-      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, target_type, target_id,
+      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, basis, modality, confidence, weight, recorded_at)
-      VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', 'claim', op ->> 'node_id',
+      VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'claim', op ->> 'node_id',
               (c ->> 'polarity')::smallint, c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
       PERFORM kernel.touch(op ->> 'node_id', v_offset, v_agent);
 
     WHEN 'transition' THEN
-      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, target_type, target_id,
+      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, value, basis, modality, confidence, weight, recorded_at)
-      VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', 'status', op ->> 'node',
+      VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status', op ->> 'node',
               1, op ->> 'status', c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
       PERFORM kernel.touch(op ->> 'node', v_offset, v_agent);
 

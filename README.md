@@ -49,11 +49,12 @@ what changed and retracts what a file no longer says. `make map-self` maps this 
 with the self boundary: the system this kernel instance is, and its parts, each a claim
 with its own belief ([ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)).
 
-## The seven tools
+## The tools
 
 | Tool | Tier | Does |
 | --- | --- | --- |
 | `write` | Write | Submits a claim and its operations to `kernel.write` |
+| `write_batch` | Write | Up to 50 writes in order, each its own `kernel.write`; refs carry across ([ADR 0023](docs/decisions/0023-batch-writes.md)) |
 | `lookup_entities` | Read | Ranked resolution candidates: identity keys, normalised names, trigrams, embeddings |
 | `get_schema_slice` | Read | The kinds, edges and rules most relevant to a passage |
 | `query_graph` | Read | Read-only Cypher, with belief status, `valid_at` and `known_at_offset` |
@@ -106,6 +107,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make eval` | Every fixture through the eval profile (precision and recall for entities and edges), then the resolution set (auto-band precision and recall, candidate recall, clean new names) |
 | `make replay` | Rebuild `$WMK_DATABASE` (default `wmk`) from its log and diff; a non-empty diff fails |
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
+| `make annotated` | Extraction measured against annotators we are not: a real harness maps 30 SciFact abstracts blind, then judges a claim against each from the graph alone. Reports verdict accuracy, evidence capture, rationale precision and recall and calibration, with 95% intervals (about US$15 with Sonnet; `MODEL=` picks the model; results in [evals/annotated/RESULTS.md](evals/annotated/RESULTS.md)). Not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused and that every page loads in headless Chromium (after `make seed`) |
@@ -127,6 +129,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | `WMK_EMBEDDING_URL`, `WMK_EMBEDDING_MODEL`, `WMK_EMBEDDING_API_KEY` | unset | gateway: optional OpenAI-compatible embeddings |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | gateway: export spans and metrics |
 | `WMK_PAPERS_MAILTO`, `WMK_PAPERS_OPENALEX_API_KEY` | unset | papers: contact email for the APIs; OpenAlex search |
+| `WMK_PAPERS_GROBID_URL` | `http://grobid:8070` in compose | papers: the GROBID service that parses PDFs for `get_full_text` |
 | `WMK_UI_PORT` | `8080` | compose: the explorer's port on localhost |
 
 ## Guarantees
@@ -136,7 +139,9 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 - The log tables refuse UPDATE, DELETE and TRUNCATE for every role.
 - Projection makes no clock, random or network calls; CI replays the log and diffs.
 - No model calls in the database or in a transaction: embeddings come from the gateway.
-- Belief is a pure function of assertions: each source counts once, no decay, conflicts
+- Belief is a pure function of assertions: each source counts once and so does each
+  origin, the people a source comes from
+  ([ADR 0021](docs/decisions/0021-belief-v2-counts-origins.md)); no decay; conflicts
   between sources are shown as contested, never overwritten.
 - Telemetry carries IDs, never claim text, source content or message content.
 - A reported claim quotes the words of its source it rests on; the kernel finds them and
@@ -152,11 +157,15 @@ Research is the first product pack: papers are found with the paper-source serve
 mapped from their abstracts by any MCP harness following the core and research skills.
 The software pack maps what a repository declares, not what is running; its self
 boundary is a set of claims, and changing the system stays with people (the approval
-channel is the next ADR). Not yet built: the parser container for full text, workers,
-observer runs, and the pack registry (packs are installed from this repository by the stack's `packs` service; pack
+channel is the next ADR). Full text comes from open-access PDFs parsed by GROBID
+([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers
+([ADR 0024](docs/decisions/0024-extraction-workers.md), proposed), observer runs, and the
+pack registry (packs are installed from this repository by the stack's `packs` service; pack
 servers run beside the gateway,
 [ADR 0014](docs/decisions/0014-pack-servers-run-beside-the-gateway.md)). Redaction masks the graph and read
 paths but does not yet erase source content
-([ADR 0006](docs/decisions/0006-redaction-in-phase-1.md)). CI drives the eval profile with
-scripted extraction ([ADR 0008](docs/decisions/0008-eval-profile-runs-scripted-extraction.md));
-`make live` runs a real model.
+([ADR 0006](docs/decisions/0006-redaction-in-phase-1.md); the design for erasure is
+[ADR 0022](docs/decisions/0022-erasing-personal-data.md), proposed): do not ingest real
+personal data yet. CI drives the eval profile with scripted extraction
+([ADR 0008](docs/decisions/0008-eval-profile-runs-scripted-extraction.md)); `make live` and
+`make annotated` run a real model.

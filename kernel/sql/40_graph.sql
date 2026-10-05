@@ -59,6 +59,8 @@ CREATE TABLE kernel.edges (
   belief_against   numeric NOT NULL DEFAULT 0,
   sources_for      int NOT NULL DEFAULT 0,
   sources_against  int NOT NULL DEFAULT 0,
+  origins_for      int NOT NULL DEFAULT 0,
+  origins_against  int NOT NULL DEFAULT 0,
   contested_with   text[] NOT NULL DEFAULT '{}',
   claim_id         text NOT NULL,
   created_offset   bigint NOT NULL,
@@ -67,7 +69,7 @@ CREATE TABLE kernel.edges (
   updated_at       timestamptz NOT NULL
 );
 COMMENT ON TABLE kernel.edges IS
-  'Projection: one row per edge. The window is the union of what counted sources assert; belief_* follows kernel.belief_v1; contested_with lists edges in an active single-valued conflict.';
+  'Projection: one row per edge. The window is the union of what counted sources assert; belief_* follows kernel.belief_v2; contested_with lists edges in an active single-valued conflict.';
 CREATE INDEX edges_from_idx ON kernel.edges (from_id, edge);
 CREATE INDEX edges_to_idx ON kernel.edges (to_id, edge);
 
@@ -158,6 +160,7 @@ LANGUAGE sql IMMUTABLE AS $$
     'window_agreed', e.window_agreed,
     'belief_status', e.belief_status, 'belief_score', e.belief_score,
     'sources_for', e.sources_for, 'sources_against', e.sources_against,
+    'origins_for', e.origins_for, 'origins_against', e.origins_against,
     'contested_with', CASE WHEN e.contested_with <> '{}' THEN to_jsonb(e.contested_with) END,
     'props', CASE WHEN e.props <> '{}' THEN e.props END,
     'created_offset', e.created_offset, 'updated_offset', e.updated_offset,

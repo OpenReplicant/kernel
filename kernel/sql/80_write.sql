@@ -347,6 +347,7 @@ DECLARE
   v_agent text := p_agent_id;
   v_trust text;
   v_claim_trust text;
+  v_origins text[];
   v_self_count int;
   ops jsonb := coalesce(payload -> 'ops', '[]');
   op jsonb;
@@ -1081,16 +1082,24 @@ BEGIN
   -- 5. Project, check cardinality, append the log entry, apply conflicts --------------------
   v_source_key := CASE WHEN v_source.id IS NOT NULL THEN coalesce(v_source.collection, v_source.id)
                        ELSE 'agent:' || v_agent END;
+  -- Origins (who the claim comes from; belief_v2 counts each once): the source's declared
+  -- origins, else its author agent, else the source itself; the writer for a claim with no
+  -- source. Recorded in the entry, so replay never reads sources or agents.
+  v_origins := CASE
+    WHEN v_source.id IS NULL THEN ARRAY[kernel.normalize_origin('agent:' || v_agent)]
+    WHEN cardinality(v_source.origins) > 0 THEN v_source.origins
+    WHEN v_source.author_agent_id IS NOT NULL THEN ARRAY[kernel.normalize_origin('agent:' || v_source.author_agent_id)]
+    ELSE ARRAY['source:' || v_source_key] END;
   v_row := ROW(
     v_offset, uuidv7(), 'write', v_agent, v_trust,
     jsonb_strip_nulls(jsonb_build_object(
       'id', v_claim_id, 'text', c ->> 'text', 'chunk_id', v_chunk.id, 'source_id', v_source.id,
       'source_key', v_source_key, 'basis', v_basis, 'modality', v_modality, 'polarity', v_polarity,
       'confidence', v_confidence, 'trust', v_claim_trust,
-      'quote_start', v_quote_start, 'quote_end', v_quote_end, 'run', c ->> 'run',
+      'quote_start', v_quote_start, 'quote_end', v_quote_end, 'run', c ->> 'run', 'origins', to_jsonb(v_origins),
       'resolution', CASE WHEN jsonb_array_length(resolved) = 0 THEN 'unresolved' ELSE 'resolved' END,
       'unresolved', CASE WHEN jsonb_array_length(resolved) = 0 THEN coalesce(v_unresolved, '{}') END)),
-    resolved, '[]'::jsonb, v_read, payload ->> 'trace_id', payload ->> 'span_id', v_at, 1
+    resolved, '[]'::jsonb, v_read, payload ->> 'trace_id', payload ->> 'span_id', v_at, 2
   )::kernel.log;
   entry := to_jsonb(v_row);
   PERFORM kernel.project_ops(entry);

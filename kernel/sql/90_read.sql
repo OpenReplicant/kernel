@@ -38,7 +38,7 @@ SELECT c.id, c.log_offset,
        CASE WHEN r.claim_id IS NULL AND c.quote_start IS NOT NULL THEN
          (SELECT substring(s.content FROM c.quote_start + 1 FOR c.quote_end - c.quote_start)
           FROM kernel.sources s WHERE s.id = c.source_id) END AS quote,
-       c.run_id
+       c.run_id, c.origins
 FROM kernel.claims c
 LEFT JOIN kernel.claim_redactions r ON r.claim_id = c.id;
 COMMENT ON VIEW kernel.claims_view IS
@@ -48,7 +48,7 @@ CREATE VIEW kernel.log_entries AS
 SELECT l.log_offset, l.entry_id, l.recorded_at, l.agent_id, l.read_at_offset, l.trace_id, l.span_id,
        c.id AS claim_id, c.text AS claim_text, c.chunk_id, c.source_id, c.source_key, c.basis, c.modality,
        c.polarity, c.confidence, c.trust, c.resolution, c.unresolved, kernel.mask_ops(l.ops) AS ops, l.conflicts,
-       c.quote, c.run_id
+       c.quote, c.run_id, c.origins
 FROM kernel.log l
 JOIN kernel.claims_view c ON c.log_offset = l.log_offset;
 COMMENT ON VIEW kernel.log_entries IS 'Log entries with their claim, redaction applied.';
@@ -107,7 +107,8 @@ LANGUAGE sql STABLE AS $$
                                     'source_id', h.source_id, 'basis', h.basis, 'modality', h.modality,
                                     'polarity', CASE h.polarity WHEN 1 THEN 'positive' ELSE 'negative' END,
                                     'confidence', h.confidence, 'trust', h.trust, 'resolution', h.resolution,
-                                    'unresolved', h.unresolved, 'quote', h.quote, 'run', h.run_id),
+                                    'unresolved', h.unresolved, 'quote', h.quote, 'run', h.run_id,
+                                    'origins', h.origins),
         'ops', h.ops,
         'conflicts', CASE WHEN h.conflicts <> '[]' THEN h.conflicts END)))
       FROM hits h), '[]'))
@@ -194,11 +195,11 @@ $$;
 CREATE FUNCTION kernel.edge_state_as_of(p_edge_id text, p_offset bigint) RETURNS jsonb
 LANGUAGE sql STABLE AS $$
   WITH e AS (SELECT * FROM kernel.edges WHERE id = p_edge_id),
-  b AS (SELECT * FROM kernel.belief_v1('edge', p_edge_id, p_offset)),
+  b AS (SELECT * FROM kernel.belief_v2('edge', p_edge_id, p_offset)),
   conflicted AS (
     SELECT EXISTS (
       SELECT 1 FROM kernel.conflicts c, b,
-        LATERAL kernel.belief_v1('edge', CASE WHEN c.edge_a = p_edge_id THEN c.edge_b ELSE c.edge_a END, p_offset) pb
+        LATERAL kernel.belief_v2('edge', CASE WHEN c.edge_a = p_edge_id THEN c.edge_b ELSE c.edge_a END, p_offset) pb
       WHERE (c.edge_a = p_edge_id OR c.edge_b = p_edge_id) AND c.log_offset <= p_offset
         AND b.status NOT IN ('rejected', 'unknown') AND pb.status NOT IN ('rejected', 'unknown')
         AND tstzrange(b.valid_from, b.valid_to, '[)') && tstzrange(pb.valid_from, pb.valid_to, '[)')
@@ -224,8 +225,8 @@ LANGUAGE sql STABLE AS $$
     'belief_status', CASE WHEN n.type = 'Claim' THEN cb.status END,
     'belief_score', CASE WHEN n.type = 'Claim' THEN cb.score END))
   FROM kernel.nodes n,
-       LATERAL kernel.belief_v1('status', n.id, p_offset) s,
-       LATERAL kernel.belief_v1('claim', n.id, p_offset) cb
+       LATERAL kernel.belief_v2('status', n.id, p_offset) s,
+       LATERAL kernel.belief_v2('claim', n.id, p_offset) cb
   WHERE n.id = p_node_id
 $$;
 

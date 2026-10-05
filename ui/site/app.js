@@ -10,7 +10,8 @@ const NODE_COLUMNS =
   "belief_for,belief_against,superseded_by,redacted,claim_id,created_offset,updated_offset,created_at,updated_at";
 const EDGE_COLUMNS =
   "id,edge,kind,props,valid_from,valid_to,window_agreed,belief_status,belief_score,belief_for," +
-  "belief_against,sources_for,sources_against,contested_with,claim_id,created_offset,updated_offset";
+  "belief_against,sources_for,sources_against,origins_for,origins_against,contested_with,claim_id," +
+  "created_offset,updated_offset";
 const EDGE_ROW = `id,edge,kind,valid_from,valid_to,belief_status,belief_score,${ENDPOINTS}`;
 const NODE_TYPES = ["Entity", "Agent", "Claim", "Event"];
 const PAGE = 25;

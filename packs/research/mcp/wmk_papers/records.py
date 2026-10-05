@@ -57,6 +57,16 @@ def clean_text(value: str | None) -> str | None:
 class Author:
     name: str
     orcid: str | None = None
+    openalex: str | None = None
+
+    def origin(self) -> str | None:
+        """The author as a kernel origin key: the ORCID iD, else the OpenAlex id, else the name."""
+        if self.orcid:
+            return f"orcid:{self.orcid}"
+        if self.openalex:
+            return f"openalex:{self.openalex}"
+        name = " ".join(self.name.split())
+        return f"name:{name}" if name else None
 
 
 @dataclass
@@ -72,6 +82,8 @@ class Paper:
     found_in: str = ""
     cited_by: int | None = None
     references: list[str] = field(default_factory=list)
+    # An open-access PDF of the paper, for get_full_text.
+    pdf_url: str | None = None
 
     def key(self) -> str | None:
         """The paper's identifier as the research skill uses it for a collection."""
@@ -114,6 +126,11 @@ class Paper:
             "title": self.title,
             "metadata": metadata,
         }
+        # Its authors are who a paper's findings come from: papers sharing authors are not
+        # independent, and the kernel's belief counts each origin once (at most 64 per source).
+        origins = list(dict.fromkeys(o for a in self.authors if (o := a.origin())))[:64]
+        if origins:
+            arguments["origins"] = origins
         if uri:
             arguments["uri"] = uri
         if self.key():

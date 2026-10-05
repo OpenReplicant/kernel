@@ -10,7 +10,7 @@ Read the relevant section before changing anything architectural.
 
 ## Current phase: Phase 2, research track (approved 2026-10-04)
 
-Phase 1 (the MVP) is complete: `kernel/sql/`, the gateway's seven tools, `skills/core/`
+Phase 1 (the MVP) is complete: `kernel/sql/`, the gateway's tools, `skills/core/`
 (plus `skills/interview/`), `docker-compose.yml`, `evals/`, `profiles/`. Keep all of it
 working; its invariants and tests still apply.
 
@@ -45,6 +45,23 @@ Also approved (2026-10-04):
   reviews) enforces, the kernel records. Until 0019 is built, an `approved_by` edge in the
   graph is a claim, not a decision.
 
+Also approved (2026-10-05), from the review of ingestion:
+
+- `make annotated` (`evals/annotated.py`): extraction measured against an independently
+  annotated corpus (a fixed SciFact sample in `evals/annotated/`), reported apart from the
+  plumbing scores. It is a live run, not CI; its scorer has offline tests.
+- Belief v2 (ADR 0021): sources declare origins (authors, speaker, publisher, repository)
+  and belief counts each origin once. Kernel 0.4.0.
+- `write_batch` (ADR 0023): several writes per call, each its own `kernel.write`.
+- The software adapter maps Kubernetes manifests and OpenAPI documents; ingest returns the
+  abbreviations a document defines (`terms`).
+- Research item 4's parser container: GROBID (CRF models) beside the papers server, whose
+  `get_full_text` returns a paper's full text as Markdown in the abstract's collection
+  (ADR 0025). Workers stay a proposal.
+- Proposed, not built: erasing personal data by destroying per-subject keys (ADR 0022),
+  which must exist before real personal data is ingested; extraction workers with a queue
+  outside the kernel (ADR 0024), gated on the annotated eval's floors.
+
 **Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
 fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
 habit formation, the BPM product. If a task seems to need one of these, stop and ask.
@@ -68,6 +85,7 @@ Create these as Makefile targets early; keep them working.
 - `make eval` — run the eval fixtures through the eval profile
 - `make lint` — ruff check and format check
 - `make up-ui`, `make ui-smoke` — the read-only explorer and its smoke check
+- `make annotated` — a real model maps and judges the SciFact sample (costs model usage)
 
 ## Invariants — never violate these
 
@@ -83,7 +101,8 @@ Create these as Makefile targets early; keep them working.
 4. **The log stores operations in kernel vocabulary.** Never Cypher, never SQL, never
    an instruction to call a model.
 5. **No model calls inside the database or inside a transaction.**
-6. **Belief is a pure function of assertions.** Each source counts once. No time decay.
+6. **Belief is a pure function of assertions.** Each source counts once, through its latest
+   assertion, and each origin (who a source comes from) counts once (ADR 0021). No time decay.
    Conflicts follow the kernel's policy: same source newer supersedes; a different
    source makes the fact contested. Never resolve a conflict by overwriting.
 7. **Kernel node types and edges are fixed.** Four node types (Entity, Agent, Claim,
@@ -151,6 +170,8 @@ provenance, no ops). Never drop it.
   - bulk writes must pass the same rule checks as single writes.
 - Evals compare the produced graph with the expected graph per fixture. Report
   precision and recall for entities and edges separately.
+- Fixture evals measure the plumbing; extraction quality is measured only against data we
+  did not annotate ourselves (`make annotated`), with intervals, never against fixtures.
 
 ## Build order for Phase 1
 
@@ -174,6 +195,8 @@ provenance, no ops). Never drop it.
 - **Modality:** descriptive, predictive, normative, proposed or hypothetical.
 - **Belief status:** accepted, contested, rejected or unknown.
 - **Unresolved claim:** a claim kept without graph ops until it can be placed.
+- **Origin:** who a source's content comes from (authors, a speaker, a publisher, a
+  repository); belief counts each once, however many sources repeat it.
 - **Schema slice:** the kinds, edges and rules most relevant to one passage.
 
 ## When unsure

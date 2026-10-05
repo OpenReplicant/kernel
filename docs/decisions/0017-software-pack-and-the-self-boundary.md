@@ -52,3 +52,11 @@ The adapter no longer retracts with its own reading of the log: it maps each cha
 in an extraction run, and closing the run makes the kernel retract what an older run over
 the file found and this one did not ([ADR 0020](0020-quotes-and-extraction-runs.md)). A run
 with a refused claim is cancelled, so a partial pass retracts nothing.
+
+## Amendment (2026-10-04, later)
+
+The adapter (0.3.0) also maps Kubernetes manifests and OpenAPI documents, found by content
+anywhere in the repository. A namespace is a stack. A workload is a service that runs its
+containers' images and mounts its volume claims. Service ports and Ingress rules are
+endpoints of the workloads they reach. An OpenAPI operation is an endpoint of the service
+named in `x-service`. Every file declares the repository as its origin (ADR 0021).

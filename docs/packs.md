@@ -142,7 +142,7 @@ graph. `packs/software/adapter/` (`wmk-software`) is the example
 
 ## Moving a pack out of this repository
 
-A pack folder depends only on the manifest format, the seven tools, `kernel.testing` and
+A pack folder depends only on the manifest format, the gateway's tools, `kernel.testing` and
 the eval runners. To move one: copy the folder, depend on the kernel package for tests and
 evals, point `WMK_PACKS` at its path, and run its tests against a kernel database. Not
 built yet: a registry, fetching packs by URL, and pack SQL in a pack's own schema.

@@ -12,7 +12,7 @@ agent:
 permissions:
   mode: policy            # requests are answered by policy, never passed to a person
   allow:
-    - mcp:wmk/*           # the seven kernel tools
+    - mcp:wmk/*           # the kernel tools
   deny:
     - "*"                 # no shell, files, network or other servers
 

@@ -59,9 +59,9 @@
       - {op: create, ref: $commit_d0dda1b631e2, type: Event, kind: change, namespace: software, name: 'A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)', identity: {commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67}, start: '2026-10-04T19:35:12Z', props: {pr: 7}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_d0dda1b631e2, props: {role: changed}}
 - write:
-    claim: {text: wmk-software 0.2.0 maps pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:0}}'}
+    claim: {text: wmk-software 0.3.0 maps pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:0}}'}
     ops:
-      - {op: create, ref: $run_pyproject_toml, type: Event, kind: extraction, name: wmk-software over pyproject.toml @ 94526960d835, props: {extractor: wmk-software, version: 0.2.0, source: pyproject.toml}}
+      - {op: create, ref: $run_pyproject_toml, type: Event, kind: extraction, name: wmk-software over pyproject.toml @ 94526960d835, props: {extractor: wmk-software, version: 0.3.0, source: pyproject.toml}}
 - write:
     claim: {text: pyproject.toml defines the Python package world-model-kernel 0.2.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:10}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
@@ -132,9 +132,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_pyproject_toml}}'}
 - write:
-    claim: {text: wmk-software 0.2.0 maps packs/research/mcp/pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:0}}'}
+    claim: {text: wmk-software 0.3.0 maps packs/research/mcp/pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:0}}'}
     ops:
-      - {op: create, ref: $run_packs_research_mcp_pyproject_toml, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/pyproject.toml @ ffa636c20a40, props: {extractor: wmk-software, version: 0.2.0, source: packs/research/mcp/pyproject.toml}}
+      - {op: create, ref: $run_packs_research_mcp_pyproject_toml, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/pyproject.toml @ ffa636c20a40, props: {extractor: wmk-software, version: 0.3.0, source: packs/research/mcp/pyproject.toml}}
 - write:
     claim: {text: packs/research/mcp/pyproject.toml defines the Python package wmk-papers 0.1.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:10}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
@@ -163,9 +163,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
 - write:
-    claim: {text: wmk-software 0.2.0 maps docker-compose.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:0}}'}
+    claim: {text: wmk-software 0.3.0 maps docker-compose.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:0}}'}
     ops:
-      - {op: create, ref: $run_docker_compose_yml, type: Event, kind: extraction, name: wmk-software over docker-compose.yml @ 16c5ecc308d7, props: {extractor: wmk-software, version: 0.2.0, source: docker-compose.yml}}
+      - {op: create, ref: $run_docker_compose_yml, type: Event, kind: extraction, name: wmk-software over docker-compose.yml @ 16c5ecc308d7, props: {extractor: wmk-software, version: 0.3.0, source: docker-compose.yml}}
 - write:
     claim: {text: docker-compose.yml defines the Compose stack wmk., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:409}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
@@ -298,9 +298,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_docker_compose_yml}}'}
 - write:
-    claim: {text: wmk-software 0.2.0 maps db/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:0}}'}
+    claim: {text: wmk-software 0.3.0 maps db/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:0}}'}
     ops:
-      - {op: create, ref: $run_db_dockerfile, type: Event, kind: extraction, name: wmk-software over db/Dockerfile @ e37de45e2c52, props: {extractor: wmk-software, version: 0.2.0, source: db/Dockerfile}}
+      - {op: create, ref: $run_db_dockerfile, type: Event, kind: extraction, name: wmk-software over db/Dockerfile @ e37de45e2c52, props: {extractor: wmk-software, version: 0.3.0, source: db/Dockerfile}}
 - write:
     claim: {text: 'db/Dockerfile builds wmk-db on the base image pgvector/pgvector:0.8.7-pg18-trixie in its pgvector stage.', basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:164}}', run: '{{ref:run_db_dockerfile}}'}
     ops:
@@ -316,9 +316,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_db_dockerfile}}'}
 - write:
-    claim: {text: wmk-software 0.2.0 maps gateway/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:0}}'}
+    claim: {text: wmk-software 0.3.0 maps gateway/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:0}}'}
     ops:
-      - {op: create, ref: $run_gateway_dockerfile, type: Event, kind: extraction, name: wmk-software over gateway/Dockerfile @ bbc371d646b1, props: {extractor: wmk-software, version: 0.2.0, source: gateway/Dockerfile}}
+      - {op: create, ref: $run_gateway_dockerfile, type: Event, kind: extraction, name: wmk-software over gateway/Dockerfile @ bbc371d646b1, props: {extractor: wmk-software, version: 0.3.0, source: gateway/Dockerfile}}
 - write:
     claim: {text: 'gateway/Dockerfile builds wmk-gateway on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:104}}', run: '{{ref:run_gateway_dockerfile}}'}
     ops:
@@ -329,9 +329,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_gateway_dockerfile}}'}
 - write:
-    claim: {text: wmk-software 0.2.0 maps packs/research/mcp/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:0}}'}
+    claim: {text: wmk-software 0.3.0 maps packs/research/mcp/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:0}}'}
     ops:
-      - {op: create, ref: $run_packs_research_mcp_dockerfile, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/Dockerfile @ 52b7c225bf89, props: {extractor: wmk-software, version: 0.2.0, source: packs/research/mcp/Dockerfile}}
+      - {op: create, ref: $run_packs_research_mcp_dockerfile, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/Dockerfile @ 52b7c225bf89, props: {extractor: wmk-software, version: 0.3.0, source: packs/research/mcp/Dockerfile}}
 - write:
     claim: {text: 'packs/research/mcp/Dockerfile builds wmk-papers on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:158}}', run: '{{ref:run_packs_research_mcp_dockerfile}}'}
     ops:
@@ -341,9 +341,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_packs_research_mcp_dockerfile}}'}
 - write:
-    claim: {text: wmk-software 0.2.0 maps .github/workflows/ci.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:0}}'}
+    claim: {text: wmk-software 0.3.0 maps .github/workflows/ci.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:0}}'}
     ops:
-      - {op: create, ref: $run_github_workflows_ci_yml, type: Event, kind: extraction, name: wmk-software over .github/workflows/ci.yml @ 1047c93a1324, props: {extractor: wmk-software, version: 0.2.0, source: .github/workflows/ci.yml}}
+      - {op: create, ref: $run_github_workflows_ci_yml, type: Event, kind: extraction, name: wmk-software over .github/workflows/ci.yml @ 1047c93a1324, props: {extractor: wmk-software, version: 0.3.0, source: .github/workflows/ci.yml}}
 - write:
     claim: {text: 'The ci workflow''s job lint checks OpenReplicant/kernel on push to main and pull_request; it runs uv sync --frozen; make lint; it uses actions/checkout@v4, astral-sh/setup-uv@v6.', basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:136}}', run: '{{ref:run_github_workflows_ci_yml}}'}
     ops:

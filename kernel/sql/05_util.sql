@@ -133,6 +133,16 @@ LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
   SELECT CASE basis WHEN 'observed' THEN 1.0 WHEN 'reported' THEN 0.7 WHEN 'inferred' THEN 0.4 END
 $$;
 
+-- Contract: an origin key (who a statement comes from: belief_v2 counts each once) in
+-- canonical form: trimmed, lower case, runs of whitespace as one space. NULL unless it
+-- reads `scheme:value`, the scheme a letter then letters, digits, '+', '.', '_' or '-',
+-- the value starting with a non-space, at most 300 characters in all. Pure.
+CREATE FUNCTION kernel.normalize_origin(origin text) RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+  SELECT CASE WHEN o ~ '^[a-z][a-z0-9+._-]*:\S' AND length(o) <= 300 THEN o END
+  FROM (SELECT regexp_replace(lower(btrim(origin)), '\s+', ' ', 'g') AS o) x
+$$;
+
 -- Contract: basis strength order used by provenance rules: inferred 1 < reported 2 < observed 3. Pure.
 CREATE FUNCTION kernel.basis_rank(basis text) RETURNS int
 LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$

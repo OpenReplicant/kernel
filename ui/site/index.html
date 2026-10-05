@@ -254,8 +254,10 @@
             <dt>Belief</dt>
             <dd>
               <span x-text="score(data.edge.belief_score)"></span>:
-              for <span x-text="score(data.edge.belief_for)"></span> from <span x-text="data.edge.sources_for"></span> source(s),
+              for <span x-text="score(data.edge.belief_for)"></span> from <span x-text="data.edge.sources_for"></span> source(s)
+              by <span x-text="data.edge.origins_for"></span> origin(s),
               against <span x-text="score(data.edge.belief_against)"></span> from <span x-text="data.edge.sources_against"></span>
+              by <span x-text="data.edge.origins_against"></span>
               <span x-show="data.edge.window_agreed === false">· the sources disagree on the window</span>
             </dd>
             <dt>Recorded</dt>

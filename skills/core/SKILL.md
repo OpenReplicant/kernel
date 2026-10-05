@@ -8,8 +8,8 @@ description: >
   operations it justifies, fix rejected writes from their problem documents, and cite
   what each answer sentence relied on.
 metadata:
-  kernel: ">=0.1 <1.0"
-  tools: write, lookup_entities, get_schema_slice, query_graph, query_log, ingest_source, cite
+  kernel: ">=0.4 <1.0"
+  tools: write, write_batch, lookup_entities, get_schema_slice, query_graph, query_log, ingest_source, cite
 ---
 
 # World Model Kernel: core skill
@@ -23,7 +23,12 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
 
 1. **Ingest the source.** Call `ingest_source` with the document, file text or
    conversation turn. Keep the returned chunk ids: every reported claim cites one as
-   `claim.source`. Known content is not stored twice; you get its chunks back.
+   `claim.source`. Known content is not stored twice; you get its chunks back. When you
+   know who the content comes from, pass `origins` (`orcid:<iD>`, `domain:<publisher>`,
+   `name:<full name>`): sources sharing an origin are not independent, and belief counts
+   each origin once. An interview's speaker (`author`) is its origin by default. Each
+   chunk comes with its heading path, and `terms` lists the abbreviations the document
+   defines: name nodes by the long form and put the short form in `aliases`.
 2. **Read first.**
    - `get_schema_slice` with the passage: which kinds, edges and rules apply. Use only
      the terms it returns (kinds, kernel edges and their specialisations).
@@ -69,6 +74,11 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
    not a failure: `contested_with` names an edge another source holds open across yours,
    and `window_agreed: false` means sources disagree on the dates. Your claim is on
    record; do not write it again. Tell the person both sides and what would settle it.
+   When you have read and looked up a stretch of one source, send its claims together
+   with `write_batch`, in order: a `$ref` created by an earlier write in the batch works
+   in later ones (in ops and `claim.run`). The batch stops at the first rejection;
+   `batch_index` names it and the writes before it are committed, so fix that one and
+   send it with the rest.
 6. **Handle rejections.** A rejected write returns an RFC 9457 problem document with
    `type`, `detail`, the broken `rule`, and `candidates` or `nearest` allowed terms.
    Fix the payload and retry (see [reference/rejections.md](reference/rejections.md)).

@@ -81,6 +81,9 @@ CREATE TABLE kernel.claims (
   quote_end   int CHECK (quote_end > quote_start),
   -- The extraction run (an Event of kind extraction) the claim was written in.
   run_id      text,
+  -- Who the claim comes from, resolved by kernel.write from its source (or its writer):
+  -- belief_v2 counts each origin once.
+  origins     text[] NOT NULL CHECK (cardinality(origins) BETWEEN 1 AND 64),
   CHECK ((quote_start IS NULL) = (quote_end IS NULL))
 );
 COMMENT ON TABLE kernel.claims IS
@@ -96,6 +99,7 @@ CREATE TABLE kernel.assertions (
   claim_id    text NOT NULL REFERENCES kernel.claims (id) DEFERRABLE INITIALLY DEFERRED,
   agent_id    text NOT NULL,
   source_key  text NOT NULL,
+  origins     text[] NOT NULL CHECK (cardinality(origins) BETWEEN 1 AND 64),
   target_type text NOT NULL CHECK (target_type IN ('edge', 'claim', 'status')),
   target_id   text NOT NULL,
   polarity    smallint NOT NULL CHECK (polarity IN (1, -1)),

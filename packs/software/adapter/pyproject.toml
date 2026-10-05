@@ -1,6 +1,6 @@
 [project]
 name = "wmk-software"
-version = "0.2.0"
+version = "0.3.0"
 description = "The software pack's adapter: maps a repository's compose files, Dockerfiles, pyproject.toml, CI workflows and git history into the World Model Kernel through its gateway."
 requires-python = ">=3.12"
 dependencies = [

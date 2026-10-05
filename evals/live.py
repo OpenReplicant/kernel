@@ -1,7 +1,7 @@
 """`make live`: the MVP check with a real harness and model.
 
 Headless Claude Code is connected to a running gateway (`make up`, interactive profile) with
-the core and interview skills installed and only the seven kernel tools allowed. It maps a document and then
+the core and interview skills installed and only the kernel tools allowed. It maps a document and then
 a conversation, one turn at a time, and answers a question with citations. The resulting graph
 is checked loosely (the model's wording varies) and the log is replayed.
 
@@ -36,6 +36,7 @@ SCENARIO_ROOTS = [ROOT / "evals" / "live", *sorted(ROOT.glob("packs/*/evals/live
 REPORT = ROOT / "evals" / "out" / "live.json"
 TOOLS = [
     "mcp__wmk__write",
+    "mcp__wmk__write_batch",
     "mcp__wmk__lookup_entities",
     "mcp__wmk__get_schema_slice",
     "mcp__wmk__query_graph",
@@ -91,7 +92,9 @@ def document_prompt(scenario: dict[str, Any], document: dict[str, Any]) -> str:
     )
 
 
-def turn(cwd: Path, prompt: str, session: str | None, max_steps: int) -> dict[str, Any]:
+def turn(
+    cwd: Path, prompt: str, session: str | None, max_steps: int, model: str | None = None
+) -> dict[str, Any]:
     cmd = [
         "claude",
         "-p",
@@ -110,6 +113,8 @@ def turn(cwd: Path, prompt: str, session: str | None, max_steps: int) -> dict[st
     ]
     if session:
         cmd += ["--resume", session]
+    if model:
+        cmd += ["--model", model]
     done = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=1800, check=False)
     if done.returncode != 0 and not done.stdout.strip():
         raise RuntimeError(f"claude exited {done.returncode}: {done.stderr[-500:]}")

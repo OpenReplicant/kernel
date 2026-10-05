@@ -15,6 +15,7 @@ import yaml
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
+from wmk_software import manifests
 from wmk_software.plan import SELF, Fact, Plan, Source
 from wmk_software.repo import COMPOSE_FILES, WORKFLOWS, Repository, build_spec, file_uri, parse_history
 
@@ -43,6 +44,10 @@ def build(repo: Repository, *, self_system: str | None = None) -> Plan:
     for path in repo.files:
         if path.startswith(WORKFLOWS):
             mapper.workflow(path)
+    kinds = {path: manifests.manifest_type(path, text) for path, text in repo.files.items()}
+    manifests.kubernetes(mapper, [p for p, k in kinds.items() if k == "kubernetes"])
+    for path in [p for p, k in kinds.items() if k == "openapi"]:
+        manifests.openapi(mapper, path)
     if self_system:
         mapper.self_boundary(self_system)
     mapper.plan.drop_empty()
@@ -69,6 +74,7 @@ class Mapper:
                 uri=file_uri(r.url, path),
                 collection=f"{r.url}#{path}",
                 metadata={"repository": r.url, "path": path, "commit": r.commit},
+                origins=(f"repo:{r.url}",),
             )
         )
 
@@ -88,6 +94,7 @@ class Mapper:
                 collection=f"{r.url}#git-history",
                 metadata={"repository": r.url, "branch": r.branch, "commit": r.commit},
                 append_only=True,
+                origins=(f"repo:{r.url}",),
             )
         )
         repo = self.node("repo", "repository", r.name, identity={"url": r.url})
