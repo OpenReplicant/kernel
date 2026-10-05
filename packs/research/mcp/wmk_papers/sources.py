@@ -96,6 +96,7 @@ class ArxivSource:
             abstract=clean_text(r.summary),
             url=r.entry_id,
             found_in="arxiv",
+            pdf_url=r.pdf_url,
         )
 
 
@@ -141,6 +142,7 @@ class OpenAlexSource:
                 Author(
                     name=(a.get("author") or {}).get("display_name") or a.get("raw_author_name") or "",
                     orcid=normalize_orcid((a.get("author") or {}).get("orcid")),
+                    openalex=((a.get("author") or {}).get("id") or "").rsplit("/", 1)[-1] or None,
                 )
                 for a in w.get("authorships") or []
             ],
@@ -153,6 +155,7 @@ class OpenAlexSource:
             found_in="openalex",
             cited_by=w.get("cited_by_count"),
             references=[r.rsplit("/", 1)[-1] for r in w.get("referenced_works") or []],
+            pdf_url=(w.get("best_oa_location") or {}).get("pdf_url") or location.get("pdf_url"),
         )
 
 

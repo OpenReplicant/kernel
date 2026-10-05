@@ -1,18 +1,21 @@
 -- 50_belief.sql
 -- Belief: a pure, versioned function of the assertions, kept current by triggers.
 --
--- belief_v1, for one edge, claim node or node status:
+-- belief_v2 (ADR 0021), for one edge, claim node or node status:
 --   1. Group assertions by source_key; each source counts once, through its latest
 --      assertion (same source, newer supersedes).
 --   2. Each counted assertion weighs trust x basis x confidence band. Trust is the claim's
 --      (kernel.claims.trust): the writer's, or for a reported claim citing a source with
 --      an author, the lower of the writer's and the author's.
---      Denials (polarity -1) weigh against.
---   3. Status: unknown with no weight; contested when both sides reach the credibility
+--   3. Each origin counts once: an assertion spreads its weight evenly over its origins
+--      (who the claim comes from), and each origin adds its largest share to each side.
+--      Denials (polarity -1) weigh against. With one origin per source this is belief_v1.
+--   4. Status: unknown with no weight; contested when both sides reach the credibility
 --      threshold (0.25), when counted sources disagree on the validity window, or when
 --      the scores tie; otherwise accepted or rejected by the heavier side.
 -- No decay: recorded_at never enters the computation. Different sources never
--- overwrite one another; their disagreement is shown as contested.
+-- overwrite one another, even with the same origin; their disagreement is contested.
+-- belief_v1 (ADR 0007) stays defined for comparison; nothing maintains it.
 
 SET ROLE kernel_owner;
 
@@ -26,10 +29,13 @@ CREATE TYPE kernel.belief AS (
   valid_from      timestamptz,
   valid_to        timestamptz,
   window_agreed   boolean,
-  status_values   text[]
+  status_values   text[],
+  origins_for     int,
+  origins_against int
 );
 
--- Contract: belief status from the two weights and window agreement, per belief_v1. Pure.
+-- Contract: belief status from the two weights and window agreement, per belief_v1 and
+-- belief_v2 (the same rule and thresholds). Pure.
 CREATE FUNCTION kernel.belief_status_v1(for_weight numeric, against_weight numeric, window_agreed boolean)
 RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
   SELECT CASE
@@ -83,7 +89,62 @@ RETURNS kernel.belief LANGUAGE sql STABLE AS $$
     CASE WHEN t.f + t.ag > 0 THEN round(t.f / (t.f + t.ag), 4) END,
     t.f, t.ag, t.nf, t.na,
     w.vf, w.vt, w.agreed,
-    vals.v
+    vals.v, t.nf, t.na
+  )::kernel.belief
+  FROM tally t, win w, vals
+$$;
+
+-- Contract: belief_v2 for one target ('edge', 'claim' or 'status' with a node id),
+-- computed from assertions with log_offset <= max_offset (all when NULL). Like belief_v1,
+-- but each origin counts once: a counted assertion spreads its weight evenly over its
+-- origins, and each origin adds its largest share to each side. Sums are rounded to four
+-- places. Equal to belief_v1 when every source has one origin of its own; adding a source
+-- never lowers either side. Reads only kernel.assertions; deterministic.
+CREATE FUNCTION kernel.belief_v2(p_target_type text, p_target_id text, max_offset bigint DEFAULT NULL)
+RETURNS kernel.belief LANGUAGE sql STABLE AS $$
+  WITH counted AS (
+    SELECT DISTINCT ON (a.source_key) a.*
+    FROM kernel.assertions a
+    WHERE a.target_type = p_target_type AND a.target_id = p_target_id
+      AND (max_offset IS NULL OR a.log_offset <= max_offset)
+    ORDER BY a.source_key, a.log_offset DESC, a.op_index DESC
+  ),
+  shares AS (
+    SELECT c.polarity, o.origin, max(c.weight / cardinality(c.origins)) AS share
+    FROM counted c CROSS JOIN LATERAL unnest(c.origins) AS o(origin)
+    GROUP BY c.polarity, o.origin
+  ),
+  tally AS (
+    SELECT
+      trim_scale(round(coalesce((SELECT sum(share) FROM shares WHERE polarity = 1), 0), 4)) AS f,
+      trim_scale(round(coalesce((SELECT sum(share) FROM shares WHERE polarity = -1), 0), 4)) AS ag,
+      (SELECT count(*) FROM counted WHERE polarity = 1)::int AS nf,
+      (SELECT count(*) FROM counted WHERE polarity = -1)::int AS na,
+      (SELECT count(*) FROM shares WHERE polarity = 1)::int AS ofor,
+      (SELECT count(*) FROM shares WHERE polarity = -1)::int AS oag
+  ),
+  windowed AS (
+    -- The window comes from positive assertions; from denials when there are none.
+    SELECT * FROM counted
+    WHERE polarity = 1 OR NOT EXISTS (SELECT 1 FROM counted WHERE polarity = 1)
+  ),
+  win AS (
+    SELECT
+      CASE WHEN bool_or(valid_from IS NULL) THEN NULL ELSE min(valid_from) END AS vf,
+      CASE WHEN bool_or(valid_to IS NULL) THEN NULL ELSE max(valid_to) END AS vt,
+      count(DISTINCT coalesce(valid_from::text, '-') || '|' || coalesce(valid_to::text, '+')) <= 1 AS agreed
+    FROM windowed
+  ),
+  vals AS (
+    SELECT coalesce(array_agg(DISTINCT value ORDER BY value) FILTER (WHERE polarity = 1 AND value IS NOT NULL), '{}') AS v
+    FROM counted
+  )
+  SELECT ROW(
+    kernel.belief_status_v1(t.f, t.ag, w.agreed),
+    CASE WHEN t.f + t.ag > 0 THEN round(t.f / (t.f + t.ag), 4) END,
+    t.f, t.ag, t.nf, t.na,
+    w.vf, w.vt, w.agreed,
+    vals.v, t.ofor, t.oag
   )::kernel.belief
   FROM tally t, win w, vals
 $$;
@@ -131,10 +192,11 @@ DECLARE
   partner text;
 BEGIN
   SELECT * INTO old FROM kernel.edges WHERE id = p_edge_id;
-  b := kernel.belief_v1('edge', p_edge_id);
+  b := kernel.belief_v2('edge', p_edge_id);
   UPDATE kernel.edges
   SET belief_for = b.for_weight, belief_against = b.against_weight, belief_score = b.score,
       sources_for = b.sources_for, sources_against = b.sources_against,
+      origins_for = b.origins_for, origins_against = b.origins_against,
       valid_from = b.valid_from, valid_to = b.valid_to, window_agreed = b.window_agreed,
       belief_status = kernel.belief_status_v1(b.for_weight, b.against_weight, b.window_agreed),
       updated_offset = p_offset, updated_at = p_at
@@ -169,7 +231,7 @@ $$;
 CREATE FUNCTION kernel.refresh_claim_node(p_node_id text, p_offset bigint, p_at timestamptz)
 RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
-  b kernel.belief := kernel.belief_v1('claim', p_node_id);
+  b kernel.belief := kernel.belief_v2('claim', p_node_id);
 BEGIN
   UPDATE kernel.nodes
   SET belief_status = b.status, belief_score = b.score,
@@ -184,7 +246,7 @@ $$;
 CREATE FUNCTION kernel.refresh_node_status(p_node_id text, p_offset bigint, p_at timestamptz)
 RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
-  b kernel.belief := kernel.belief_v1('status', p_node_id);
+  b kernel.belief := kernel.belief_v2('status', p_node_id);
 BEGIN
   UPDATE kernel.nodes
   SET status = CASE cardinality(b.status_values) WHEN 0 THEN NULL WHEN 1 THEN b.status_values[1] ELSE 'contested' END,

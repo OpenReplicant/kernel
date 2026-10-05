@@ -1,5 +1,5 @@
-"""The seven gateway tools. Read tools never change data; write tools only call the three
-kernel write functions. Every rejection reaches the model as an RFC 9457 problem document.
+"""The gateway tools. Read tools never change data; write tools only call the three kernel
+write functions. Every rejection reaches the model as an RFC 9457 problem document.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 
 TOOL_NAMES = (
     "write",
+    "write_batch",
     "lookup_entities",
     "get_schema_slice",
     "query_graph",
@@ -62,6 +63,53 @@ class Claim(BaseModel):
         description="The extraction run this claim belongs to (an Event of kind extraction you started) "
         "when you are extracting a whole source; close it with a close_run op when done.",
     )
+
+
+class Write(BaseModel):
+    claim: Claim
+    ops: list[dict[str, Any]] = Field(
+        default_factory=list, description="Graph operations the claim justifies, as for the write tool."
+    )
+    unresolved: dict[str, Any] | None = Field(
+        None, description="Only with empty ops: why the claim could not be placed."
+    )
+
+
+# Op fields that may name a node, edge, claim or run by a "$ref" from an earlier write in a batch.
+_REF_FIELDS = (
+    "from",
+    "to",
+    "node",
+    "claim",
+    "edge_id",
+    "claim_id",
+    "about",
+    "about_edges",
+    "distinct_from",
+    "run",
+)
+
+
+def bind_refs(payload: dict[str, Any], known: dict[str, str]) -> dict[str, Any]:
+    """Replace "$name" refs that an earlier write in the batch created, and this payload does not
+    define itself, with their ids: in claim.run and in the op fields that point at things."""
+    local = {op.get("ref") for op in payload["ops"] if isinstance(op, dict)}
+
+    def bind(value: Any) -> Any:
+        if isinstance(value, str) and value in known and value not in local:
+            return known[value]
+        if isinstance(value, list):
+            return [bind(v) for v in value]
+        return value
+
+    claim = dict(payload["claim"])
+    if "run" in claim:
+        claim["run"] = bind(claim["run"])
+    ops = [
+        {k: bind(v) if k in _REF_FIELDS else v for k, v in op.items()} if isinstance(op, dict) else op
+        for op in payload["ops"]
+    ]
+    return {**payload, "claim": claim, "ops": ops}
 
 
 class EntityQuery(BaseModel):
@@ -158,12 +206,62 @@ class Tools:
         }
         if unresolved is not None:
             payload["unresolved"] = unresolved
+        written, result = await self._write(payload, "write")
+        return ok(result) if written else fail(result)
+
+    async def write_batch(
+        self,
+        writes: Annotated[
+            list[Write],
+            Field(min_length=1, max_length=50, description="Claims in the order to write them (at most 50)."),
+        ],
+        read_at_offset: Annotated[
+            int, Field(description="head_offset returned by your last read of the graph (any read tool).")
+        ],
+    ) -> CallToolResult:
+        """Submit several claims in order, each through the same kernel.write as the write tool: its own
+        commit, the same rules and checks. A "$name" ref created by an earlier write in the batch can be used
+        by later ones (in op fields and in claim.run), so a run, a node and the claims about it can go in one
+        call. Stops at the first rejection: the writes before it stay committed, and the problem document says
+        which write failed (batch_index), what was written (written) and how many were not attempted. Fix that
+        write and send it with the rest again.
+        """
+        known: dict[str, str] = {}
+        results: list[dict[str, Any]] = []
+        for index, item in enumerate(writes):
+            payload = bind_refs(
+                {
+                    "claim": item.claim.model_dump(exclude_none=True),
+                    "read_at_offset": read_at_offset,
+                    "ops": item.ops,
+                },
+                known,
+            )
+            if item.unresolved is not None:
+                payload["unresolved"] = item.unresolved
+            written, result = await self._write(payload, "write_batch")
+            if not written:
+                return fail(
+                    {
+                        **result,
+                        "batch_index": index,
+                        "written": results,
+                        "not_attempted": len(writes) - index - 1,
+                    }
+                )
+            known.update(result.get("refs", {}))
+            results.append(result)
+        return ok({"head_offset": results[-1]["offset"], "written": results})
+
+    async def _write(self, payload: dict[str, Any], tool: str) -> tuple[bool, dict[str, Any]]:
+        """One payload through kernel.write: (True, result) or (False, problem document)."""
+        ops = payload["ops"]
         with otel.span(
             otel.SPAN_KERNEL_WRITE,
             **{
                 otel.ATTR_AGENT_ID: self.agents.agent_id,
                 otel.ATTR_OPS_COUNT: len(ops),
-                otel.ATTR_TOOL: "write",
+                otel.ATTR_TOOL: tool,
             },
         ) as span:
             trace_id, span_id = otel.current_ids()
@@ -175,9 +273,9 @@ class Tools:
             except KernelRejection as rejection:
                 doc = problems.from_kernel(rejection.detail)
                 otel.rejected(span, problems.type_of(doc), doc.get("rule"))
-                return fail(doc)
+                return False, doc
             except psycopg.Error as exc:
-                return self._db_failure(span, exc)
+                return False, self._db_problem(span, exc)
             otel.set_attributes(
                 span,
                 **{
@@ -192,7 +290,7 @@ class Tools:
                 span, result["offset"], str(result["entry_id"]), result["claim_id"], len(result["conflicts"])
             )
             otel.resolution_bands(["ambiguous" for _ in result.get("ambiguous", [])])
-            return ok(result)
+            return True, result
 
     async def _embed_creates(self, ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Embeddings belong to the gateway: drop any the model sent, add ours for created nodes."""
@@ -421,10 +519,20 @@ class Tools:
             Field(description="Group of sources that count as one for belief, e.g. one conversation's id."),
         ] = None,
         author: Annotated[str | None, Field(description="Agent id of whoever wrote or said it.")] = None,
+        origins: Annotated[
+            list[str] | None,
+            Field(
+                description="Who the content comes from, as scheme:value keys (orcid:..., openalex:..., "
+                "domain:example.org): sources sharing an origin are not independent, so belief counts it "
+                "once. Default: the author, else the source itself."
+            ),
+        ] = None,
         metadata: dict[str, Any] | None = None,
     ) -> CallToolResult:
         """Store a source and split it into chunks with stable ids and character spans. A source whose content
-        hash is already known is not stored again; its chunks are returned. Cite chunk ids as claim.source."""
+        hash is already known is not stored again; its chunks are returned. Cite chunk ids as claim.source.
+        Each chunk carries its heading path; `terms` lists the abbreviations the document defines
+        ("retrieval-gated decoding (RGD)"), so a chunk that only says RGD can still be read."""
         source: dict[str, Any] = {
             k: v
             for k, v in {
@@ -434,6 +542,7 @@ class Tools:
                 "uri": uri,
                 "collection": collection,
                 "author": author,
+                "origins": origins,
                 "metadata": metadata,
             }.items()
             if v is not None
@@ -497,15 +606,16 @@ class Tools:
     # ------------------------------------------------------------------------------------
 
     def _db_failure(self, span: Any, exc: psycopg.Error) -> CallToolResult:
+        return fail(self._db_problem(span, exc))
+
+    def _db_problem(self, span: Any, exc: psycopg.Error) -> dict[str, Any]:
         # Only the error class is logged: database messages can echo payload values.
         log.error("kernel call failed: %s (%s)", type(exc).__name__, exc.sqlstate)
         if span is not None:
             otel.rejected(span, problems.PROBLEM_TYPES["internal"].uri, None)
         if isinstance(exc, psycopg.OperationalError):
-            return fail(problems.problem("unavailable", "the kernel database is not reachable; retry later"))
-        return fail(
-            problems.problem("internal", f"the kernel failed ({type(exc).__name__}); retry or report")
-        )
+            return problems.problem("unavailable", "the kernel database is not reachable; retry later")
+        return problems.problem("internal", f"the kernel failed ({type(exc).__name__}); retry or report")
 
 
 def _parse_moment(value: str) -> str:

@@ -120,3 +120,23 @@ def test_history_merges_writes_ingestions_and_cites(kdb: KernelDB, agent: str) -
     kdb.cite({"sentences": [{"text": "Finance pays on Fridays.", "claims": [result["claim_id"]]}]}, agent)
     kinds = [r[0] for r in kdb.q("SELECT kind FROM kernel.history ORDER BY recorded_at")]
     assert kinds == ["write", "ingest", "write", "cite"]
+
+
+def test_ingest_lists_the_abbreviations_a_document_defines(kdb: KernelDB, agent: str) -> None:
+    text = (
+        "# Methods\n\nWe introduce retrieval-gated decoding (RGD). Earlier work on large language models "
+        "(LLMs; Smith, 2024) found gains. A transmembrane protein 27 (TMEM27) assay was used (n = 17). "
+        "Results were robust (Lima and Okafor, 2025) and significant (p < 0.05).\n\n## Results\n\n"
+        "RGD beat greedy decoding. The apparent diffusion coefficient (ADC) fell."
+    )
+    terms = kdb.ingest({"content": text, "media_type": "text/markdown"}, agent)["terms"]
+    assert [(t["term"], t["means"]) for t in terms] == [
+        ("RGD", "retrieval-gated decoding"),
+        ("LLMs", "large language models"),
+        ("TMEM27", "transmembrane protein 27"),
+        ("ADC", "apparent diffusion coefficient"),
+    ]
+    assert text[terms[0]["at"] :].startswith("(RGD)")
+    # Chunks carry their heading path, so a chunk read alone keeps its place in the document.
+    chunks = kdb.ingest({"content": text, "media_type": "text/markdown"}, agent)["chunks"]
+    assert [c["heading"] for c in chunks] == ["Methods", "Methods > Results"]

@@ -22,6 +22,8 @@ sources:
     title: Git history of OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel
     collection: https://github.com/OpenReplicant/kernel#git-history
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       branch: main
@@ -32,6 +34,8 @@ sources:
     title: pyproject.toml in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/pyproject.toml
     collection: https://github.com/OpenReplicant/kernel#pyproject.toml
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: pyproject.toml
@@ -42,6 +46,8 @@ sources:
     title: packs/research/mcp/pyproject.toml in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/packs/research/mcp/pyproject.toml
     collection: https://github.com/OpenReplicant/kernel#packs/research/mcp/pyproject.toml
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: packs/research/mcp/pyproject.toml
@@ -52,6 +58,8 @@ sources:
     title: docker-compose.yml in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/docker-compose.yml
     collection: https://github.com/OpenReplicant/kernel#docker-compose.yml
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: docker-compose.yml
@@ -62,6 +70,8 @@ sources:
     title: db/Dockerfile in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/db/Dockerfile
     collection: https://github.com/OpenReplicant/kernel#db/Dockerfile
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: db/Dockerfile
@@ -72,6 +82,8 @@ sources:
     title: gateway/Dockerfile in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/gateway/Dockerfile
     collection: https://github.com/OpenReplicant/kernel#gateway/Dockerfile
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: gateway/Dockerfile
@@ -82,6 +94,8 @@ sources:
     title: packs/research/mcp/Dockerfile in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/packs/research/mcp/Dockerfile
     collection: https://github.com/OpenReplicant/kernel#packs/research/mcp/Dockerfile
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: packs/research/mcp/Dockerfile
@@ -92,6 +106,8 @@ sources:
     title: .github/workflows/ci.yml in OpenReplicant/kernel
     uri: https://github.com/OpenReplicant/kernel/blob/HEAD/.github/workflows/ci.yml
     collection: https://github.com/OpenReplicant/kernel#.github/workflows/ci.yml
+    origins:
+    - repo:https://github.com/OpenReplicant/kernel
     metadata:
       repository: https://github.com/OpenReplicant/kernel
       path: .github/workflows/ci.yml

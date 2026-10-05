@@ -1,4 +1,4 @@
-"""The gateway over MCP (in-process): seven tools, RFC 9457 problems, as-of reads and telemetry."""
+"""The gateway over MCP (in-process): its tools, RFC 9457 problems, as-of reads and telemetry."""
 
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ async def seed(client: Any) -> dict[str, Any]:
     return {"chunk": chunk, **written}
 
 
-async def test_exactly_seven_tools(gateway: Any) -> None:
+async def test_exactly_the_kernel_tools(gateway: Any) -> None:
     tools = await gateway.list_tools()
     assert {t.name for t in tools.tools} == set(TOOL_NAMES)
     read_only = {t.name for t in tools.tools if t.annotations and t.annotations.read_only_hint}
@@ -126,6 +126,104 @@ async def test_write_read_and_cite_round_trip(gateway: Any) -> None:
         gateway, "cite", {"sentences": [{"text": "Sam approves invoices.", "edges": [written["refs"]["$s"]]}]}
     )
     assert not error and len(cited["cites"][0]["assertion_ids"]) == 1
+
+
+async def test_a_batch_writes_in_order_and_carries_refs(gateway: Any) -> None:
+    _, src = await call(
+        gateway,
+        "ingest_source",
+        {"content": "Payments depends on the Ledger service.", "title": "Arch note", "collection": "arch"},
+    )
+    chunk = src["chunks"][0]["id"]
+    _, head = await call(gateway, "query_log", {"limit": 1})
+    reported = {"source": chunk, "basis": "reported", "modality": "descriptive", "run": "$run"}
+    error, batch = await call(
+        gateway,
+        "write_batch",
+        {
+            "read_at_offset": head["head_offset"],
+            "writes": [
+                {
+                    "claim": {
+                        "text": "A run maps the note.",
+                        "source": chunk,
+                        "basis": "observed",
+                        "modality": "descriptive",
+                    },
+                    "ops": [
+                        {"op": "create", "ref": "$run", "type": "Event", "kind": "extraction", "name": "r1"}
+                    ],
+                },
+                {
+                    "claim": {
+                        "text": "Payments and the Ledger service are components.",
+                        "quote": "Payments depends on the Ledger service",
+                        **reported,
+                    },
+                    "ops": [
+                        {"op": "create", "ref": "$p", "kind": "component", "name": "Payments"},
+                        {"op": "create", "ref": "$l", "kind": "component", "name": "Ledger service"},
+                    ],
+                },
+                {
+                    "claim": {
+                        "text": "Payments depends on the Ledger service.",
+                        "quote": "Payments depends on the Ledger service",
+                        **reported,
+                    },
+                    "ops": [{"op": "assert", "edge": "depends_on", "from": "$p", "to": "$l"}],
+                },
+                {
+                    "claim": {
+                        "text": "The run is complete.",
+                        "source": chunk,
+                        "basis": "observed",
+                        "modality": "descriptive",
+                    },
+                    "ops": [{"op": "close_run", "run": "$run"}],
+                },
+            ],
+        },
+    )
+    assert not error, batch
+    assert [w["offset"] for w in batch["written"]] == list(
+        range(head["head_offset"] + 1, head["head_offset"] + 5)
+    )
+    run = batch["written"][0]["refs"]["$run"]
+    edge = batch["written"][2]["ops"][0]
+    assert (
+        edge["from"] == batch["written"][1]["refs"]["$p"] and edge["to"] == batch["written"][1]["refs"]["$l"]
+    )
+    _, log = await call(gateway, "query_log", {"collection": "arch", "order": "asc"})
+    assert [e["claim"].get("run") for e in log["entries"]] == [None, run, run, None]
+
+
+async def test_a_batch_stops_at_the_first_rejection(gateway: Any) -> None:
+    _, head = await call(gateway, "query_log", {"limit": 1})
+    observed = {"basis": "observed", "modality": "descriptive"}
+    error, doc = await call(
+        gateway,
+        "write_batch",
+        {
+            "read_at_offset": head["head_offset"],
+            "writes": [
+                {
+                    "claim": {"text": "Billing is a component.", **observed},
+                    "ops": [{"op": "create", "ref": "$b", "kind": "component", "name": "Billing"}],
+                },
+                {
+                    "claim": {"text": "Billing is a wombat.", **observed},
+                    "ops": [{"op": "create", "kind": "wombat", "name": "Billing"}],
+                },
+                {"claim": {"text": "Never written.", **observed}, "ops": []},
+            ],
+        },
+    )
+    assert error and doc["batch_index"] == 1 and doc["not_attempted"] == 1
+    assert doc["type"] == problems.PROBLEM_TYPES["types"].uri and doc["rule"]
+    assert [w["claim_id"] for w in doc["written"]] and len(doc["written"]) == 1
+    _, after = await call(gateway, "query_log", {"limit": 5})
+    assert after["head_offset"] == head["head_offset"] + 1
 
 
 async def test_rejections_are_rfc9457_problem_documents(gateway: Any) -> None:

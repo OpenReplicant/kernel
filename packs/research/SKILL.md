@@ -6,8 +6,8 @@ description: >
   evidence across papers. Use with the core skill when reading abstracts or papers, or
   when asked what a field knows, where findings disagree, or what is still open.
 metadata:
-  version: "0.1.0"
-  kernel: ">=0.2 <1.0"
+  version: "0.3.0"
+  kernel: ">=0.4 <1.0"
   namespace: research
   requires: world-model-core
 ---
@@ -27,6 +27,18 @@ paper's full record with `ingest`: the exact `ingest_source` arguments described
 Pass them to the kernel's `ingest_source` unchanged. Without it, build the same arguments
 from whatever text you were given.
 
+## Full text
+
+When the papers server has a parser (`get_full_text`), map a paper's full text rather than
+its abstract alone: abstracts overstate results and leave out their conditions.
+`get_full_text` (DOI, arXiv id or a PDF URL) returns `ingest` arguments in the same layout,
+with numbered sections as headings and the references at the end. Their collection is the
+abstract's, so the full text is a newer version of the same source. Map it in a new run:
+closing that run retracts what the abstract's run found and the full text does not say.
+Findings from the Results section beat the abstract's summary of them. Quote the sentence
+with the numbers, and record the conditions (data set, subgroup, setting) in the
+finding's text.
+
 ## One run per paper
 
 Map each paper in an extraction run (core skill, step 7): start it citing the paper's
@@ -45,6 +57,8 @@ arXiv id, then the abstract (and the full text when you have it), as Markdown.
 - `collection`: `doi:<doi>`, else `arxiv:<id>`, so a preprint and its published version
   count as one source.
 - `metadata`: `{"doi", "arxiv", "year", "venue"}` as known.
+- `origins`: one key per author, `orcid:<iD>` when known, else `name:<full name>`.
+  Papers by the same people are not independent evidence; belief counts each author once.
 - Leave `author` unset; authors are recorded as people in the graph.
 
 ## Map it

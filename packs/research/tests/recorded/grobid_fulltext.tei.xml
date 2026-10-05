@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xml:space="preserve" xmlns="http://www.tei-c.org/ns/1.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.tei-c.org/ns/1.0 https://raw.githubusercontent.com/kermitt2/grobid/master/grobid-home/schemas/xsd/Grobid.xsd"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+	<teiHeader xml:lang="en">
+		<fileDesc>
+			<titleStmt>
+				<title level="a" type="main">Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization</title>
+			</titleStmt>
+			<publicationStmt>
+				<publisher/>
+				<availability status="unknown"><licence/></availability>
+			</publicationStmt>
+			<sourceDesc>
+				<biblStruct status="extracted">
+					<analytic>
+						<author role="corresp">
+							<persName><forename type="first">Ana</forename><surname>Lima</surname></persName>
+							<email>ana.lima@example.org</email>
+							<affiliation key="aff0">
+								<orgName type="institution">University of Lisbon</orgName>
+								<address>
+									<country key="PT">Portugal</country>
+								</address>
+							</affiliation>
+						</author>
+						<author>
+							<persName><forename type="first">Ben</forename><surname>Okafor</surname></persName>
+							<affiliation key="aff1">
+								<orgName type="institution">University of Lagos</orgName>
+								<address>
+									<country key="NG">Nigeria</country>
+								</address>
+							</affiliation>
+						</author>
+						<title level="a" type="main">Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization</title>
+					</analytic>
+					<monogr>
+						<imprint>
+							<date/>
+						</imprint>
+					</monogr>
+					<idno type="MD5">BDB198F403C37057C0537E6BD11D068D</idno>
+				</biblStruct>
+			</sourceDesc>
+		</fileDesc>
+		<encodingDesc>
+			<appInfo>
+				<application version="0.9.1" ident="GROBID" when="2026-10-05T00:04+0000">
+					<desc>GROBID - A machine learning software for extracting information from scholarly documents</desc>
+					<label type="revision">0.9.1</label>
+					<label type="parameters">startPage=-1, endPage=-1, consolidateCitations=0, consolidateHeader=0, consolidateFunders=0, includeRawAffiliations=false, includeRawCitations=false, includeRawCopyrights=false, generateTeiIds=false, generateTeiCoordinates=[], flavor=null, debugLabelingCollector=disabled</label>
+					<ref target="https://github.com/kermitt2/grobid"/>
+				</application>
+			</appInfo>
+		</encodingDesc>
+		<profileDesc>
+			<abstract>
+<div xmlns="http://www.tei-c.org/ns/1.0"><p>Abstractive summarizers often state facts that are not in the source document. We introduce retrieval-gated decoding (RGD), which blocks a token when no retrieved passage of the source supports it. On the NewsSum-2 benchmark, RGD raises factual consistency from 71% to 84%, while ROUGE-L drops by 0.4 points. We hypothesize that gating at the token level, rather than the sentence level, drives the gain.</p></div>
+			</abstract>
+		</profileDesc>
+	</teiHeader>
+	<text xml:lang="en">
+		<body>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="1">Introduction</head><p>Neural abstractive summarization produces fluent text, but a large share of generated summaries contain statements that the source does not support <ref type="bibr" target="#b1">(Maynez et al., 2020)</ref>. Retrieval-augmented generation reduces this problem for open-domain question answering <ref type="bibr" target="#b0">(Lewis et al., 2020</ref>), yet summarizers rarely check each token against the source.</p><p>We propose retrieval-gated decoding, which retrieves supporting passages for every candidate token and blocks tokens that no passage supports.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="2">Method</head><p>At each decoding step, RGD retrieves the top five passages of the source document with BM25 and scores the candidate token against them with an entailment model. A token whose best score falls below a threshold of 0.6 is masked, and the decoder samples among the remaining tokens.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="3">Experiments</head><p>We evaluate on NewsSum-2, a benchmark of 12,000 news articles with reference summaries, and report factual consistency with the FactCC classifier and ROUGE-L against the references.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="4">Results</head><p>RGD raises factual consistency from 71% to 84% on NewsSum-2, while ROUGE-L drops by 0.4 points. Gating at the sentence level instead raises factual consistency only to 76%.</p></div>
+<div xmlns="http://www.tei-c.org/ns/1.0"><head n="5">Discussion</head><p>We hypothesize that gating at the token level, rather than the sentence level, drives the gain. Whether RGD helps on documents longer than 4,000 tokens remains an open question.</p></div>		</body>
+		<back>
+			<div type="references">
+
+				<listBibl>
+
+<biblStruct status="extracted" xml:id="b0">
+	<analytic>
+		<title level="a" type="main">Retrieval-augmented generation for knowledge-intensive NLP tasks</title>
+		<author>
+			<persName><forename type="first">Patrick</forename><surname>Lewis</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ethan</forename><surname>Perez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Aleksandra</forename><surname>Piktus</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Advances in Neural Information Processing Systems</title>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+			<biblScope unit="volume">33</biblScope>
+		</imprint>
+	</monogr>
+</biblStruct>
+
+<biblStruct status="extracted" xml:id="b1">
+	<analytic>
+		<title level="a" type="main">On faithfulness and factuality in abstractive summarization</title>
+		<author>
+			<persName><forename type="first">Joshua</forename><surname>Maynez</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Shashi</forename><surname>Narayan</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Bernd</forename><surname>Bohnet</surname></persName>
+		</author>
+		<author>
+			<persName><forename type="first">Ryan</forename><surname>Mcdonald</surname></persName>
+		</author>
+	</analytic>
+	<monogr>
+		<title level="m">Proceedings of ACL 2020</title>
+		<meeting>ACL 2020</meeting>
+		<imprint>
+			<date type="published" when="2020">2020</date>
+			<biblScope unit="page" from="1906" to="1919" />
+		</imprint>
+	</monogr>
+</biblStruct>
+
+				</listBibl>
+			</div>
+		</back>
+	</text>
+</TEI>

@@ -31,11 +31,22 @@ uv run wmk-software map . --self "World Model Kernel (this instance)"   # also t
 ```
 
 It maps `pyproject.toml` (and uv workspace members), the compose file and the Dockerfiles
-it builds, `.github/workflows/*.yml` and the first-parent git history. Each file is one
-source whose `collection` is `<repository URL>#<path>`, so a newer version of a file
-supersedes the older one. Mapping again writes nothing for unchanged files, reuses nodes
-by identity key, and retracts edges a changed file no longer states. Run it after a change
-lands; it never needs database credentials.
+it builds, `.github/workflows/*.yml`, Kubernetes manifests, OpenAPI documents and the
+first-parent git history.
+
+- **Kubernetes:** a namespace is a `stack`. A Deployment, StatefulSet, DaemonSet, Job or
+  CronJob is a `service` named `<namespace>/<name>`, which `runs` its containers' images
+  and `mounts` its volume claims. A Service's ports and an Ingress's rules are endpoints of
+  the workloads their selectors reach.
+- **OpenAPI:** each operation is an `endpoint` named `<API title> <METHOD> <path>`. It is
+  `exposed_by` the service named in the document's `x-service` (`<stack>/<service>`), else
+  by a service of the API's own.
+
+Each file is one source whose `collection` is `<repository URL>#<path>`, so a newer version
+of a file supersedes the older one. Every file's origin is the repository, so its files do
+not count as independent evidence for each other. Mapping again writes nothing for
+unchanged files, reuses nodes by identity key, and retracts edges a changed file no longer
+states. Run it after a change lands; it never needs database credentials.
 
 Use the adapter for what files declare. Map by hand, with the core skill, what only people
 or running systems know: who owns a service, why it was built that way, what an incident

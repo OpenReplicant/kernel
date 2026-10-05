@@ -91,7 +91,10 @@ def test_ingest_arguments_follow_the_research_skill() -> None:
         "",
         "Ana Lima, Ben Okafor. 2025. Synthetic Proceedings of Summarization 12. doi:10.5555/wmk.rgd.2025",
     ]
+    # Who the findings come from: each author once, by ORCID iD, else OpenAlex id, else name.
+    assert args["origins"] == ["orcid:0000-0002-1825-0097", "name:Ben Okafor"]
     preprint = Paper(title="T", authors=[], arxiv="2501.01234")
+    assert "origins" not in preprint.ingest_arguments()
     assert preprint.ingest_arguments()["collection"] == "arxiv:2501.01234"
     assert preprint.ingest_arguments()["uri"] == "https://arxiv.org/abs/2501.01234"
 
@@ -248,7 +251,7 @@ async def test_tools_search_fetch_and_fall_back() -> None:
     )
     async with Client(build_server(papers)) as client:
         tools = {t.name for t in (await client.list_tools()).tools}
-        assert tools == {"search_papers", "get_paper"}
+        assert tools == {"search_papers", "get_paper", "get_full_text"}
 
         error, found = await call(client, "search_papers", {"query": "retrieval-gated"})
         assert not error and found["source"] == "crossref" and len(found["results"]) == 1
@@ -270,3 +273,66 @@ async def test_tools_search_fetch_and_fall_back() -> None:
     async with Client(build_server(down)) as client:
         error, failed = await call(client, "get_paper", {"doi": "10.5555/wmk.rgd.2025"})
         assert error and failed["type"] == "urn:wmk:papers:upstream" and failed["status"] == 502
+
+
+# Full text -------------------------------------------------------------------------------
+
+
+def test_grobid_tei_becomes_markdown_in_the_skills_layout() -> None:
+    from wmk_papers.fulltext import from_tei, markdown
+
+    full = from_tei(recorded("grobid_fulltext.tei.xml").decode())
+    assert full.parser == "GROBID 0.9.1" and [a.name for a in full.authors] == ["Ana Lima", "Ben Okafor"]
+    assert [s.heading for s in full.sections] == [
+        "1 Introduction",
+        "2 Method",
+        "3 Experiments",
+        "4 Results",
+        "5 Discussion",
+    ]
+    text = markdown(full, paper())
+    lines = text.split("\n\n")
+    # The record's header (authors, year, venue, DOI), then the parsed abstract and body.
+    assert lines[:3] == [
+        "# Retrieval-Gated Decoding Reduces Hallucination in Abstractive Summarization",
+        "Ana Lima, Ben Okafor. 2025. Synthetic Proceedings of Summarization 12. doi:10.5555/wmk.rgd.2025",
+        "## Abstract",
+    ]
+    assert "## 4 Results\n\nRGD raises factual consistency from 71% to 84% on NewsSum-2" in text
+    assert "## References\n\n- Patrick Lewis, Ethan Perez, Aleksandra Piktus. 2020." in text
+
+
+@pytest.mark.anyio
+async def test_full_text_keeps_the_papers_collection(monkeypatch: pytest.MonkeyPatch, dbname: str) -> None:
+    from kernel.testing import gateway_client
+    from wmk_papers import server
+
+    record = paper()
+    record.pdf_url = "https://example.org/rgd.pdf"
+    fetched: list[str] = []
+    monkeypatch.setattr(server, "fetch_pdf", lambda url: fetched.append(url) or b"%PDF-1.7")
+    monkeypatch.setattr(server, "grobid_tei", lambda base, pdf: recorded("grobid_fulltext.tei.xml").decode())
+    papers = Papers(
+        {"crossref": FakeSource("crossref", {"10.5555/wmk.rgd.2025": record})}, "http://grobid:8070"
+    )
+    async with Client(build_server(papers)) as client:
+        error, got = await call(client, "get_full_text", {"doi": "10.5555/wmk.rgd.2025"})
+        assert not error, got
+        error, no_pdf = await call(client, "get_full_text", {"pdf_url": None})
+        assert error and no_pdf["status"] == 404
+    async with Client(build_server(Papers({}))) as client:
+        error, off = await call(client, "get_full_text", {"pdf_url": "https://example.org/x.pdf"})
+        assert error and off["type"] == "urn:wmk:papers:unavailable"
+    assert fetched == ["https://example.org/rgd.pdf"]
+    ingest = got["ingest"]
+    abstract = record.ingest_arguments()
+    # Same collection and origins as the abstract: a newer version of the same source.
+    assert (ingest["collection"], ingest["origins"]) == (abstract["collection"], abstract["origins"])
+    assert ingest["metadata"]["parser"] == "GROBID 0.9.1" and got["sections"][3] == "4 Results"
+    async with gateway_client(dbname) as kernel:
+        result = await kernel.call_tool("ingest_source", ingest)
+        body = json.loads(result.content[0].text)
+    assert not result.is_error, body
+    # Chunks carry their heading path under the paper's title.
+    assert {c["heading"].split(" > ")[-1] for c in body["chunks"]} >= {"Abstract", "4 Results", "References"}
+    assert {t["term"] for t in body["terms"]} == {"RGD"}

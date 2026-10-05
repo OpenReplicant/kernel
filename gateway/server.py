@@ -1,4 +1,4 @@
-"""The MCP gateway: one server exposing the seven kernel tools."""
+"""The MCP gateway: one server exposing the kernel tools."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from gateway.tools import Tools
 
 log = logging.getLogger(__name__)
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 _READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 _WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
@@ -28,8 +28,9 @@ _WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_worl
 def instructions(agents: Agents, profile: str) -> str:
     lines = [
         "World Model Kernel: a sourced, versioned world model. Follow the core skill:",
-        "read first (get_schema_slice, lookup_entities, query_graph), then write one claim at a time with",
-        "the ops it justifies and the head_offset of your last read as read_at_offset. A reported claim",
+        "read first (get_schema_slice, lookup_entities, query_graph), then write each claim with the ops it",
+        "justifies and the head_offset of your last read as read_at_offset (write_batch sends several in",
+        "order, each checked like a single write). A reported claim",
         "quotes the exact words of its chunk (claim.quote). Fix rejected writes",
         "using the problem document; after two failed retries write the claim with empty ops (unresolved).",
         "Ingest sources before citing them, and cite the edges and claims each answer sentence relied on.",
@@ -51,6 +52,7 @@ def build_server(tools: Tools) -> MCPServer:
         version=VERSION,
     )
     server.add_tool(tools.write, name="write", annotations=_WRITE)
+    server.add_tool(tools.write_batch, name="write_batch", annotations=_WRITE)
     server.add_tool(tools.lookup_entities, name="lookup_entities", annotations=_READ)
     server.add_tool(tools.get_schema_slice, name="get_schema_slice", annotations=_READ)
     server.add_tool(tools.query_graph, name="query_graph", annotations=_READ)

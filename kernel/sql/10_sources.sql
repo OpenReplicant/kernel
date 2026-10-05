@@ -13,6 +13,10 @@ CREATE TABLE kernel.sources (
   -- one source for belief. NULL means the source stands alone.
   collection      text,
   author_agent_id text,
+  -- Who the content comes from (authors, a speaker, a publisher, a repository), as origin
+  -- keys in kernel.normalize_origin form, sorted. belief_v2 counts each origin once across
+  -- sources. Empty: the author agent, else the source itself, is the origin.
+  origins         text[] NOT NULL DEFAULT '{}' CHECK (cardinality(origins) <= 64),
   content         text NOT NULL,
   metadata        jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(metadata) = 'object'),
   agent_id        text NOT NULL,

@@ -2,7 +2,7 @@
 
 For each fixture: a fresh database with the kernel and the reference pack, a gateway
 running the eval profile (in-process, spoken to over MCP), the fixture's script played
-through the seven tools, then precision and recall for entities and edges against the
+through the gateway's tools, then precision and recall for entities and edges against the
 expected graph, and the replay check on that database.
 
 The script stands in for the eval harness's model, which keeps CI deterministic and free

@@ -111,14 +111,88 @@ BEGIN
 END
 $$;
 
+-- Contract: the abbreviations a text defines, as "long form (SHORT)" (Schwartz and Hearst,
+-- 2003, simplified): a short form of 2 to 10 characters starting with a letter, alone in
+-- its parentheses or before a ';' or ','; its long form is the shortest run of preceding
+-- words in the same sentence whose letters contain the short form's letters and digits in
+-- order, the first at the start of a word. Returns [{"term", "means", "at"}] by first
+-- definition (`at`: 0-based offset of the parenthesis), each term once. Pure.
+CREATE FUNCTION kernel.defined_terms(p_content text) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+  pattern constant text := '\(([A-Za-z][A-Za-z0-9-]{0,8}[A-Za-z0-9]s?)(?:[;,][^)]{0,80})?\)';
+  n int := 1;
+  p int;
+  sf text;
+  before text;
+  words text[];
+  keep int;
+  win text;
+  si int;
+  li int;
+  c text;
+  ok boolean;
+  lf text;
+  seen text[] := '{}';
+  found jsonb := '[]';
+BEGIN
+  LOOP
+    p := regexp_instr(p_content, pattern, 1, n);
+    EXIT WHEN p = 0 OR n > 500;
+    n := n + 1;
+    sf := regexp_substr(p_content, pattern, 1, n - 1, '', 1);
+    CONTINUE WHEN sf = ANY (seen) OR sf !~ '[A-Z]';
+    -- The words before the parenthesis, back to the start of the sentence.
+    before := regexp_replace(substring(p_content FROM 1 FOR p - 1), '^.*([.!?]\s|\n)', '', 's');
+    words := regexp_split_to_array(btrim(before), '\s+');
+    keep := least(length(sf) + 5, 2 * length(sf));
+    win := array_to_string(words[greatest(1, cardinality(words) - keep + 1):cardinality(words)], ' ');
+    si := length(sf);
+    li := length(win);
+    ok := li > 0;
+    WHILE ok AND si >= 1 LOOP
+      c := lower(substr(sf, si, 1));
+      IF c !~ '[a-z0-9]' OR (si = length(sf) AND c = 's' AND si > 2 AND substr(sf, si, 1) = 's') THEN
+        si := si - 1;
+        CONTINUE;
+      END IF;
+      WHILE li >= 1 AND (lower(substr(win, li, 1)) <> c
+                         OR (si = 1 AND li > 1 AND substr(win, li - 1, 1) ~ '[A-Za-z0-9]')) LOOP
+        li := li - 1;
+      END LOOP;
+      IF li < 1 THEN
+        ok := false;
+      ELSE
+        li := li - 1;
+        si := si - 1;
+      END IF;
+    END LOOP;
+    IF ok THEN
+      lf := btrim(substring(win FROM li + 1), ' ,;:"''');
+      IF length(lf) > length(sf) AND lf !~ '[()]' THEN
+        seen := seen || sf;
+        found := found || jsonb_build_object('term', sf, 'means', lf, 'at', p - 1);
+      END IF;
+    END IF;
+  END LOOP;
+  RETURN found;
+END
+$$;
+
 -- Contract: kernel.ingest_source(source, agent_id) stores a source with stable chunk ids
 -- and character spans, or returns the existing one when its content hash is already
 -- known (per collection and uri for collections). Writes nothing else.
 --
 -- source: {"content", "media_type"?: "text/plain"|"text/markdown", "title"?, "uri"?,
---          "collection"?, "author"?: agent id, "metadata"?: {}, "trace_id"?, "span_id"?}
--- Returns {"source_id", "content_hash", "skipped", "chunks": [{"id", "seq", "char_start",
---          "char_end", "heading", "text"}]}.
+--          "collection"?, "author"?: agent id, "origins"?: [origin key], "metadata"?: {},
+--          "trace_id"?, "span_id"?}
+-- origins: who the content comes from (authors, speaker, publisher), at most 64 keys
+-- `scheme:value` (kernel.normalize_origin; the scheme `source` is the kernel's own).
+-- belief_v2 counts each origin once across sources. A skipped source keeps the origins it
+-- was first stored with.
+-- Returns {"source_id", "content_hash", "skipped", "origins", "terms" (the abbreviations
+--          the content defines, kernel.defined_terms), "chunks": [{"id", "seq",
+--          "char_start", "char_end", "heading" (the heading path), "text"}]}.
 CREATE FUNCTION kernel.ingest_source(p_source jsonb, p_agent_id text) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, kernel, public, pg_temp
@@ -129,6 +203,7 @@ DECLARE
   v_collection text := p_source ->> 'collection';
   v_uri text := p_source ->> 'uri';
   v_author text := p_source ->> 'author';
+  v_origins text[] := '{}';
   v_hash text;
   v_id text;
   v_keys text;
@@ -137,7 +212,8 @@ BEGIN
     PERFORM kernel.reject('payload', NULL, 'the source must be a JSON object');
   END IF;
   SELECT string_agg(k, ', ') INTO v_keys FROM jsonb_object_keys(p_source) k
-  WHERE k NOT IN ('content', 'media_type', 'title', 'uri', 'collection', 'author', 'metadata', 'trace_id', 'span_id');
+  WHERE k NOT IN ('content', 'media_type', 'title', 'uri', 'collection', 'author', 'origins', 'metadata', 'trace_id',
+                  'span_id');
   IF v_keys IS NOT NULL THEN
     PERFORM kernel.reject('payload', NULL, format('unknown source keys: %s', v_keys));
   END IF;
@@ -150,6 +226,18 @@ BEGIN
   END IF;
   IF p_source ? 'metadata' AND jsonb_typeof(p_source -> 'metadata') <> 'object' THEN
     PERFORM kernel.reject('payload', NULL, 'metadata must be an object', jsonb_build_object('field', 'metadata'));
+  END IF;
+  IF p_source ? 'origins' THEN
+    IF jsonb_typeof(p_source -> 'origins') <> 'array' OR jsonb_array_length(p_source -> 'origins') > 64
+       OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_source -> 'origins') o
+                  WHERE jsonb_typeof(o) <> 'string' OR kernel.normalize_origin(o #>> '{}') IS NULL
+                     OR kernel.normalize_origin(o #>> '{}') LIKE 'source:%') THEN
+      PERFORM kernel.reject('payload', NULL,
+        'origins must list at most 64 keys of the form scheme:value, such as orcid:0000-0002-1825-0097 or '
+        || 'domain:example.org (the scheme source is reserved)', jsonb_build_object('field', 'origins'));
+    END IF;
+    v_origins := ARRAY(SELECT DISTINCT kernel.normalize_origin(o) FROM jsonb_array_elements_text(p_source -> 'origins') o
+                       ORDER BY 1);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM kernel.nodes WHERE id = p_agent_id AND type = 'Agent') THEN
     PERFORM kernel.reject('agent', NULL, format('%s is not an agent', coalesce(p_agent_id, 'null')));
@@ -168,9 +256,9 @@ BEGIN
 
   IF v_id IS NULL THEN
     v_id := kernel.new_id('src');
-    INSERT INTO kernel.sources (id, content_hash, media_type, title, uri, collection, author_agent_id, content,
+    INSERT INTO kernel.sources (id, content_hash, media_type, title, uri, collection, author_agent_id, origins, content,
                                 metadata, agent_id, recorded_at, trace_id, span_id)
-    VALUES (v_id, v_hash, v_media, p_source ->> 'title', v_uri, v_collection, v_author, v_content,
+    VALUES (v_id, v_hash, v_media, p_source ->> 'title', v_uri, v_collection, v_author, v_origins, v_content,
             coalesce(p_source -> 'metadata', '{}'), p_agent_id, clock_timestamp(),
             p_source ->> 'trace_id', p_source ->> 'span_id');
     INSERT INTO kernel.chunks (id, source_id, seq, char_start, char_end, heading, text)
@@ -178,10 +266,12 @@ BEGIN
            ch.char_start, ch.char_end, ch.heading, ch.body
     FROM kernel.chunk_text(v_content, v_media) ch;
     RETURN jsonb_build_object('source_id', v_id, 'content_hash', v_hash, 'skipped', false,
+                              'origins', to_jsonb(v_origins), 'terms', kernel.defined_terms(v_content),
                               'chunks', kernel.source_chunks(v_id));
   END IF;
   RETURN jsonb_build_object('source_id', v_id, 'content_hash', v_hash, 'skipped', true,
-                            'chunks', kernel.source_chunks(v_id));
+                            'origins', (SELECT to_jsonb(origins) FROM kernel.sources WHERE id = v_id),
+                            'terms', kernel.defined_terms(v_content), 'chunks', kernel.source_chunks(v_id));
 END
 $$;
 

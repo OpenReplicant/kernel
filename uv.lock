@@ -1360,7 +1360,7 @@ wheels = [
 
 [[package]]
 name = "wmk-papers"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packs/research/mcp" }
 dependencies = [
     { name = "arxiv" },
@@ -1379,7 +1379,7 @@ requires-dist = [
 
 [[package]]
 name = "wmk-software"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "packs/software/adapter" }
 dependencies = [
     { name = "anyio" },
@@ -1398,7 +1398,7 @@ requires-dist = [
 
 [[package]]
 name = "world-model-kernel"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

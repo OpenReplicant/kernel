@@ -17,7 +17,7 @@ from typing import Any
 # The agent that writes the claims, known from the gateway's write results.
 SELF = "agent:self"
 EXTRACTOR = "wmk-software"
-EXTRACTOR_VERSION = "0.2.0"
+EXTRACTOR_VERSION = "0.3.0"
 
 
 @dataclass(frozen=True)
@@ -34,15 +34,20 @@ class Source:
     metadata: dict[str, Any] = field(default_factory=dict)
     # Facts from an append-only source are never retracted when a later version omits them.
     append_only: bool = False
+    # Who the content comes from: the files of one repository are not independent of each
+    # other, so belief counts their repository once.
+    origins: tuple[str, ...] = ()
 
     def ingest_args(self) -> dict[str, Any]:
-        args = {
+        args: dict[str, Any] = {
             "content": self.content,
             "media_type": self.media_type,
             "title": self.title,
             "uri": self.uri,
             "collection": self.collection,
         }
+        if self.origins:
+            args["origins"] = list(self.origins)
         if self.metadata:
             args["metadata"] = self.metadata
         return args

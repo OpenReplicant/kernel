@@ -118,7 +118,8 @@ def _has_origin(root: Path) -> bool:
 
 def wanted(paths: set[str], content: Any) -> list[str]:
     """The files the adapter maps, in mapping order: pyproject.toml and the uv workspace
-    members' pyproject.toml, the compose file and the Dockerfiles it builds, CI workflows."""
+    members' pyproject.toml, the compose file and the Dockerfiles it builds, CI workflows,
+    Kubernetes manifests and OpenAPI documents."""
     out: list[str] = []
     if "pyproject.toml" in paths:
         out.append("pyproject.toml")
@@ -131,6 +132,18 @@ def wanted(paths: set[str], content: Any) -> list[str]:
         out.append(compose)
         out += [d for d in dockerfiles(yaml.safe_load(content(compose)) or {}) if d in paths]
     out += sorted(p for p in paths if p.startswith(WORKFLOWS) and p.endswith((".yml", ".yaml")))
+    # Kubernetes manifests and OpenAPI documents, wherever they are (not compose or workflows).
+    from wmk_software.manifests import manifest_type
+
+    taken = set(out)
+    out += sorted(
+        p
+        for p in paths
+        if p not in taken
+        and not p.startswith(WORKFLOWS)
+        and p.endswith((".yaml", ".yml", ".json"))
+        and manifest_type(p, content(p))
+    )
     return list(dict.fromkeys(out))
 
 

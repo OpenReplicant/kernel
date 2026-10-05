@@ -1,6 +1,6 @@
 [project]
 name = "wmk-papers"
-version = "0.1.0"
+version = "0.2.0"
 description = "The research pack's paper-source MCP server: arXiv, OpenAlex and Crossref for the World Model Kernel."
 requires-python = ">=3.12"
 dependencies = [

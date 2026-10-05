@@ -20,3 +20,8 @@ term depends on time. The version is stored on each log entry (`belief_version`)
 
 The thresholds are placeholders until calibration from evals exists; changing them is a
 new belief version, never an edit of v1.
+
+## Amendment (2026-10-04)
+
+belief_v2 ([ADR 0021](0021-belief-v2-counts-origins.md)) replaces v1 in the triggers. It
+keeps v1's weights, thresholds and status rule, and counts each origin once across sources.
