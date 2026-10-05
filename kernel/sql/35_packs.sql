@@ -8,7 +8,7 @@ SET ROLE kernel_owner;
 -- Contract: the kernel's version (semantic versioning). Packs declare the kernel range
 -- they support; the installer checks it. Pure.
 CREATE FUNCTION kernel.version() RETURNS text
-LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT '0.4.0' $$;
+LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT '0.5.0' $$;
 
 CREATE TABLE kernel.packs (
   name          text PRIMARY KEY CHECK (name ~ '^[a-z][a-z0-9-]*$' AND name <> 'core'),

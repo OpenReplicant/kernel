@@ -184,15 +184,21 @@ $$;
 -- known (per collection and uri for collections). Writes nothing else.
 --
 -- source: {"content", "media_type"?: "text/plain"|"text/markdown", "title"?, "uri"?,
---          "collection"?, "author"?: agent id, "origins"?: [origin key], "metadata"?: {},
---          "trace_id"?, "span_id"?}
+--          "collection"?, "author"?: agent id, "origins"?: [origin key],
+--          "subjects"?: [agent id], "metadata"?: {}, "trace_id"?, "span_id"?}
 -- origins: who the content comes from (authors, speaker, publisher), at most 64 keys
 -- `scheme:value` (kernel.normalize_origin; the scheme `source` is the kernel's own).
--- belief_v2 counts each origin once across sources. A skipped source keeps the origins it
--- was first stored with.
--- Returns {"source_id", "content_hash", "skipped", "origins", "terms" (the abbreviations
---          the content defines, kernel.defined_terms), "chunks": [{"id", "seq",
---          "char_start", "char_end", "heading" (the heading path), "text"}]}.
+-- belief_v2 counts each origin once across sources.
+-- subjects: the people the content is from or about (agent ids, at most 64). By default the
+-- author, when the author is a human agent. A source with subjects is sealed under a new data
+-- key (ADR 0022): its content, title, metadata and chunks are stored encrypted, so erasing
+-- any of its subjects (kernel.erase) makes them unreadable. Its uri and collection are not
+-- sealed and must be opaque. A skipped source keeps the origins and subjects it was first
+-- stored with; content that was erased is refused rather than stored again.
+-- Returns {"source_id", "content_hash", "skipped", "origins", "subjects", "terms" (the
+--          abbreviations the content defines, kernel.defined_terms), "chunks": [{"id",
+--          "seq", "char_start", "char_end", "heading" (the heading path), "text"}]}, all
+--          in the clear.
 CREATE FUNCTION kernel.ingest_source(p_source jsonb, p_agent_id text) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, kernel, public, pg_temp
@@ -204,6 +210,8 @@ DECLARE
   v_uri text := p_source ->> 'uri';
   v_author text := p_source ->> 'author';
   v_origins text[] := '{}';
+  v_subjects text[];
+  v_existing kernel.sources;
   v_hash text;
   v_id text;
   v_keys text;
@@ -212,8 +220,8 @@ BEGIN
     PERFORM kernel.reject('payload', NULL, 'the source must be a JSON object');
   END IF;
   SELECT string_agg(k, ', ') INTO v_keys FROM jsonb_object_keys(p_source) k
-  WHERE k NOT IN ('content', 'media_type', 'title', 'uri', 'collection', 'author', 'origins', 'metadata', 'trace_id',
-                  'span_id');
+  WHERE k NOT IN ('content', 'media_type', 'title', 'uri', 'collection', 'author', 'origins', 'subjects', 'metadata',
+                  'trace_id', 'span_id');
   IF v_keys IS NOT NULL THEN
     PERFORM kernel.reject('payload', NULL, format('unknown source keys: %s', v_keys));
   END IF;
@@ -246,6 +254,22 @@ BEGIN
     PERFORM kernel.reject('reference', NULL, format('author %s is not an agent id', v_author),
                           jsonb_build_object('field', 'author'));
   END IF;
+  IF p_source ? 'subjects' THEN
+    IF jsonb_typeof(p_source -> 'subjects') <> 'array' OR jsonb_array_length(p_source -> 'subjects') > 64
+       OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_source -> 'subjects') x WHERE jsonb_typeof(x) <> 'string') THEN
+      PERFORM kernel.reject('payload', NULL, 'subjects must list at most 64 agent ids',
+                            jsonb_build_object('field', 'subjects'));
+    END IF;
+    v_subjects := ARRAY(SELECT DISTINCT x FROM jsonb_array_elements_text(p_source -> 'subjects') x ORDER BY 1);
+    SELECT string_agg(x, ', ') INTO v_keys FROM unnest(v_subjects) x
+    WHERE NOT EXISTS (SELECT 1 FROM kernel.nodes WHERE id = x AND type = 'Agent');
+    IF v_keys IS NOT NULL THEN
+      PERFORM kernel.reject('reference', NULL, format('subjects are agent ids; these are not: %s', v_keys),
+                            jsonb_build_object('field', 'subjects'));
+    END IF;
+  ELSE
+    v_subjects := ARRAY(SELECT id FROM kernel.nodes WHERE id = v_author AND type = 'Agent' AND kind = 'human');
+  END IF;
 
   v_hash := encode(sha256(convert_to(v_content, 'UTF8')), 'hex');
   PERFORM pg_advisory_xact_lock(hashtextextended('kernel.source:' || coalesce(v_collection, '') || ':' || v_hash, 0));
@@ -256,30 +280,55 @@ BEGIN
 
   IF v_id IS NULL THEN
     v_id := kernel.new_id('src');
-    INSERT INTO kernel.sources (id, content_hash, media_type, title, uri, collection, author_agent_id, origins, content,
-                                metadata, agent_id, recorded_at, trace_id, span_id)
-    VALUES (v_id, v_hash, v_media, p_source ->> 'title', v_uri, v_collection, v_author, v_origins, v_content,
-            coalesce(p_source -> 'metadata', '{}'), p_agent_id, clock_timestamp(),
-            p_source ->> 'trace_id', p_source ->> 'span_id');
-    INSERT INTO kernel.chunks (id, source_id, seq, char_start, char_end, heading, text)
-    SELECT 'chk_' || split_part(v_id, '_', 2) || '_' || lpad(ch.seq::text, 4, '0'), v_id, ch.seq,
-           ch.char_start, ch.char_end, ch.heading, ch.body
-    FROM kernel.chunk_text(v_content, v_media) ch;
+    IF cardinality(v_subjects) > 0 THEN
+      -- Sealed: everything but the ids, hash, uri and collection is stored encrypted.
+      PERFORM kernel.new_data_key(v_id, v_subjects);
+      INSERT INTO kernel.sources (id, content_hash, media_type, title, uri, collection, author_agent_id, origins,
+                                  subjects, content, metadata, agent_id, recorded_at, trace_id, span_id)
+      VALUES (v_id, v_hash, v_media, kernel.seal(p_source ->> 'title', v_id), v_uri, v_collection, v_author, v_origins,
+              v_subjects, kernel.seal(v_content, v_id),
+              jsonb_build_object('sealed', kernel.seal(coalesce(p_source -> 'metadata', '{}')::text, v_id)),
+              p_agent_id, clock_timestamp(), p_source ->> 'trace_id', p_source ->> 'span_id');
+      INSERT INTO kernel.chunks (id, source_id, seq, char_start, char_end, heading, text)
+      SELECT 'chk_' || split_part(v_id, '_', 2) || '_' || lpad(ch.seq::text, 4, '0'), v_id, ch.seq,
+             ch.char_start, ch.char_end, kernel.seal(ch.heading, v_id), kernel.seal(ch.body, v_id)
+      FROM kernel.chunk_text(v_content, v_media) ch;
+    ELSE
+      INSERT INTO kernel.sources (id, content_hash, media_type, title, uri, collection, author_agent_id, origins, content,
+                                  metadata, agent_id, recorded_at, trace_id, span_id)
+      VALUES (v_id, v_hash, v_media, p_source ->> 'title', v_uri, v_collection, v_author, v_origins, v_content,
+              coalesce(p_source -> 'metadata', '{}'), p_agent_id, clock_timestamp(),
+              p_source ->> 'trace_id', p_source ->> 'span_id');
+      INSERT INTO kernel.chunks (id, source_id, seq, char_start, char_end, heading, text)
+      SELECT 'chk_' || split_part(v_id, '_', 2) || '_' || lpad(ch.seq::text, 4, '0'), v_id, ch.seq,
+             ch.char_start, ch.char_end, ch.heading, ch.body
+      FROM kernel.chunk_text(v_content, v_media) ch;
+    END IF;
     RETURN jsonb_build_object('source_id', v_id, 'content_hash', v_hash, 'skipped', false,
-                              'origins', to_jsonb(v_origins), 'terms', kernel.defined_terms(v_content),
-                              'chunks', kernel.source_chunks(v_id));
+                              'origins', to_jsonb(v_origins), 'subjects', to_jsonb(v_subjects),
+                              'terms', kernel.defined_terms(v_content), 'chunks', kernel.source_chunks(v_id));
+  END IF;
+  SELECT * INTO v_existing FROM kernel.sources WHERE id = v_id;
+  IF cardinality(v_existing.subjects) > 0 AND NOT EXISTS (SELECT 1 FROM kernel.data_keys WHERE id = v_id) THEN
+    PERFORM kernel.reject('provenance', 'kernel.source_erased',
+      format('this content was erased (source %s); it is not stored again', v_id),
+      jsonb_build_object('field', 'content'));
   END IF;
   RETURN jsonb_build_object('source_id', v_id, 'content_hash', v_hash, 'skipped', true,
-                            'origins', (SELECT to_jsonb(origins) FROM kernel.sources WHERE id = v_id),
+                            'origins', to_jsonb(v_existing.origins), 'subjects', to_jsonb(v_existing.subjects),
                             'terms', kernel.defined_terms(v_content), 'chunks', kernel.source_chunks(v_id));
 END
 $$;
 
--- Contract: the chunks of a source in order, as returned by ingest_source.
+-- Contract: the chunks of a source in order, as returned by ingest_source, opened when the
+-- source is sealed ('[erased]' text once its key is gone).
 CREATE FUNCTION kernel.source_chunks(p_source_id text) RETURNS jsonb
 LANGUAGE sql STABLE AS $$
   SELECT coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
-           'id', id, 'seq', seq, 'char_start', char_start, 'char_end', char_end, 'heading', heading, 'text', text))
-         ORDER BY seq), '[]')
-  FROM kernel.chunks WHERE source_id = p_source_id
+           'id', ch.id, 'seq', ch.seq, 'char_start', ch.char_start, 'char_end', ch.char_end,
+           'heading', CASE WHEN s.subjects = '{}' THEN ch.heading ELSE kernel.unseal(ch.heading) END,
+           'text', CASE WHEN s.subjects = '{}' THEN ch.text ELSE coalesce(kernel.unseal(ch.text), '[erased]') END))
+         ORDER BY ch.seq), '[]')
+  FROM kernel.chunks ch JOIN kernel.sources s ON s.id = ch.source_id
+  WHERE ch.source_id = p_source_id
 $$;

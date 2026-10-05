@@ -527,12 +527,21 @@ class Tools:
                 "once. Default: the author, else the source itself."
             ),
         ] = None,
+        subjects: Annotated[
+            list[str] | None,
+            Field(
+                description="Agent ids of the people the content is from or about. Their source is stored "
+                "encrypted so it can be erased on request. Default: the author, when the author is a person; "
+                "[] for content that is about no one. Keep uri and collection free of names."
+            ),
+        ] = None,
         metadata: dict[str, Any] | None = None,
     ) -> CallToolResult:
         """Store a source and split it into chunks with stable ids and character spans. A source whose content
         hash is already known is not stored again; its chunks are returned. Cite chunk ids as claim.source.
         Each chunk carries its heading path; `terms` lists the abbreviations the document defines
-        ("retrieval-gated decoding (RGD)"), so a chunk that only says RGD can still be read."""
+        ("retrieval-gated decoding (RGD)"), so a chunk that only says RGD can still be read. A source with
+        subjects is sealed: erasing one of them later makes it, and the claims citing it, unreadable."""
         source: dict[str, Any] = {
             k: v
             for k, v in {
@@ -543,6 +552,7 @@ class Tools:
                 "collection": collection,
                 "author": author,
                 "origins": origins,
+                "subjects": subjects,
                 "metadata": metadata,
             }.items()
             if v is not None

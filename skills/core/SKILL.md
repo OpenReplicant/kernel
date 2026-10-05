@@ -8,7 +8,7 @@ description: >
   operations it justifies, fix rejected writes from their problem documents, and cite
   what each answer sentence relied on.
 metadata:
-  kernel: ">=0.4 <1.0"
+  kernel: ">=0.5 <1.0"
   tools: write, write_batch, lookup_entities, get_schema_slice, query_graph, query_log, ingest_source, cite
 ---
 
@@ -28,7 +28,11 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
    `name:<full name>`): sources sharing an origin are not independent, and belief counts
    each origin once. An interview's speaker (`author`) is its origin by default. Each
    chunk comes with its heading path, and `terms` lists the abbreviations the document
-   defines: name nodes by the long form and put the short form in `aliases`.
+   defines: name nodes by the long form and put the short form in `aliases`. A source
+   about people (an interview, a meeting note, an email) lists them in `subjects` (their
+   agent ids; by default the author, when the author is a person): it is stored sealed, so
+   the people can later be erased, with the claims drawn from it. Pass `subjects: []` for
+   content about no one. Never put a name in `uri` or `collection`: they stay readable.
 2. **Read first.**
    - `get_schema_slice` with the passage: which kinds, edges and rules apply. Use only
      the terms it returns (kinds, kernel edges and their specialisations).
@@ -120,8 +124,9 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
 
 When the person you work with tells you things (an interview, a chat), with their
 consent ingest each of their turns as a source: `collection` set to the session id,
-`uri` to the turn number, `author` to their agent id (the gateway names it). Claims from
-their turns are `reported` and cite the turn's chunk. If they decline capture, do not
+`uri` to the turn number, `author` to their agent id (the gateway names it). Their turns
+are sealed under their key, and so are the claims citing them. Claims from their turns are
+`reported` and cite the turn's chunk. If they decline capture, do not
 ingest their turns; claims you write then have no source and must be `observed` or
 `inferred` from your own work. To run an interview (finding gaps, asking, following up),
 use the world-model-interview skill alongside this one.

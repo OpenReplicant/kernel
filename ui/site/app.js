@@ -71,7 +71,7 @@ async function namesOf(ids) {
 async function titlesOf(ids) {
   const wanted = [...new Set(ids.filter((id) => id && id.startsWith("src_")))];
   if (!wanted.length) return {};
-  const rows = await get(`sources?select=id,title&id=${inList(wanted)}`);
+  const rows = await get(`sources_view?select=id,title&id=${inList(wanted)}`);
   return Object.fromEntries(rows.map((s) => [s.id, s.title]));
 }
 
@@ -117,7 +117,7 @@ const LOADERS = {
     const like = enc(`*${term}*`);
     const [nodes, sources] = await Promise.all([
       get(`nodes?select=id,type,kind,namespace,name,status,belief_status&name=ilike.${like}&order=type,name&limit=100`),
-      get(`sources?select=id,title,uri,media_type,recorded_at&title=ilike.${like}&order=recorded_at.desc&limit=25`),
+      get(`sources_view?select=id,title,uri,media_type,recorded_at&title=ilike.${like}&order=recorded_at.desc&limit=25`),
     ]);
     return { term, nodes, sources };
   },
@@ -176,8 +176,8 @@ const LOADERS = {
 
   async source(id) {
     const [rows, chunks, claims] = await Promise.all([
-      get(`sources?select=id,title,uri,collection,media_type,author_agent_id,agent_id,metadata,content_hash,recorded_at&id=eq.${enc(id)}`),
-      get(`chunks?select=id,seq,page,heading,text&source_id=eq.${enc(id)}&order=seq`),
+      get(`sources_view?select=id,title,uri,collection,media_type,author_agent_id,agent_id,metadata,content_hash,recorded_at,subjects,sealed,erased&id=eq.${enc(id)}`),
+      get(`chunks_view?select=id,seq,page,heading,text&source_id=eq.${enc(id)}&order=seq`),
       get(`claims_view?select=id,text,quote,run_id,chunk_id,basis,modality,confidence,trust,resolution,log_offset,redacted&source_id=eq.${enc(id)}&order=log_offset`),
     ]);
     const source = one(rows, "source");

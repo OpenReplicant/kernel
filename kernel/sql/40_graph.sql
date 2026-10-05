@@ -26,6 +26,10 @@ CREATE TABLE kernel.nodes (
   belief_against   numeric,
   superseded_by    text[] NOT NULL DEFAULT '{}',
   redacted         text[] NOT NULL DEFAULT '{}',
+  -- The data key the node's personal fields were opened from (ADR 0022): a human agent's
+  -- own key, or for a Claim node its claim's text key. kernel.erase re-projects the nodes
+  -- whose key it destroys.
+  sealed_key       text,
   claim_id         text NOT NULL,
   created_offset   bigint NOT NULL,
   updated_offset   bigint NOT NULL,
@@ -37,6 +41,7 @@ CREATE TABLE kernel.nodes (
 COMMENT ON TABLE kernel.nodes IS
   'Projection: one row per node. status is the agreed lifecycle status or ''contested'' with status_options; belief_* is set for Claim nodes.';
 CREATE INDEX nodes_lookup_idx ON kernel.nodes (type, kind, name_norm);
+CREATE INDEX nodes_sealed_idx ON kernel.nodes (sealed_key) WHERE sealed_key IS NOT NULL;
 -- GIN indexes here have fastupdate off: every create looks up names right after earlier
 -- inserts, and a pending list would make each lookup scan it linearly until a vacuum.
 CREATE INDEX nodes_trgm_idx ON kernel.nodes USING gin (name_norm gin_trgm_ops) WITH (fastupdate = off);

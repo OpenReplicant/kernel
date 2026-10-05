@@ -17,6 +17,12 @@ CREATE TABLE kernel.sources (
   -- keys in kernel.normalize_origin form, sorted. belief_v2 counts each origin once across
   -- sources. Empty: the author agent, else the source itself, is the origin.
   origins         text[] NOT NULL DEFAULT '{}' CHECK (cardinality(origins) <= 64),
+  -- The data subjects (agent ids of people) the content is from or about. When there are
+  -- any, the source is sealed under its own data key (kernel.data_keys, id = this id):
+  -- content, title and metadata ({"sealed": ...}), and its chunks' text and headings, hold
+  -- kernel.seal values, and claims citing it are sealed too (ADR 0022). uri and collection
+  -- stay readable, so they must be opaque (a session id, never a name).
+  subjects        text[] NOT NULL DEFAULT '{}' CHECK (cardinality(subjects) <= 64),
   content         text NOT NULL,
   metadata        jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(metadata) = 'object'),
   agent_id        text NOT NULL,
@@ -25,7 +31,7 @@ CREATE TABLE kernel.sources (
   span_id         text
 );
 COMMENT ON TABLE kernel.sources IS
-  'Ingested sources. Known content hashes are skipped, per collection. Append-only.';
+  'Ingested sources. Known content hashes are skipped, per collection. Sources with subjects are sealed; readers use kernel.sources_view. Append-only.';
 
 -- A document is skipped when its content hash is known; a turn in a collection is
 -- skipped only when the same content arrives again at the same uri in that collection.
@@ -45,7 +51,7 @@ CREATE TABLE kernel.chunks (
   UNIQUE (source_id, seq)
 );
 COMMENT ON TABLE kernel.chunks IS
-  'Chunks of a source with character spans [char_start, char_end) into the source content. Append-only.';
+  'Chunks of a source with character spans [char_start, char_end) into the source content; sealed with their source. Readers use kernel.chunks_view. Append-only.';
 
 CREATE TRIGGER sources_append_only BEFORE UPDATE OR DELETE ON kernel.sources
   FOR EACH ROW EXECUTE FUNCTION kernel.forbid_change();

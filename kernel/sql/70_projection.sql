@@ -13,6 +13,18 @@ RETURNS void LANGUAGE sql AS $$
   ON CONFLICT DO NOTHING
 $$;
 
+-- Contract: a logged operation with its sealed fields opened (ADR 0022). A create of a
+-- human agent carries its name, aliases, identity, props and embedding as one sealed JSON
+-- document; they come back from it, or, once its key has been destroyed, as the erased
+-- placeholders: name '[erased]' and no aliases, identity, props or embedding. Any other
+-- operation comes back unchanged. Deterministic for a given set of keys.
+CREATE FUNCTION kernel.open_op(op jsonb) RETURNS jsonb
+LANGUAGE sql STABLE AS $$
+  SELECT CASE WHEN op ? 'sealed'
+              THEN (op - 'sealed') || coalesce(kernel.unseal_json(op ->> 'sealed'), '{"name": "[erased]"}')
+              ELSE op END
+$$;
+
 -- Contract: applies the claim and the resolved operations of a log entry (jsonb in the
 -- shape of a kernel.log row) to kernel.claims, kernel.assertions and the graph.
 -- Assertion ids derive from the claim id and the op index. Belief follows through the
@@ -36,15 +48,17 @@ DECLARE
     WHEN c ? 'origins' THEN ARRAY(SELECT jsonb_array_elements_text(c -> 'origins'))
     WHEN c ->> 'source_id' IS NOT NULL THEN ARRAY['source:' || (c ->> 'source_key')]
     ELSE ARRAY[kernel.normalize_origin(c ->> 'source_key')] END;
+  v_text text;
+  v_open jsonb;
 BEGIN
   INSERT INTO kernel.claims (id, log_offset, text, chunk_id, source_id, source_key, agent_id, basis, modality,
                              polarity, confidence, trust, resolution, unresolved, recorded_at, trace_id, span_id,
-                             quote_start, quote_end, run_id, origins)
+                             quote_start, quote_end, run_id, origins, text_key)
   VALUES (c ->> 'id', v_offset, c ->> 'text', c ->> 'chunk_id', c ->> 'source_id', c ->> 'source_key', v_agent,
           c ->> 'basis', c ->> 'modality', (c ->> 'polarity')::smallint, c ->> 'confidence',
           coalesce(c ->> 'trust', entry ->> 'agent_trust'), c ->> 'resolution',
           c -> 'unresolved', v_at, entry ->> 'trace_id', entry ->> 'span_id',
-          (c ->> 'quote_start')::int, (c ->> 'quote_end')::int, c ->> 'run', v_origins);
+          (c ->> 'quote_start')::int, (c ->> 'quote_end')::int, c ->> 'run', v_origins, c ->> 'text_key');
 
   v_weight := kernel.level_weight(coalesce(c ->> 'trust', entry ->> 'agent_trust'))
               * kernel.basis_weight(c ->> 'basis') * kernel.level_weight(c ->> 'confidence');
@@ -54,13 +68,15 @@ BEGIN
     CASE op ->> 'op'
 
     WHEN 'create' THEN
+      v_open := kernel.open_op(op);
       INSERT INTO kernel.nodes (id, type, kind, namespace, name, aliases, identity, props, embedding, trust_level,
-                                claim_id, created_offset, updated_offset, created_at, updated_at)
-      VALUES (op ->> 'id', op ->> 'type', op ->> 'kind', op ->> 'namespace', op ->> 'name',
-              ARRAY(SELECT jsonb_array_elements_text(coalesce(op -> 'aliases', '[]'))),
-              coalesce(op -> 'identity', '{}'), coalesce(op -> 'props', '{}'),
-              CASE WHEN op ? 'embedding' THEN (op ->> 'embedding')::vector END,
-              op ->> 'trust_level', c ->> 'id', v_offset, v_offset, v_at, v_at);
+                                sealed_key, claim_id, created_offset, updated_offset, created_at, updated_at)
+      VALUES (op ->> 'id', op ->> 'type', op ->> 'kind', op ->> 'namespace', v_open ->> 'name',
+              ARRAY(SELECT jsonb_array_elements_text(coalesce(v_open -> 'aliases', '[]'))),
+              coalesce(v_open -> 'identity', '{}'), coalesce(v_open -> 'props', '{}'),
+              CASE WHEN v_open ? 'embedding' THEN (v_open ->> 'embedding')::vector END,
+              op ->> 'trust_level', CASE WHEN op ? 'sealed' THEN split_part(op ->> 'sealed', ':', 3) END,
+              c ->> 'id', v_offset, v_offset, v_at, v_at);
       INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, value, basis, modality, confidence, weight, recorded_at)
       VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status', op ->> 'id',
@@ -91,15 +107,17 @@ BEGIN
       END IF;
 
     WHEN 'promote' THEN
+      -- The claim's text in the clear; '[erased]' once a sealed text's key is gone.
+      v_text := CASE WHEN c ? 'text_key' THEN coalesce(kernel.unseal(c ->> 'text'), '[erased]') ELSE c ->> 'text' END;
       INSERT INTO kernel.nodes (id, type, kind, namespace, name, props, belief_status,
-                                claim_id, created_offset, updated_offset, created_at, updated_at)
-      VALUES (op ->> 'node_id', 'Claim', c ->> 'modality', 'core', kernel.claim_node_name(c ->> 'text'),
+                                sealed_key, claim_id, created_offset, updated_offset, created_at, updated_at)
+      VALUES (op ->> 'node_id', 'Claim', c ->> 'modality', 'core', kernel.claim_node_name(v_text),
               coalesce(op -> 'props', '{}') || jsonb_build_object(
-                'text', c ->> 'text', 'modality', c ->> 'modality', 'basis', c ->> 'basis',
+                'text', v_text, 'modality', c ->> 'modality', 'basis', c ->> 'basis',
                 'polarity', (c ->> 'polarity')::int, 'confidence', c ->> 'confidence', 'claim_id', c ->> 'id')
               || CASE WHEN jsonb_array_length(coalesce(op -> 'about_edges', '[]')) > 0
                       THEN jsonb_build_object('about_edges', op -> 'about_edges') ELSE '{}' END,
-              'unknown', c ->> 'id', v_offset, v_offset, v_at, v_at);
+              'unknown', c ->> 'text_key', c ->> 'id', v_offset, v_offset, v_at, v_at);
       INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, value, basis, modality, confidence, weight, recorded_at)
       VALUES (v_asr || idx || 's', v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status', op ->> 'node_id',
@@ -164,8 +182,37 @@ LANGUAGE sql AS $$
   ON CONFLICT DO NOTHING
 $$;
 
+-- Contract: re-projects the nodes whose personal fields came from the data keys p_keys
+-- exactly as projecting the log without those keys would (ADR 0022), after kernel.erase has
+-- destroyed them. A human agent's name becomes '[erased]' unless it is redacted, and its
+-- aliases, identity, props and embedding go. A Claim node's text and name become '[erased]'
+-- unless its text, name or props are redacted. Offsets, statuses, belief, edges and the
+-- redacted list stay as they are; the AGE mirror follows through its trigger. Returns the
+-- ids of the nodes changed, sorted. Deterministic: no clock, no randomness.
+CREATE FUNCTION kernel.erase_nodes(p_keys text[]) RETURNS text[]
+LANGUAGE sql AS $$
+  WITH changed AS (
+    UPDATE kernel.nodes SET
+      name = CASE
+        WHEN type = 'Claim' AND NOT redacted && ARRAY['name', 'text'] THEN kernel.claim_node_name('[erased]')
+        WHEN type <> 'Claim' AND NOT 'name' = ANY (redacted) THEN '[erased]'
+        ELSE name END,
+      aliases = CASE WHEN type = 'Claim' THEN aliases ELSE '{}' END,
+      identity = CASE WHEN type = 'Claim' THEN identity ELSE '{}' END,
+      props = CASE
+        WHEN type <> 'Claim' THEN '{}'
+        WHEN redacted && ARRAY['text', 'props'] THEN props
+        ELSE props || '{"text": "[erased]"}' END,
+      embedding = CASE WHEN type = 'Claim' THEN embedding END
+    WHERE sealed_key = ANY (p_keys)
+    RETURNING id
+  )
+  SELECT coalesce(array_agg(id ORDER BY id), '{}') FROM changed
+$$;
+
 -- Contract: rebuilds every projection from kernel.log in offset order. Requires empty
--- projections, as in a fresh database holding a copy of the log, sources and chunks.
+-- projections, as in a fresh database holding a copy of the log, sources, chunks, data keys
+-- and erasure ledger: what a destroyed key sealed projects as erased.
 -- Used by the replay test; never granted to the writer or reader roles.
 CREATE FUNCTION kernel.rebuild() RETURNS bigint
 LANGUAGE plpgsql AS $$

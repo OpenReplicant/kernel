@@ -346,6 +346,9 @@
               <div><dt>Author</dt><dd><a :href="href(data.source.author_agent_id)" x-text="agentName(data.source.author_agent_id)"></a></dd></div>
             </template>
             <dt>Ingested</dt><dd x-text="`${day(data.source.recorded_at)} by ${agentName(data.source.agent_id)}`"></dd>
+            <template x-if="data.source.sealed">
+              <div><dt>Sealed</dt><dd x-text="data.source.erased ? 'erased: its key was destroyed' : `about ${data.source.subjects.map((s) => agentName(s)).join(', ')}; erasable`"></dd></div>
+            </template>
             <dt>Content hash</dt><dd class="mono" x-text="data.source.content_hash"></dd>
           </dl>
           <template x-if="!isEmpty(data.source.metadata)">

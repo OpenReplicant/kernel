@@ -20,7 +20,7 @@ LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
          WHERE NOT (k.key = ANY (CASE o.op ->> 'op'
            WHEN 'create' THEN ARRAY['op', 'id', 'ref', 'type', 'kind', 'namespace', 'name', 'aliases', 'identity',
                                     'props', 'status', 'trust_level', 'start', 'end', 'embedding', 'self',
-                                    'distinct_from']
+                                    'distinct_from', 'sealed']
            WHEN 'assert' THEN ARRAY['op', 'ref', 'target', 'edge_id', 'new_edge', 'edge', 'kind', 'from', 'to',
                                     'props', 'valid_from', 'valid_to', 'polarity', 'claim_node']
            WHEN 'link' THEN ARRAY['op', 'edge_id', 'new_edge', 'from', 'to', 'polarity']
@@ -84,12 +84,16 @@ CREATE TABLE kernel.claims (
   -- Who the claim comes from, resolved by kernel.write from its source (or its writer):
   -- belief_v2 counts each origin once.
   origins     text[] NOT NULL CHECK (cardinality(origins) BETWEEN 1 AND 64),
+  -- The data key the text is sealed under (ADR 0022): its source's when the source has
+  -- subjects, else the key of the first human agent the claim creates; NULL for plain text.
+  text_key    text,
   CHECK ((quote_start IS NULL) = (quote_end IS NULL))
 );
 COMMENT ON TABLE kernel.claims IS
-  'One claim per log entry. Unresolved claims keep text and provenance with no operations. Append-only.';
+  'One claim per log entry. Unresolved claims keep text and provenance with no operations. Sealed text stays sealed here; readers use kernel.claims_view. Append-only.';
 CREATE INDEX claims_source_idx ON kernel.claims (source_id);
 CREATE INDEX claims_run_idx ON kernel.claims (run_id) WHERE run_id IS NOT NULL;
+CREATE INDEX claims_text_key_idx ON kernel.claims (text_key) WHERE text_key IS NOT NULL;
 CREATE INDEX claims_unresolved_idx ON kernel.claims (log_offset) WHERE resolution = 'unresolved';
 
 CREATE TABLE kernel.assertions (
