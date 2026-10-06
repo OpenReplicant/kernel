@@ -117,7 +117,12 @@ A fixture folder holds `fixture.yaml` (sources, `packs: [...]`, thresholds), `sc
 (the tool calls an extractor makes), `expected.yaml` (the graph it should produce) and
 `sources/`. `make eval` finds fixtures in `evals/fixtures` and every
 `packs/*/evals/fixtures`, gives each a database with only its packs, and scores entities
-and edges. A live scenario in `evals/live/` runs a real model (`make live SCENARIO=<name>`);
+and edges. A source's fields may name what the script created earlier, such as an
+interview turn's `author: "{{ref:maya}}"`. `make seed` plays the fixtures into a running
+stack, except those marked `seed: false`: a script cannot reuse the nodes another fixture
+creates, so such a fixture is scored in its own database only, and its adapter maps the
+same input into the stack instead (`make northwind` maps the Northwind log onto the
+views' nodes). A live scenario in `evals/live/` runs a real model (`make live SCENARIO=<name>`);
 its document `file` paths are relative to the scenario.
 
 ## Servers
@@ -145,7 +150,7 @@ verdicts. A source about people names them in `Source.subjects` (node keys of hu
 agents): `apply` creates those agents first and ingests the source sealed under their keys,
 so erasing one of them makes it unreadable ([ADR 0022](decisions/0022-erasing-personal-data.md));
 the forge adapter does this for the people on each pull request. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
-(`wmk-process`, which reads event logs and checks the mapped process against them) are the
+(`wmk-process`, which reads event logs, checks the mapped process against them and compares the views) are the
 examples ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md),
 [ADR 0027](decisions/0027-process-pack-and-event-logs.md)).
 

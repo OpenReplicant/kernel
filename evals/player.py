@@ -120,7 +120,8 @@ class Player:
 
     async def _ingest(self, index: int, step: dict[str, Any]) -> None:
         alias = step["ingest"]
-        spec = dict(self.fixture.sources[alias])
+        # A source may name what the script created before it, such as its author.
+        spec = self.render(dict(self.fixture.sources[alias]))
         content = (self.fixture.path / spec.pop("file")).read_text()
         error, result = await self.call("ingest_source", {"content": content, **spec})
         if error:

@@ -15,3 +15,8 @@ labels:
   PR_APPROVE: Approve purchase request
   PO_CREATE: Create purchase order
   PO_SEND: Send purchase order
+# The views wmk-process compare reads: the SOP and the interviews of northwind-views. The
+# view as done is the log's.
+views:
+  as written: ["sop:fin-007"]
+  as told: ["interview:nw-2026-09-15-a", "interview:nw-2026-09-16-b"]

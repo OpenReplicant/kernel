@@ -1,0 +1,1 @@
+The requester raises the request in Coupa and it goes to their line manager for review. The line manager can send it back to the requester to fix, and then it comes back to them for another review. Or they reject it outright.

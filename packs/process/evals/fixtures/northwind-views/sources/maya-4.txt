@@ -1,0 +1,1 @@
+Officially, anything over 10,000 euros needs the finance controller's sign-off before we create the order. In practice, when something urgent comes in, we create and send the order first and the controller approves it afterwards.

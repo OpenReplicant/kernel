@@ -1,0 +1,95 @@
+# The graph a reading of the SOP and the two interviews should give, written by hand.
+# Entities match on type, kind and name; edges on edge, kind and endpoint names. The
+# machine agent that writes is left out.
+entities:
+  - {type: Entity, kind: process, name: Purchase requests}
+  - {type: Entity, kind: unit, name: Finance}
+  - {type: Entity, kind: component, name: Coupa}
+  # Steps, with the budget check only the SOP still has
+  - {type: Entity, kind: activity, name: Submit purchase request}
+  - {type: Entity, kind: activity, name: Check budget}
+  - {type: Entity, kind: activity, name: Review purchase request}
+  - {type: Entity, kind: activity, name: Revise purchase request}
+  - {type: Entity, kind: activity, name: Reject purchase request}
+  - {type: Entity, kind: gateway, name: "Over 10,000 euros?"}
+  - {type: Entity, kind: activity, name: Approve purchase request}
+  - {type: Entity, kind: activity, name: Create purchase order}
+  - {type: Entity, kind: activity, name: Send purchase order}
+  # Roles, named as the log names them
+  - {type: Entity, kind: role, name: requester}
+  - {type: Entity, kind: role, name: line manager}
+  - {type: Entity, kind: role, name: finance controller}
+  - {type: Entity, kind: role, name: procurement}
+  # The people interviewed
+  - {type: Agent, kind: human, name: Maya Chen}
+  - {type: Agent, kind: human, name: Lucia Ferreira}
+  # The SOP's extraction run, closed when all of it is read
+  - {type: Event, kind: extraction, name: Scripted extractor over SOP-FIN-007, status: completed}
+  # Rules, and the practice that breaks one. The SOP and Maya state the policy: two origins.
+  - {type: Claim, kind: normative,
+     name: "No purchase order may be created for a request over 10,000 euros without the finance controller's approval.",
+     belief_status: accepted}
+  - {type: Claim, kind: normative, name: Requests are approved or rejected within 3 working days of submission.,
+     belief_status: accepted}
+  - {type: Claim, kind: descriptive,
+     name: "When an urgent request over 10,000 euros comes in, procurement creates and sends the order first and the finance controller approves it afterwards.",
+     belief_status: accepted}
+
+edges:
+  - {edge: responsible_for, from: Finance, to: Purchase requests}
+  - {edge: part_of, from: Submit purchase request, to: Purchase requests, belief_status: accepted}
+  # Written, and denied by Lucia: contested
+  - {edge: part_of, from: Check budget, to: Purchase requests, belief_status: contested}
+  - {edge: part_of, from: Review purchase request, to: Purchase requests}
+  - {edge: part_of, from: Revise purchase request, to: Purchase requests}
+  - {edge: part_of, from: Reject purchase request, to: Purchase requests}
+  - {edge: part_of, from: "Over 10,000 euros?", to: Purchase requests}
+  - {edge: part_of, from: Approve purchase request, to: Purchase requests}
+  - {edge: part_of, from: Create purchase order, to: Purchase requests}
+  - {edge: part_of, from: Send purchase order, to: Purchase requests}
+  - {edge: responsible_for, from: requester, to: Submit purchase request}
+  - {edge: responsible_for, from: requester, to: Revise purchase request}
+  - {edge: responsible_for, from: Finance, to: Check budget}
+  - {edge: responsible_for, from: line manager, to: Review purchase request}
+  - {edge: responsible_for, from: line manager, to: Reject purchase request}
+  - {edge: responsible_for, from: finance controller, to: Approve purchase request}
+  - {edge: responsible_for, from: procurement, to: Create purchase order}
+  - {edge: responsible_for, from: procurement, to: Send purchase order}
+  - {edge: depends_on, kind: performed_in, from: Submit purchase request, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Review purchase request, to: Coupa}
+  # Flows. The budget check's are contested; Maya alone tells of requests going straight
+  # to review and of approvals after the order is sent.
+  - {edge: flows_to, from: Submit purchase request, to: Check budget, belief_status: contested}
+  - {edge: flows_to, from: Check budget, to: Review purchase request, belief_status: contested}
+  - {edge: flows_to, from: Submit purchase request, to: Review purchase request, belief_status: accepted}
+  - {edge: flows_to, from: Review purchase request, to: Revise purchase request, belief_status: accepted}
+  - {edge: flows_to, from: Revise purchase request, to: Review purchase request}
+  - {edge: flows_to, from: Review purchase request, to: Reject purchase request}
+  - {edge: flows_to, from: Review purchase request, to: "Over 10,000 euros?"}
+  # The routing rule: the SOP and Lucia (from August) for, Maya against
+  - {edge: flows_to, from: "Over 10,000 euros?", to: Approve purchase request, valid_from: null,
+     belief_status: contested}
+  - {edge: flows_to, from: "Over 10,000 euros?", to: Create purchase order, belief_status: accepted}
+  - {edge: flows_to, from: Approve purchase request, to: Create purchase order, belief_status: accepted}
+  - {edge: flows_to, from: Create purchase order, to: Send purchase order}
+  - {edge: flows_to, from: Send purchase order, to: Approve purchase request, belief_status: accepted}
+  # People and their roles
+  - {edge: implements, from: Maya Chen, to: procurement, belief_status: accepted}
+  - {edge: implements, from: Lucia Ferreira, to: finance controller, valid_from: "2026-08-01", belief_status: accepted}
+  # Rules and practice
+  - {edge: about, from: "No purchase order may be created for a request over 10,000 euros without the finance controller's approval.",
+     to: "Over 10,000 euros?"}
+  - {edge: about, from: "No purchase order may be created for a request over 10,000 euros without the finance controller's approval.",
+     to: Approve purchase request}
+  - {edge: about, from: Requests are approved or rejected within 3 working days of submission., to: Purchase requests}
+  - {edge: about,
+     from: "When an urgent request over 10,000 euros comes in, procurement creates and sends the order first and the finance controller approves it afterwards.",
+     to: Approve purchase request}
+  - {edge: about,
+     from: "When an urgent request over 10,000 euros comes in, procurement creates and sends the order first and the finance controller approves it afterwards.",
+     to: Send purchase order}
+  - {edge: contradicts,
+     from: "When an urgent request over 10,000 euros comes in, procurement creates and sends the order first and the finance controller approves it afterwards.",
+     to: "No purchase order may be created for a request over 10,000 euros without the finance controller's approval."}
+
+unresolved_claims: 0

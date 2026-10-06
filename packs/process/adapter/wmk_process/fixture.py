@@ -34,6 +34,7 @@ def write(cfg_path: Path, folder: Path, *, name: str) -> Plan:
         "description": old.get("description", f"The event log of {cfg.process}, mapped by wmk-process."),
         "namespaces": ["process"],
         "packs": ["process"],
+        **({"seed": old["seed"]} if "seed" in old else {}),
         "sources": sources,
         "script": "script.yaml",
         "expected": "expected.yaml",
