@@ -8,7 +8,7 @@ description: >
   core skill when mapping or comparing how a process runs, finding where practice departs
   from the documented process, or preparing a process for automation.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   kernel: ">=0.5 <1.0"
   namespace: process
   requires: world-model-core
@@ -105,6 +105,7 @@ to step names, the system and the case object
 uv run wmk-process plan northwind.yaml                                # the claims discover would write
 uv run wmk-process discover northwind.yaml --url http://localhost:8000/mcp
 uv run wmk-process conform northwind.yaml --url http://localhost:8000/mcp
+uv run wmk-process compare northwind.yaml --url http://localhost:8000/mcp   # writes nothing
 ```
 
 - **`discover`** writes the log's view without reading the model: a digest of the log as
@@ -118,9 +119,18 @@ uv run wmk-process conform northwind.yaml --url http://localhost:8000/mcp
   with the counts and example cases in the claim. What it cannot check is listed in its
   digest.
 
+- **`compare`** reports where the views agree and disagree. The file's `views:` names the
+  collections of each view (the SOP's, each interview session's); the view as done is the
+  log's and its conformance digest's. For each step and flow it gives the kernel's belief
+  and each view's stance: asserts (with its window), denies, divided (its sources
+  disagree) or silent. It groups them: contested, denied, stated by one view only, agreed.
+  It reads the log's operations, never claim text, so it shows nothing sealed.
+
 Run `discover` after a new export, and `conform` after the told and written views are
 mapped and again after they change. Map the label map before conforming: a step whose
-name matches no log label is reported as never run.
+name matches no log label is reported as never run. Run `compare` after `conform`.
+`make northwind` does all of it for the Northwind scenario: its SOP and interviews are the
+`northwind-views` fixture, the tool calls you would make for them.
 
 ## Questions for the discovery
 

@@ -1,0 +1,1 @@
+Nobody checks the budget as a separate step any more. Coupa shows the line manager the cost centre's remaining budget on the request, so the review covers it.

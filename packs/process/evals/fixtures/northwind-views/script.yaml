@@ -1,0 +1,262 @@
+# The tool calls an extractor following the core, process and interview skills makes for
+# these sources (ADR 0032). {{chunk:<source>:<seq>}} is a chunk id, {{ref:<name>}} an id
+# returned for "$<name>" earlier. Every write reads the schema slice for its claim first and
+# uses that head_offset.
+
+# As written: SOP-FIN-007, read whole in one extraction run. -------------------------------
+- ingest: sop
+- write:
+    claim: {text: The scripted extractor maps Purchase request procedure (SOP-FIN-007)., source: "{{chunk:sop:0}}",
+            basis: observed, modality: descriptive}
+    ops:
+      - {op: create, ref: $run, type: Event, kind: extraction, name: Scripted extractor over SOP-FIN-007,
+         props: {skill: process, model: scripted}}
+
+- write:
+    claim: {text: Finance owns the purchase request procedure., source: "{{chunk:sop:0}}", quote: "Owner: Finance",
+            basis: reported, modality: descriptive, run: "{{ref:run}}"}
+    ops:
+      - {op: create, ref: $process, kind: process, namespace: process, name: Purchase requests}
+      - {op: create, ref: $finance, kind: unit, namespace: process, name: Finance}
+      - {op: assert, edge: responsible_for, from: $finance, to: $process}
+
+- write:
+    claim: {text: The requester submits a purchase request in Coupa., source: "{{chunk:sop:1}}",
+            quote: The requester submits a purchase request in Coupa, basis: reported, modality: descriptive,
+            run: "{{ref:run}}"}
+    ops:
+      - {op: create, ref: $submit, kind: activity, namespace: process, name: Submit purchase request}
+      - {op: create, ref: $requester, kind: role, namespace: process, name: requester}
+      - {op: create, ref: $coupa, kind: component, name: Coupa}
+      - {op: assert, edge: part_of, from: $submit, to: "{{ref:process}}"}
+      - {op: assert, edge: responsible_for, from: $requester, to: $submit}
+      - {op: assert, edge: performed_in, from: $submit, to: $coupa}
+
+- write:
+    claim: {text: "Finance checks the budget of the requester's cost centre before the line manager reviews the request.",
+            source: "{{chunk:sop:1}}",
+            quote: "Finance checks the budget of the requester's cost centre before the line manager reviews the request",
+            basis: reported, modality: descriptive, run: "{{ref:run}}"}
+    ops:
+      - {op: create, ref: $budget, kind: activity, namespace: process, name: Check budget}
+      - {op: create, ref: $review, kind: activity, namespace: process, name: Review purchase request}
+      - {op: create, ref: $manager, kind: role, namespace: process, name: line manager}
+      - {op: assert, ref: $budget_step, edge: part_of, from: $budget, to: "{{ref:process}}"}
+      - {op: assert, edge: part_of, from: $review, to: "{{ref:process}}"}
+      - {op: assert, edge: responsible_for, from: "{{ref:finance}}", to: $budget}
+      - {op: assert, edge: responsible_for, from: $manager, to: $review}
+      - {op: assert, ref: $submit_budget, edge: flows_to, from: "{{ref:submit}}", to: $budget}
+      - {op: assert, ref: $budget_review, edge: flows_to, from: $budget, to: $review}
+
+- write:
+    claim: {text: "The line manager reviews the request, and may send it back to the requester for revision or reject it.",
+            source: "{{chunk:sop:1}}",
+            quote: "The line manager reviews the request, and may send it back to the requester for revision or reject it",
+            basis: reported, modality: descriptive, run: "{{ref:run}}"}
+    ops:
+      - {op: create, ref: $revise, kind: activity, namespace: process, name: Revise purchase request}
+      - {op: create, ref: $reject, kind: activity, namespace: process, name: Reject purchase request}
+      - {op: assert, edge: part_of, from: $revise, to: "{{ref:process}}"}
+      - {op: assert, edge: part_of, from: $reject, to: "{{ref:process}}"}
+      - {op: assert, edge: responsible_for, from: "{{ref:requester}}", to: $revise}
+      - {op: assert, edge: responsible_for, from: "{{ref:manager}}", to: $reject}
+      - {op: assert, edge: flows_to, from: "{{ref:review}}", to: $revise}
+      - {op: assert, edge: flows_to, from: $revise, to: "{{ref:review}}"}
+      - {op: assert, edge: flows_to, from: "{{ref:review}}", to: $reject}
+
+# The decision on the amount: a gateway, one flow out per branch, each a routing rule.
+- write:
+    claim: {text: Requests over 10,000 euros go to the finance controller for approval before a purchase order is created.,
+            source: "{{chunk:sop:1}}",
+            quote: Requests over 10,000 euros go to the finance controller for approval before a purchase order is created,
+            basis: reported, modality: descriptive, run: "{{ref:run}}"}
+    ops:
+      - {op: create, ref: $amount, kind: gateway, namespace: process, name: "Over 10,000 euros?"}
+      - {op: create, ref: $approve, kind: activity, namespace: process, name: Approve purchase request}
+      - {op: create, ref: $order, kind: activity, namespace: process, name: Create purchase order}
+      - {op: create, ref: $controller, kind: role, namespace: process, name: finance controller}
+      - {op: assert, edge: part_of, from: $amount, to: "{{ref:process}}"}
+      - {op: assert, edge: part_of, from: $approve, to: "{{ref:process}}"}
+      - {op: assert, edge: part_of, from: $order, to: "{{ref:process}}"}
+      - {op: assert, edge: responsible_for, from: $controller, to: $approve}
+      - {op: assert, edge: flows_to, from: "{{ref:review}}", to: $amount}
+      - {op: assert, ref: $over_rule, edge: flows_to, from: $amount, to: $approve, props: {when: amount > 10000}}
+      - {op: assert, edge: flows_to, from: $approve, to: $order}
+
+- write:
+    claim: {text: "Requests of 10,000 euros or less go straight to procurement.", source: "{{chunk:sop:1}}",
+            quote: "Requests of 10,000 euros or less go straight to procurement", basis: reported, modality: descriptive,
+            run: "{{ref:run}}"}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:amount}}", to: "{{ref:order}}", props: {when: else}}
+
+- write:
+    claim: {text: Procurement creates the purchase order and sends it to the supplier., source: "{{chunk:sop:1}}",
+            quote: Procurement creates the purchase order and sends it to the supplier, basis: reported,
+            modality: descriptive, run: "{{ref:run}}"}
+    ops:
+      - {op: create, ref: $send, kind: activity, namespace: process, name: Send purchase order}
+      - {op: create, ref: $procurement, kind: role, namespace: process, name: procurement}
+      - {op: assert, edge: part_of, from: $send, to: "{{ref:process}}"}
+      - {op: assert, edge: responsible_for, from: $procurement, to: "{{ref:order}}"}
+      - {op: assert, edge: responsible_for, from: $procurement, to: $send}
+      - {op: assert, edge: flows_to, from: "{{ref:order}}", to: $send}
+
+# Targets are rules: normative claims about what they govern, asserting no flows.
+- write:
+    claim: {text: "No purchase order may be created for a request over 10,000 euros without the finance controller's approval.",
+            source: "{{chunk:sop:2}}",
+            quote: "No purchase order may be created for a request over 10,000 euros without the finance controller's approval",
+            basis: reported, modality: normative, run: "{{ref:run}}"}
+    ops:
+      - {op: promote, ref: $policy, about: ["{{ref:amount}}", "{{ref:approve}}"]}
+
+- write:
+    claim: {text: Requests are approved or rejected within 3 working days of submission., source: "{{chunk:sop:2}}",
+            quote: Requests are approved or rejected within 3 working days of submission, basis: reported,
+            modality: normative, run: "{{ref:run}}"}
+    ops:
+      - {op: promote, ref: $target, about: ["{{ref:process}}"]}
+
+- write:
+    claim: {text: The scripted extractor has read all of SOP-FIN-007., source: "{{chunk:sop:0}}", basis: observed,
+            modality: descriptive}
+    ops:
+      - {op: close_run, run: "{{ref:run}}"}
+
+# As told: Maya Chen, procurement lead, 15 September 2026 (session interview:nw-2026-09-15-a).
+# She becomes an agent before her first turn, which she authors: her turns are sealed.
+- write:
+    claim: {text: "Maya Chen (maya.chen@northwind.test) agreed on 15 September 2026 to be interviewed about purchase requests and to be recorded.",
+            basis: observed, modality: descriptive}
+    ops:
+      - {op: create, ref: $maya, type: Agent, kind: human, name: Maya Chen, identity: {email: maya.chen@northwind.test}}
+
+- ingest: maya-1
+- write:
+    claim: {text: Maya Chen leads procurement at Northwind Foods., source: "{{chunk:maya-1:0}}",
+            quote: I lead procurement at Northwind Foods, basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: implements, from: "{{ref:maya}}", to: "{{ref:procurement}}"}
+
+- ingest: maya-2
+- write:
+    claim: {text: "A purchase request raised in Coupa goes to the requester's line manager for review.",
+            source: "{{chunk:maya-2:0}}",
+            quote: The requester raises the request in Coupa and it goes to their line manager for review,
+            basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:submit}}", to: "{{ref:review}}"}
+
+- write:
+    claim: {text: "The line manager can send a request back to the requester to fix, after which it comes back for another review.",
+            source: "{{chunk:maya-2:0}}",
+            quote: "The line manager can send it back to the requester to fix, and then it comes back to them for another review",
+            basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:review}}", to: "{{ref:revise}}"}
+      - {op: assert, edge: flows_to, from: "{{ref:revise}}", to: "{{ref:review}}"}
+      - {op: assert, edge: responsible_for, from: "{{ref:requester}}", to: "{{ref:revise}}"}
+
+- write:
+    claim: {text: The line manager can reject a request outright., source: "{{chunk:maya-2:0}}",
+            quote: Or they reject it outright, basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:review}}", to: "{{ref:reject}}"}
+      - {op: assert, edge: responsible_for, from: "{{ref:manager}}", to: "{{ref:reject}}"}
+
+- ingest: maya-3
+- write:
+    claim: {text: "After the review, requests of 10,000 euros or less go straight to procurement.",
+            source: "{{chunk:maya-3:0}}", quote: "After the review, anything of 10,000 euros or less comes straight to us",
+            basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:review}}", to: "{{ref:amount}}"}
+      - {op: assert, edge: flows_to, from: "{{ref:amount}}", to: "{{ref:order}}", props: {when: else}}
+
+- write:
+    claim: {text: Procurement creates the purchase order and sends it to the supplier., source: "{{chunk:maya-3:0}}",
+            quote: We create the purchase order and send it to the supplier, basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:order}}", to: "{{ref:send}}"}
+      - {op: assert, edge: responsible_for, from: "{{ref:procurement}}", to: "{{ref:order}}"}
+      - {op: assert, edge: responsible_for, from: "{{ref:procurement}}", to: "{{ref:send}}"}
+
+# Rule and practice: she states the rule (another source for the SOP's), then what happens.
+# The practice denies the routing rule and contradicts the policy.
+- ingest: maya-4
+- write:
+    claim: {text: "Officially, requests over 10,000 euros need the finance controller's sign-off before procurement creates the order.",
+            source: "{{chunk:maya-4:0}}",
+            quote: "Officially, anything over 10,000 euros needs the finance controller's sign-off before we create the order",
+            basis: reported, modality: normative}
+    ops:
+      - {op: assert, claim_id: "{{ref:policy}}"}
+
+- write:
+    claim: {text: "When an urgent request over 10,000 euros comes in, procurement creates and sends the order first and the finance controller approves it afterwards.",
+            source: "{{chunk:maya-4:0}}",
+            quote: "In practice, when something urgent comes in, we create and send the order first and the controller approves it afterwards",
+            basis: reported, modality: descriptive}
+    ops:
+      - {op: promote, ref: $practice, about: ["{{ref:approve}}", "{{ref:send}}"]}
+      - {op: assert, edge: contradicts, from: $practice, to: "{{ref:policy}}"}
+      - {op: assert, edge: flows_to, from: "{{ref:send}}", to: "{{ref:approve}}"}
+      - {op: assert, edge_id: "{{ref:over_rule}}", polarity: negative}
+
+# As told: Lucia Ferreira, finance controller, 16 September 2026 (session interview:nw-2026-09-16-b).
+- write:
+    claim: {text: "Lucia Ferreira (lucia.ferreira@northwind.test) agreed on 16 September 2026 to be interviewed about purchase requests and to be recorded.",
+            basis: observed, modality: descriptive}
+    ops:
+      - {op: create, ref: $lucia, type: Agent, kind: human, name: Lucia Ferreira,
+         identity: {email: lucia.ferreira@northwind.test}}
+
+- ingest: lucia-1
+- write:
+    claim: {text: Lucia Ferreira has been the finance controller since 1 August 2026., source: "{{chunk:lucia-1:0}}",
+            quote: "I'm the finance controller. I started on 1 August 2026", basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: implements, from: "{{ref:lucia}}", to: "{{ref:controller}}", valid_from: "2026-08-01"}
+
+# She vouches for the routing rule from when she started: the same edge, her own window.
+- ingest: lucia-2
+- write:
+    claim: {text: "Since August 2026, every request over 10,000 euros goes to the finance controller after the line manager's review, without exception.",
+            source: "{{chunk:lucia-2:0}}",
+            quote: "Since I started in August, every request over 10,000 euros comes to me after the line manager's review",
+            basis: reported, modality: descriptive, confidence: high}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:amount}}", to: "{{ref:approve}}", props: {when: amount > 10000},
+         valid_from: "2026-08-01"}
+
+- write:
+    claim: {text: The finance controller approves requests over 10,000 euros before procurement creates the order.,
+            source: "{{chunk:lucia-2:0}}", quote: I approve it before procurement creates the order, basis: reported,
+            modality: descriptive}
+    ops:
+      - {op: assert, edge: flows_to, from: "{{ref:approve}}", to: "{{ref:order}}"}
+
+# The budget check the SOP still describes: denied as a step and as both its flows.
+- ingest: lucia-3
+- write:
+    claim: {text: Nobody checks the budget as a separate step any more., source: "{{chunk:lucia-3:0}}",
+            quote: Nobody checks the budget as a separate step any more, basis: reported, modality: descriptive,
+            polarity: negative}
+    ops:
+      - {op: assert, edge_id: "{{ref:budget_step}}"}
+      - {op: assert, edge_id: "{{ref:submit_budget}}"}
+      - {op: assert, edge_id: "{{ref:budget_review}}"}
+
+- write:
+    claim: {text: "Coupa shows the line manager the cost centre's remaining budget on the request during the review.",
+            source: "{{chunk:lucia-3:0}}",
+            quote: "Coupa shows the line manager the cost centre's remaining budget on the request",
+            basis: reported, modality: descriptive}
+    ops:
+      - {op: assert, edge: performed_in, from: "{{ref:review}}", to: "{{ref:coupa}}"}
+
+# Read back: where the written and told views disagree, the flows are contested.
+- query:
+    cypher: "MATCH (a:Entity)-[f:flows_to]->(b:Entity) WHERE f.belief_status = 'contested' RETURN a.name, b.name"
+    expect_rows: 3

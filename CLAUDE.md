@@ -66,7 +66,10 @@ ADR, then code. In this order:
      operator installs (ADR 0012).
 
    Where the views disagree, belief shows it as contested: that is the discovery
-   deliverable. `bpm-reference` stays as the kernel's test pack.
+   deliverable. For Northwind (ADR 0032, built), the SOP and two interviews are a scripted
+   fixture (`northwind-views`) until the extractor reads them, and `wmk-process compare`
+   reports each view's stance on every step and flow; `make northwind` runs all of it.
+   `bpm-reference` stays as the kernel's test pack.
 2. **Sysops and self** (ADR 0028, built for Docker in the software pack). Extends the
    software pack from what a repository declares to what runs: deployments, versions,
    health and changes, read by deterministic observation adapters (`wmk-software capture`,
@@ -147,6 +150,8 @@ Keep these working; add `make demo` in Phase 3.
 - `make lint` — ruff check and format check
 - `make up-ui`, `make ui-smoke` — the explorer and its smoke check
 - `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
+- `make northwind` — Northwind's purchase requests as written, told and done, the log
+  checked against them, and where the views disagree
 - `make observe-self` — capture the running stack, observe it and check it for drift
 - `make forge-self` — capture this repository's pull requests, map them and audit its
   changes for approval (`FORGE_CAPTURE=` replays a recorded capture, as CI does)

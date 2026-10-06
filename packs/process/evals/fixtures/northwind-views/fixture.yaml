@@ -1,0 +1,36 @@
+name: northwind-views
+description: >
+  Northwind's purchase-request process as written and as told (ADR 0032): the procedure
+  SOP-FIN-007, and interviews with Maya Chen (procurement lead, 15 September 2026) and
+  Lucia Ferreira (finance controller since August 2026, 16 September). The tool calls an
+  extractor following the core, process and interview skills makes, until the extractor
+  reads the same sources. Each interview is a session, each answer a source its speaker
+  wrote, sealed under their key. They disagree on the approval of large requests and on
+  the budget check. `make northwind` maps the log (northwind-purchase-requests) onto the
+  same nodes and compares the three views.
+namespaces: [process]
+packs: [process]
+# {{ref:...}} in a source works as in the script: a turn's author is an agent created earlier.
+sources:
+  sop: {file: sources/sop-fin-007.md, media_type: text/markdown, title: Purchase request procedure (SOP-FIN-007),
+        uri: "sop:fin-007", collection: "sop:fin-007", origins: ["org:northwind-finance"]}
+  maya-1: {file: sources/maya-1.txt, title: Maya Chen, turn 1, collection: "interview:nw-2026-09-15-a",
+           uri: "turn:1", author: "{{ref:maya}}"}
+  maya-2: {file: sources/maya-2.txt, title: Maya Chen, turn 2, collection: "interview:nw-2026-09-15-a",
+           uri: "turn:2", author: "{{ref:maya}}"}
+  maya-3: {file: sources/maya-3.txt, title: Maya Chen, turn 3, collection: "interview:nw-2026-09-15-a",
+           uri: "turn:3", author: "{{ref:maya}}"}
+  maya-4: {file: sources/maya-4.txt, title: Maya Chen, turn 4, collection: "interview:nw-2026-09-15-a",
+           uri: "turn:4", author: "{{ref:maya}}"}
+  lucia-1: {file: sources/lucia-1.txt, title: Lucia Ferreira, turn 1, collection: "interview:nw-2026-09-16-b",
+            uri: "turn:1", author: "{{ref:lucia}}"}
+  lucia-2: {file: sources/lucia-2.txt, title: Lucia Ferreira, turn 2, collection: "interview:nw-2026-09-16-b",
+            uri: "turn:2", author: "{{ref:lucia}}"}
+  lucia-3: {file: sources/lucia-3.txt, title: Lucia Ferreira, turn 3, collection: "interview:nw-2026-09-16-b",
+            uri: "turn:3", author: "{{ref:lucia}}"}
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities: {precision: 1.0, recall: 1.0}
+  edges: {precision: 1.0, recall: 1.0}
+  attributes: 1.0

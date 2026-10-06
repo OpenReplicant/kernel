@@ -53,6 +53,7 @@ class Node:
     name: str
     kind: str
     part_of: str | None = None  # the edge into the process
+    belief: str | None = None  # of that edge
 
 
 @dataclass
@@ -61,6 +62,7 @@ class Flow:
     frm: str
     to: str
     when: str | None
+    belief: str | None = None
 
 
 @dataclass
@@ -89,15 +91,16 @@ class Model:
 
 STEPS = """
 MATCH (s:Entity)-[r:part_of]->(p:Entity {id: $process})
-RETURN s.id AS id, s.name AS name, s.kind AS kind, r.id AS edge
+RETURN s.id AS id, s.name AS name, s.kind AS kind, r.id AS edge, r.belief_status AS belief
 """
 FLOWS = """
 MATCH (a:Entity)-[:part_of]->(p:Entity {id: $process}), (a)-[f:flows_to]->(b:Entity)
-RETURN a.id AS frm, b.id AS to, b.name AS to_name, b.kind AS to_kind, f.id AS id, f.props AS props
+RETURN a.id AS frm, b.id AS to, b.name AS to_name, b.kind AS to_kind, f.id AS id, f.props AS props,
+       f.belief_status AS belief
 """
 
 
-async def _call(client: Any, tool: str, args: dict[str, Any]) -> dict[str, Any]:
+async def call(client: Any, tool: str, args: dict[str, Any]) -> dict[str, Any]:
     result = await client.call_tool(tool, args)
     body = json.loads(result.content[0].text)
     if result.is_error:
@@ -107,7 +110,7 @@ async def _call(client: Any, tool: str, args: dict[str, Any]) -> dict[str, Any]:
 
 async def read_model(client: Any, cfg: Config) -> Model:
     """The process named in the configuration, as the kernel holds it now."""
-    found = await _call(
+    found = await call(
         client,
         "lookup_entities",
         {"queries": [{"name": cfg.process, "type": "Entity", "kind": "process"}], "limit": 5},
@@ -116,17 +119,19 @@ async def read_model(client: Any, cfg: Config) -> Model:
     if not same:
         raise ModelError(f"no process named {cfg.process!r} is mapped yet")
     pid = same[0]["node_id"]
-    steps = await _call(client, "query_graph", {"cypher": STEPS, "params": {"process": pid}, "limit": 1000})
-    flows = await _call(client, "query_graph", {"cypher": FLOWS, "params": {"process": pid}, "limit": 1000})
+    steps = await call(client, "query_graph", {"cypher": STEPS, "params": {"process": pid}, "limit": 1000})
+    flows = await call(client, "query_graph", {"cypher": FLOWS, "params": {"process": pid}, "limit": 1000})
     if steps["truncated"] or flows["truncated"]:
         raise ModelError(f"{cfg.process} has more than 1000 steps or flows; not checked")
     model = Model(pid, cfg.process, int(steps["head_offset"]))
     for row in steps["rows"]:
-        model.nodes[row["id"]] = Node(row["id"], row["name"], row["kind"], row["edge"])
+        model.nodes[row["id"]] = Node(row["id"], row["name"], row["kind"], row["edge"], row.get("belief"))
     for row in flows["rows"]:
         model.nodes.setdefault(row["to"], Node(row["to"], row["to_name"], row["to_kind"]))
         when = (row.get("props") or {}).get("when")
-        model.flows.append(Flow(row["id"], row["frm"], row["to"], str(when) if when is not None else None))
+        model.flows.append(
+            Flow(row["id"], row["frm"], row["to"], str(when) if when is not None else None, row.get("belief"))
+        )
     model.flows.sort(key=lambda f: (f.frm, f.to, f.when or "", f.id))
     return model
 

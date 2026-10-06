@@ -1,12 +1,14 @@
 name: northwind-purchase-requests
 description: 'Northwind''s synthetic purchase-request log (generate.py: 120 cases, January to September 2026), mapped
   by the process pack''s adapter as the view as done: steps, directly-follows flows, roles, the system and case
-  object, and KPIs over the period. Refresh with `uv run wmk-process snapshot packs/process/evals/fixtures/northwind-purchase-requests/northwind.yaml
+  object, and KPIs over the period. `make seed` leaves it out: `make northwind` maps the log onto the nodes of northwind-views
+  and compares the views. Refresh with `uv run wmk-process snapshot packs/process/evals/fixtures/northwind-purchase-requests/northwind.yaml
   packs/process/evals/fixtures/northwind-purchase-requests`, then update expected.yaml by hand.'
 namespaces:
 - process
 packs:
 - process
+seed: false
 sources:
   purchase-requests.csv.digest:
     file: sources/purchase-requests.csv.digest

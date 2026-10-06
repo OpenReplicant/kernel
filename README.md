@@ -23,7 +23,8 @@ changes to what it deployed, which a person approves.
 
 ```sh
 make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
-make seed      # optional: write the eval fixtures (two BPM, one research) through the gateway
+make seed      # optional: write the eval fixtures through the gateway
+make northwind # optional: Northwind's purchase requests as written, told and done, compared
 make replay    # rebuild the graph from the log and diff it against the live graph
 make up-ui     # optional: the explorer on http://localhost:8080
 make map-self  # optional: map this repository and the kernel's own boundary (software pack)
@@ -95,6 +96,20 @@ workflow runtime can compile. Its adapter reads CSV, XES and OCEL 2.0 logs:
 log. A step or branch the SOP states and the log denies becomes contested
 ([ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)).
 
+`make northwind` takes Northwind's purchase requests through all three views. Its SOP and
+two interviews are a scripted fixture standing in for the extractor, with each answer
+sealed under its speaker's key. The log maps onto the same nodes and checks them, and
+`uv run wmk-process compare <config> --url ...` prints where the views disagree
+([ADR 0032](docs/decisions/0032-northwind-as-told-and-as-written.md)):
+
+```text
+Contested (some source asserts, some denies):
+- Check budget [contested]: as written asserts; as told denies; as done denies.
+- Over 10,000 euros? -> Approve purchase request, when amount > 10000 [contested]: as written asserts;
+  as told divided (interview:nw-2026-09-15-a denies, interview:nw-2026-09-16-b asserts from 2026-08-01);
+  as done denies.
+```
+
 ## The tools
 
 | Tool | Tier | Does |
@@ -158,6 +173,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make annotated` | Extraction measured against annotators we are not: a real harness maps 30 SciFact abstracts blind, then judges a claim against each from the graph alone. Reports verdict accuracy, evidence capture, rationale precision and recall and calibration, with 95% intervals (about US$15 with Sonnet; `MODEL=` picks the model; results in [evals/annotated/RESULTS.md](evals/annotated/RESULTS.md)). Not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
+| `make northwind` | Northwind's purchase requests: the SOP and interviews (the `northwind-views` fixture, unless `make seed` played it), the log mapped onto the same nodes and checked against them, and where the three views disagree |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make observe-self` | Capture the running stack from Docker, observe it and check it for drift against what `map-self` declared (`PROJECT=` names the Compose project) |
 | `make forge-self` | Capture this repository's pull requests from GitHub, map them, and audit its changes and deployments for approval (after `map-self` and `observe-self`; `FORGE_REPO=` names another repository, `FORGE_CAPTURE=` replays a recorded capture without the network) |

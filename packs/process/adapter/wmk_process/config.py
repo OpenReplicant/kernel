@@ -13,6 +13,9 @@ origin: system:coupa                # who the log comes from (default: system:<s
 labels:                             # the log's activity labels -> step names
   PR_SUBMIT: Submit purchase request
 min_count: 1                        # directly-follows pairs seen fewer times are left out
+views:                              # compare: each view's collections (ADR 0032); the view
+  as written: ["sop:fin-007"]       # as done defaults to the log's and its conformance digest's
+  as told: ["interview:nw-2026-09-15-a"]
 """
 
 from __future__ import annotations
@@ -25,6 +28,8 @@ from typing import Any
 import yaml
 
 from wmk_process import logs
+
+AS_DONE = "as done"
 
 
 class ConfigError(ValueError):
@@ -44,6 +49,7 @@ class Config:
     origin: str | None = None
     labels: dict[str, str] = field(default_factory=dict)
     min_count: int = 1
+    views: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     @property
     def slug(self) -> str:
@@ -65,6 +71,12 @@ class Config:
         if self.system:
             return (f"system:{self.system.lower()}",)
         return ()
+
+    def compared(self) -> dict[str, tuple[str, ...]]:
+        """The views `compare` reads, each with its collections: those configured, and the
+        view as done (the log and its conformance digest) unless it is configured too."""
+        done = {} if AS_DONE in self.views else {AS_DONE: (self.collection, self.conformance_collection)}
+        return {**self.views, **done}
 
     def step(self, label: str) -> str:
         """The step name an activity label stands for."""
@@ -88,7 +100,7 @@ def load(path: Path | str) -> Config:
         raw: dict[str, Any] = yaml.safe_load(path.read_text()) or {}
     except (OSError, yaml.YAMLError) as exc:
         raise ConfigError(f"cannot read {path}: {exc}") from exc
-    unknown = set(raw) - {"process", "log", "case_object", "system", "origin", "labels", "min_count"}
+    unknown = set(raw) - {"process", "log", "case_object", "system", "origin", "labels", "min_count", "views"}
     if unknown:
         raise ConfigError(f"{path.name}: unknown keys {', '.join(sorted(unknown))}")
     log = raw.get("log") or {}
@@ -109,6 +121,11 @@ def load(path: Path | str) -> Config:
     min_count = int(raw.get("min_count", 1))
     if min_count < 1:
         raise ConfigError(f"{path.name}: min_count must be at least 1")
+    views = raw.get("views") or {}
+    if not isinstance(views, dict) or not all(
+        isinstance(v, list) and v and all(isinstance(c, str) and c for c in v) for v in views.values()
+    ):
+        raise ConfigError(f"{path.name}: views must map each view's name to a list of collections")
     return Config(
         process=str(raw["process"]),
         file=file,
@@ -121,4 +138,5 @@ def load(path: Path | str) -> Config:
         origin=raw.get("origin"),
         labels={str(k): str(v) for k, v in (raw.get("labels") or {}).items()},
         min_count=min_count,
+        views={str(k): tuple(v) for k, v in views.items()},
     )
