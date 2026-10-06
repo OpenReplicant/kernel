@@ -52,6 +52,30 @@ LEFT JOIN kernel.claim_redactions r ON r.claim_id = c.id;
 COMMENT ON VIEW kernel.claims_view IS
   'Claims with sealed text opened, erased text as [erased] (quote NULL), redacted text masked, and the quoted words of the source each rests on. Readers use this view, not kernel.claims.';
 
+-- Proposals (ADR 0029, 0030): each with its text, the change it describes, what it is about,
+-- who proposed it, its status, the approvals it has and needs, whether it touches an
+-- instrument, and the evidence for and against it. The explorer's Proposals page reads this.
+CREATE VIEW kernel.proposals_view AS
+SELECT n.id, v.text, n.status, n.props -> 'change' AS change, c.agent_id AS proposer, c.source_id, c.basis,
+       n.created_offset, n.created_at AS recorded_at,
+       kernel.proposal_about(n.id) AS about,
+       kernel.proposal_approvers(n.id) AS approvers,
+       (SELECT coalesce(array_agg(DISTINCT e.to_id ORDER BY e.to_id), '{}') FROM kernel.edges e
+        WHERE e.edge = 'rejected_by' AND e.from_id = n.id AND e.belief_status = 'accepted') AS rejecters,
+       kernel.approvals_needed(n.id) AS needed,
+       EXISTS (SELECT 1 FROM unnest(kernel.proposal_about(n.id)) a WHERE kernel.is_instrument(a)) AS instrument,
+       (SELECT coalesce(jsonb_agg(jsonb_build_object('edge', e.edge, 'edge_id', e.id, 'from', e.from_id, 'to', e.to_id,
+                                                     'belief_status', e.belief_status) ORDER BY e.created_offset), '[]')
+        FROM kernel.edges e
+        WHERE (e.edge IN ('supports', 'contradicts') AND e.to_id = n.id) OR (e.edge = 'verified_by' AND e.from_id = n.id))
+         AS evidence
+FROM kernel.nodes n
+JOIN kernel.claims c ON c.id = n.id
+JOIN kernel.claims_view v ON v.id = n.id
+WHERE n.type = 'Claim' AND n.kind = 'proposed';
+COMMENT ON VIEW kernel.proposals_view IS
+  'Proposals: text, change (props.change), about, proposer, status, approvers and rejecters, approvals needed, whether an instrument is involved, and supporting, contradicting and verifying edges.';
+
 CREATE VIEW kernel.sources_view AS
 SELECT s.id, s.content_hash, s.media_type,
        CASE WHEN s.subjects = '{}' OR s.title IS NULL THEN s.title ELSE coalesce(kernel.unseal(s.title), '[erased]') END

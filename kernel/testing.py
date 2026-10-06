@@ -28,6 +28,7 @@ from kernel import admin
 
 WRITER_PASSWORD = os.environ.get("WMK_WRITER_PASSWORD", "writer")
 READER_PASSWORD = os.environ.get("WMK_READER_PASSWORD", "reader")
+API_PASSWORD = os.environ.get("WMK_API_PASSWORD", "api")
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -193,7 +194,7 @@ def _wmk_templates() -> Iterator[dict[tuple[str, ...], str]]:
         pytest.exit(
             f"no database at WMK_ADMIN_DSN ({exc.__class__.__name__}); run `make db` first", returncode=2
         )
-    admin.ensure_login_roles(WRITER_PASSWORD, READER_PASSWORD)
+    admin.ensure_login_roles(WRITER_PASSWORD, READER_PASSWORD, API_PASSWORD)
     templates: dict[tuple[str, ...], str] = {}
     yield templates
     for name in templates.values():
@@ -237,7 +238,7 @@ def agent(kdb: KernelDB) -> str:
 
 
 def login_dsn(dbname: str, role: str) -> str:
-    password = WRITER_PASSWORD if role == "wmk_writer" else READER_PASSWORD
+    password = {"wmk_writer": WRITER_PASSWORD, "wmk_api": API_PASSWORD}.get(role, READER_PASSWORD)
     return admin.dsn_for(admin.admin_dsn(), dbname) + f" user={role} password={password}"
 
 

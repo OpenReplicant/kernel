@@ -1,6 +1,7 @@
-// The explorer: a read-only view of one kernel database. Every call goes to /api, which
-// Caddy forwards to PostgREST running as the reader role (ui/Caddyfile, ADR 0016). Pages
-// are hash routes; each route has a loader that returns the page's data.
+// The explorer: a view of one kernel database. Every call goes to /api, which Caddy forwards
+// to PostgREST running as the reader role (ui/Caddyfile, ADR 0016). A person who signs in
+// with a token can decide on proposals: kernel.decide is the one write (ADR 0030). Pages are
+// hash routes; each route has a loader that returns the page's data.
 
 const API = "/api";
 const ENDPOINTS =
@@ -16,15 +17,44 @@ const EDGE_ROW = `id,edge,kind,valid_from,valid_to,belief_status,belief_score,${
 const NODE_TYPES = ["Entity", "Agent", "Claim", "Event"];
 const PAGE = 25;
 const GRAPH_LIMIT = 400;
+// The sign-in token lives in this tab only: it goes when the tab closes.
+const TOKEN_KEY = "wmk.token";
 
 // --- API ---------------------------------------------------------------------------------
 
 async function failure(res) {
   try {
     const body = await res.json();
+    // A kernel rejection carries its problem document in details (RFC 9457).
+    if (body.code === "WMK01" && body.details) {
+      try {
+        return JSON.parse(body.details).detail || body.message;
+      } catch {
+        return body.message;
+      }
+    }
+    // PostgREST without WMK_JWT_SECRET verifies no token (ADR 0030).
+    if (body.code === "PGRST300") return "This explorer has no sign-in: its operator has not set WMK_JWT_SECRET.";
     return body.message || body.detail || `${res.status} ${res.statusText}`;
   } catch {
     return `${res.status} ${res.statusText}`;
+  }
+}
+
+function storedToken() {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function storeToken(token) {
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Storage blocked: the sign-in lasts until the page reloads.
   }
 }
 
@@ -44,12 +74,13 @@ async function count(path) {
   return Number((res.headers.get("Content-Range") || "/0").split("/")[1]);
 }
 
-async function rpc(name, args = {}) {
-  const res = await fetch(`${API}/rpc/${name}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(args),
-  });
+// A function call. With a token PostgREST acts for the person it names; `commit` asks it to
+// keep the transaction, which it otherwise rolls back (decisions only).
+async function rpc(name, args = {}, { token = "", commit = false } = {}) {
+  const headers = { "Content-Type": "application/json", Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (commit) headers.Prefer = "tx=commit";
+  const res = await fetch(`${API}/rpc/${name}`, { method: "POST", headers, body: JSON.stringify(args) });
   if (!res.ok) throw new Error(await failure(res));
   return res.json();
 }
@@ -123,18 +154,46 @@ const LOADERS = {
   },
 
   async node(id) {
-    const [rows, out, inc, log] = await Promise.all([
+    const [rows, out, inc, log, instrument] = await Promise.all([
       get(`nodes?select=${NODE_COLUMNS}&id=eq.${enc(id)}`),
       get(`edges?select=${EDGE_ROW}&from_id=eq.${enc(id)}&order=edge,kind,created_offset`),
       get(`edges?select=${EDGE_ROW}&to_id=eq.${enc(id)}&order=edge,kind,created_offset`),
       rpc("query_log", { p_filter: { node_id: id, limit: 50 } }),
+      rpc("is_instrument", { p_node: id }),
     ]);
     const node = one(rows, "node");
     const claim = node.claim_id
       ? (await get(`claims_view?select=id,text,quote,run_id,source_id,chunk_id,basis,modality,log_offset&id=eq.${enc(node.claim_id)}`))[0]
       : null;
     const titles = await titlesOf([claim?.source_id, ...log.entries.map((e) => e.claim.source_id)]);
-    return { node, out, inc, log: log.entries, claim, titles, names: await namesOf(log.entries.flatMap((e) => e.ops.flatMap(opIds))) };
+    return {
+      node,
+      out,
+      inc,
+      log: log.entries,
+      claim,
+      titles,
+      instrument,
+      names: await namesOf(log.entries.flatMap((e) => e.ops.flatMap(opIds))),
+    };
+  },
+
+  // Proposals (ADR 0030): open ones by default, all with #/proposals/all.
+  async proposals(filter) {
+    const open = filter !== "all";
+    const [proposals, decided] = await Promise.all([
+      get(`proposals_view?select=*${open ? "&status=eq.open" : ""}&order=created_offset.desc&limit=200`),
+      count(`proposals_view?status=neq.open`),
+    ]);
+    const ids = proposals.flatMap((p) => [
+      p.proposer,
+      ...p.about,
+      ...p.approvers,
+      ...p.rejecters,
+      ...p.evidence.flatMap((e) => [e.from, e.to]),
+    ]);
+    const [names, titles] = await Promise.all([namesOf(ids), titlesOf(proposals.map((p) => p.source_id))]);
+    return { proposals, names, titles, decided, filter: open ? "open" : "all" };
   },
 
   async edge(id) {
@@ -416,10 +475,103 @@ document.addEventListener("alpine:init", () => {
     showRetracted: false,
     picked: null,
     hover: null,
+    // Signing in to decide (ADR 0030).
+    token: "",
+    me: null,
+    signing: false,
+    tokenInput: "",
+    signError: "",
+    notes: {},
+    outcome: {},
+    flash: "",
 
     async init() {
       window.addEventListener("hashchange", () => this.route());
+      this.token = storedToken();
+      await this.whoami();
       await this.route();
+    },
+
+    // Who the token names; a token that does not let its holder decide is dropped.
+    async whoami() {
+      if (!this.token) {
+        this.me = null;
+        return;
+      }
+      try {
+        const me = await rpc("signed_in", {}, { token: this.token });
+        if (!me.approver) throw new Error("This token does not let you decide.");
+        this.me = me;
+        this.signError = "";
+      } catch (err) {
+        this.me = null;
+        this.signError = `Not signed in. ${err.message}`;
+        this.token = "";
+        storeToken("");
+      }
+    },
+
+    async signIn() {
+      this.token = this.tokenInput.trim();
+      this.tokenInput = "";
+      storeToken(this.token);
+      await this.whoami();
+      if (this.me) {
+        this.signing = false;
+        await this.route();
+      }
+    },
+
+    async signOut() {
+      this.token = "";
+      this.me = null;
+      storeToken("");
+      await this.route();
+    },
+
+    // A decision through kernel.decide; the kernel's refusals are shown as they come.
+    async decide(request, key, done) {
+      this.outcome = { ...this.outcome, [key]: { busy: true } };
+      try {
+        const result = await rpc("decide", { p_request: request }, { token: this.token, commit: true });
+        this.outcome = { ...this.outcome, [key]: {} };
+        await this.whoami();
+        await this.route();
+        this.flash = done(result);
+      } catch (err) {
+        this.outcome = { ...this.outcome, [key]: { error: err.message } };
+      }
+    },
+
+    // A real boolean: Alpine binds an undefined dotted value as "", which still disables.
+    busy(key) {
+      return Boolean(this.outcome[key]?.busy);
+    },
+
+    approve(p) {
+      const reason = (this.notes[p.id] || "").trim();
+      return this.decide({ action: "approve", proposal: p.id, ...(reason ? { reason } : {}) }, p.id, (r) =>
+        r.approvals >= r.needed
+          ? `Approved: "${p.text}"`
+          : `Your approval is recorded: ${r.approvals} of the ${r.needed} it needs. It stays open until another person approves.`,
+      );
+    },
+
+    reject(p) {
+      const reason = (this.notes[p.id] || "").trim();
+      return this.decide(
+        { action: "reject", proposal: p.id, ...(reason ? { reason } : {}) },
+        p.id,
+        () => `Rejected: "${p.text}"`,
+      );
+    },
+
+    protect(node) {
+      return this.decide(
+        { action: "protect", about: [node.id] },
+        node.id,
+        () => `${node.name} is now an instrument: proposals about it need two people's approval.`,
+      );
     },
 
     async route() {
@@ -428,6 +580,7 @@ document.addEventListener("alpine:init", () => {
       const arg = decodeURIComponent(rest.join("/"));
       const seq = ++this.seq;
       this.loading = true;
+      this.flash = "";
       delete document.body.dataset.state;
       if (page === "search") this.query = arg;
       try {
@@ -478,6 +631,7 @@ document.addEventListener("alpine:init", () => {
           ontology: "Ontology",
           graph: d.title,
           models: "Models",
+          proposals: "Proposals",
         }[this.view] || "Explorer"
       );
     },

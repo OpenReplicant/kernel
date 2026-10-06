@@ -34,7 +34,7 @@ ADR 0026). Read the relevant ones before changing anything architectural.
 
 Keep all of it working; its invariants and tests still apply.
 
-- Kernel 0.6.0 (`kernel/sql/`): the log and seven operations, quotes checked against their
+- Kernel 0.6.1 (`kernel/sql/`): the log and seven operations, quotes checked against their
   source, extraction runs, belief v2 counting independent origins, the two clocks and
   as-of reads, the resolution cascade, sealing and erasure of personal data (ADR 0022),
   and governance: proposals are data, only a signed-in person decides (ADR 0029).
@@ -77,14 +77,16 @@ ADR, then code. In this order:
    enforces, the kernel records. The kernel part is built: `kernel.decide`, run only as
    `kernel_approver` for the person a verified token names, and governance rules in
    `kernel.write` (no machine decides, no self-approval, approvers outside the system they
-   change, instruments need two people). Next, approval adapters per channel:
-   - a forge for code and configuration: GitHub, or a self-hosted Forgejo (also an
-     OpenID Connect provider) or GitLab, with branch protection and required reviews;
+   change, instruments need two people). Approval adapters per channel:
    - the explorer's signed-in Proposals page for decisions that are not code (activating
-     an automation, an erasure, a policy).
-4. **Workflow adapters, one per runtime.** Operaton or Camunda (Camunda 8 is licensed for
-   non-production use only without a paid licence), n8n, RuleGo, any rules engine, runner
-   or plain code. Each compiles the process representation into its runtime's
+     an automation, an erasure, a policy): built with a static one-person token (ADR
+     0030); sign-in through an OpenID Connect provider (Forgejo) is next;
+   - a forge for code and configuration: GitHub, or a self-hosted Forgejo or GitLab, with
+     branch protection and required reviews; its adapter records reviews and merges as
+     evidence of decisions (next).
+4. **Workflow adapters, one per runtime.** The first is Operaton (chosen 2026-10-06: the
+   Apache-2.0 fork of Camunda 7, BPMN with a REST API and run history); later ones may be
+   n8n, RuleGo, any rules engine, runner or plain code. Each compiles the process representation into its runtime's
    configuration, and reads deployments and runs back as observed claims and events, so
    conformance compares what ran with what was mapped. The representation never depends on
    one runtime.
@@ -141,9 +143,11 @@ Keep these working; add `make demo` in Phase 3.
 - `make replay` — rebuild the graph from the log and diff against the live graph
 - `make eval` — the fixtures through the eval profile, then the resolution set
 - `make lint` — ruff check and format check
-- `make up-ui`, `make ui-smoke` — the read-only explorer and its smoke check
+- `make up-ui`, `make ui-smoke` — the explorer and its smoke check
 - `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
 - `make observe-self` — capture the running stack, observe it and check it for drift
+- `make token EMAIL=…` — mint a sign-in token for one person (operators only; needs
+  `WMK_JWT_SECRET`, which agents never hold)
 - `make live`, `make annotated` — real-model runs (cost model usage; not CI)
 - `make erase-scope SUBJECT=…`, `make erase SUBJECT=… REQUESTED_BY=… APPROVED_BY=… YES=1` —
   review and carry out an approved erasure (operators only)

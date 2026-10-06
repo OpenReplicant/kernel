@@ -24,7 +24,8 @@ GRANT EXECUTE ON FUNCTION kernel.write(jsonb, text), kernel.ingest_source(jsonb,
 GRANT SELECT ON kernel.sources, kernel.chunks, kernel.assertions, kernel.cites,
   kernel.node_types, kernel.edge_types, kernel.namespaces, kernel.kinds, kernel.edge_kinds, kernel.statuses,
   kernel.rules, kernel.nodes, kernel.edges, kernel.conflicts, kernel.node_touches, kernel.claim_redactions,
-  kernel.claims_view, kernel.sources_view, kernel.chunks_view, kernel.log_entries, kernel.history, kernel.packs
+  kernel.claims_view, kernel.sources_view, kernel.chunks_view, kernel.log_entries, kernel.history, kernel.packs,
+  kernel.proposals_view
   TO kernel_reader;
 GRANT SELECT (log_offset, entry_id, kind, agent_id, agent_trust, conflicts, read_at_offset, trace_id, span_id,
               recorded_at, belief_version) ON kernel.log TO kernel_reader;
@@ -69,7 +70,8 @@ GRANT EXECUTE ON FUNCTION
   kernel.proposal_about(text),
   kernel.proposal_approvers(text),
   kernel.approvals_needed(text),
-  kernel.systems_of(text)
+  kernel.systems_of(text),
+  kernel.signed_in()
 TO kernel_reader;
 
 -- Approver: a signed-in person reads like any reader (the role is granted kernel_reader in

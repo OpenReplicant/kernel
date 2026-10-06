@@ -68,21 +68,30 @@ def install_packs(
         return [pack_installer.install(conn, pack) for pack in chosen]
 
 
-def ensure_login_roles(writer_password: str, reader_password: str, *, base_dsn: str | None = None) -> None:
-    """Create the gateway's login roles if missing: wmk_writer (kernel_writer), wmk_reader (kernel_reader).
+def ensure_login_roles(
+    writer_password: str, reader_password: str, api_password: str = "api", *, base_dsn: str | None = None
+) -> None:
+    """Create the stack's login roles if missing: wmk_writer (kernel_writer) and wmk_reader
+    (kernel_reader) for the gateway, and wmk_api for PostgREST: NOINHERIT, a member of
+    kernel_reader and kernel_approver, so it holds a role's privileges only after switching
+    to it for a request (ADR 0030).
 
     Existing roles are left as they are, so a running gateway keeps its credentials.
     """
     with psycopg.connect(base_dsn or admin_dsn(), autocommit=True) as conn:
-        for login, group, password in (
-            ("wmk_writer", "kernel_writer", writer_password),
-            ("wmk_reader", "kernel_reader", reader_password),
+        for login, groups, password, inherit in (
+            ("wmk_writer", ["kernel_writer"], writer_password, True),
+            ("wmk_reader", ["kernel_reader"], reader_password, True),
+            ("wmk_api", ["kernel_reader", "kernel_approver"], api_password, False),
         ):
             if conn.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", [login]).fetchone():
                 continue
             conn.execute(
-                sql.SQL("CREATE ROLE {} LOGIN PASSWORD {} IN ROLE {}").format(
-                    sql.Identifier(login), sql.Literal(password), sql.Identifier(group)
+                sql.SQL("CREATE ROLE {} LOGIN {} PASSWORD {} IN ROLE {}").format(
+                    sql.Identifier(login),
+                    sql.SQL("INHERIT" if inherit else "NOINHERIT"),
+                    sql.Literal(password),
+                    sql.SQL(", ").join(sql.Identifier(g) for g in groups),
                 )
             )
 

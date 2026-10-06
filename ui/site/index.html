@@ -18,16 +18,43 @@
         <a href="#/models" :class="{ on: view === 'models' }">Models</a>
         <a href="#/graph" :class="{ on: view === 'graph' }">Graph</a>
         <a href="#/evidence" :class="{ on: view === 'evidence' }">Evidence</a>
+        <a href="#/proposals" :class="{ on: view === 'proposals' }">Proposals</a>
         <a href="#/log" :class="{ on: view === 'log' }">Log</a>
         <a href="#/ontology" :class="{ on: view === 'ontology' }">Ontology</a>
       </nav>
       <form class="search" role="search" @submit.prevent="search()">
         <input type="search" x-model="query" placeholder="Find a node, source or id" aria-label="Search" />
       </form>
+      <div class="who">
+        <template x-if="me">
+          <span>
+            <span class="muted">Signed in as</span> <span class="me" x-text="me.name || me.email"></span>
+            <button type="button" @click="signOut()">Sign out</button>
+          </span>
+        </template>
+        <template x-if="!me">
+          <button type="button" class="signin-toggle" @click="signing = !signing">Sign in to decide</button>
+        </template>
+      </div>
     </header>
+
+    <form class="signin" x-show="signing && !me" @submit.prevent="signIn()">
+      <label>
+        Sign-in token
+        <input type="password" x-model="tokenInput" autocomplete="off" spellcheck="false" />
+      </label>
+      <button type="submit">Sign in</button>
+      <p class="muted">
+        An operator mints one for you with <code>make token EMAIL=you@example.org</code>. It stays in this tab
+        and goes when the tab closes. Signed in, you can approve or reject proposals and protect instruments;
+        everything else stays read-only.
+      </p>
+    </form>
+    <p class="problem banner" x-show="signError" x-text="signError"></p>
 
     <main :aria-busy="loading">
       <p class="muted" x-show="view === 'loading'">Loading…</p>
+      <p class="flash" x-show="flash" x-text="flash"></p>
 
       <!-- Error -------------------------------------------------------------------------->
       <template x-if="view === 'error'">
@@ -122,6 +149,84 @@
         </section>
       </template>
 
+      <!-- Proposals ---------------------------------------------------------------------->
+      <template x-if="view === 'proposals'">
+        <section>
+          <h1>Proposals</h1>
+          <p class="muted">
+            Changes agents propose. Only a signed-in person decides: nobody decides on their own proposal or on a
+            system they are part of, and changes to instruments need two people.
+            <template x-if="data.filter === 'open'">
+              <a href="#/proposals/all" x-text="`Show the ${data.decided} decided too`"></a>
+            </template>
+            <template x-if="data.filter === 'all'"><a href="#/proposals">Show open ones only</a></template>
+          </p>
+          <p class="muted" x-show="!data.proposals.length" x-text="data.filter === 'open' ? 'No open proposals.' : 'No proposals.'"></p>
+          <template x-for="p in data.proposals" :key="p.id">
+            <article class="proposal" :data-id="p.id">
+              <p class="claim"><a :href="href(p.id)" x-text="p.text"></a></p>
+              <p class="tags">
+                <span class="belief" :class="{ accepted: p.status === 'approved', rejected: p.status === 'rejected', contested: p.status === 'open' }" x-text="p.status"></span>
+                <span class="tag" x-text="`${p.approvers.length} of ${p.needed} approval${p.needed === 1 ? '' : 's'}`"></span>
+                <span class="tag warn" x-show="p.instrument">instrument</span>
+              </p>
+              <dl>
+                <dt>About</dt>
+                <dd>
+                  <template x-for="(id, i) in p.about" :key="id">
+                    <span><span x-text="i ? ', ' : ''"></span><a :href="href(id)" x-text="nodeName(id)"></a></span>
+                  </template>
+                  <span class="muted" x-show="!p.about.length">nothing named</span>
+                </dd>
+                <dt>Proposed</dt>
+                <dd>
+                  by <a :href="href(p.proposer)" x-text="nodeName(p.proposer)"></a> · <span x-text="day(p.recorded_at)"></span>
+                  <template x-if="p.source_id">
+                    <span> · from <a :href="href(p.source_id)" x-text="data.titles[p.source_id] || p.source_id"></a></span>
+                  </template>
+                </dd>
+                <template x-if="!isEmpty(p.change)">
+                  <div><dt>Change</dt><dd><pre x-text="json(p.change)"></pre></dd></div>
+                </template>
+                <template x-if="p.evidence.length">
+                  <div>
+                    <dt>Evidence</dt>
+                    <dd>
+                      <template x-for="e in p.evidence" :key="e.edge_id">
+                        <div>
+                          <a :href="href(e.edge_id)" x-text="e.edge.replaceAll('_', ' ')"></a>
+                          <a :href="href(e.edge === 'verified_by' ? e.to : e.from)" x-text="nodeName(e.edge === 'verified_by' ? e.to : e.from)"></a>
+                        </div>
+                      </template>
+                    </dd>
+                  </div>
+                </template>
+                <template x-if="p.approvers.length || p.rejecters.length">
+                  <div>
+                    <dt>Decided by</dt>
+                    <dd>
+                      <template x-for="id in p.approvers" :key="id"><div>approved by <a :href="href(id)" x-text="nodeName(id)"></a></div></template>
+                      <template x-for="id in p.rejecters" :key="id"><div>rejected by <a :href="href(id)" x-text="nodeName(id)"></a></div></template>
+                    </dd>
+                  </div>
+                </template>
+              </dl>
+              <template x-if="me && p.status === 'open'">
+                <form class="decide" @submit.prevent="approve(p)">
+                  <input type="text" x-model="notes[p.id]" placeholder="Reason (optional)" aria-label="Reason" />
+                  <button type="submit" class="approve" :disabled="busy(p.id)">Approve</button>
+                  <button type="button" class="reject" @click="reject(p)" :disabled="busy(p.id)">Reject</button>
+                </form>
+              </template>
+              <p class="problem" x-show="outcome[p.id]?.error" x-text="outcome[p.id]?.error"></p>
+            </article>
+          </template>
+          <p class="muted" x-show="!me && data.proposals.some((p) => p.status === 'open')">
+            <button type="button" @click="signing = true">Sign in</button> to approve or reject.
+          </p>
+        </section>
+      </template>
+
       <!-- Node --------------------------------------------------------------------------->
       <template x-if="view === 'node'">
         <section>
@@ -134,7 +239,17 @@
             <span class="tag" x-show="data.node.status" x-text="data.node.status"></span>
             <span class="belief" x-show="data.node.belief_status" :class="data.node.belief_status" x-text="data.node.belief_status"></span>
             <span class="tag warn" x-show="data.node.redacted.length" x-text="`redacted: ${data.node.redacted.join(', ')}`"></span>
+            <span class="tag warn" x-show="data.instrument">instrument</span>
           </p>
+          <template x-if="me && !data.instrument">
+            <p class="actions">
+              <button type="button" class="protect" @click="protect(data.node)" :disabled="busy(data.node.id)">
+                Protect as an instrument
+              </button>
+              <span class="muted">Proposals about it will then need two people's approval.</span>
+            </p>
+          </template>
+          <p class="problem" x-show="outcome[data.node.id]?.error" x-text="outcome[data.node.id]?.error"></p>
           <dl>
             <dt>Id</dt><dd class="mono" x-text="data.node.id"></dd>
             <template x-if="data.node.aliases.length">
