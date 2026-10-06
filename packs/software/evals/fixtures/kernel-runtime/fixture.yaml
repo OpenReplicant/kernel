@@ -1,0 +1,48 @@
+name: kernel-runtime
+description: 'This kernel''s own stack as it ran on a development host (capture.json, recorded with `wmk-software
+  capture wmk --host dev-host`), mapped by `observe` without the declared view: the services that ran, their images
+  and published ports, the host, and a deployment per container. Refresh with `uv run wmk-software observe packs/software/evals/fixtures/kernel-runtime/capture.json
+  --repo https://github.com/OpenReplicant/kernel --snapshot packs/software/evals/fixtures/kernel-runtime`, then
+  update expected.yaml by hand.'
+namespaces:
+- software
+packs:
+- software
+capture:
+  file: capture.json
+  repo: https://github.com/OpenReplicant/kernel
+seed: false
+sources:
+  wmk@dev-host.state:
+    file: sources/wmk@dev-host.state
+    media_type: text/plain
+    title: 'Docker on dev-host: wmk, observed 2026-10-06T04:28:03Z'
+    uri: docker://dev-host/wmk
+    collection: docker://dev-host/wmk#state
+    origins:
+    - host:dev-host
+    metadata:
+      host: dev-host
+      project: wmk
+      observed_at: '2026-10-06T04:28:03Z'
+  wmk@dev-host.history:
+    file: sources/wmk@dev-host.history
+    media_type: text/plain
+    title: 'Docker on dev-host: what happened to wmk'
+    uri: docker://dev-host/wmk/history
+    collection: docker://dev-host/wmk#history
+    origins:
+    - host:dev-host
+    metadata:
+      host: dev-host
+      project: wmk
+      observed_at: '2026-10-06T04:28:03Z'
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities:
+    precision: 1.0
+    recall: 1.0
+  edges:
+    precision: 1.0
+    recall: 1.0

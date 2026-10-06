@@ -1,0 +1,38 @@
+# The graph a reading of sources/ should give, written by hand from the two digests: the
+# state of the wmk stack on dev-host, and what happened to it. Entities match on type, kind
+# and name; edges on edge, kind and endpoint names. The machine agent that writes is left out.
+entities:
+  - {type: Entity, kind: stack, name: wmk}
+  - {type: Entity, kind: service, name: wmk/db}
+  - {type: Entity, kind: service, name: wmk/gateway}
+  # A job: it ran and finished with code 0
+  - {type: Entity, kind: service, name: wmk/packs}
+  - {type: Entity, kind: image, name: wmk-db}
+  - {type: Entity, kind: image, name: wmk-gateway}
+  - {type: Entity, kind: host, name: dev-host}
+  - {type: Entity, kind: endpoint, name: "wmk/db:5432"}
+  - {type: Entity, kind: endpoint, name: "wmk/gateway:8000"}
+  # The history: one deployment per container, at its creation
+  - {type: Event, kind: deployment, name: "wmk/db from wmk-db:dev at 2026-10-06T04:27:44Z", status: completed}
+  - {type: Event, kind: deployment, name: "wmk/packs from wmk-gateway:dev at 2026-10-06T04:27:44Z", status: completed}
+  - {type: Event, kind: deployment, name: "wmk/gateway from wmk-gateway:dev at 2026-10-06T04:27:45Z", status: completed}
+  # The state is mapped in a run; the history is append-only and mapped outside runs
+  - {type: Event, kind: extraction, name: "wmk-software over wmk@dev-host.state @ 5373b3a3dba6", status: completed}
+edges:
+  - {edge: part_of, from: wmk/db, to: wmk, belief_status: accepted}
+  - {edge: part_of, from: wmk/gateway, to: wmk}
+  - {edge: part_of, from: wmk/packs, to: wmk}
+  - {edge: depends_on, kind: runs, from: wmk/db, to: wmk-db, belief_status: accepted}
+  - {edge: depends_on, kind: runs, from: wmk/gateway, to: wmk-gateway}
+  - {edge: depends_on, kind: runs, from: wmk/packs, to: wmk-gateway}
+  - {edge: depends_on, kind: runs_on, from: wmk/db, to: dev-host}
+  - {edge: depends_on, kind: runs_on, from: wmk/gateway, to: dev-host}
+  - {edge: depends_on, kind: runs_on, from: wmk/packs, to: dev-host}
+  - {edge: part_of, kind: exposed_by, from: "wmk/db:5432", to: wmk/db}
+  - {edge: part_of, kind: exposed_by, from: "wmk/gateway:8000", to: wmk/gateway}
+  - {edge: participates_in, from: wmk/db, to: "wmk/db from wmk-db:dev at 2026-10-06T04:27:44Z"}
+  - {edge: participates_in, from: wmk-db, to: "wmk/db from wmk-db:dev at 2026-10-06T04:27:44Z"}
+  - {edge: participates_in, from: wmk/packs, to: "wmk/packs from wmk-gateway:dev at 2026-10-06T04:27:44Z"}
+  - {edge: participates_in, from: wmk-gateway, to: "wmk/packs from wmk-gateway:dev at 2026-10-06T04:27:44Z"}
+  - {edge: participates_in, from: wmk/gateway, to: "wmk/gateway from wmk-gateway:dev at 2026-10-06T04:27:45Z"}
+  - {edge: participates_in, from: wmk-gateway, to: "wmk/gateway from wmk-gateway:dev at 2026-10-06T04:27:45Z"}

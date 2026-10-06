@@ -66,10 +66,12 @@ ADR, then code. In this order:
 
    Where the views disagree, belief shows it as contested: that is the discovery
    deliverable. `bpm-reference` stays as the kernel's test pack.
-2. **A sysops and self pack.** Extends the software pack from what a repository declares to
-   what runs: deployments, versions, health and changes, read by deterministic observation
-   adapters from existing servers and APIs (Kubernetes, Docker, Grafana or Prometheus, the
-   forge). Drift is the declared view contradicting the observed one.
+2. **Sysops and self** (ADR 0028, built for Docker in the software pack). Extends the
+   software pack from what a repository declares to what runs: deployments, versions,
+   health and changes, read by deterministic observation adapters (`wmk-software capture`,
+   `observe`, `drift`); Kubernetes, Grafana or Prometheus and the forge are later readers of
+   the same model. Drift is the declared view contradicting the observed one, shown as
+   contested; `make observe-self` observes the kernel's own stack.
 3. **The approval channel (ADR 0019, now to be built).** People approve, the actuator
    enforces, the kernel records. Approval adapters per channel:
    - a forge for code and configuration: GitHub, or a self-hosted Forgejo (also an
@@ -112,11 +114,11 @@ one of these, stop and ask.
 ## Open and private
 
 This repository is public. It holds the kernel, the gateway, the skills, the general packs
-(process, software, sysops and self, research), the demo, the evals and their results.
-Client data, packs and adapters refined on engagements, enterprise adapters, playbooks,
-pricing and labelled client datasets live in private repositories that install packs from
-local folders. The kernel and this repository's CI never depend on or reference them. The
-licence is the owner's decision: do not add or change one.
+(process, software with its observation of what runs, research), the demo, the evals and
+their results. Client data, packs and adapters refined on engagements, enterprise
+adapters, playbooks, pricing and labelled client datasets live in private repositories that
+install packs from local folders. The kernel and this repository's CI never depend on or
+reference them. The licence is the owner's decision: do not add or change one.
 
 ## Stack
 
@@ -137,6 +139,7 @@ Keep these working; add `make demo` in Phase 3.
 - `make lint` — ruff check and format check
 - `make up-ui`, `make ui-smoke` — the read-only explorer and its smoke check
 - `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
+- `make observe-self` — capture the running stack, observe it and check it for drift
 - `make live`, `make annotated` — real-model runs (cost model usage; not CI)
 - `make erase-scope SUBJECT=…`, `make erase SUBJECT=… REQUESTED_BY=… APPROVED_BY=… YES=1` —
   review and carry out an approved erasure (operators only)

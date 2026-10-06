@@ -87,8 +87,7 @@ def read(
     git(root, "rev-parse", "--git-dir")
     commit = git(root, "rev-parse", rev or "HEAD").strip()
     if url is None:
-        remote = git(root, "config", "--get", "remote.origin.url").strip() if _has_origin(root) else ""
-        url = normalize_url(remote) if remote else root.resolve().as_uri()
+        url = repository_url(root)
     if branch is None:
         branch = rev.split("/")[-1] if rev else git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
     if rev:
@@ -110,6 +109,13 @@ def read(
         files=files,
         history=history_text(root, url, commit, branch, history),
     )
+
+
+def repository_url(root: Path | str) -> str:
+    """The URL a repository is known by: its origin, browsable, else its folder."""
+    root = Path(root)
+    remote = git(root, "config", "--get", "remote.origin.url").strip() if _has_origin(root) else ""
+    return normalize_url(remote) if remote else root.resolve().as_uri()
 
 
 def _has_origin(root: Path) -> bool:

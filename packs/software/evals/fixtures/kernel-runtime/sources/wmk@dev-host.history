@@ -1,0 +1,5 @@
+Docker on dev-host, Compose project wmk: what happened, as seen at 2026-10-06T04:28:03Z
+
+- 2026-10-06T04:27:44Z: wmk-db-1 (48002a648618) created for wmk/db from wmk-db:dev
+- 2026-10-06T04:27:44Z: wmk-packs-1 (3e8b02e83dd1) created for wmk/packs from wmk-gateway:dev
+- 2026-10-06T04:27:45Z: wmk-gateway-1 (48fd0df61f79) created for wmk/gateway from wmk-gateway:dev

@@ -54,6 +54,10 @@ Dockerfiles, `pyproject.toml`, CI workflows and git history through the gateway:
 what changed and retracts what a file no longer says. `make map-self` maps this repository
 with the self boundary: the system this kernel instance is, and its parts, each a claim
 with its own belief ([ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)).
+`make observe-self` then captures what actually runs from Docker and checks it against
+what was mapped. An image tag, a port or a service the repository declares and the host
+contradicts becomes contested: drift. Unhealthy containers open incidents that close when
+the service recovers ([ADR 0028](docs/decisions/0028-what-runs-observed.md)).
 
 For business processes, the process pack maps how work happens as told (interviews), as
 written (SOPs) and as done (event logs), with steps joined by flows whose conditions any
@@ -127,6 +131,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make annotated` | Extraction measured against annotators we are not: a real harness maps 30 SciFact abstracts blind, then judges a claim against each from the graph alone. Reports verdict accuracy, evidence capture, rationale precision and recall and calibration, with 95% intervals (about US$15 with Sonnet; `MODEL=` picks the model; results in [evals/annotated/RESULTS.md](evals/annotated/RESULTS.md)). Not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
+| `make observe-self` | Capture the running stack from Docker, observe it and check it for drift against what `map-self` declared (`PROJECT=` names the Compose project) |
 | `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused and that every page loads in headless Chromium (after `make seed`) |
 | `uv run python -m kernel.packs check` | Validate every pack's manifests ([ADR 0015](docs/decisions/0015-packs-declare-their-ontology.md)) |
 | `make lint` | `ruff check` and `ruff format --check` |
@@ -178,8 +183,8 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 Research is the first product pack: papers are found with the paper-source server and
 mapped from their abstracts by any MCP harness following the core and research skills.
 The process pack's adapter maps event logs without people (`org:resource` is dropped) and
-checks decisions one gateway deep. The software pack maps what a repository declares, not
-what is running; its self
+checks decisions one gateway deep. The software pack maps what a repository declares and observes
+what runs on Docker (other runtimes are later readers); its self
 boundary is a set of claims, and changing the system stays with people (the approval
 channel is the next ADR). Full text comes from open-access PDFs parsed by GROBID
 ([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers
