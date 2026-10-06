@@ -1,0 +1,6 @@
+Docker on dev-host, Compose project wmk, observed 2026-10-06T04:28:03Z
+Containers: 3 (2 running)
+
+- wmk/db: container wmk-db-1 (48002a648618), running, healthy, image wmk-db:dev (420df7e0213b), created 2026-10-06T04:27:44Z; publishes 5432/tcp on 127.0.0.1:5432
+- wmk/gateway: container wmk-gateway-1 (48fd0df61f79), running, healthy, image wmk-gateway:dev (fcf410e98b56), created 2026-10-06T04:27:45Z; publishes 8000/tcp on 127.0.0.1:8000
+- wmk/packs: container wmk-packs-1 (3e8b02e83dd1), exited with code 0, image wmk-gateway:dev (fcf410e98b56), created 2026-10-06T04:27:44Z

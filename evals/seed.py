@@ -21,6 +21,9 @@ async def seed(url: str, names: list[str] | None) -> int:
     failed = False
     async with Client(url) as client:
         for fixture in fixtures(names):
+            if not fixture.seed and not names:
+                print(f"{fixture.name}: not seeded (it maps nodes another fixture creates)")
+                continue
             first = next(i for i, step in enumerate(fixture.steps) if "ingest" in step)
             probe = Player(client, replace(fixture, steps=[fixture.steps[first]]))
             await probe.run()

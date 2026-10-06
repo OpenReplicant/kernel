@@ -1,0 +1,69 @@
+{
+  "format": "wmk-docker-capture",
+  "version": 1,
+  "host": "dev-host",
+  "project": "wmk",
+  "observed_at": "2026-10-06T04:28:03Z",
+  "containers": [
+    {
+      "id": "48002a648618642ff06817da6b2e762b9be0aa8c3edb140df42f478d843f697e",
+      "name": "wmk-db-1",
+      "service": "db",
+      "image": "wmk-db:dev",
+      "image_id": "sha256:420df7e0213b1c76d86b2116231a315715d244ccf08f7510398d888fe81a2d40",
+      "created": "2026-10-06T04:27:44Z",
+      "state": "running",
+      "started_at": "2026-10-06T04:27:45Z",
+      "finished_at": null,
+      "exit_code": 0,
+      "health": "healthy",
+      "failing_since": null,
+      "restarts": 0,
+      "ports": [
+        {
+          "target": 5432,
+          "protocol": "tcp",
+          "published": "127.0.0.1:5432"
+        }
+      ]
+    },
+    {
+      "id": "48fd0df61f792328b7e8f0951f89a2f8a3238aea71132731c7f4e34b6d3fa728",
+      "name": "wmk-gateway-1",
+      "service": "gateway",
+      "image": "wmk-gateway:dev",
+      "image_id": "sha256:fcf410e98b56479fab76cbadd189d276466c4de7443b52218e806195117f6f92",
+      "created": "2026-10-06T04:27:45Z",
+      "state": "running",
+      "started_at": "2026-10-06T04:27:51Z",
+      "finished_at": null,
+      "exit_code": 0,
+      "health": "healthy",
+      "failing_since": null,
+      "restarts": 0,
+      "ports": [
+        {
+          "target": 8000,
+          "protocol": "tcp",
+          "published": "127.0.0.1:8000"
+        }
+      ]
+    },
+    {
+      "id": "3e8b02e83dd1916cdb0e6ec31da8e68c6d177237d26d86ea21c0fed2c7ede854",
+      "name": "wmk-packs-1",
+      "service": "packs",
+      "image": "wmk-gateway:dev",
+      "image_id": "sha256:fcf410e98b56479fab76cbadd189d276466c4de7443b52218e806195117f6f92",
+      "created": "2026-10-06T04:27:44Z",
+      "state": "exited",
+      "started_at": "2026-10-06T04:27:49Z",
+      "finished_at": "2026-10-06T04:27:50Z",
+      "exit_code": 0,
+      "health": "unhealthy",
+      "failing_since": null,
+      "restarts": 0,
+      "ports": []
+    }
+  ]
+}

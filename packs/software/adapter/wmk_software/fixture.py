@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from wmk_adapter import script
+from wmk_software import docker, observe
 from wmk_software.mapping import build
 from wmk_software.plan import Plan
 from wmk_software.repo import HISTORY_FILE, Repository
@@ -90,4 +91,46 @@ def write(repo: Repository, folder: Path | str, *, name: str, self_system: str |
     }
     (folder / "fixture.yaml").write_text(yaml.safe_dump(meta, sort_keys=False, allow_unicode=True, width=110))
     (folder / "script.yaml").write_text(script_text(plan))
+    return plan
+
+
+def write_observed(capture_path: Path | str, folder: Path | str, *, name: str, repo: str | None) -> Plan:
+    """Write (or refresh) a fixture from a recorded Docker capture (ADR 0028): the capture
+    itself, the two digests `observe` ingests, fixture.yaml and script.yaml. expected.yaml is
+    left alone."""
+    folder = Path(folder)
+    cap = docker.load(capture_path)
+    plan = observe.build(cap, repo=repo)
+    old = yaml.safe_load((folder / "fixture.yaml").read_text()) if (folder / "fixture.yaml").exists() else {}
+    if Path(capture_path).resolve() != (folder / "capture.json").resolve():
+        (folder / "capture.json").write_text(cap.to_json())
+    sources: dict[str, Any] = {}
+    for source in plan.sources:
+        file = f"sources/{source.alias}"
+        target = folder / file
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.content)
+        args = source.ingest_args()
+        del args["content"]
+        sources[source.alias] = {"file": file, **args}
+    meta = {
+        "name": name,
+        "description": old.get(
+            "description", f"The {cap.project} stack on {cap.host}, observed {cap.observed_at}."
+        ),
+        "namespaces": ["software"],
+        "packs": ["software"],
+        "capture": {"file": "capture.json", **({"repo": repo} if repo else {})},
+        # The same stack as kernel-stack: make seed leaves it out, make observe-self observes it.
+        "seed": old.get("seed", False),
+        "sources": sources,
+        "script": "script.yaml",
+        "expected": "expected.yaml",
+        "thresholds": old.get(
+            "thresholds",
+            {"entities": {"precision": 1.0, "recall": 1.0}, "edges": {"precision": 1.0, "recall": 1.0}},
+        ),
+    }
+    (folder / "fixture.yaml").write_text(yaml.safe_dump(meta, sort_keys=False, allow_unicode=True, width=110))
+    (folder / "script.yaml").write_text(script.script_text(plan, "wmk-software observe --snapshot"))
     return plan

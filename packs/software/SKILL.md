@@ -6,7 +6,7 @@ description: >
   boundary of a system's self. Use with the core skill when asked how a system is built or
   run, what depends on what, what a change would affect, or what this system is made of.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   kernel: ">=0.2 <1.0"
   namespace: software
   requires: world-model-core
@@ -81,6 +81,33 @@ claims from a running system cite that observation. Where they disagree, the edg
 contested and both stay on record. That gap, intended against actual, is often the most
 useful thing to show.
 
+The adapter observes Docker (ADR 0028). Map the repository first, so observations reuse
+its nodes:
+
+```sh
+uv run wmk-software capture wmk -o capture.json        # the containers of a Compose project
+uv run wmk-software observe capture.json --repo . --url http://localhost:8000/mcp
+uv run wmk-software drift capture.json --url http://localhost:8000/mcp
+make observe-self                                      # all three, for this kernel's own stack
+```
+
+- **`capture`** reads the local Docker daemon. It keeps only an allowlist of fields,
+  never environment variables, commands or mounts.
+- **`observe`** writes what runs, without reading the model:
+  - each service `part_of` its stack, `runs` its image and `runs_on` the host, with its
+    published ports. These are mapped in a run, so the next capture retracts what stopped.
+  - a `deployment` event per container, as append-only history.
+
+  A job's container that finished with code 0 counts as having run.
+- **`drift`** checks each declared `runs` and published port against the capture and
+  writes a verdict. Where the host runs another tag, another image, another port or
+  nothing at all, the declared edge becomes contested. Services that start only with a
+  Compose profile are not checked. Drift also opens an `incident` for each container in
+  trouble (unhealthy, restarting, exited with an error) and closes it when the service
+  runs cleanly again.
+
+Drift is a fact to show and act on through a proposal. Never "fix" it by writing claims.
+
 ## The self
 
 A system's self is a `system` node and the `part_of` edges into it. Each part is its own
@@ -115,6 +142,22 @@ OPTIONAL MATCH (i)-[b:depends_on {kind: 'based_on'}]->(base)
 RETURN s.name, i.name, r.props, base.name, b.props
 ```
 
+Drift: what the repository declares and the running system contradicts:
+
+```cypher
+MATCH (s:Entity {kind: 'service'})-[r:depends_on]->(x)
+WHERE r.belief_status = 'contested' AND r.kind IN ['runs']
+RETURN s.name, x.name, r.props, r.origins_for, r.origins_against
+```
+
+Open incidents, and what they affect:
+
+```cypher
+MATCH (s:Entity)-[:participates_in]->(i:Event {kind: 'incident'})
+WHERE i.status = 'ongoing'
+RETURN i.name, s.name
+```
+
 What the system is made of, with how sure the kernel is of each part:
 
 ```cypher
@@ -135,8 +178,10 @@ RETURN c.name, c.props ORDER BY c.name
   `change`, `incident` and `occurrence`.
 - One `domain_range` rule per edge kind: each connects only the kinds in the table above.
 - `software.purl`, `software.repository_url`, `software.definition_key`,
-  `software.system_instance`, `software.commit`: identity keys; a second node with the
-  same key is refused as a duplicate.
+  `software.system_instance`, `software.commit`, `software.runtime_key`: identity keys; a
+  second node with the same key is refused as a duplicate. `runtime` is
+  `<host>/<container id>` for an observed deployment and `<host>/<container id>@<since>`
+  for an incident.
 
 The ontology is declared in `schema.yaml` and `rules.yaml` and applied by the kernel's pack
 installer.

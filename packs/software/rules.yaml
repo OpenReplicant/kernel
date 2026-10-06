@@ -92,3 +92,9 @@ rules:
   label: A commit identifies a change
   description: Two changes with the same commit hash are the same change.
   params: {node_type: Event, kinds: [change, deployment], keys: [commit], patterns: {commit: '^[0-9a-f]{7,40}$'}}
+- id: software.runtime_key
+  category: identity
+  label: A runtime key identifies an observed deployment or incident
+  description: >-
+    Deployments and incidents observed on a running system are the same when their runtime key is: <host>/<container id> for the deployment a container is, <host>/<container id>@<since> for an incident of it.
+  params: {node_type: Event, kinds: [deployment, incident], keys: [runtime]}

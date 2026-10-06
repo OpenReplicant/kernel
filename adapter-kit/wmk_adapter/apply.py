@@ -209,6 +209,8 @@ class Applier:
                 ref(op["node"])
             elif op["op"] == "close_run":
                 ops.append({"op": "close_run", "run": ref(op["run"])})
+            elif op["op"] == "transition" and "node_id" in op:
+                ops.append({"op": "transition", "node": op["node_id"], "status": op["status"]})
             elif op["op"] == "transition":
                 ops.append({**op, "node": ref(op["node"])})
             elif "edge_id" in op:

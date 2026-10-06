@@ -6,10 +6,12 @@ export WMK_ADMIN_DSN ?= postgresql://postgres:$(WMK_DB_PASSWORD)@localhost:$(WMK
 export WMK_DATABASE ?= wmk
 SCENARIO ?= northwind
 SELF ?= World Model Kernel (this instance)
+# The Compose project `make observe-self` captures (the stack's `name:`).
+PROJECT ?= wmk
 # The explorer's browser check (ui/smoke.py); `make ui-browser` installs its Chromium.
 PLAYWRIGHT ?= playwright==1.56.0
 
-.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self live annotated papers-smoke lint fmt
+.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self observe-self live annotated papers-smoke lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
@@ -23,6 +25,7 @@ help:
 	@echo "make eval     run the eval fixtures through the eval profile"
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
 	@echo "make map-self  map this repository and the kernel's self boundary into the running stack"
+	@echo "make observe-self  capture the running stack, observe it and check it for drift (after map-self)"
 	@echo "make live     a real harness (headless Claude Code) runs evals/live/\$$SCENARIO (northwind, research)"
 	@echo "make annotated  a real harness maps and judges the SciFact sample; scores against its annotators (\$$MODEL)"
 	@echo "make papers-smoke  one live lookup per paper source; needs network access to the APIs"
@@ -67,6 +70,12 @@ seed:
 
 map-self:
 	uv run wmk-software map . --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --self "$(SELF)"
+
+observe-self:
+	@mkdir -p evals/out
+	uv run wmk-software capture $(PROJECT) -o evals/out/capture-$(PROJECT).json
+	uv run wmk-software observe evals/out/capture-$(PROJECT).json --repo . --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+	uv run wmk-software drift evals/out/capture-$(PROJECT).json --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 
 live:
 	uv run python -m evals.live $(SCENARIO) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --database $(WMK_DATABASE)

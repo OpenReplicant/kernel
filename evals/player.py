@@ -27,6 +27,9 @@ class Fixture:
     thresholds: dict[str, Any]
     namespaces: list[str] | None = None
     packs: list[str] = field(default_factory=list)
+    # False for a fixture whose nodes another fixture also creates: a script cannot reuse
+    # them the way an adapter's resolution does, so it is scored in its own database only.
+    seed: bool = True
 
     @classmethod
     def load(cls, path: Path) -> Fixture:
@@ -40,6 +43,7 @@ class Fixture:
             thresholds=meta.get("thresholds", {}),
             namespaces=meta.get("namespaces"),
             packs=list(meta.get("packs") or []),
+            seed=bool(meta.get("seed", True)),
         )
 
 

@@ -58,7 +58,8 @@ class Fact:
     """One claim. Its ops are `{"op": "create", "node": key}` (mention a node, creating it if
     needed), `{"op": "assert", "edge": ..., "from": key, "to": key, "props"?: {...}}` and
     `{"op": "assert", "edge_id": ..., "polarity"?: "negative", "valid_to"?: ...}` on an
-    existing edge."""
+    existing edge, and `{"op": "transition", "node_id": ..., "status": ...}` on an existing
+    node."""
 
     text: str
     source: str | None = None
@@ -141,6 +142,10 @@ class Plan:
         if valid_to:
             op["valid_to"] = valid_to
         fact.ops.append(op)
+
+    def transition(self, fact: Fact, node_id: str, status: str) -> None:
+        """Move a node that already exists in the kernel, by its id, to a status."""
+        fact.ops.append({"op": "transition", "node_id": node_id, "status": status})
 
     def on_edge(self, fact: Fact, edge_id: str, *, deny: bool = False) -> None:
         """Assert (or deny) an edge that already exists in the kernel, by its id."""
@@ -236,9 +241,9 @@ class Plan:
                     ref(op["node"])
                 elif op["op"] == "close_run":
                     ops.append({"op": "close_run", "run": ref(op["run"])})
-                elif "edge_id" in op:
+                elif "edge_id" in op or "node_id" in op:
                     raise ValueError(
-                        "a fact on an existing edge_id needs a live kernel; it has no script form"
+                        "a fact on an existing edge or node needs a live kernel; it has no script form"
                     )
                 else:
                     ops.append({**op, "from": ref(op["from"]), "to": ref(op["to"])})
