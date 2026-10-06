@@ -6,10 +6,10 @@ rules:
   namespace: software
   label: Software kinds
   description: >-
-    The software namespace allows systems, repositories, packages, images, services, stacks, endpoints, volumes, networks, hosts, pipelines, components and data, and change, deployment and incident events.
+    The software namespace allows systems, repositories, packages, images, services, stacks, endpoints, volumes, networks, hosts, pipelines, components and data, and change, pull request, deployment and incident events.
   params:
     kinds: [system, repository, package, image, service, stack, endpoint, volume, network, host, pipeline,
-            component, data, concept, change, deployment, incident, occurrence]
+            component, data, concept, change, pull_request, deployment, incident, occurrence]
 - id: software.runs_image
   category: domain_range
   label: Services run images
@@ -98,3 +98,14 @@ rules:
   description: >-
     Deployments and incidents observed on a running system are the same when their runtime key is: <host>/<container id> for the deployment a container is, <host>/<container id>@<since> for an incident of it.
   params: {node_type: Event, kinds: [deployment, incident], keys: [runtime]}
+- id: software.pull_request_url
+  category: identity
+  label: A URL identifies a pull request
+  description: Two pull requests with the same URL are the same pull request.
+  params: {node_type: Event, kinds: [pull_request], keys: [url], patterns: {url: '^https?://[^[:space:]]+$'}}
+- id: software.forge_account
+  category: identity
+  label: A forge account identifies a person or a bot
+  description: >-
+    Two agents with the same forge account, the account's profile URL such as https://github.com/octocat, are the same person or bot. A forge account and a signed-in email stay different agents until evidence links them.
+  params: {node_type: Agent, kinds: [human, machine], keys: [account], patterns: {account: '^https?://[^[:space:]]+$'}}

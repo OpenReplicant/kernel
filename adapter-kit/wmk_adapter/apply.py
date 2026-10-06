@@ -8,6 +8,9 @@
 - A changed file is mapped in an extraction run (ADR 0020). Closing the run makes the kernel
   retract what an older run over the file found and this one did not; a run with a refused
   claim is cancelled instead, so a partial pass retracts nothing.
+- A source about people names them as subjects: each one that does not exist yet is created
+  first, by a claim of its own (sealed under that person's key), and the source is ingested
+  sealed under theirs. A source whose people cannot be created is not ingested.
 """
 
 from __future__ import annotations
@@ -84,7 +87,13 @@ class Applier:
 
     async def ingest(self, source: Source) -> None:
         self.report.sources += 1
-        error, result = await self.call("ingest_source", source.ingest_args())
+        args = source.ingest_args()
+        if source.subjects:
+            subjects = await self.people(source)
+            if subjects is None:
+                return
+            args["subjects"] = subjects
+        error, result = await self.call("ingest_source", args)
         if error:
             self.fail(source.alias, f"ingest {source.alias}: {result.get('detail')}")
             return
@@ -93,6 +102,31 @@ class Applier:
             self.report.unchanged += 1
         else:
             self.changed.add(source.alias)
+
+    async def people(self, source: Source) -> list[str] | None:
+        """The agent ids of a source's subjects, creating those that do not exist yet, one claim
+        each: a claim creating a person is sealed under that person's key."""
+        distinct = await self.resolve(list(source.subjects))
+        for key in source.subjects:
+            if key in self.ids:
+                continue
+            spec = self.plan.nodes[key]
+            fact = Fact(f"{spec['name']} is named in {source.title}.", ops=[{"op": "create", "node": key}])
+            created: dict[str, str] = {}
+            payload = {
+                "claim": fact.claim(),
+                "read_at_offset": self.head,
+                "ops": self.render(fact, distinct, created),
+            }
+            error, result = await self.call("write", payload)
+            if error:
+                self.fail(source.alias, f"{source.alias}: could not record {key}: {result.get('detail')}")
+                return None
+            self.report.claims += 1
+            self.report.created += 1
+            self.head = int(result["offset"])
+            self.ids[key] = result["refs"][f"${created[key]}"]
+        return [self.ids[k] for k in source.subjects]
 
     async def resolve(self, keys: list[str]) -> dict[str, list[str]]:
         """Map existing nodes into self.ids; return distinct_from ids for the nodes to create."""

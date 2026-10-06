@@ -111,7 +111,7 @@ class Mapper:
                 name=subject or sha[:7],
                 identity={"commit": sha},
                 start=when,
-                **({"props": {"pr": int(pr.group(1))}} if pr else {}),
+                props={"commit": sha, **({"pr": int(pr.group(1))} if pr else {})},
             )
             fact = self.plan.fact(
                 f"Commit {sha[:7]} on {when[:10]} changed {r.name}: {subject}".rstrip(": ") + ".",

@@ -10,7 +10,10 @@ Adopted so far: `arxiv`, `pyalex` and `habanero` in the research pack's paper-so
 ([ADR 0014](decisions/0014-pack-servers-run-beside-the-gateway.md)). habanero uses `httpx2`,
 the continuation of httpx under Pydantic's stewardship (BSD-3). The software pack's
 repository adapter needs nothing new: PyYAML, `tomllib`, `packaging` and the `git` command
-line ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md)).
+line ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md)). Its forge reader
+calls three read-only GitHub REST endpoints with the standard library; GitHub's MCP server
+is for agents, and a client library would add nothing for three GETs
+([ADR 0031](decisions/0031-the-forge-as-evidence.md)).
 
 ## Recommendations
 

@@ -1362,7 +1362,7 @@ wheels = [
 
 [[package]]
 name = "wmk-adapter-kit"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "adapter-kit" }
 dependencies = [
     { name = "pyyaml" },
@@ -1411,7 +1411,7 @@ requires-dist = [
 
 [[package]]
 name = "wmk-software"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "packs/software/adapter" }
 dependencies = [
     { name = "anyio" },

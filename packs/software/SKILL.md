@@ -6,7 +6,7 @@ description: >
   boundary of a system's self. Use with the core skill when asked how a system is built or
   run, what depends on what, what a change would affect, or what this system is made of.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   kernel: ">=0.2 <1.0"
   namespace: software
   requires: world-model-core
@@ -65,7 +65,9 @@ showed, what actually runs on a host.
 | Storage, networks, machines | `volume` (`mounts`), `network` (`attached_to`), `host` (`runs_on`) |
 | A CI job | `pipeline` named `<workflow>/<job>`, `checks` the repository, `uses_package` its actions |
 | A merge, release or config change | Event `change` with `start` and `identity` `{"commit": ...}`; the repository or service `participates_in` it (`props.role`) |
-| A rollout | Event `deployment`; the service and image `participates_in` it |
+| A rollout | Event `deployment`; the service and image `participates_in` it; the change it rolls out is `part_of` it |
+| A pull request | Event `pull_request`, `identity` `{"url": ...}`; its author and merger `participates_in` it (`props.role`), the repository too (role `target`); `approved_by` to each approver, `props.commit` the reviewed commit; it `causes` the merge commit's `change` |
+| A forge account | Agent `human` (or `machine` for a bot), `identity` `{"account": "<profile URL>"}` |
 | An outage | Event `incident` (core); affected services `participates_in` it |
 | Who owns or runs it | core `responsible_for` from a person or team |
 
@@ -107,6 +109,36 @@ make observe-self                                      # all three, for this ker
   runs cleanly again.
 
 Drift is a fact to show and act on through a proposal. Never "fix" it by writing claims.
+
+## The forge
+
+The forge is where code is reviewed and merged (ADR 0031). The adapter records what it
+did, as evidence:
+
+```sh
+uv run wmk-software forge capture OpenReplicant/kernel -o forge.json   # pull requests and reviews
+uv run wmk-software forge map forge.json --url http://localhost:8000/mcp
+uv run wmk-software forge audit https://github.com/OpenReplicant/kernel --url http://localhost:8000/mcp
+make forge-self                                                        # all three, for this repository
+```
+
+- **`capture`** reads GitHub's REST API, read-only. It keeps an allowlist: numbers, titles,
+  states, commits, times and accounts, never descriptions, comments or review bodies.
+- **`map`** writes each pull request from its own record. Its people are the record's
+  subjects, so their data is sealed. Approvals become `approved_by` edges on the pull
+  request: evidence of a decision on the forge, never a decision on a kernel proposal.
+- **`audit`** judges every first-parent change of the repository:
+  - `decided`: an approved proposal names its pull request in `props.change`
+    (`{"kind": "pull_request", "url": ...}`);
+  - `reviewed`: a person other than its author approved it on the forge;
+  - `stale`: only an earlier commit was approved;
+  - `unreviewed`: merged with no approval;
+  - `no pull request known`.
+
+  It also lists the deployments of changes that were neither decided nor reviewed.
+
+Never write an approval because the forge shows one: only a person decides on a proposal,
+through the explorer (ADR 0030).
 
 ## The self
 
@@ -174,14 +206,15 @@ RETURN c.name, c.props ORDER BY c.name
 
 ## Rules this pack adds
 
-- `software.allowed_kinds`: the kinds above, plus core `component`, `data`, `concept`,
-  `change`, `incident` and `occurrence`.
+- `software.allowed_kinds`: the kinds above (with `pull_request`), plus core `component`,
+  `data`, `concept`, `change`, `incident` and `occurrence`.
 - One `domain_range` rule per edge kind: each connects only the kinds in the table above.
 - `software.purl`, `software.repository_url`, `software.definition_key`,
-  `software.system_instance`, `software.commit`, `software.runtime_key`: identity keys; a
-  second node with the same key is refused as a duplicate. `runtime` is
-  `<host>/<container id>` for an observed deployment and `<host>/<container id>@<since>`
-  for an incident.
+  `software.system_instance`, `software.commit`, `software.runtime_key`,
+  `software.pull_request_url`, `software.forge_account`: identity keys; a second node with
+  the same key is refused as a duplicate. `runtime` is `<host>/<container id>` for an
+  observed deployment and `<host>/<container id>@<since>` for an incident; `account` is a
+  forge account's profile URL.
 
 The ontology is declared in `schema.yaml` and `rules.yaml` and applied by the kernel's pack
 installer.

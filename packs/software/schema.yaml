@@ -4,7 +4,7 @@ namespaces:
 - name: software
   label: Software
   description: >-
-    Software systems and how they run: repositories, packages, container images, services, stacks, endpoints, volumes, networks, hosts and pipelines, and the changes, deployments and incidents that happen to them.
+    Software systems and how they run: repositories, packages, container images, services, stacks, endpoints, volumes, networks, hosts and pipelines, and the changes, pull requests, deployments and incidents that happen to them.
 kinds:
 - name: system
   node_type: Entity
@@ -66,6 +66,11 @@ kinds:
   label: Deployment
   description: >-
     A rollout of a version of a system, service or image to an environment.
+- name: pull_request
+  node_type: Event
+  label: Pull request
+  description: >-
+    A request to merge a branch into a repository on a forge (GitHub, Forgejo, GitLab), identified by its URL. Its author, reviewers and merger take part in it; approved_by edges record approvals on it, and it causes the change its merge made. Evidence of a decision, never the decision on a kernel proposal.
 edge_kinds:
 - name: runs
   edge: depends_on

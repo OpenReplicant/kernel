@@ -7,8 +7,9 @@ Two sources, both from the host as origin:
   (the same props the declared view uses: tag or digest), has its published ports as
   endpoints `exposed_by` it, and `runs_on` the host.
 - **The history**, append-only like git history: a `deployment` per container at its
-  creation time, written once, keyed by `runtime`. Incidents need what the kernel already
-  holds (to close them), so `drift` writes them.
+  creation time, written once, keyed by `runtime`. When the image carries a revision label,
+  the change at that commit is `part_of` the deployment (ADR 0031). Incidents need what the
+  kernel already holds (to close them), so `drift` writes them.
 
 Observed nodes reuse the declared ones by name. With `repo`, stacks, services and
 endpoints also carry the declared identity keys (`<repository URL>#<project>/<service>`).
@@ -90,8 +91,9 @@ class Observer:
             state_lines.append(f"- {p}/{c.service}: {describe(c)}{published(c)}")
         for c in sorted(cap.containers, key=lambda c: (c.created, c.name)):
             history_at[c.id] = sum(len(x) + 1 for x in history_lines)
+            revision = f", revision {c.revision}" if c.revision else ""
             history_lines.append(
-                f"- {c.created}: {c.name} ({c.short_id}) created for {p}/{c.service} from {c.image}"
+                f"- {c.created}: {c.name} ({c.short_id}) created for {p}/{c.service} from {c.image}{revision}"
             )
 
         origins = (f"host:{cap.host}",)
@@ -171,6 +173,24 @@ class Observer:
             )
             self.plan.edge(fact, "participates_in", svc, key, {"role": "deployed"})
             self.plan.edge(fact, "participates_in", self.image(name), key, {"role": "image"})
+            if c.revision:
+                change = self.plan.node(
+                    f"commit:{c.revision[:12]}",
+                    type="Event",
+                    kind="change",
+                    namespace=NS,
+                    name=f"Commit {c.revision[:7]}",
+                    identity={"commit": c.revision},
+                    props={"commit": c.revision},
+                )
+                rev = self.plan.fact(
+                    f"The container {c.name} on {cap.host} runs code at commit {c.revision[:7]}, its image's "
+                    "revision.",
+                    source=history.alias,
+                    at=history_at[c.id],
+                    once=True,
+                )
+                self.plan.edge(rev, "part_of", change, key)
         self.plan.drop_empty()
         return self.plan
 

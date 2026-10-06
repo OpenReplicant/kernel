@@ -190,3 +190,37 @@ def test_observe_writes_state_in_a_run_and_history_once() -> None:
         "ongoing",
         {"runtime": "dev-host/ffffffffffff@2026-10-06T04:30:00Z"},
     )
+
+
+def test_the_revision_label_names_the_commit_a_container_runs() -> None:
+    """ADR 0031: the image's revision label is kept when it is a commit hash, and the
+    deployment then has that change as a part."""
+    sha = "40539d52dfeb1098023e39063ffaa89fc3cf39da"
+    doc = inspect()
+    doc["Config"]["Labels"]["org.opencontainers.image.revision"] = sha.upper()
+    labelled = container(doc)
+    assert labelled.revision == sha
+    for value in ("", "unknown", "v1.2.3", None):
+        doc["Config"]["Labels"]["org.opencontainers.image.revision"] = value
+        assert container(doc).revision is None
+    # A capture without revisions reads as before: the field is left out.
+    assert (
+        '"revision"'
+        not in Capture("dev-host", "wmk", "2026-10-06T04:30:00Z", [container(inspect())]).to_json()
+    )
+    cap = Capture("dev-host", "wmk", "2026-10-06T04:30:00Z", [labelled])
+    assert f'"revision": "{sha}"' in cap.to_json()
+
+    plan = observe.build(cap)
+    history = plan.sources[1]
+    assert f"revision {sha}" in history.content
+    (fact,) = [f for f in plan.facts if "its image's revision" in f.text]
+    assert fact.once and fact.ops == [
+        {
+            "op": "assert",
+            "edge": "part_of",
+            "from": f"commit:{sha[:12]}",
+            "to": f"deployment:{labelled.short_id}",
+        }
+    ]
+    assert plan.nodes[f"commit:{sha[:12]}"]["identity"] == {"commit": sha}

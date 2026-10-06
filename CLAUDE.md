@@ -82,8 +82,10 @@ ADR, then code. In this order:
      an automation, an erasure, a policy): built with a static one-person token (ADR
      0030); sign-in through an OpenID Connect provider (Forgejo) is next;
    - a forge for code and configuration: GitHub, or a self-hosted Forgejo or GitLab, with
-     branch protection and required reviews; its adapter records reviews and merges as
-     evidence of decisions (next).
+     branch protection and required reviews. Its adapter is built for GitHub (ADR 0031,
+     `wmk-software forge`): it records pull requests, reviews and merges as evidence of
+     decisions, never as decisions, and audits which changes, and which deployments of them,
+     no person approved.
 4. **Workflow adapters, one per runtime.** The first is Operaton (chosen 2026-10-06: the
    Apache-2.0 fork of Camunda 7, BPMN with a REST API and run history); later ones may be
    n8n, RuleGo, any rules engine, runner or plain code. Each compiles the process representation into its runtime's
@@ -146,6 +148,8 @@ Keep these working; add `make demo` in Phase 3.
 - `make up-ui`, `make ui-smoke` — the explorer and its smoke check
 - `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
 - `make observe-self` — capture the running stack, observe it and check it for drift
+- `make forge-self` — capture this repository's pull requests, map them and audit its
+  changes for approval (`FORGE_CAPTURE=` replays a recorded capture, as CI does)
 - `make token EMAIL=…` — mint a sign-in token for one person (operators only; needs
   `WMK_JWT_SECRET`, which agents never hold)
 - `make live`, `make annotated` — real-model runs (cost model usage; not CI)

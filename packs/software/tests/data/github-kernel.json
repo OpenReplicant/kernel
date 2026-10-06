@@ -1,0 +1,402 @@
+{
+  "format": "wmk-forge-capture",
+  "version": 1,
+  "forge": "github",
+  "repository": "https://github.com/OpenReplicant/kernel",
+  "default_branch": "main",
+  "observed_at": "2026-10-06T14:58:13Z",
+  "complete": true,
+  "pulls": [
+    {
+      "number": 1,
+      "url": "https://github.com/OpenReplicant/kernel/pull/1",
+      "title": "Build Phase 1 of the World Model Kernel",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "bbdd4c041449fc8eb34ee421ee2f62755c179942",
+      "created_at": "2026-10-04T02:37:34Z",
+      "closed_at": "2026-10-04T10:10:55Z",
+      "merged_at": "2026-10-04T10:10:55Z",
+      "merge_commit": "18b2507cc08fa8bcb64cd30fa9af21b12ad2c819",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "url": "https://github.com/OpenReplicant/kernel/pull/2",
+      "title": "Add the live-harness check and fix what its first run showed",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "d27cfb19a93952879fe89592c75919218f8b1c0f",
+      "created_at": "2026-10-04T10:23:26Z",
+      "closed_at": "2026-10-04T10:31:15Z",
+      "merged_at": "2026-10-04T10:31:15Z",
+      "merge_commit": "56e70eb58313c7dce616e2aab8093968d8103920",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "url": "https://github.com/OpenReplicant/kernel/pull/3",
+      "title": "Test the embeddings path and run CI once per pull request",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "606ebb4c7e5f4bb8fbc555928289a6e0d5ee6a47",
+      "created_at": "2026-10-04T10:34:08Z",
+      "closed_at": "2026-10-04T10:37:51Z",
+      "merged_at": "2026-10-04T10:37:51Z",
+      "merge_commit": "d637137e09f01b047ea8c9ba282a5cde992ab184",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "url": "https://github.com/OpenReplicant/kernel/pull/4",
+      "title": "Interview skill, speaker trust, resolution eval set and adapter survey",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "11d948988aeefc68c250ebddd61138e9d41b4725",
+      "created_at": "2026-10-04T11:47:04Z",
+      "closed_at": "2026-10-04T12:13:33Z",
+      "merged_at": "2026-10-04T12:13:32Z",
+      "merge_commit": "0078a8eec0e72addd0bd1ccd4c76a6592a59cbc5",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "url": "https://github.com/OpenReplicant/kernel/pull/5",
+      "title": "Research pack, paper-source server and a live research eval",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "5f6c285458c7635fca436584c9f243ce71718e4f",
+      "created_at": "2026-10-04T13:23:42Z",
+      "closed_at": "2026-10-04T16:46:04Z",
+      "merged_at": "2026-10-04T16:46:04Z",
+      "merge_commit": "6f5b38cdf8d9999adeef4c60c6323628dca28f3c",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "url": "https://github.com/OpenReplicant/kernel/pull/6",
+      "title": "Install packs from manifests; make the research pack self-contained",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "ab05649b3cc55e8d98c8112d02810af68d3b27db",
+      "created_at": "2026-10-04T17:03:29Z",
+      "closed_at": "2026-10-04T17:47:21Z",
+      "merged_at": "2026-10-04T17:47:21Z",
+      "merge_commit": "d8caa13d99ed24a4715565ecc75889bfa2811ea5",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "url": "https://github.com/OpenReplicant/kernel/pull/7",
+      "title": "A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "b9ba1a0476e0934925d78be6dadd07fcf783ff6e",
+      "created_at": "2026-10-04T18:09:19Z",
+      "closed_at": "2026-10-04T19:35:13Z",
+      "merged_at": "2026-10-04T19:35:13Z",
+      "merge_commit": "d0dda1b631e2226b4efbe7959289fdf39fb62a67",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "url": "https://github.com/OpenReplicant/kernel/pull/8",
+      "title": "Software pack, repository adapter and the self boundary; graph and models views",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "15ab6365ca87c37d9fa0be50fe8c35e7b84a2a58",
+      "created_at": "2026-10-04T21:39:17Z",
+      "closed_at": "2026-10-04T21:43:58Z",
+      "merged_at": "2026-10-04T21:43:58Z",
+      "merge_commit": "1f4887756ca8c9a1e7ff1b79fb0cf46e275512ca",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "url": "https://github.com/OpenReplicant/kernel/pull/9",
+      "title": "ADRs: sub-models as lenses and forks (0018), the approval channel (0019)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "b621e7418ab66f4c43c0bdf6a0839ef030813566",
+      "created_at": "2026-10-04T21:47:41Z",
+      "closed_at": "2026-10-04T21:54:13Z",
+      "merged_at": "2026-10-04T21:54:13Z",
+      "merge_commit": "caab6df143e0aa2d2bb2077d7c9448f5427468c7",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "url": "https://github.com/OpenReplicant/kernel/pull/10",
+      "title": "Reported claims quote their source; extraction happens in runs (kernel 0.3.0)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "dadf328f227e9dfde71c936d64f7499eb20cb9bd",
+      "created_at": "2026-10-04T22:57:39Z",
+      "closed_at": "2026-10-04T23:20:10Z",
+      "merged_at": "2026-10-04T23:20:10Z",
+      "merge_commit": "063536d08c4142c48d48ecfa1ad83903db0599d0",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 11,
+      "url": "https://github.com/OpenReplicant/kernel/pull/11",
+      "title": "Measure extraction on SciFact; belief v2 counts origins; batch writes, manifests, full text (kernel 0.4.0)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "cd502d9b0164a94d4b68f68945cf3006a66f0162",
+      "created_at": "2026-10-05T03:58:23Z",
+      "closed_at": "2026-10-05T04:05:15Z",
+      "merged_at": "2026-10-05T04:05:15Z",
+      "merge_commit": "055aec6dcbb6a807c67c86daf2b642988805671b",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 12,
+      "url": "https://github.com/OpenReplicant/kernel/pull/12",
+      "title": "Erase personal data by destroying keys (ADR 0022, kernel 0.5.0); workers reuse existing parsers (ADR 0024)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "d2ee94bf0f3b382cf88e83d1c6563b51369ef835",
+      "created_at": "2026-10-05T13:44:57Z",
+      "closed_at": "2026-10-05T15:22:20Z",
+      "merged_at": "2026-10-05T15:22:20Z",
+      "merge_commit": "f0860a3a6a0e4b537b3d8e76b977a6e2d369f57f",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 13,
+      "url": "https://github.com/OpenReplicant/kernel/pull/13",
+      "title": "Phase 3: the closed loop (CLAUDE.md rewritten, ADR 0026)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "25d683ba756b7a99672961526f47ea39b6cd21d5",
+      "created_at": "2026-10-06T00:56:27Z",
+      "closed_at": "2026-10-06T02:17:10Z",
+      "merged_at": "2026-10-06T02:17:10Z",
+      "merge_commit": "b773465c0780a450b5bb2e9add7a0f2f5bb849de",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 14,
+      "url": "https://github.com/OpenReplicant/kernel/pull/14",
+      "title": "Process pack and event-log adapter (ADR 0027)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "b53847ae096b1756be74a6335dfac31fab723312",
+      "created_at": "2026-10-06T03:02:25Z",
+      "closed_at": "2026-10-06T04:17:12Z",
+      "merged_at": "2026-10-06T04:17:12Z",
+      "merge_commit": "ae3df18dcc61dac27bd7ca423c67c2ae80a04f1c",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 15,
+      "url": "https://github.com/OpenReplicant/kernel/pull/15",
+      "title": "Observe what runs on Docker and check it for drift (ADR 0028)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "c794303e6b76cee1bf00ca70b8fe6844070e4ac4",
+      "created_at": "2026-10-06T04:57:12Z",
+      "closed_at": "2026-10-06T05:17:18Z",
+      "merged_at": "2026-10-06T05:17:18Z",
+      "merge_commit": "4314b40b0297133417ce15dda1f3216317ba8c68",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 16,
+      "url": "https://github.com/OpenReplicant/kernel/pull/16",
+      "title": "Build the approval channel's kernel part (ADR 0029, kernel 0.6.0)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "87884d3affa1356285d1f59e4e31c88fbdc20b1a",
+      "created_at": "2026-10-06T05:43:05Z",
+      "closed_at": "2026-10-06T13:35:32Z",
+      "merged_at": "2026-10-06T13:35:32Z",
+      "merge_commit": "94231ef002b84fedfac6c2c1ae1bc60c8ab5d488",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    },
+    {
+      "number": 17,
+      "url": "https://github.com/OpenReplicant/kernel/pull/17",
+      "title": "Sign in to decide: the explorer's Proposals page (ADR 0030, kernel 0.6.1)",
+      "author": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "state": "merged",
+      "base": "main",
+      "head": "840df8e8c6ee790608af054bf3669aa85f8dd223",
+      "created_at": "2026-10-06T14:30:54Z",
+      "closed_at": "2026-10-06T14:44:33Z",
+      "merged_at": "2026-10-06T14:44:33Z",
+      "merge_commit": "40539d52dfeb1098023e39063ffaa89fc3cf39da",
+      "merged_by": {
+        "login": "OpenReplicant",
+        "url": "https://github.com/OpenReplicant",
+        "bot": false
+      },
+      "reviews": []
+    }
+  ]
+}

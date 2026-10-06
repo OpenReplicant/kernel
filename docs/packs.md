@@ -141,7 +141,10 @@ graph. The plan, the code that plays it through the gateway and the script rende
 shared: `adapter-kit/` (`wmk_adapter.plan`, `.apply`, `.script`; a workspace member your
 adapter depends on). A plan can also assert on, or deny, an edge that already exists by its
 `edge_id` (`Plan.on_edge`), which is how a check against the mapped model records its
-verdicts. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
+verdicts. A source about people names them in `Source.subjects` (node keys of human
+agents): `apply` creates those agents first and ingests the source sealed under their keys,
+so erasing one of them makes it unreadable ([ADR 0022](decisions/0022-erasing-personal-data.md));
+the forge adapter does this for the people on each pull request. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
 (`wmk-process`, which reads event logs and checks the mapped process against them) are the
 examples ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md),
 [ADR 0027](decisions/0027-process-pack-and-event-logs.md)).

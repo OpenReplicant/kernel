@@ -74,6 +74,19 @@ what was mapped. An image tag, a port or a service the repository declares and t
 contradicts becomes contested: drift. Unhealthy containers open incidents that close when
 the service recovers ([ADR 0028](docs/decisions/0028-what-runs-observed.md)).
 
+The forge is where code is reviewed and merged. `make forge-self` reads this repository's
+pull requests from GitHub (read-only), writes each one's author, approvals and merge as
+evidence, and audits every change on `main`. Each change is one of:
+- decided by an approved proposal;
+- reviewed on the forge by someone other than its author;
+- approved only at an earlier commit;
+- unreviewed;
+- merged through no pull request the kernel knows.
+
+The audit also lists what runs from changes nobody approved, using the commit each image is
+labelled with. A forge's approval is evidence of a decision, never the decision
+([ADR 0031](docs/decisions/0031-the-forge-as-evidence.md)).
+
 For business processes, the process pack maps how work happens as told (interviews), as
 written (SOPs) and as done (event logs), with steps joined by flows whose conditions any
 workflow runtime can compile. Its adapter reads CSV, XES and OCEL 2.0 logs:
@@ -122,7 +135,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `kernel/sql/` | The kernel, applied in order: sources, chunks, data keys and the erasure ledger, log, claims, assertions, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, `kernel.erase`, governance and `kernel.decide`, roles; operator tools beside it (`kernel/token.py` mints sign-in tokens) |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
-| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)), `process` (processes as told, written and done, with an event-log adapter; [ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
+| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter, Docker observation and a forge adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md), [0028](docs/decisions/0028-what-runs-observed.md), [0031](docs/decisions/0031-the-forge-as-evidence.md)), `process` (processes as told, written and done, with an event-log adapter; [ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
 | `adapter-kit/` | What the packs' deterministic adapters share: a plan of sources and claims, played through the gateway as an MCP client, and rendered as an eval fixture script |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
@@ -147,6 +160,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make observe-self` | Capture the running stack from Docker, observe it and check it for drift against what `map-self` declared (`PROJECT=` names the Compose project) |
+| `make forge-self` | Capture this repository's pull requests from GitHub, map them, and audit its changes and deployments for approval (after `map-self` and `observe-self`; `FORGE_REPO=` names another repository, `FORGE_CAPTURE=` replays a recorded capture without the network) |
 | `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused, that every page loads in headless Chromium and, with `WMK_JWT_SECRET` set, that a minted token signs in and approves an open proposal (after `make seed`) |
 | `make token EMAIL=… [NAME=…]` | Mint a sign-in token for one person with `WMK_JWT_SECRET`; for operators ([ADR 0030](docs/decisions/0030-signing-in-to-decide.md)) |
 | `uv run python -m kernel.packs check` | Validate every pack's manifests ([ADR 0015](docs/decisions/0015-packs-declare-their-ontology.md)) |
@@ -170,6 +184,8 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | `WMK_PAPERS_GROBID_URL` | `http://grobid:8070` in compose | papers: the GROBID service that parses PDFs for `get_full_text` |
 | `WMK_UI_PORT` | `8080` | compose: the explorer's port on localhost |
 | `WMK_JWT_SECRET` | unset | compose (the explorer's API only) and `make token`: signs and verifies sign-in tokens; unset, the explorer only reads |
+| `WMK_REVISION` | the checked-out commit, set by `make` | compose: the revision label on the images it builds, so observed deployments know their commit |
+| `GITHUB_TOKEN` | unset | `wmk-software forge capture`: optional, read-only; raises GitHub's rate limit |
 
 ## Guarantees
 
@@ -211,8 +227,9 @@ checks decisions one gateway deep. The software pack maps what a repository decl
 what runs on Docker (other runtimes are later readers); its self
 boundary is a set of claims, and changing the system stays with people. People decide on
 the explorer's Proposals page, signed in with a token an operator mints for them; sign-in
-through an identity provider (Forgejo, over OpenID Connect) and the forge adapter, which
-records pull requests, reviews and merges, are next. Full text comes from open-access PDFs parsed by GROBID
+through an identity provider (Forgejo, over OpenID Connect) is next. The forge adapter reads
+GitHub only; a rebase merge shows only its last commit as merged, and a forge account and a
+signed-in email stay different people until linked. Full text comes from open-access PDFs parsed by GROBID
 ([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers
 ([ADR 0024](docs/decisions/0024-extraction-workers.md), proposed: a script moving documents
 from parser servers to the gateway with no model in between), observer runs, and the

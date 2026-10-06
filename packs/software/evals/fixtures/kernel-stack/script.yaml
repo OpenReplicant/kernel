@@ -16,52 +16,52 @@
 - write:
     claim: {text: 'Commit e334f55 on 2026-10-04 changed OpenReplicant/kernel: Empty repository.', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:1083}}'}
     ops:
-      - {op: create, ref: $commit_e334f55cea03, type: Event, kind: change, namespace: software, name: Empty repository, identity: {commit: e334f55cea030890881db58d229a61d607229469}, start: '2026-10-04T00:14:24Z'}
+      - {op: create, ref: $commit_e334f55cea03, type: Event, kind: change, namespace: software, name: Empty repository, identity: {commit: e334f55cea030890881db58d229a61d607229469}, start: '2026-10-04T00:14:24Z', props: {commit: e334f55cea030890881db58d229a61d607229469}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_e334f55cea03, props: {role: changed}}
 - write:
     claim: {text: 'Commit dcebf5c on 2026-10-04 changed OpenReplicant/kernel: Add files via upload.', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:1000}}'}
     ops:
-      - {op: create, ref: $commit_dcebf5c82310, type: Event, kind: change, namespace: software, name: Add files via upload, identity: {commit: dcebf5c82310903476d5b44fb2169a81cb3dd17b}, start: '2026-10-04T00:17:03Z'}
+      - {op: create, ref: $commit_dcebf5c82310, type: Event, kind: change, namespace: software, name: Add files via upload, identity: {commit: dcebf5c82310903476d5b44fb2169a81cb3dd17b}, start: '2026-10-04T00:17:03Z', props: {commit: dcebf5c82310903476d5b44fb2169a81cb3dd17b}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_dcebf5c82310, props: {role: changed}}
 - write:
     claim: {text: 'Commit 18b2507 on 2026-10-04 changed OpenReplicant/kernel: Build Phase 1 of the World Model Kernel (#1).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:893}}'}
     ops:
-      - {op: create, ref: $commit_18b2507cc08f, type: Event, kind: change, namespace: software, name: Build Phase 1 of the World Model Kernel (#1), identity: {commit: 18b2507cc08fa8bcb64cd30fa9af21b12ad2c819}, start: '2026-10-04T10:10:55Z', props: {pr: 1}}
+      - {op: create, ref: $commit_18b2507cc08f, type: Event, kind: change, namespace: software, name: Build Phase 1 of the World Model Kernel (#1), identity: {commit: 18b2507cc08fa8bcb64cd30fa9af21b12ad2c819}, start: '2026-10-04T10:10:55Z', props: {commit: 18b2507cc08fa8bcb64cd30fa9af21b12ad2c819, pr: 1}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_18b2507cc08f, props: {role: changed}}
 - write:
     claim: {text: 'Commit 56e70eb on 2026-10-04 changed OpenReplicant/kernel: Add the live-harness check and fix what its first run showed (#2).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:765}}'}
     ops:
-      - {op: create, ref: $commit_56e70eb58313, type: Event, kind: change, namespace: software, name: Add the live-harness check and fix what its first run showed (#2), identity: {commit: 56e70eb58313c7dce616e2aab8093968d8103920}, start: '2026-10-04T10:31:14Z', props: {pr: 2}}
+      - {op: create, ref: $commit_56e70eb58313, type: Event, kind: change, namespace: software, name: Add the live-harness check and fix what its first run showed (#2), identity: {commit: 56e70eb58313c7dce616e2aab8093968d8103920}, start: '2026-10-04T10:31:14Z', props: {commit: 56e70eb58313c7dce616e2aab8093968d8103920, pr: 2}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_56e70eb58313, props: {role: changed}}
 - write:
     claim: {text: 'Commit d637137 on 2026-10-04 changed OpenReplicant/kernel: Test the embeddings path and run CI once per pull request (#3).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:640}}'}
     ops:
-      - {op: create, ref: $commit_d637137e09f0, type: Event, kind: change, namespace: software, name: Test the embeddings path and run CI once per pull request (#3), identity: {commit: d637137e09f01b047ea8c9ba282a5cde992ab184}, start: '2026-10-04T10:37:51Z', props: {pr: 3}}
+      - {op: create, ref: $commit_d637137e09f0, type: Event, kind: change, namespace: software, name: Test the embeddings path and run CI once per pull request (#3), identity: {commit: d637137e09f01b047ea8c9ba282a5cde992ab184}, start: '2026-10-04T10:37:51Z', props: {commit: d637137e09f01b047ea8c9ba282a5cde992ab184, pr: 3}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_d637137e09f0, props: {role: changed}}
 - write:
     claim: {text: 'Commit 0078a8e on 2026-10-04 changed OpenReplicant/kernel: Interview skill, speaker trust, resolution eval set and adapter survey (#4).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:502}}'}
     ops:
-      - {op: create, ref: $commit_0078a8eec0e7, type: Event, kind: change, namespace: software, name: 'Interview skill, speaker trust, resolution eval set and adapter survey (#4)', identity: {commit: 0078a8eec0e72addd0bd1ccd4c76a6592a59cbc5}, start: '2026-10-04T12:13:32Z', props: {pr: 4}}
+      - {op: create, ref: $commit_0078a8eec0e7, type: Event, kind: change, namespace: software, name: 'Interview skill, speaker trust, resolution eval set and adapter survey (#4)', identity: {commit: 0078a8eec0e72addd0bd1ccd4c76a6592a59cbc5}, start: '2026-10-04T12:13:32Z', props: {commit: 0078a8eec0e72addd0bd1ccd4c76a6592a59cbc5, pr: 4}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_0078a8eec0e7, props: {role: changed}}
 - write:
     claim: {text: 'Commit 6f5b38c on 2026-10-04 changed OpenReplicant/kernel: Research pack, paper-source server and a live research eval (#5).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:375}}'}
     ops:
-      - {op: create, ref: $commit_6f5b38cdf8d9, type: Event, kind: change, namespace: software, name: 'Research pack, paper-source server and a live research eval (#5)', identity: {commit: 6f5b38cdf8d9999adeef4c60c6323628dca28f3c}, start: '2026-10-04T16:46:03Z', props: {pr: 5}}
+      - {op: create, ref: $commit_6f5b38cdf8d9, type: Event, kind: change, namespace: software, name: 'Research pack, paper-source server and a live research eval (#5)', identity: {commit: 6f5b38cdf8d9999adeef4c60c6323628dca28f3c}, start: '2026-10-04T16:46:03Z', props: {commit: 6f5b38cdf8d9999adeef4c60c6323628dca28f3c, pr: 5}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_6f5b38cdf8d9, props: {role: changed}}
 - write:
     claim: {text: 'Commit d8caa13 on 2026-10-04 changed OpenReplicant/kernel: Install packs from manifests; make the research pack self-contained (#6).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:240}}'}
     ops:
-      - {op: create, ref: $commit_d8caa13d99ed, type: Event, kind: change, namespace: software, name: Install packs from manifests; make the research pack self-contained (#6), identity: {commit: d8caa13d99ed24a4715565ecc75889bfa2811ea5}, start: '2026-10-04T17:47:21Z', props: {pr: 6}}
+      - {op: create, ref: $commit_d8caa13d99ed, type: Event, kind: change, namespace: software, name: Install packs from manifests; make the research pack self-contained (#6), identity: {commit: d8caa13d99ed24a4715565ecc75889bfa2811ea5}, start: '2026-10-04T17:47:21Z', props: {commit: d8caa13d99ed24a4715565ecc75889bfa2811ea5, pr: 6}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_d8caa13d99ed, props: {role: changed}}
 - write:
     claim: {text: 'Commit d0dda1b on 2026-10-04 changed OpenReplicant/kernel: A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7).', basis: observed, modality: descriptive, confidence: high, source: '{{at:git-history:103}}'}
     ops:
-      - {op: create, ref: $commit_d0dda1b631e2, type: Event, kind: change, namespace: software, name: 'A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)', identity: {commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67}, start: '2026-10-04T19:35:12Z', props: {pr: 7}}
+      - {op: create, ref: $commit_d0dda1b631e2, type: Event, kind: change, namespace: software, name: 'A read-only explorer: Alpine.js pages, Caddy, PostgREST as the reader (#7)', identity: {commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67}, start: '2026-10-04T19:35:12Z', props: {commit: d0dda1b631e2226b4efbe7959289fdf39fb62a67, pr: 7}}
       - {op: assert, edge: participates_in, from: '{{ref:repo}}', to: $commit_d0dda1b631e2, props: {role: changed}}
 - write:
-    claim: {text: wmk-software 0.3.0 maps pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:0}}'}
+    claim: {text: wmk-software 0.4.0 maps pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:0}}'}
     ops:
-      - {op: create, ref: $run_pyproject_toml, type: Event, kind: extraction, name: wmk-software over pyproject.toml @ 94526960d835, props: {extractor: wmk-software, version: 0.3.0, source: pyproject.toml}}
+      - {op: create, ref: $run_pyproject_toml, type: Event, kind: extraction, name: wmk-software over pyproject.toml @ 94526960d835, props: {extractor: wmk-software, version: 0.4.0, source: pyproject.toml}}
 - write:
     claim: {text: pyproject.toml defines the Python package world-model-kernel 0.2.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:pyproject.toml:10}}', run: '{{ref:run_pyproject_toml}}'}
     ops:
@@ -132,9 +132,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_pyproject_toml}}'}
 - write:
-    claim: {text: wmk-software 0.3.0 maps packs/research/mcp/pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:0}}'}
+    claim: {text: wmk-software 0.4.0 maps packs/research/mcp/pyproject.toml., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:0}}'}
     ops:
-      - {op: create, ref: $run_packs_research_mcp_pyproject_toml, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/pyproject.toml @ ffa636c20a40, props: {extractor: wmk-software, version: 0.3.0, source: packs/research/mcp/pyproject.toml}}
+      - {op: create, ref: $run_packs_research_mcp_pyproject_toml, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/pyproject.toml @ ffa636c20a40, props: {extractor: wmk-software, version: 0.4.0, source: packs/research/mcp/pyproject.toml}}
 - write:
     claim: {text: packs/research/mcp/pyproject.toml defines the Python package wmk-papers 0.1.0., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/pyproject.toml:10}}', run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
     ops:
@@ -163,9 +163,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_packs_research_mcp_pyproject_toml}}'}
 - write:
-    claim: {text: wmk-software 0.3.0 maps docker-compose.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:0}}'}
+    claim: {text: wmk-software 0.4.0 maps docker-compose.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:0}}'}
     ops:
-      - {op: create, ref: $run_docker_compose_yml, type: Event, kind: extraction, name: wmk-software over docker-compose.yml @ 16c5ecc308d7, props: {extractor: wmk-software, version: 0.3.0, source: docker-compose.yml}}
+      - {op: create, ref: $run_docker_compose_yml, type: Event, kind: extraction, name: wmk-software over docker-compose.yml @ 16c5ecc308d7, props: {extractor: wmk-software, version: 0.4.0, source: docker-compose.yml}}
 - write:
     claim: {text: docker-compose.yml defines the Compose stack wmk., basis: observed, modality: descriptive, confidence: high, source: '{{at:docker-compose.yml:409}}', run: '{{ref:run_docker_compose_yml}}'}
     ops:
@@ -298,9 +298,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_docker_compose_yml}}'}
 - write:
-    claim: {text: wmk-software 0.3.0 maps db/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:0}}'}
+    claim: {text: wmk-software 0.4.0 maps db/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:0}}'}
     ops:
-      - {op: create, ref: $run_db_dockerfile, type: Event, kind: extraction, name: wmk-software over db/Dockerfile @ e37de45e2c52, props: {extractor: wmk-software, version: 0.3.0, source: db/Dockerfile}}
+      - {op: create, ref: $run_db_dockerfile, type: Event, kind: extraction, name: wmk-software over db/Dockerfile @ e37de45e2c52, props: {extractor: wmk-software, version: 0.4.0, source: db/Dockerfile}}
 - write:
     claim: {text: 'db/Dockerfile builds wmk-db on the base image pgvector/pgvector:0.8.7-pg18-trixie in its pgvector stage.', basis: observed, modality: descriptive, confidence: high, source: '{{at:db/Dockerfile:164}}', run: '{{ref:run_db_dockerfile}}'}
     ops:
@@ -316,9 +316,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_db_dockerfile}}'}
 - write:
-    claim: {text: wmk-software 0.3.0 maps gateway/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:0}}'}
+    claim: {text: wmk-software 0.4.0 maps gateway/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:0}}'}
     ops:
-      - {op: create, ref: $run_gateway_dockerfile, type: Event, kind: extraction, name: wmk-software over gateway/Dockerfile @ bbc371d646b1, props: {extractor: wmk-software, version: 0.3.0, source: gateway/Dockerfile}}
+      - {op: create, ref: $run_gateway_dockerfile, type: Event, kind: extraction, name: wmk-software over gateway/Dockerfile @ bbc371d646b1, props: {extractor: wmk-software, version: 0.4.0, source: gateway/Dockerfile}}
 - write:
     claim: {text: 'gateway/Dockerfile builds wmk-gateway on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:gateway/Dockerfile:104}}', run: '{{ref:run_gateway_dockerfile}}'}
     ops:
@@ -329,9 +329,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_gateway_dockerfile}}'}
 - write:
-    claim: {text: wmk-software 0.3.0 maps packs/research/mcp/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:0}}'}
+    claim: {text: wmk-software 0.4.0 maps packs/research/mcp/Dockerfile., basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:0}}'}
     ops:
-      - {op: create, ref: $run_packs_research_mcp_dockerfile, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/Dockerfile @ 52b7c225bf89, props: {extractor: wmk-software, version: 0.3.0, source: packs/research/mcp/Dockerfile}}
+      - {op: create, ref: $run_packs_research_mcp_dockerfile, type: Event, kind: extraction, name: wmk-software over packs/research/mcp/Dockerfile @ 52b7c225bf89, props: {extractor: wmk-software, version: 0.4.0, source: packs/research/mcp/Dockerfile}}
 - write:
     claim: {text: 'packs/research/mcp/Dockerfile builds wmk-papers on the base image python:3.12-slim.', basis: observed, modality: descriptive, confidence: high, source: '{{at:packs/research/mcp/Dockerfile:158}}', run: '{{ref:run_packs_research_mcp_dockerfile}}'}
     ops:
@@ -341,9 +341,9 @@
     ops:
       - {op: close_run, run: '{{ref:run_packs_research_mcp_dockerfile}}'}
 - write:
-    claim: {text: wmk-software 0.3.0 maps .github/workflows/ci.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:0}}'}
+    claim: {text: wmk-software 0.4.0 maps .github/workflows/ci.yml., basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:0}}'}
     ops:
-      - {op: create, ref: $run_github_workflows_ci_yml, type: Event, kind: extraction, name: wmk-software over .github/workflows/ci.yml @ 1047c93a1324, props: {extractor: wmk-software, version: 0.3.0, source: .github/workflows/ci.yml}}
+      - {op: create, ref: $run_github_workflows_ci_yml, type: Event, kind: extraction, name: wmk-software over .github/workflows/ci.yml @ 1047c93a1324, props: {extractor: wmk-software, version: 0.4.0, source: .github/workflows/ci.yml}}
 - write:
     claim: {text: 'The ci workflow''s job lint checks OpenReplicant/kernel on push to main and pull_request; it runs uv sync --frozen; make lint; it uses actions/checkout@v4, astral-sh/setup-uv@v6.', basis: observed, modality: descriptive, confidence: high, source: '{{at:.github/workflows/ci.yml:136}}', run: '{{ref:run_github_workflows_ci_yml}}'}
     ops:

@@ -216,4 +216,5 @@ def test_a_repository_at_a_commit_and_in_its_working_tree(toy_repo: Path) -> Non
         t.startswith("The test workflow's job unit checks example/toy on push; it runs make test")
         for t in texts
     )
-    assert plan.nodes["commit:" + git(toy_repo, "rev-parse", "HEAD").strip()[:12]]["props"] == {"pr": 1}
+    head = git(toy_repo, "rev-parse", "HEAD").strip()
+    assert plan.nodes["commit:" + head[:12]]["props"] == {"commit": head, "pr": 1}

@@ -4,14 +4,19 @@ WMK_DB_PORT ?= 5432
 WMK_DB_PASSWORD ?= postgres
 export WMK_ADMIN_DSN ?= postgresql://postgres:$(WMK_DB_PASSWORD)@localhost:$(WMK_DB_PORT)/postgres
 export WMK_DATABASE ?= wmk
+# Images built from this checkout carry its commit as their revision label (ADR 0031).
+export WMK_REVISION ?= $(shell git rev-parse HEAD 2>/dev/null)
 SCENARIO ?= northwind
 SELF ?= World Model Kernel (this instance)
 # The Compose project `make observe-self` captures (the stack's `name:`).
 PROJECT ?= wmk
+# The forge repository `make forge-self` reads; FORGE_CAPTURE replays a recorded capture instead.
+FORGE_REPO ?= OpenReplicant/kernel
+FORGE_CAPTURE ?=
 # The explorer's browser check (ui/smoke.py); `make ui-browser` installs its Chromium.
 PLAYWRIGHT ?= playwright==1.56.0
 
-.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self observe-self token live annotated papers-smoke lint fmt
+.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self observe-self forge-self token live annotated papers-smoke lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
@@ -26,6 +31,7 @@ help:
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
 	@echo "make map-self  map this repository and the kernel's self boundary into the running stack"
 	@echo "make observe-self  capture the running stack, observe it and check it for drift (after map-self)"
+	@echo "make forge-self  read this repository's pull requests from GitHub, map them and audit its changes for approval"
 	@echo "make token EMAIL=you@example.org [NAME=...]  a sign-in token for the explorer (operators; needs WMK_JWT_SECRET)"
 	@echo "make live     a real harness (headless Claude Code) runs evals/live/\$$SCENARIO (northwind, research)"
 	@echo "make annotated  a real harness maps and judges the SciFact sample; scores against its annotators (\$$MODEL)"
@@ -80,6 +86,12 @@ observe-self:
 	uv run wmk-software capture $(PROJECT) -o evals/out/capture-$(PROJECT).json
 	uv run wmk-software observe evals/out/capture-$(PROJECT).json --repo . --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 	uv run wmk-software drift evals/out/capture-$(PROJECT).json --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+
+forge-self:
+	@mkdir -p evals/out
+	$(if $(FORGE_CAPTURE),,uv run wmk-software forge capture $(FORGE_REPO) -o evals/out/forge-capture.json)
+	uv run wmk-software forge map $(or $(FORGE_CAPTURE),evals/out/forge-capture.json) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+	uv run wmk-software forge audit https://github.com/$(FORGE_REPO) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 
 live:
 	uv run python -m evals.live $(SCENARIO) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --database $(WMK_DATABASE)
