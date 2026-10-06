@@ -1,6 +1,6 @@
 # 0019. The approval channel: people approve, the actuator enforces, the kernel records
 
-Date: 2026-10-04 · Status: proposed (design only; nothing here is built until reviewed)
+Date: 2026-10-04 · Status: accepted; built by [ADR 0029](0029-building-the-approval-channel.md), which amends it
 
 ## Context
 

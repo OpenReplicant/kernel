@@ -41,7 +41,7 @@ class Rejected(Exception):
 
 class KernelDB:
     """SQL-level access: write functions called as kernel_writer, erasures as kernel_eraser,
-    queries as superuser."""
+    decisions as kernel_approver for a signed-in person, queries as superuser."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -52,12 +52,14 @@ class KernelDB:
         self.writer.execute("SET ROLE kernel_writer")
         self.eraser = psycopg.connect(self.dsn, autocommit=True)
         self.eraser.execute("SET ROLE kernel_eraser")
+        self.approver = psycopg.connect(self.dsn, autocommit=True)
         self.chunk_text: dict[str, str] = {}
 
     def close(self) -> None:
         self.admin.close()
         self.writer.close()
         self.eraser.close()
+        self.approver.close()
 
     def _call(self, function: str, payload: dict[str, Any], agent: str | None) -> dict[str, Any]:
         return self._run(self.writer, f"SELECT kernel.{function}(%s, %s)", [Jsonb(payload), agent])
@@ -87,6 +89,24 @@ class KernelDB:
     def erase(self, request: dict[str, Any]) -> dict[str, Any]:
         """kernel.erase as kernel_eraser (ADR 0022)."""
         return self._run(self.eraser, "SELECT kernel.erase(%s)", [Jsonb(request)])
+
+    def decide(self, email: str, request: dict[str, Any], *, name: str | None = None) -> dict[str, Any]:
+        """kernel.decide as PostgREST calls it for a verified token (ADR 0029): in one
+        transaction, the role kernel_approver and the token's claims in request.jwt.claims."""
+        claims = {"email": email, **({"name": name} if name else {})}
+        try:
+            with self.approver.transaction():
+                self.approver.execute("SET LOCAL ROLE kernel_approver")
+                self.approver.execute(
+                    "SELECT set_config('request.jwt.claims', %s, true)", [json.dumps(claims)]
+                )
+                row = self.approver.execute("SELECT kernel.decide(%s)", [Jsonb(request)]).fetchone()
+        except psycopg.Error as exc:
+            if exc.sqlstate == "WMK01" and exc.diag.message_detail:
+                raise Rejected(json.loads(exc.diag.message_detail)) from None
+            raise
+        assert row is not None
+        return row[0]
 
     def erasure_scope(self, subject: str) -> dict[str, Any]:
         return self._run(self.eraser, "SELECT kernel.erasure_scope(%s)", [subject])

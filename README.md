@@ -163,6 +163,11 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
   the fields of human agents are encrypted under per-subject keys. Erasing a person destroys
   their keys; the log is untouched, everything they sealed reads `[erased]`, and replay
   reproduces the erased graph ([ADR 0022](docs/decisions/0022-erasing-personal-data.md)).
+- Agents never decide: only a signed-in person approves or rejects a proposal, through
+  `kernel.decide` as the `kernel_approver` role, which no gateway login holds. Nobody
+  decides on their own proposal or on a system they are part of. Instruments (what judges
+  changes) need two people. Proposals and hypotheses state no facts, so belief never counts
+  them ([ADR 0029](docs/decisions/0029-building-the-approval-channel.md)).
 - The log tables refuse UPDATE, DELETE and TRUNCATE for every role.
 - Projection makes no clock, random or network calls; CI replays the log and diffs.
 - No model calls in the database or in a transaction: embeddings come from the gateway.
@@ -185,8 +190,10 @@ mapped from their abstracts by any MCP harness following the core and research s
 The process pack's adapter maps event logs without people (`org:resource` is dropped) and
 checks decisions one gateway deep. The software pack maps what a repository declares and observes
 what runs on Docker (other runtimes are later readers); its self
-boundary is a set of claims, and changing the system stays with people (the approval
-channel is the next ADR). Full text comes from open-access PDFs parsed by GROBID
+boundary is a set of claims, and changing the system stays with people. The approval
+channel's kernel part is built; the explorer's signed-in Proposals page and the forge
+adapter are next, so until then a decision needs a session that can take the approver
+role. Full text comes from open-access PDFs parsed by GROBID
 ([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers
 ([ADR 0024](docs/decisions/0024-extraction-workers.md), proposed: a script moving documents
 from parser servers to the gateway with no model in between), observer runs, and the

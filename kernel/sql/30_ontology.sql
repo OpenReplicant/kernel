@@ -74,7 +74,8 @@ CREATE UNIQUE INDEX statuses_one_default ON kernel.statuses (node_type) WHERE is
 
 CREATE TABLE kernel.rules (
   id          text PRIMARY KEY CHECK (id ~ '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'),
-  category    text NOT NULL CHECK (category IN ('types', 'domain_range', 'cardinality', 'time', 'identity', 'provenance')),
+  category    text NOT NULL CHECK (category IN ('types', 'domain_range', 'cardinality', 'time', 'identity', 'provenance',
+                                                'governance')),
   namespace   text REFERENCES kernel.namespaces (name),
   params      jsonb NOT NULL CHECK (jsonb_typeof(params) = 'object'),
   label       text NOT NULL CHECK (label <> ''),
@@ -191,4 +192,30 @@ INSERT INTO kernel.rules (id, category, namespace, params, label, description, d
    'Email identifies a person', 'Two human agents with the same email are the same person.', 'core'),
   ('core.machine_profile', 'identity', NULL,
    '{"node_type": "Agent", "kinds": ["machine"], "keys": ["profile"]}',
-   'Profile identifies a machine agent', 'Two machine agents with the same profile name are the same configuration.', 'core');
+   'Profile identifies a machine agent', 'Two machine agents with the same profile name are the same configuration.', 'core'),
+  -- Governance (ADR 0029): checked in code by kernel.check_governance; the rows name the rules
+  -- rejections cite and let readers list them.
+  ('core.proposals_are_data', 'governance', NULL, '{"modalities": ["proposed", "hypothetical"]}',
+   'Proposals and hypotheses are data',
+   'A proposed or hypothetical claim may promote itself and assert edges to or from its own Claim node, never facts about other nodes: belief never counts what is merely proposed or supposed. Put the change in props.change.',
+   'core'),
+  ('core.decided_by_person', 'governance', NULL, '{}',
+   'Decisions are made by a signed-in person',
+   'Approving or rejecting a proposal happens only through kernel.decide, as kernel_approver, by the human agent of the person the verified token names; the approved_by or rejected_by edge points at that person. Agents never decide.',
+   'core'),
+  ('core.no_self_approval', 'governance', NULL, '{}',
+   'Nobody decides on their own proposal', 'The person deciding must not be the agent that wrote the proposal.', 'core'),
+  ('core.approver_outside_system', 'governance', NULL, '{"kinds": ["system"]}',
+   'Approvers are outside the system they change',
+   'The person deciding must not be part_of a system the proposal is about, or that something it is about is part_of.',
+   'core'),
+  ('core.instruments_need_two', 'governance', NULL, '{"approvals": 2}',
+   'Instruments need two people',
+   'A proposal about an instrument (a node a protecting claim is about, or such a claim) is approved only once two distinct people approve it.',
+   'core'),
+  ('core.instruments_alone', 'governance', NULL, '{}',
+   'Instrument changes stand alone',
+   'A proposal about an instrument and about anything else is refused at approval: split it, so the change and its check are judged apart.',
+   'core'),
+  ('core.withdraw_own', 'governance', NULL, '{}',
+   'Only the proposer withdraws', 'Only the agent that wrote a proposal may move it to withdrawn.', 'core');

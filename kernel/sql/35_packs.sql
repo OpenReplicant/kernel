@@ -8,7 +8,7 @@ SET ROLE kernel_owner;
 -- Contract: the kernel's version (semantic versioning). Packs declare the kernel range
 -- they support; the installer checks it. Pure.
 CREATE FUNCTION kernel.version() RETURNS text
-LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT '0.5.0' $$;
+LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT '0.6.0' $$;
 
 CREATE TABLE kernel.packs (
   name          text PRIMARY KEY CHECK (name ~ '^[a-z][a-z0-9-]*$' AND name <> 'core'),
@@ -132,6 +132,9 @@ BEGIN
     UNION ALL
     SELECT format('rule %s: namespace %s is not one of the pack''s', x ->> 'id', x ->> 'namespace')
     FROM jsonb_array_elements(v_rules) x WHERE x ->> 'namespace' IS NOT NULL AND NOT (x ->> 'namespace') = ANY (v_own)
+    UNION ALL
+    SELECT format('rule %s: governance rules are the kernel''s own (ADR 0029)', x ->> 'id')
+    FROM jsonb_array_elements(v_rules) x WHERE x ->> 'category' = 'governance'
   ) c ORDER BY problem LIMIT 1;
   IF v_problem IS NOT NULL THEN
     PERFORM kernel.pack_error(format('%s: %s', v_name, v_problem));

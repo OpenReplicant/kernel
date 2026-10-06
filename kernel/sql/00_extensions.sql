@@ -1,5 +1,5 @@
 -- 00_extensions.sql
--- Extensions, the kernel schema and the four group roles.
+-- Extensions, the kernel schema and the five group roles.
 -- Applied as a superuser; every later file switches to kernel_owner.
 
 CREATE EXTENSION IF NOT EXISTS age;
@@ -24,8 +24,15 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'kernel_eraser') THEN
     CREATE ROLE kernel_eraser NOLOGIN;
   END IF;
+  -- A signed-in person deciding on proposals (kernel.decide, ADR 0029); never an agent, and
+  -- no gateway login holds it.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'kernel_approver') THEN
+    CREATE ROLE kernel_approver NOLOGIN;
+  END IF;
 END
 $$;
+-- A signed-in person reads what any reader reads.
+GRANT kernel_reader TO kernel_approver;
 
 -- kernel.resolve_candidates pins the trigram threshold with a SET clause. In a session that
 -- has not loaded pg_trgm yet the setting is an unknown placeholder, which only a superuser
