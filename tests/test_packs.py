@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import importlib.metadata
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,8 @@ from kernel import admin
 from kernel import packs as packs_mod
 from kernel.packs import PackError
 from kernel.testing import KernelDB, Rejected
+
+KERNEL_VERSION = importlib.metadata.version("world-model-kernel")
 
 
 @pytest.fixture(scope="module")
@@ -57,7 +60,7 @@ def install(dbname: str, m: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_kernel_version_matches_the_package(kdb: KernelDB) -> None:
-    assert kdb.one("SELECT kernel.version()") == importlib.metadata.version("world-model-kernel")
+    assert kdb.one("SELECT kernel.version()") == KERNEL_VERSION
 
 
 def test_every_pack_loads_and_installs_beside_the_others(dbname: str) -> None:
@@ -222,6 +225,6 @@ def test_the_kernel_range_is_enforced(tmp_path: Path, dbname: str) -> None:
     )
     with (
         psycopg.connect(admin.dsn_for(admin.admin_dsn(), dbname)) as conn,
-        pytest.raises(PackError, match=r"supports kernel >=9\.0, not 0\.6\.0"),
+        pytest.raises(PackError, match=rf"supports kernel >=9\.0, not {re.escape(KERNEL_VERSION)}"),
     ):
         packs_mod.install(conn, packs_mod.load(future))

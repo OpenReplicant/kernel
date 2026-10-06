@@ -25,7 +25,7 @@ changes to what it deployed, which a person approves.
 make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
 make seed      # optional: write the eval fixtures (two BPM, one research) through the gateway
 make replay    # rebuild the graph from the log and diff it against the live graph
-make up-ui     # optional: the read-only explorer on http://localhost:8080
+make up-ui     # optional: the explorer on http://localhost:8080
 make map-self  # optional: map this repository and the kernel's own boundary (software pack)
 ```
 
@@ -45,8 +45,23 @@ give the harness [`packs/research/`](packs/research/SKILL.md) as a skill. Set
 The explorer (`make up-ui`) shows what agents wrote: the log, nodes and edges with their
 belief and assertions, each source with the claims drawn from its passages, the evidence
 between claims, a graph view, an index of models (each area of the graph, and each system
-with its parts) and the installed ontology. It reads through the reader role and cannot
-change anything ([ADR 0016](docs/decisions/0016-a-read-only-explorer.md)).
+with its parts) and the installed ontology. It reads through the reader role
+([ADR 0016](docs/decisions/0016-a-read-only-explorer.md)).
+
+Its Proposals page lists what agents propose, with what each changes, its evidence and the
+approvals it needs. A person signs in there to approve or reject one, or to protect a node
+as an instrument; nothing else in the explorer writes
+([ADR 0030](docs/decisions/0030-signing-in-to-decide.md)). To turn sign-in on, start the
+explorer with a secret of at least 32 characters, then mint a token for each person:
+
+```sh
+export WMK_JWT_SECRET=$(openssl rand -hex 32)
+make up-ui
+make token EMAIL=dana@example.org NAME="Dana Ruiz"   # paste it into "Sign in to decide"
+```
+
+The secret stays with the operator: anyone holding it can mint a token for anyone. Without
+it, the explorer only reads.
 
 For software and operations, the software pack's adapter maps a repository's compose file,
 Dockerfiles, `pyproject.toml`, CI workflows and git history through the gateway:
@@ -104,7 +119,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 
 | Path | Contents |
 | --- | --- |
-| `kernel/sql/` | The kernel, applied in order: sources, chunks, data keys and the erasure ledger, log, claims, assertions, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, `kernel.erase`, roles |
+| `kernel/sql/` | The kernel, applied in order: sources, chunks, data keys and the erasure ledger, log, claims, assertions, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, `kernel.erase`, governance and `kernel.decide`, roles; operator tools beside it (`kernel/token.py` mints sign-in tokens) |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
 | `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)), `process` (processes as told, written and done, with an event-log adapter; [ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
@@ -112,7 +127,7 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
 | `tests/` | Unit, SQL, invariant and regression tests; the shared test kit is `kernel/testing.py` |
-| `ui/` | The read-only explorer: Alpine.js pages in `site/`, the Caddy config, the smoke check |
+| `ui/` | The explorer: Alpine.js pages in `site/`, the Caddy config, the smoke check |
 | `db/`, `docker-compose.yml` | The database image and the stack |
 
 ## Development
@@ -132,7 +147,8 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make observe-self` | Capture the running stack from Docker, observe it and check it for drift against what `map-self` declared (`PROJECT=` names the Compose project) |
-| `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused and that every page loads in headless Chromium (after `make seed`) |
+| `make up-ui` / `make ui-smoke` | Start the explorer / check that writes are refused, that every page loads in headless Chromium and, with `WMK_JWT_SECRET` set, that a minted token signs in and approves an open proposal (after `make seed`) |
+| `make token EMAIL=… [NAME=…]` | Mint a sign-in token for one person with `WMK_JWT_SECRET`; for operators ([ADR 0030](docs/decisions/0030-signing-in-to-decide.md)) |
 | `uv run python -m kernel.packs check` | Validate every pack's manifests ([ADR 0015](docs/decisions/0015-packs-declare-their-ontology.md)) |
 | `make lint` | `ruff check` and `ruff format --check` |
 
@@ -143,7 +159,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 
 | Variable | Default | Used by |
 | --- | --- | --- |
-| `WMK_DB_PASSWORD`, `WMK_WRITER_PASSWORD`, `WMK_READER_PASSWORD` | `postgres`, `writer`, `reader` | compose |
+| `WMK_DB_PASSWORD`, `WMK_WRITER_PASSWORD`, `WMK_READER_PASSWORD`, `WMK_API_PASSWORD` | `postgres`, `writer`, `reader`, `api` | compose |
 | `WMK_PROFILE` | `interactive` | compose: which profile the gateway runs |
 | `WMK_PACKS` | every pack | compose and `kernel.packs install`: which packs the database gets |
 | `WMK_WRITER_DSN`, `WMK_READER_DSN` | set by compose | gateway |
@@ -153,6 +169,7 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 | `WMK_PAPERS_MAILTO`, `WMK_PAPERS_OPENALEX_API_KEY` | unset | papers: contact email for the APIs; OpenAlex search |
 | `WMK_PAPERS_GROBID_URL` | `http://grobid:8070` in compose | papers: the GROBID service that parses PDFs for `get_full_text` |
 | `WMK_UI_PORT` | `8080` | compose: the explorer's port on localhost |
+| `WMK_JWT_SECRET` | unset | compose (the explorer's API only) and `make token`: signs and verifies sign-in tokens; unset, the explorer only reads |
 
 ## Guarantees
 
@@ -167,7 +184,9 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
   `kernel.decide` as the `kernel_approver` role, which no gateway login holds. Nobody
   decides on their own proposal or on a system they are part of. Instruments (what judges
   changes) need two people. Proposals and hypotheses state no facts, so belief never counts
-  them ([ADR 0029](docs/decisions/0029-building-the-approval-channel.md)).
+  them ([ADR 0029](docs/decisions/0029-building-the-approval-channel.md)). The explorer's
+  API takes that role only for a request carrying a token signed with a secret the gateway
+  never holds ([ADR 0030](docs/decisions/0030-signing-in-to-decide.md)).
 - The log tables refuse UPDATE, DELETE and TRUNCATE for every role.
 - Projection makes no clock, random or network calls; CI replays the log and diffs.
 - No model calls in the database or in a transaction: embeddings come from the gateway.
@@ -190,10 +209,10 @@ mapped from their abstracts by any MCP harness following the core and research s
 The process pack's adapter maps event logs without people (`org:resource` is dropped) and
 checks decisions one gateway deep. The software pack maps what a repository declares and observes
 what runs on Docker (other runtimes are later readers); its self
-boundary is a set of claims, and changing the system stays with people. The approval
-channel's kernel part is built; the explorer's signed-in Proposals page and the forge
-adapter are next, so until then a decision needs a session that can take the approver
-role. Full text comes from open-access PDFs parsed by GROBID
+boundary is a set of claims, and changing the system stays with people. People decide on
+the explorer's Proposals page, signed in with a token an operator mints for them; sign-in
+through an identity provider (Forgejo, over OpenID Connect) and the forge adapter, which
+records pull requests, reviews and merges, are next. Full text comes from open-access PDFs parsed by GROBID
 ([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers
 ([ADR 0024](docs/decisions/0024-extraction-workers.md), proposed: a script moving documents
 from parser servers to the gateway with no model in between), observer runs, and the

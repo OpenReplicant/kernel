@@ -40,12 +40,16 @@ jobs:
         run: make observe-self
       - name: Replay the live log (a non-empty diff fails the build)
         run: make replay
-      - name: Start the read-only explorer (Caddy and PostgREST)
+      - name: A throwaway secret for the explorer's sign-in (ADR 0030)
+        run: echo "WMK_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Start the explorer (Caddy and PostgREST)
         run: make up-ui
-      - name: Explorer smoke (refused writes, every page in headless Chromium)
+      - name: Explorer smoke (refused writes, every page, signing in to approve in headless Chromium)
         run: |
           make ui-browser
           make ui-smoke
+      - name: Replay again, with the decision made in the explorer
+        run: make replay
       - name: Stack logs
         if: failure()
         run: docker compose logs

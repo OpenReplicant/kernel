@@ -2,9 +2,12 @@
 with `make seed`:
 
 1. The API is a reader's view: writes are refused at Caddy and in the database, and the
-   unmasked claim text and log operations stay out of reach.
+   unmasked claim text and log operations stay out of reach. Deciding needs a token.
 2. Every page loads in headless Chromium with no failed API call, no script error and no
    error view; an unknown page and an unknown id show the error view.
+3. With WMK_JWT_SECRET set (as on the stack's API service), a person signs in with a minted
+   token and approves an open proposal through the Proposals page; a forged token is
+   refused (ADR 0030).
 
     uv run --with playwright==1.56.0 python ui/smoke.py --url http://localhost:8080
 """
@@ -12,11 +15,15 @@ with `make seed`:
 from __future__ import annotations
 
 import argparse
+import os
+import secrets
 import sys
 import time
 from typing import Any
 
 import httpx
+
+from kernel.token import mint
 
 PLAYWRIGHT = "playwright==1.56.0"
 
@@ -77,6 +84,15 @@ class Smoke:
                 res.status_code in (401, 403) and "permission denied" in res.text,
                 f"GET /api/{path} is refused: readers see masked views only ({res.status_code})",
             )
+        res = self.http.post(
+            "/api/rpc/decide", json={"p_request": {"action": "approve"}}, headers={"Prefer": "tx=commit"}
+        )
+        self.check(
+            res.status_code in (401, 403) and "permission denied" in res.text,
+            f"POST /api/rpc/decide without a token is refused ({res.status_code})",
+        )
+        anonymous = self.http.post("/api/rpc/signed_in", json={})
+        self.check(anonymous.json() == {"approver": False}, "without a token nobody is signed in")
 
     # 2. Pages --------------------------------------------------------------------------
 
@@ -93,6 +109,7 @@ class Smoke:
             return []
         area = self.get(f"nodes?select=namespace&id=eq.{entity[0]['id']}")[0]["namespace"]
         pages = ["#/", "#/search/a", "#/log", f"#/log/{max(head - 5, 1)}", "#/evidence", "#/ontology"]
+        pages += ["#/proposals", "#/proposals/all"]
         pages += ["#/models", "#/graph", f"#/graph/ns:{area}"]
         pages += [f"#/graph/{n['id']}" for n in entity] + [f"#/graph/{n['id']}/1" for n in claim]
         pages += [f"#/node/{n['id']}" for n in entity + claim]
@@ -150,6 +167,63 @@ class Smoke:
                 page.close()
             browser.close()
 
+    # 3. Deciding --------------------------------------------------------------------------
+
+    def deciding(self, secret: str) -> None:
+        """Sign in with a minted token and approve an open proposal through the page."""
+        token = mint(secret, "smoke@example.test", name="Smoke Test", days=1)
+        auth = {"Authorization": f"Bearer {token}"}
+        me = self.http.post("/api/rpc/signed_in", json={}, headers=auth).json()
+        self.check(
+            me.get("approver") is True and me.get("email") == "smoke@example.test", "a minted token signs in"
+        )
+        forged = mint(secrets.token_hex(32), "smoke@example.test", days=1)
+        res = self.http.post("/api/rpc/signed_in", json={}, headers={"Authorization": f"Bearer {forged}"})
+        self.check(
+            res.status_code == 401, f"a token signed with another secret is refused ({res.status_code})"
+        )
+        open_ = self.get("proposals_view?select=id,text&status=eq.open&order=created_offset&limit=1")
+        if not open_:
+            self.check(False, "an open proposal to decide on (seed a fresh stack)")
+            return
+        proposal = open_[0]["id"]
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"{self.url}/#/proposals")
+            page.wait_for_function("document.body.dataset.state === 'ready'", timeout=15_000)
+            card = page.locator(f'article.proposal[data-id="{proposal}"]')
+            self.check(not card.locator("form.decide").count(), "signed out, the page offers no decision")
+            page.locator("button.signin-toggle").click()
+            page.locator("form.signin input").fill(token)
+            page.locator("form.signin button[type=submit]").click()
+            page.locator(".who .me").wait_for(timeout=15_000)
+            self.check(
+                page.locator(".who .me").inner_text() == "Smoke Test", "the page shows who is signed in"
+            )
+            # The token stays in the tab across a reload.
+            page.reload()
+            page.wait_for_function("document.body.dataset.state === 'ready'", timeout=15_000)
+            page.locator(".who .me").wait_for(timeout=15_000)
+            card.locator("input").fill("Checked by the smoke test.")
+            card.locator("button.approve").click()
+            page.wait_for_function(
+                "document.querySelector('.flash') && document.querySelector('.flash').offsetParent",
+                timeout=15_000,
+            )
+            flash = page.locator(".flash").inner_text()
+            self.check(
+                flash.startswith("Approved") or "approval is recorded" in flash, f"approving shows: {flash}"
+            )
+            browser.close()
+        after = self.get(f"proposals_view?select=status,approvers&id=eq.{proposal}")[0]
+        self.check(
+            after["status"] == "approved" and len(after["approvers"]) == 1,
+            "the proposal is approved in the kernel",
+        )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Smoke-check the explorer against a running stack.")
@@ -161,6 +235,11 @@ def main() -> None:
     smoke.api()
     if not args.api_only:
         smoke.pages()
+        secret = os.environ.get("WMK_JWT_SECRET", "")
+        if secret:
+            smoke.deciding(secret)
+        else:
+            print("skip deciding: WMK_JWT_SECRET is not set, so the stack verifies no tokens")
     if smoke.failures:
         sys.exit(f"{len(smoke.failures)} explorer check(s) failed")
     print("explorer: all checks passed")

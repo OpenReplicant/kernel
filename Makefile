@@ -11,13 +11,13 @@ PROJECT ?= wmk
 # The explorer's browser check (ui/smoke.py); `make ui-browser` installs its Chromium.
 PLAYWRIGHT ?= playwright==1.56.0
 
-.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self observe-self live annotated papers-smoke lint fmt
+.PHONY: help up up-otel up-research up-ui ui-smoke ui-browser down db test replay erase-scope erase eval seed map-self observe-self token live annotated papers-smoke lint fmt
 
 help:
 	@echo "make up       start db + gateway (http://localhost:8000/mcp)"
 	@echo "make up-otel  also start the OTel Collector and Jaeger (http://localhost:16686)"
 	@echo "make up-research  also start the research pack's paper-source server and its GROBID parser (http://localhost:8001/mcp)"
-	@echo "make up-ui    also start the read-only explorer (http://localhost:8080)"
+	@echo "make up-ui    also start the explorer (http://localhost:8080); with WMK_JWT_SECRET set, people sign in to decide"
 	@echo "make ui-smoke  check the explorer: refused writes, every page in Chromium (after up-ui, seed)"
 	@echo "make ui-browser  install the Chromium that ui-smoke drives (CI; needs apt for its libraries)"
 	@echo "make down     stop the stack and remove volumes"
@@ -26,6 +26,7 @@ help:
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
 	@echo "make map-self  map this repository and the kernel's self boundary into the running stack"
 	@echo "make observe-self  capture the running stack, observe it and check it for drift (after map-self)"
+	@echo "make token EMAIL=you@example.org [NAME=...]  a sign-in token for the explorer (operators; needs WMK_JWT_SECRET)"
 	@echo "make live     a real harness (headless Claude Code) runs evals/live/\$$SCENARIO (northwind, research)"
 	@echo "make annotated  a real harness maps and judges the SciFact sample; scores against its annotators (\$$MODEL)"
 	@echo "make papers-smoke  one live lookup per paper source; needs network access to the APIs"
@@ -70,6 +71,9 @@ seed:
 
 map-self:
 	uv run wmk-software map . --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --self "$(SELF)"
+
+token:
+	@uv run python -m kernel.token --email "$(EMAIL)" $(if $(NAME),--name "$(NAME)")
 
 observe-self:
 	@mkdir -p evals/out

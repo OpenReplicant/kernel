@@ -1,4 +1,5 @@
-# The explorer: static pages, and /api forwarded to PostgREST running as the reader role.
+# The explorer: static pages, and /api forwarded to PostgREST, which runs as the reader role,
+# or as the approver for a request with a verified sign-in token (ADR 0030).
 {
 	admin off
 	auto_https off
@@ -12,8 +13,9 @@
 :8080 {
 	encode gzip
 
-	# Only reads reach the API: GET for tables and views, POST only for /rpc/ functions
-	# (PostgREST also rolls back every transaction, and the reader role cannot write).
+	# Only reads and decisions reach the API: GET for tables and views, POST only for /rpc/
+	# functions. PostgREST rolls back every transaction unless a decision asks to commit; the
+	# reader role cannot write, and the approver can only call kernel.decide.
 	@reads {
 		path /api/*
 		method GET HEAD
@@ -31,7 +33,7 @@
 		reverse_proxy api:3000
 	}
 	handle /api/* {
-		respond "The explorer's API is read-only." 405
+		respond "The explorer's API only reads, and decides through /rpc/decide." 405
 	}
 
 	handle {

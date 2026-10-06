@@ -61,13 +61,18 @@ BEGIN
   IF v_agent IS NULL THEN
     v_claims := current_setting('request.jwt.claims', true)::jsonb;
     v_name := coalesce(nullif(btrim(v_claims ->> 'name'), ''), split_part(v_email, '@', 1));
+    -- The email is the identity: a person of the same name without it may be someone else,
+    -- so the new agent is recorded as distinct from them; evidence can link them later.
     v_result := kernel.write(jsonb_build_object(
       'claim', jsonb_build_object('text', format('%s signed in to decide on proposals.', v_name),
                                   'basis', 'observed', 'modality', 'descriptive'),
       'read_at_offset', kernel.head_offset(),
       'ops', jsonb_build_array(jsonb_build_object(
         'op', 'create', 'type', 'Agent', 'kind', 'human', 'name', v_name,
-        'identity', jsonb_build_object('email', v_email), 'self', true))), NULL);
+        'identity', jsonb_build_object('email', v_email), 'self', true,
+        'distinct_from', (SELECT coalesce(jsonb_agg(DISTINCT r.node_id), '[]')
+                          FROM kernel.resolve_candidates(v_name, 'Agent', 'human', '{}'::jsonb, NULL, 20) r
+                          WHERE r.band = 'high')))), NULL);
     v_agent := v_result ->> 'agent_id';
   END IF;
 
@@ -141,6 +146,22 @@ BEGIN
     'approvals', CASE WHEN v_action = 'approve' THEN cardinality(v_approvers) END,
     'needed', CASE WHEN v_action = 'approve' THEN v_needed END));
 END
+$$;
+
+-- Contract: who the session's verified token names: {"email", "agent_id" (once they have
+-- decided or been mapped), "name" (the agent's, else the token's), "approver" (whether the
+-- session acts as kernel_approver)}; only approver is present without a token. Reads only.
+CREATE FUNCTION kernel.signed_in() RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, kernel, public, pg_temp
+AS $$
+  SELECT jsonb_strip_nulls(jsonb_build_object(
+    'email', kernel.signed_in_email(),
+    'agent_id', kernel.signed_in_agent(),
+    'name', coalesce((SELECT name FROM kernel.nodes WHERE id = kernel.signed_in_agent()),
+                     CASE WHEN kernel.signed_in_email() IS NOT NULL
+                          THEN nullif(btrim(current_setting('request.jwt.claims', true)::jsonb ->> 'name'), '') END),
+    'approver', kernel.approver_session()))
 $$;
 
 RESET ROLE;

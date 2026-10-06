@@ -2,7 +2,7 @@
 #   make up                 db, the packs in $WMK_PACKS (default: all) + gateway
 #   make up-otel            also an OpenTelemetry Collector and a trace viewer (Jaeger)
 #   make up-research        also the research pack's paper-source server (arXiv, OpenAlex, Crossref)
-#   make up-ui              also the explorer on http://localhost:8080 (read-only)
+#   make up-ui              also the explorer on http://localhost:8080 (reads; with WMK_JWT_SECRET set, a signed-in person decides)
 name: wmk
 
 services:
@@ -17,6 +17,7 @@ services:
       POSTGRES_DB: wmk
       WMK_WRITER_PASSWORD: ${WMK_WRITER_PASSWORD:-writer}
       WMK_READER_PASSWORD: ${WMK_READER_PASSWORD:-reader}
+      WMK_API_PASSWORD: ${WMK_API_PASSWORD:-api}
     ports:
       # Published on localhost only: the stack has no authentication.
       - "127.0.0.1:${WMK_DB_PORT:-5432}:5432"
@@ -98,18 +99,23 @@ services:
       retries: 60
 
   api:
-    # The explorer's data: PostgREST over the kernel schema as the reader role, so it sees
-    # exactly what any reader sees and can change nothing. PostgREST 16.4, pinned by digest.
+    # The explorer's data: PostgREST over the kernel schema. Without a token it is the reader
+    # role, which sees what any reader sees and changes nothing. A token signed with
+    # WMK_JWT_SECRET and naming role kernel_approver lets a signed-in person call
+    # kernel.decide, the one write (ADR 0030). The secret is set here only, never on the
+    # gateway, and has no default: unset, the explorer stays read-only. Transactions roll
+    # back unless a decision asks to commit. PostgREST 16.4, pinned by digest.
     profiles: [ui]
     image: postgrest/postgrest@sha256:d155c6718ed9a9f990d159a2ab7c0a3f16944dbb6d0a0344557421042acfe0df
     depends_on:
       db:
         condition: service_healthy
     environment:
-      PGRST_DB_URI: postgresql://wmk_reader:${WMK_READER_PASSWORD:-reader}@db:5432/wmk
+      PGRST_DB_URI: postgresql://wmk_api:${WMK_API_PASSWORD:-api}@db:5432/wmk
       PGRST_DB_SCHEMAS: kernel
       PGRST_DB_ANON_ROLE: kernel_reader
-      PGRST_DB_TX_END: rollback
+      PGRST_JWT_SECRET: ${WMK_JWT_SECRET:-}
+      PGRST_DB_TX_END: rollback-allow-override
       PGRST_DB_MAX_ROWS: "1000"
       PGRST_SERVER_PORT: "3000"
       # Critical errors only: request lines carry search terms (invariant 9).

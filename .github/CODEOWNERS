@@ -1,0 +1,8 @@
+# Instruments: what judges changes (ADR 0019, 0029). Pull requests touching these need the
+# owner's review once branch protection requires code-owner review on main.
+/kernel/sql/            @OpenReplicant
+/evals/                 @OpenReplicant
+/packs/*/evals/         @OpenReplicant
+/packs/*/rules.yaml     @OpenReplicant
+/.github/               @OpenReplicant
+/profiles/              @OpenReplicant

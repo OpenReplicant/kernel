@@ -1,6 +1,6 @@
 # 0016. A read-only explorer over the reader role
 
-Date: 2026-10-04 · Status: accepted
+Date: 2026-10-04 · Status: accepted (amended by ADR 0030: a signed-in person decides on proposals in the explorer)
 
 ## Context
 

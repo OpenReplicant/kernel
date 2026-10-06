@@ -591,3 +591,102 @@ button {
 .quote::after {
   content: "\201D";
 }
+
+/* Signing in and deciding (ADR 0030) */
+
+.who {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.signin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: end;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.signin label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 320px;
+  font-size: 0.88rem;
+}
+
+.signin p {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.signin input,
+.decide input {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.problem.banner {
+  max-width: 1120px;
+  margin: 8px auto 0;
+}
+
+.flash {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.proposal {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.decide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.decide input {
+  flex: 1 1 260px;
+}
+
+button.approve {
+  background: var(--ok-bg);
+  border-color: transparent;
+  color: var(--ok);
+}
+
+button.reject {
+  background: var(--bad-bg);
+  border-color: transparent;
+  color: var(--bad);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
