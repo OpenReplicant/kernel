@@ -16,6 +16,8 @@ min_count: 1                        # directly-follows pairs seen fewer times ar
 views:                              # compare: each view's collections (ADR 0032); the view
   as written: ["sop:fin-007"]       # as done defaults to the log's and its conformance digest's
   as told: ["interview:nw-2026-09-15-a"]
+rank:                               # rank (ADR 0033): each factor's weight, 1 when not given
+  weights: {waiting: 2, rework: 1}
 """
 
 from __future__ import annotations
@@ -30,6 +32,8 @@ import yaml
 from wmk_process import logs
 
 AS_DONE = "as done"
+# What rank scores each step on (ADR 0033), in the order it prints them.
+FACTORS = ("volume", "waiting", "rework", "handoffs", "rule", "system")
 
 
 class ConfigError(ValueError):
@@ -50,6 +54,7 @@ class Config:
     labels: dict[str, str] = field(default_factory=dict)
     min_count: int = 1
     views: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    weights: dict[str, float] = field(default_factory=lambda: dict.fromkeys(FACTORS, 1.0))
 
     @property
     def slug(self) -> str:
@@ -100,7 +105,17 @@ def load(path: Path | str) -> Config:
         raw: dict[str, Any] = yaml.safe_load(path.read_text()) or {}
     except (OSError, yaml.YAMLError) as exc:
         raise ConfigError(f"cannot read {path}: {exc}") from exc
-    unknown = set(raw) - {"process", "log", "case_object", "system", "origin", "labels", "min_count", "views"}
+    unknown = set(raw) - {
+        "process",
+        "log",
+        "case_object",
+        "system",
+        "origin",
+        "labels",
+        "min_count",
+        "views",
+        "rank",
+    }
     if unknown:
         raise ConfigError(f"{path.name}: unknown keys {', '.join(sorted(unknown))}")
     log = raw.get("log") or {}
@@ -126,6 +141,17 @@ def load(path: Path | str) -> Config:
         isinstance(v, list) and v and all(isinstance(c, str) and c for c in v) for v in views.values()
     ):
         raise ConfigError(f"{path.name}: views must map each view's name to a list of collections")
+    rank = raw.get("rank") or {}
+    given = rank.get("weights") or {} if isinstance(rank, dict) else None
+    if (
+        not isinstance(given, dict)
+        or set(rank) - {"weights"}
+        or set(given) - set(FACTORS)
+        or not all(isinstance(w, int | float) and not isinstance(w, bool) and w >= 0 for w in given.values())
+    ):
+        raise ConfigError(
+            f"{path.name}: rank takes weights, a map from {', '.join(FACTORS)} to numbers of 0 or more"
+        )
     return Config(
         process=str(raw["process"]),
         file=file,
@@ -139,4 +165,5 @@ def load(path: Path | str) -> Config:
         labels={str(k): str(v) for k, v in (raw.get("labels") or {}).items()},
         min_count=min_count,
         views={str(k): tuple(v) for k, v in views.items()},
+        weights={f: float(given.get(f, 1)) for f in FACTORS},
     )

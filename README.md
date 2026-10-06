@@ -32,7 +32,7 @@ changes to what it deployed, which a person approves.
 ```sh
 make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
 make seed      # optional: write the eval fixtures through the gateway
-make northwind # optional: Northwind's purchase requests as written, told and done, compared
+make northwind # optional: Northwind's purchase requests as written, told and done, compared, ranked
 make replay    # rebuild the graph from the log and diff it against the live graph
 make up-ui     # optional: the explorer on http://localhost:8080
 make map-self  # optional: map this repository and the kernel's own boundary (software pack)
@@ -118,6 +118,23 @@ Contested (some source asserts, some denies):
   as done denies.
 ```
 
+`uv run wmk-process rank <config> --url ...` then scores each step on what the kernel holds:
+volume, time since the previous event, rework, handoffs between roles, routing rules some
+source denies, and whether a system runs it. Every input sits next to its factor, and the
+contested facts to settle first are listed with it
+([ADR 0033](docs/decisions/0033-ranking-what-to-automate.md)):
+
+```text
+2. Approve purchase request: 3.84
+   volume    0.26  36 executions
+   waiting   0.57  1958.2 hours in total since the case's previous event, median 52.2
+   rework    0.00  0 repeats
+   handoffs  1.00  36 after another role's step
+   rule      1.00  Over 10,000 euros? -> Approve purchase request, when amount > 10000 [contested]
+   system    1.00  Coupa
+   settle first: Over 10,000 euros? -> Approve purchase request, when amount > 10000 [contested]
+```
+
 ## The tools
 
 | Tool | Tier | Does |
@@ -181,7 +198,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make annotated` | Extraction measured against annotators we are not: a real harness maps 30 SciFact abstracts blind, then judges a claim against each from the graph alone. Reports verdict accuracy, evidence capture, rationale precision and recall and calibration, with 95% intervals (about US$15 with Sonnet; `MODEL=` picks the model; results in [evals/annotated/RESULTS.md](evals/annotated/RESULTS.md)). Not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
-| `make northwind` | Northwind's purchase requests: the SOP and interviews (the `northwind-views` fixture, unless `make seed` played it), the log mapped onto the same nodes and checked against them, and where the three views disagree |
+| `make northwind` | Northwind's purchase requests: the SOP and interviews (the `northwind-views` fixture, unless `make seed` played it), the log mapped onto the same nodes and checked against them, where the three views disagree, and its steps ranked for automation |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make observe-self` | Capture the running stack from Docker, observe it and check it for drift against what `map-self` declared (`PROJECT=` names the Compose project) |
 | `make forge-self` | Capture this repository's pull requests from GitHub, map them, and audit its changes and deployments for approval (after `map-self` and `observe-self`; `FORGE_REPO=` names another repository, `FORGE_CAPTURE=` replays a recorded capture without the network) |

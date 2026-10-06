@@ -69,6 +69,10 @@ ADR, then code. In this order:
    deliverable. For Northwind (ADR 0032, built), the SOP and two interviews are a scripted
    fixture (`northwind-views`) until the extractor reads them, and `wmk-process compare`
    reports each view's stance on every step and flow; `make northwind` runs all of it.
+   Choosing what to automate (ADR 0033, built): `discover` also measures each step's
+   repeats, time since the previous event and handoffs, and `wmk-process rank` scores the
+   steps from what the kernel holds, every input shown, with the contested facts to
+   settle first. It writes nothing; the choice is a person's, made later as a proposal.
    `bpm-reference` stays as the kernel's test pack.
 2. **Sysops and self** (ADR 0028, built for Docker in the software pack). Extends the
    software pack from what a repository declares to what runs: deployments, versions,
@@ -98,6 +102,12 @@ ADR, then code. In this order:
 5. **The demo and its write-up.** `make demo` runs the loop on Northwind end to end, with
    the extractor (item below) and scripted fallbacks so CI can run it; a short video and a
    write-up with honest numbers.
+
+**Build order from here (ADR 0033).** The discovery deliverables come before any runtime:
+ranking (built), then the discovery report (the map, the disagreements, the measures and
+the ranking, each sentence with its sources), then intake from a client's folder (documents,
+transcripts and exports through the parsers, the extractor and the adapters), then the
+Operaton workflow adapter (item 4), then `make demo` (item 5).
 
 Also in scope:
 
@@ -151,7 +161,7 @@ Keep these working; add `make demo` in Phase 3.
 - `make up-ui`, `make ui-smoke` — the explorer and its smoke check
 - `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
 - `make northwind` — Northwind's purchase requests as written, told and done, the log
-  checked against them, and where the views disagree
+  checked against them, where the views disagree, and what to automate first
 - `make observe-self` — capture the running stack, observe it and check it for drift
 - `make forge-self` — capture this repository's pull requests, map them and audit its
   changes for approval (`FORGE_CAPTURE=` replays a recorded capture, as CI does)

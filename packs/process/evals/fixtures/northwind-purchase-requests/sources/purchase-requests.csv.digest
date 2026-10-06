@@ -4,14 +4,14 @@ Cases: 120 (purchase requests), 543 events, from 2026-01-02 to 2026-09-29
 System: Coupa
 Median cycle time: 3.0 days (first to last event of a case)
 
-Steps (executions, cases, roles):
-- Review purchase request (label PR_REVIEW): 137 executions in 120 cases; roles: line manager 137
-- Submit purchase request (label PR_SUBMIT): 120 executions in 120 cases; roles: requester 120
-- Create purchase order (label PO_CREATE): 113 executions in 113 cases; roles: procurement 113
-- Send purchase order (label PO_SEND): 113 executions in 113 cases; roles: procurement 113
-- Approve purchase request (label PR_APPROVE): 36 executions in 36 cases; roles: finance controller 36
-- Revise purchase request (label PR_REVISE): 17 executions in 17 cases; roles: requester 17
-- Reject purchase request (label PR_REJECT): 7 executions in 7 cases; roles: line manager 7
+Steps (executions, cases, repeats, hours since the case's previous event, handoffs from another role, roles):
+- Review purchase request (label PR_REVIEW): 137 executions in 120 cases (17 repeats); 23.1 hours median and 3418.2 hours in total since the case's previous event; 137 handoffs from another role; roles: line manager 137
+- Submit purchase request (label PR_SUBMIT): 120 executions in 120 cases (0 repeats); roles: requester 120
+- Create purchase order (label PO_CREATE): 113 executions in 113 cases (0 repeats); 18.6 hours median and 2202.3 hours in total since the case's previous event; 113 handoffs from another role; roles: procurement 113
+- Send purchase order (label PO_SEND): 113 executions in 113 cases (0 repeats); 12.0 hours median and 1337.7 hours in total since the case's previous event; 0 handoffs from another role; roles: procurement 113
+- Approve purchase request (label PR_APPROVE): 36 executions in 36 cases (0 repeats); 52.2 hours median and 1958.2 hours in total since the case's previous event; 36 handoffs from another role; roles: finance controller 36
+- Revise purchase request (label PR_REVISE): 17 executions in 17 cases (0 repeats); 42.7 hours median and 731.9 hours in total since the case's previous event; 17 handoffs from another role; roles: requester 17
+- Reject purchase request (label PR_REJECT): 7 executions in 7 cases (0 repeats); 2.0 hours median and 12.8 hours in total since the case's previous event; 0 handoffs from another role; roles: line manager 7
 
 Directly follows (times, cases, example cases):
 - Submit purchase request -> Review purchase request: 120 times in 120 cases (PR-1001, PR-1002, PR-1003)
