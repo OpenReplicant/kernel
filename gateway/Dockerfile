@@ -10,10 +10,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
-# The workspace's pack members must be present to resolve the lock; only the kernel's own
-# dependencies are installed (no dev group, no pack packages).
+# The workspace's members (packs and the adapter kit) must be present to resolve the lock;
+# only the kernel's own dependencies are installed (no dev group, no pack packages).
 COPY pyproject.toml uv.lock README.md ./
 COPY packs ./packs
+COPY adapter-kit ./adapter-kit
 RUN uv sync --frozen --no-default-groups --no-install-project
 
 COPY kernel ./kernel

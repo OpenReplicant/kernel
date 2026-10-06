@@ -4,6 +4,7 @@ version = "0.3.0"
 description = "The software pack's adapter: maps a repository's compose files, Dockerfiles, pyproject.toml, CI workflows and git history into the World Model Kernel through its gateway."
 requires-python = ">=3.12"
 dependencies = [
+    "wmk-adapter-kit",
     "anyio>=4.5,<5",
     "mcp>=2.3,<3",
     "pyyaml>=6.0,<7",

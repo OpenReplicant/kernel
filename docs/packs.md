@@ -4,7 +4,7 @@ A pack specialises the kernel for a domain: it adds kinds, edge specialisations 
 teaches agents the domain with a skill, and may ship servers that fetch outside data. The
 kernel enforces its rules; it never adds node types or kernel edges
 ([ADR 0015](decisions/0015-packs-declare-their-ontology.md)). `packs/research/` is the
-worked example with a server; `packs/software/` the one with an adapter;
+worked example with a server; `packs/software/` and `packs/process/` the ones with adapters;
 `packs/bpm-reference/` is the kernel's own test pack.
 
 ## Layout
@@ -137,12 +137,18 @@ newer version supersedes the older one, and map each changed file in an extracti
 closing the run retracts what the previous run found and this one did not
 ([ADR 0020](decisions/0020-quotes-and-extraction-runs.md)).
 Render the plan as an eval fixture script and score it against a hand-written expected
-graph. `packs/software/adapter/` (`wmk-software`) is the example
-([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md)).
+graph. The plan, the code that plays it through the gateway and the script renderer are
+shared: `adapter-kit/` (`wmk_adapter.plan`, `.apply`, `.script`; a workspace member your
+adapter depends on). A plan can also assert on, or deny, an edge that already exists by its
+`edge_id` (`Plan.on_edge`), which is how a check against the mapped model records its
+verdicts. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
+(`wmk-process`, which reads event logs and checks the mapped process against them) are the
+examples ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md),
+[ADR 0027](decisions/0027-process-pack-and-event-logs.md)).
 
 ## Moving a pack out of this repository
 
-A pack folder depends only on the manifest format, the gateway's tools, `kernel.testing` and
-the eval runners. To move one: copy the folder, depend on the kernel package for tests and
+A pack folder depends only on the manifest format, the gateway's tools, `kernel.testing`,
+the eval runners and, for an adapter, the adapter kit. To move one: copy the folder, depend on the kernel package for tests and
 evals, point `WMK_PACKS` at its path, and run its tests against a kernel database. Not
 built yet: a registry, fetching packs by URL, and pack SQL in a pack's own schema.

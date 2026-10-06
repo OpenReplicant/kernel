@@ -1,0 +1,544 @@
+case_id,activity,timestamp,role,resource,amount,category,urgent
+PR-1001,PR_SUBMIT,2026-01-02T09:07:00Z,requester,u015,32050,packaging,false
+PR-1002,PR_SUBMIT,2026-01-02T15:37:00Z,requester,u020,38200,equipment,false
+PR-1001,PR_REVIEW,2026-01-03T18:29:00Z,line manager,u101,32050,packaging,false
+PR-1002,PR_REVIEW,2026-01-04T13:12:00Z,line manager,u102,38200,equipment,false
+PR-1003,PR_SUBMIT,2026-01-06T15:43:00Z,requester,u011,42900,equipment,false
+PR-1002,PR_APPROVE,2026-01-07T07:49:00Z,finance controller,u201,38200,equipment,false
+PR-1001,PR_APPROVE,2026-01-07T09:10:00Z,finance controller,u201,32050,packaging,false
+PR-1004,PR_SUBMIT,2026-01-07T09:24:00Z,requester,u032,2100,it,false
+PR-1003,PR_REVIEW,2026-01-07T23:38:00Z,line manager,u101,42900,equipment,false
+PR-1003,PR_REJECT,2026-01-08T00:41:00Z,line manager,u101,42900,equipment,false
+PR-1001,PO_CREATE,2026-01-08T14:30:00Z,procurement,u302,32050,packaging,false
+PR-1002,PO_CREATE,2026-01-08T18:36:00Z,procurement,u301,38200,equipment,false
+PR-1001,PO_SEND,2026-01-08T20:54:00Z,procurement,u302,32050,packaging,false
+PR-1004,PR_REVIEW,2026-01-09T07:16:00Z,line manager,u103,2100,it,false
+PR-1002,PO_SEND,2026-01-09T07:31:00Z,procurement,u301,38200,equipment,false
+PR-1005,PR_SUBMIT,2026-01-09T16:21:00Z,requester,u038,6050,it,false
+PR-1005,PR_REVIEW,2026-01-10T05:16:00Z,line manager,u103,6050,it,false
+PR-1004,PO_CREATE,2026-01-10T14:56:00Z,procurement,u302,2100,it,false
+PR-1004,PO_SEND,2026-01-11T00:40:00Z,procurement,u302,2100,it,false
+PR-1005,PO_CREATE,2026-01-11T15:43:00Z,procurement,u301,6050,it,false
+PR-1006,PR_SUBMIT,2026-01-12T08:32:00Z,requester,u030,9150,ingredients,false
+PR-1005,PO_SEND,2026-01-12T11:28:00Z,procurement,u301,6050,it,false
+PR-1006,PR_REVIEW,2026-01-12T16:58:00Z,line manager,u102,9150,ingredients,false
+PR-1006,PO_CREATE,2026-01-13T20:03:00Z,procurement,u301,9150,ingredients,false
+PR-1006,PO_SEND,2026-01-13T23:32:00Z,procurement,u301,9150,ingredients,false
+PR-1007,PR_SUBMIT,2026-01-15T11:41:00Z,requester,u019,7000,facilities,false
+PR-1008,PR_SUBMIT,2026-01-16T10:33:00Z,requester,u019,30400,equipment,false
+PR-1007,PR_REVIEW,2026-01-17T09:45:00Z,line manager,u101,7000,facilities,false
+PR-1008,PR_REVIEW,2026-01-17T23:12:00Z,line manager,u101,30400,equipment,false
+PR-1007,PO_CREATE,2026-01-18T20:39:00Z,procurement,u301,7000,facilities,false
+PR-1007,PO_SEND,2026-01-19T00:14:00Z,procurement,u301,7000,facilities,false
+PR-1008,PR_APPROVE,2026-01-19T12:00:00Z,finance controller,u201,30400,equipment,false
+PR-1008,PO_CREATE,2026-01-20T01:42:00Z,procurement,u302,30400,equipment,false
+PR-1008,PO_SEND,2026-01-20T05:57:00Z,procurement,u302,30400,equipment,false
+PR-1009,PR_SUBMIT,2026-01-20T15:55:00Z,requester,u030,9750,facilities,false
+PR-1010,PR_SUBMIT,2026-01-20T16:56:00Z,requester,u026,2050,ingredients,true
+PR-1010,PR_REVIEW,2026-01-22T10:06:00Z,line manager,u101,2050,ingredients,true
+PR-1009,PR_REVIEW,2026-01-22T13:17:00Z,line manager,u104,9750,facilities,false
+PR-1010,PR_REVISE,2026-01-23T16:15:00Z,requester,u026,2050,ingredients,true
+PR-1009,PO_CREATE,2026-01-23T16:36:00Z,procurement,u301,9750,facilities,false
+PR-1009,PO_SEND,2026-01-23T18:28:00Z,procurement,u301,9750,facilities,false
+PR-1010,PR_REVIEW,2026-01-24T13:39:00Z,line manager,u101,2050,ingredients,true
+PR-1010,PO_CREATE,2026-01-24T22:23:00Z,procurement,u301,2050,ingredients,true
+PR-1010,PO_SEND,2026-01-25T22:02:00Z,procurement,u301,2050,ingredients,true
+PR-1011,PR_SUBMIT,2026-01-26T08:26:00Z,requester,u029,9500,equipment,true
+PR-1011,PR_REVIEW,2026-01-27T17:12:00Z,line manager,u103,9500,equipment,true
+PR-1011,PO_CREATE,2026-01-28T15:20:00Z,procurement,u301,9500,equipment,true
+PR-1011,PO_SEND,2026-01-28T22:09:00Z,procurement,u301,9500,equipment,true
+PR-1012,PR_SUBMIT,2026-01-30T08:53:00Z,requester,u012,6000,equipment,false
+PR-1012,PR_REVIEW,2026-01-31T23:20:00Z,line manager,u101,6000,equipment,false
+PR-1012,PO_CREATE,2026-02-01T12:24:00Z,procurement,u302,6000,equipment,false
+PR-1012,PO_SEND,2026-02-02T04:41:00Z,procurement,u302,6000,equipment,false
+PR-1013,PR_SUBMIT,2026-02-03T11:15:00Z,requester,u020,32600,equipment,false
+PR-1013,PR_REVIEW,2026-02-04T09:27:00Z,line manager,u104,32600,equipment,false
+PR-1014,PR_SUBMIT,2026-02-06T14:57:00Z,requester,u024,7750,packaging,false
+PR-1014,PR_REVIEW,2026-02-07T14:22:00Z,line manager,u102,7750,packaging,false
+PR-1013,PR_APPROVE,2026-02-07T22:08:00Z,finance controller,u201,32600,equipment,false
+PR-1014,PO_CREATE,2026-02-08T21:24:00Z,procurement,u302,7750,packaging,false
+PR-1013,PO_CREATE,2026-02-09T07:37:00Z,procurement,u301,32600,equipment,false
+PR-1014,PO_SEND,2026-02-09T08:44:00Z,procurement,u302,7750,packaging,false
+PR-1015,PR_SUBMIT,2026-02-09T15:44:00Z,requester,u014,42550,equipment,false
+PR-1013,PO_SEND,2026-02-10T02:07:00Z,procurement,u301,32600,equipment,false
+PR-1015,PR_REVIEW,2026-02-10T08:06:00Z,line manager,u101,42550,equipment,false
+PR-1016,PR_SUBMIT,2026-02-10T12:06:00Z,requester,u039,8850,it,false
+PR-1017,PR_SUBMIT,2026-02-10T14:30:00Z,requester,u030,3400,facilities,true
+PR-1015,PR_APPROVE,2026-02-10T21:55:00Z,finance controller,u201,42550,equipment,false
+PR-1016,PR_REVIEW,2026-02-11T11:14:00Z,line manager,u102,8850,it,false
+PR-1015,PO_CREATE,2026-02-12T01:04:00Z,procurement,u302,42550,equipment,false
+PR-1017,PR_REVIEW,2026-02-12T07:16:00Z,line manager,u104,3400,facilities,true
+PR-1016,PO_CREATE,2026-02-12T14:38:00Z,procurement,u302,8850,it,false
+PR-1016,PO_SEND,2026-02-12T16:04:00Z,procurement,u302,8850,it,false
+PR-1015,PO_SEND,2026-02-12T17:38:00Z,procurement,u302,42550,equipment,false
+PR-1017,PO_CREATE,2026-02-12T22:38:00Z,procurement,u302,3400,facilities,true
+PR-1017,PO_SEND,2026-02-13T00:41:00Z,procurement,u302,3400,facilities,true
+PR-1018,PR_SUBMIT,2026-02-13T12:35:00Z,requester,u020,16650,equipment,false
+PR-1018,PR_REVIEW,2026-02-15T03:04:00Z,line manager,u101,16650,equipment,false
+PR-1018,PR_APPROVE,2026-02-15T21:42:00Z,finance controller,u201,16650,equipment,false
+PR-1019,PR_SUBMIT,2026-02-16T14:32:00Z,requester,u024,15350,packaging,true
+PR-1018,PO_CREATE,2026-02-17T00:06:00Z,procurement,u302,16650,equipment,false
+PR-1020,PR_SUBMIT,2026-02-17T08:48:00Z,requester,u033,31950,facilities,true
+PR-1021,PR_SUBMIT,2026-02-17T13:32:00Z,requester,u014,3400,it,true
+PR-1018,PO_SEND,2026-02-17T13:35:00Z,procurement,u302,16650,equipment,false
+PR-1022,PR_SUBMIT,2026-02-17T13:55:00Z,requester,u011,5300,facilities,false
+PR-1023,PR_SUBMIT,2026-02-17T16:50:00Z,requester,u020,6850,it,false
+PR-1019,PR_REVIEW,2026-02-17T21:30:00Z,line manager,u102,15350,packaging,true
+PR-1019,PO_CREATE,2026-02-18T02:47:00Z,procurement,u302,15350,packaging,true
+PR-1019,PO_SEND,2026-02-18T05:40:00Z,procurement,u302,15350,packaging,true
+PR-1024,PR_SUBMIT,2026-02-18T09:43:00Z,requester,u023,550,packaging,false
+PR-1025,PR_SUBMIT,2026-02-18T12:49:00Z,requester,u027,4850,it,false
+PR-1023,PR_REVIEW,2026-02-18T13:11:00Z,line manager,u103,6850,it,false
+PR-1021,PR_REVIEW,2026-02-18T15:05:00Z,line manager,u101,3400,it,true
+PR-1025,PR_REVIEW,2026-02-19T00:10:00Z,line manager,u102,4850,it,false
+PR-1021,PO_CREATE,2026-02-19T02:05:00Z,procurement,u302,3400,it,true
+PR-1022,PR_REVIEW,2026-02-19T07:59:00Z,line manager,u104,5300,facilities,false
+PR-1020,PR_REVIEW,2026-02-19T08:17:00Z,line manager,u102,31950,facilities,true
+PR-1025,PO_CREATE,2026-02-19T09:03:00Z,procurement,u301,4850,it,false
+PR-1021,PO_SEND,2026-02-19T09:31:00Z,procurement,u302,3400,it,true
+PR-1020,PO_CREATE,2026-02-19T11:23:00Z,procurement,u302,31950,facilities,true
+PR-1024,PR_REVIEW,2026-02-19T12:42:00Z,line manager,u102,550,packaging,false
+PR-1020,PO_SEND,2026-02-19T13:56:00Z,procurement,u302,31950,facilities,true
+PR-1019,PR_APPROVE,2026-02-19T16:02:00Z,finance controller,u201,15350,packaging,true
+PR-1024,PO_CREATE,2026-02-19T21:45:00Z,procurement,u302,550,packaging,false
+PR-1025,PO_SEND,2026-02-20T04:51:00Z,procurement,u301,4850,it,false
+PR-1023,PR_REVISE,2026-02-20T10:54:00Z,requester,u020,6850,it,false
+PR-1024,PO_SEND,2026-02-20T14:25:00Z,procurement,u302,550,packaging,false
+PR-1022,PO_CREATE,2026-02-20T19:23:00Z,procurement,u302,5300,facilities,false
+PR-1022,PO_SEND,2026-02-21T10:38:00Z,procurement,u302,5300,facilities,false
+PR-1023,PR_REVIEW,2026-02-21T16:35:00Z,line manager,u103,6850,it,false
+PR-1020,PR_APPROVE,2026-02-22T12:48:00Z,finance controller,u201,31950,facilities,true
+PR-1023,PO_CREATE,2026-02-22T17:03:00Z,procurement,u302,6850,it,false
+PR-1026,PR_SUBMIT,2026-02-23T12:32:00Z,requester,u018,950,ingredients,false
+PR-1023,PO_SEND,2026-02-23T15:21:00Z,procurement,u302,6850,it,false
+PR-1027,PR_SUBMIT,2026-02-23T16:14:00Z,requester,u023,9800,packaging,true
+PR-1026,PR_REVIEW,2026-02-25T09:59:00Z,line manager,u103,950,ingredients,false
+PR-1028,PR_SUBMIT,2026-02-25T12:01:00Z,requester,u014,5400,equipment,true
+PR-1027,PR_REVIEW,2026-02-25T12:26:00Z,line manager,u104,9800,packaging,true
+PR-1026,PO_CREATE,2026-02-25T18:46:00Z,procurement,u302,950,ingredients,false
+PR-1026,PO_SEND,2026-02-25T23:48:00Z,procurement,u302,950,ingredients,false
+PR-1028,PR_REVIEW,2026-02-26T13:09:00Z,line manager,u101,5400,equipment,true
+PR-1029,PR_SUBMIT,2026-02-26T15:56:00Z,requester,u016,1350,it,false
+PR-1027,PO_CREATE,2026-02-26T20:56:00Z,procurement,u302,9800,packaging,true
+PR-1027,PO_SEND,2026-02-27T00:13:00Z,procurement,u302,9800,packaging,true
+PR-1029,PR_REVIEW,2026-02-27T07:08:00Z,line manager,u102,1350,it,false
+PR-1029,PO_CREATE,2026-02-27T16:52:00Z,procurement,u302,1350,it,false
+PR-1028,PR_REVISE,2026-02-27T22:19:00Z,requester,u014,5400,equipment,true
+PR-1029,PO_SEND,2026-02-28T16:40:00Z,procurement,u302,1350,it,false
+PR-1028,PR_REVIEW,2026-03-01T05:26:00Z,line manager,u101,5400,equipment,true
+PR-1028,PO_CREATE,2026-03-01T20:29:00Z,procurement,u302,5400,equipment,true
+PR-1028,PO_SEND,2026-03-01T22:19:00Z,procurement,u302,5400,equipment,true
+PR-1030,PR_SUBMIT,2026-03-03T13:35:00Z,requester,u032,5600,equipment,false
+PR-1031,PR_SUBMIT,2026-03-05T09:07:00Z,requester,u032,1650,equipment,false
+PR-1030,PR_REVIEW,2026-03-05T12:13:00Z,line manager,u102,5600,equipment,false
+PR-1031,PR_REVIEW,2026-03-05T18:53:00Z,line manager,u102,1650,equipment,false
+PR-1030,PO_CREATE,2026-03-05T19:52:00Z,procurement,u302,5600,equipment,false
+PR-1031,PO_CREATE,2026-03-06T00:38:00Z,procurement,u302,1650,equipment,false
+PR-1030,PO_SEND,2026-03-06T17:31:00Z,procurement,u302,5600,equipment,false
+PR-1031,PO_SEND,2026-03-06T23:58:00Z,procurement,u302,1650,equipment,false
+PR-1032,PR_SUBMIT,2026-03-09T09:43:00Z,requester,u033,8300,equipment,false
+PR-1032,PR_REVIEW,2026-03-10T07:43:00Z,line manager,u103,8300,equipment,false
+PR-1033,PR_SUBMIT,2026-03-10T08:41:00Z,requester,u021,51100,packaging,true
+PR-1034,PR_SUBMIT,2026-03-10T12:29:00Z,requester,u024,9850,ingredients,false
+PR-1033,PR_REVIEW,2026-03-11T05:47:00Z,line manager,u104,51100,packaging,true
+PR-1034,PR_REVIEW,2026-03-11T08:13:00Z,line manager,u104,9850,ingredients,false
+PR-1033,PR_REJECT,2026-03-11T09:08:00Z,line manager,u104,51100,packaging,true
+PR-1032,PO_CREATE,2026-03-11T14:44:00Z,procurement,u302,8300,equipment,false
+PR-1032,PO_SEND,2026-03-12T03:03:00Z,procurement,u302,8300,equipment,false
+PR-1034,PO_CREATE,2026-03-12T14:24:00Z,procurement,u301,9850,ingredients,false
+PR-1034,PO_SEND,2026-03-12T22:21:00Z,procurement,u301,9850,ingredients,false
+PR-1035,PR_SUBMIT,2026-03-13T08:22:00Z,requester,u028,12600,it,true
+PR-1035,PR_REVIEW,2026-03-14T05:51:00Z,line manager,u101,12600,it,true
+PR-1035,PO_CREATE,2026-03-14T10:17:00Z,procurement,u302,12600,it,true
+PR-1035,PO_SEND,2026-03-14T11:25:00Z,procurement,u302,12600,it,true
+PR-1035,PR_APPROVE,2026-03-16T17:59:00Z,finance controller,u201,12600,it,true
+PR-1036,PR_SUBMIT,2026-03-18T14:09:00Z,requester,u037,30550,facilities,true
+PR-1036,PR_REVIEW,2026-03-18T19:44:00Z,line manager,u103,30550,facilities,true
+PR-1037,PR_SUBMIT,2026-03-19T16:03:00Z,requester,u026,9000,packaging,false
+PR-1038,PR_SUBMIT,2026-03-20T12:44:00Z,requester,u025,5050,ingredients,false
+PR-1037,PR_REVIEW,2026-03-20T14:56:00Z,line manager,u103,9000,packaging,false
+PR-1037,PO_CREATE,2026-03-21T01:37:00Z,procurement,u302,9000,packaging,false
+PR-1037,PO_SEND,2026-03-21T05:24:00Z,procurement,u302,9000,packaging,false
+PR-1038,PR_REVIEW,2026-03-21T10:09:00Z,line manager,u102,5050,ingredients,false
+PR-1036,PR_REVISE,2026-03-21T17:58:00Z,requester,u037,30550,facilities,true
+PR-1036,PR_REVIEW,2026-03-22T22:14:00Z,line manager,u103,30550,facilities,true
+PR-1036,PO_CREATE,2026-03-23T01:16:00Z,procurement,u302,30550,facilities,true
+PR-1038,PR_REVISE,2026-03-23T02:04:00Z,requester,u025,5050,ingredients,false
+PR-1036,PO_SEND,2026-03-23T03:46:00Z,procurement,u302,30550,facilities,true
+PR-1038,PR_REVIEW,2026-03-23T11:14:00Z,line manager,u102,5050,ingredients,false
+PR-1038,PO_CREATE,2026-03-24T00:22:00Z,procurement,u302,5050,ingredients,false
+PR-1038,PO_SEND,2026-03-24T11:24:00Z,procurement,u302,5050,ingredients,false
+PR-1036,PR_APPROVE,2026-03-25T10:42:00Z,finance controller,u201,30550,facilities,true
+PR-1039,PR_SUBMIT,2026-03-26T11:00:00Z,requester,u015,500,facilities,false
+PR-1039,PR_REVIEW,2026-03-27T16:06:00Z,line manager,u101,500,facilities,false
+PR-1039,PO_CREATE,2026-03-28T11:10:00Z,procurement,u301,500,facilities,false
+PR-1039,PO_SEND,2026-03-29T06:47:00Z,procurement,u301,500,facilities,false
+PR-1040,PR_SUBMIT,2026-03-31T09:40:00Z,requester,u017,5500,ingredients,false
+PR-1040,PR_REVIEW,2026-03-31T16:40:00Z,line manager,u102,5500,ingredients,false
+PR-1040,PO_CREATE,2026-04-02T01:55:00Z,procurement,u302,5500,ingredients,false
+PR-1040,PO_SEND,2026-04-02T05:02:00Z,procurement,u302,5500,ingredients,false
+PR-1041,PR_SUBMIT,2026-04-02T09:35:00Z,requester,u013,57150,facilities,true
+PR-1042,PR_SUBMIT,2026-04-03T08:19:00Z,requester,u030,800,packaging,false
+PR-1041,PR_REVIEW,2026-04-03T14:07:00Z,line manager,u104,57150,facilities,true
+PR-1042,PR_REVIEW,2026-04-04T01:10:00Z,line manager,u101,800,packaging,false
+PR-1042,PR_REVISE,2026-04-06T02:13:00Z,requester,u030,800,packaging,false
+PR-1042,PR_REVIEW,2026-04-06T08:22:00Z,line manager,u101,800,packaging,false
+PR-1041,PR_REVISE,2026-04-06T11:42:00Z,requester,u013,57150,facilities,true
+PR-1042,PO_CREATE,2026-04-07T16:47:00Z,procurement,u301,800,packaging,false
+PR-1041,PR_REVIEW,2026-04-07T23:02:00Z,line manager,u104,57150,facilities,true
+PR-1042,PO_SEND,2026-04-08T10:34:00Z,procurement,u301,800,packaging,false
+PR-1043,PR_SUBMIT,2026-04-09T13:59:00Z,requester,u017,43000,facilities,false
+PR-1043,PR_REVIEW,2026-04-11T06:12:00Z,line manager,u104,43000,facilities,false
+PR-1041,PR_APPROVE,2026-04-11T14:48:00Z,finance controller,u201,57150,facilities,true
+PR-1041,PO_CREATE,2026-04-13T01:46:00Z,procurement,u301,57150,facilities,true
+PR-1043,PR_APPROVE,2026-04-13T09:10:00Z,finance controller,u201,43000,facilities,false
+PR-1041,PO_SEND,2026-04-13T17:47:00Z,procurement,u301,57150,facilities,true
+PR-1043,PO_CREATE,2026-04-13T21:31:00Z,procurement,u302,43000,facilities,false
+PR-1043,PO_SEND,2026-04-13T23:03:00Z,procurement,u302,43000,facilities,false
+PR-1044,PR_SUBMIT,2026-04-16T08:02:00Z,requester,u015,1300,facilities,false
+PR-1045,PR_SUBMIT,2026-04-16T13:09:00Z,requester,u012,6150,equipment,true
+PR-1046,PR_SUBMIT,2026-04-16T16:08:00Z,requester,u025,8950,packaging,false
+PR-1044,PR_REVIEW,2026-04-16T23:04:00Z,line manager,u102,1300,facilities,false
+PR-1046,PR_REVIEW,2026-04-17T02:55:00Z,line manager,u101,8950,packaging,false
+PR-1047,PR_SUBMIT,2026-04-17T14:34:00Z,requester,u010,4750,facilities,true
+PR-1044,PO_CREATE,2026-04-17T16:20:00Z,procurement,u302,1300,facilities,false
+PR-1046,PO_CREATE,2026-04-18T03:20:00Z,procurement,u302,8950,packaging,false
+PR-1047,PR_REVIEW,2026-04-18T05:38:00Z,line manager,u103,4750,facilities,true
+PR-1045,PR_REVIEW,2026-04-18T12:19:00Z,line manager,u102,6150,equipment,true
+PR-1044,PO_SEND,2026-04-18T15:57:00Z,procurement,u302,1300,facilities,false
+PR-1046,PO_SEND,2026-04-18T19:49:00Z,procurement,u302,8950,packaging,false
+PR-1047,PO_CREATE,2026-04-19T04:59:00Z,procurement,u302,4750,facilities,true
+PR-1045,PO_CREATE,2026-04-19T18:47:00Z,procurement,u301,6150,equipment,true
+PR-1047,PO_SEND,2026-04-19T19:19:00Z,procurement,u302,4750,facilities,true
+PR-1045,PO_SEND,2026-04-20T06:47:00Z,procurement,u301,6150,equipment,true
+PR-1048,PR_SUBMIT,2026-04-21T13:18:00Z,requester,u010,2450,facilities,false
+PR-1048,PR_REVIEW,2026-04-22T08:53:00Z,line manager,u101,2450,facilities,false
+PR-1048,PO_CREATE,2026-04-22T21:15:00Z,procurement,u301,2450,facilities,false
+PR-1048,PO_SEND,2026-04-23T09:11:00Z,procurement,u301,2450,facilities,false
+PR-1049,PR_SUBMIT,2026-04-23T09:28:00Z,requester,u013,7950,it,false
+PR-1049,PR_REVIEW,2026-04-23T19:45:00Z,line manager,u101,7950,it,false
+PR-1050,PR_SUBMIT,2026-04-24T13:29:00Z,requester,u024,2100,ingredients,false
+PR-1050,PR_REVIEW,2026-04-24T22:26:00Z,line manager,u101,2100,ingredients,false
+PR-1049,PO_CREATE,2026-04-25T05:53:00Z,procurement,u302,7950,it,false
+PR-1049,PO_SEND,2026-04-25T07:32:00Z,procurement,u302,7950,it,false
+PR-1050,PO_CREATE,2026-04-26T05:37:00Z,procurement,u301,2100,ingredients,false
+PR-1050,PO_SEND,2026-04-27T04:33:00Z,procurement,u301,2100,ingredients,false
+PR-1051,PR_SUBMIT,2026-04-30T10:22:00Z,requester,u018,5850,equipment,false
+PR-1052,PR_SUBMIT,2026-05-01T16:51:00Z,requester,u032,2800,equipment,false
+PR-1051,PR_REVIEW,2026-05-01T23:07:00Z,line manager,u104,5850,equipment,false
+PR-1052,PR_REVIEW,2026-05-02T07:21:00Z,line manager,u104,2800,equipment,false
+PR-1052,PO_CREATE,2026-05-02T19:19:00Z,procurement,u301,2800,equipment,false
+PR-1052,PO_SEND,2026-05-02T23:26:00Z,procurement,u301,2800,equipment,false
+PR-1051,PO_CREATE,2026-05-03T05:26:00Z,procurement,u302,5850,equipment,false
+PR-1051,PO_SEND,2026-05-03T08:57:00Z,procurement,u302,5850,equipment,false
+PR-1053,PR_SUBMIT,2026-05-04T10:16:00Z,requester,u027,7050,facilities,false
+PR-1054,PR_SUBMIT,2026-05-04T11:25:00Z,requester,u036,36500,facilities,false
+PR-1055,PR_SUBMIT,2026-05-04T11:38:00Z,requester,u026,26200,facilities,false
+PR-1054,PR_REVIEW,2026-05-05T05:11:00Z,line manager,u102,36500,facilities,false
+PR-1055,PR_REVIEW,2026-05-05T16:42:00Z,line manager,u103,26200,facilities,false
+PR-1053,PR_REVIEW,2026-05-06T06:27:00Z,line manager,u103,7050,facilities,false
+PR-1053,PO_CREATE,2026-05-06T22:05:00Z,procurement,u302,7050,facilities,false
+PR-1054,PR_APPROVE,2026-05-07T06:32:00Z,finance controller,u201,36500,facilities,false
+PR-1053,PO_SEND,2026-05-07T20:18:00Z,procurement,u302,7050,facilities,false
+PR-1054,PO_CREATE,2026-05-07T23:02:00Z,procurement,u301,36500,facilities,false
+PR-1056,PR_SUBMIT,2026-05-08T09:31:00Z,requester,u017,4650,facilities,false
+PR-1054,PO_SEND,2026-05-08T11:33:00Z,procurement,u301,36500,facilities,false
+PR-1055,PR_APPROVE,2026-05-08T23:59:00Z,finance controller,u201,26200,facilities,false
+PR-1056,PR_REVIEW,2026-05-09T08:30:00Z,line manager,u101,4650,facilities,false
+PR-1055,PO_CREATE,2026-05-10T06:42:00Z,procurement,u302,26200,facilities,false
+PR-1056,PO_CREATE,2026-05-10T15:56:00Z,procurement,u302,4650,facilities,false
+PR-1055,PO_SEND,2026-05-10T21:54:00Z,procurement,u302,26200,facilities,false
+PR-1056,PO_SEND,2026-05-11T11:22:00Z,procurement,u302,4650,facilities,false
+PR-1057,PR_SUBMIT,2026-05-14T09:35:00Z,requester,u013,5000,ingredients,false
+PR-1057,PR_REVIEW,2026-05-14T23:41:00Z,line manager,u102,5000,ingredients,false
+PR-1057,PO_CREATE,2026-05-15T18:04:00Z,procurement,u301,5000,ingredients,false
+PR-1057,PO_SEND,2026-05-15T23:35:00Z,procurement,u301,5000,ingredients,false
+PR-1058,PR_SUBMIT,2026-05-19T12:01:00Z,requester,u016,14800,ingredients,false
+PR-1058,PR_REVIEW,2026-05-19T22:08:00Z,line manager,u104,14800,ingredients,false
+PR-1059,PR_SUBMIT,2026-05-20T08:47:00Z,requester,u024,13850,packaging,false
+PR-1060,PR_SUBMIT,2026-05-20T10:41:00Z,requester,u039,33200,ingredients,false
+PR-1061,PR_SUBMIT,2026-05-20T14:47:00Z,requester,u024,1000,ingredients,false
+PR-1059,PR_REVIEW,2026-05-20T17:53:00Z,line manager,u104,13850,packaging,false
+PR-1061,PR_REVIEW,2026-05-21T10:46:00Z,line manager,u104,1000,ingredients,false
+PR-1061,PR_REJECT,2026-05-21T11:38:00Z,line manager,u104,1000,ingredients,false
+PR-1058,PR_APPROVE,2026-05-21T21:06:00Z,finance controller,u201,14800,ingredients,false
+PR-1060,PR_REVIEW,2026-05-22T00:02:00Z,line manager,u104,33200,ingredients,false
+PR-1060,PR_REJECT,2026-05-22T02:15:00Z,line manager,u104,33200,ingredients,false
+PR-1059,PR_APPROVE,2026-05-22T10:31:00Z,finance controller,u201,13850,packaging,false
+PR-1058,PO_CREATE,2026-05-22T11:55:00Z,procurement,u301,14800,ingredients,false
+PR-1059,PO_CREATE,2026-05-22T20:58:00Z,procurement,u302,13850,packaging,false
+PR-1059,PO_SEND,2026-05-23T00:08:00Z,procurement,u302,13850,packaging,false
+PR-1058,PO_SEND,2026-05-23T09:34:00Z,procurement,u301,14800,ingredients,false
+PR-1062,PR_SUBMIT,2026-05-25T13:29:00Z,requester,u017,3450,facilities,false
+PR-1062,PR_REVIEW,2026-05-25T22:59:00Z,line manager,u104,3450,facilities,false
+PR-1062,PR_REJECT,2026-05-25T23:39:00Z,line manager,u104,3450,facilities,false
+PR-1063,PR_SUBMIT,2026-06-05T16:16:00Z,requester,u035,4100,it,false
+PR-1063,PR_REVIEW,2026-06-07T03:05:00Z,line manager,u101,4100,it,false
+PR-1063,PO_CREATE,2026-06-08T11:13:00Z,procurement,u302,4100,it,false
+PR-1063,PO_SEND,2026-06-08T14:18:00Z,procurement,u302,4100,it,false
+PR-1064,PR_SUBMIT,2026-06-11T08:03:00Z,requester,u037,3550,facilities,false
+PR-1065,PR_SUBMIT,2026-06-11T09:24:00Z,requester,u016,34050,equipment,false
+PR-1066,PR_SUBMIT,2026-06-11T14:51:00Z,requester,u033,7850,equipment,false
+PR-1065,PR_REVIEW,2026-06-11T21:14:00Z,line manager,u104,34050,equipment,false
+PR-1064,PR_REVIEW,2026-06-11T22:57:00Z,line manager,u103,3550,facilities,false
+PR-1064,PO_CREATE,2026-06-12T11:38:00Z,procurement,u302,3550,facilities,false
+PR-1067,PR_SUBMIT,2026-06-12T13:37:00Z,requester,u028,5700,it,false
+PR-1068,PR_SUBMIT,2026-06-12T14:24:00Z,requester,u011,300,it,false
+PR-1066,PR_REVIEW,2026-06-13T00:12:00Z,line manager,u101,7850,equipment,false
+PR-1064,PO_SEND,2026-06-13T01:29:00Z,procurement,u302,3550,facilities,false
+PR-1065,PR_APPROVE,2026-06-13T11:22:00Z,finance controller,u201,34050,equipment,false
+PR-1067,PR_REVIEW,2026-06-13T19:00:00Z,line manager,u103,5700,it,false
+PR-1066,PO_CREATE,2026-06-13T23:59:00Z,procurement,u302,7850,equipment,false
+PR-1068,PR_REVIEW,2026-06-14T08:30:00Z,line manager,u101,300,it,false
+PR-1066,PO_SEND,2026-06-14T16:35:00Z,procurement,u302,7850,equipment,false
+PR-1068,PO_CREATE,2026-06-14T16:55:00Z,procurement,u301,300,it,false
+PR-1065,PO_CREATE,2026-06-14T19:22:00Z,procurement,u302,34050,equipment,false
+PR-1067,PO_CREATE,2026-06-14T22:44:00Z,procurement,u302,5700,it,false
+PR-1068,PO_SEND,2026-06-15T01:39:00Z,procurement,u301,300,it,false
+PR-1065,PO_SEND,2026-06-15T02:11:00Z,procurement,u302,34050,equipment,false
+PR-1069,PR_SUBMIT,2026-06-15T10:22:00Z,requester,u010,25850,equipment,false
+PR-1067,PO_SEND,2026-06-15T17:59:00Z,procurement,u302,5700,it,false
+PR-1069,PR_REVIEW,2026-06-16T00:35:00Z,line manager,u102,25850,equipment,false
+PR-1070,PR_SUBMIT,2026-06-16T15:04:00Z,requester,u017,3900,it,true
+PR-1069,PR_REVISE,2026-06-16T23:10:00Z,requester,u010,25850,equipment,false
+PR-1070,PR_REVIEW,2026-06-18T01:52:00Z,line manager,u101,3900,it,true
+PR-1069,PR_REVIEW,2026-06-18T02:04:00Z,line manager,u102,25850,equipment,false
+PR-1070,PR_REVISE,2026-06-18T20:09:00Z,requester,u017,3900,it,true
+PR-1069,PR_APPROVE,2026-06-18T22:43:00Z,finance controller,u201,25850,equipment,false
+PR-1071,PR_SUBMIT,2026-06-19T13:29:00Z,requester,u023,9600,equipment,true
+PR-1069,PO_CREATE,2026-06-19T22:37:00Z,procurement,u302,25850,equipment,false
+PR-1070,PR_REVIEW,2026-06-20T01:41:00Z,line manager,u101,3900,it,true
+PR-1070,PO_CREATE,2026-06-20T07:37:00Z,procurement,u302,3900,it,true
+PR-1069,PO_SEND,2026-06-20T11:35:00Z,procurement,u302,25850,equipment,false
+PR-1071,PR_REVIEW,2026-06-20T18:20:00Z,line manager,u103,9600,equipment,true
+PR-1070,PO_SEND,2026-06-20T18:52:00Z,procurement,u302,3900,it,true
+PR-1071,PO_CREATE,2026-06-21T12:04:00Z,procurement,u301,9600,equipment,true
+PR-1071,PO_SEND,2026-06-21T16:40:00Z,procurement,u301,9600,equipment,true
+PR-1072,PR_SUBMIT,2026-06-25T08:05:00Z,requester,u032,7050,it,true
+PR-1072,PR_REVIEW,2026-06-25T15:50:00Z,line manager,u101,7050,it,true
+PR-1072,PO_CREATE,2026-06-26T10:23:00Z,procurement,u302,7050,it,true
+PR-1072,PO_SEND,2026-06-27T02:04:00Z,procurement,u302,7050,it,true
+PR-1073,PR_SUBMIT,2026-06-30T14:43:00Z,requester,u035,3850,ingredients,false
+PR-1073,PR_REVIEW,2026-07-01T14:04:00Z,line manager,u102,3850,ingredients,false
+PR-1073,PO_CREATE,2026-07-02T01:16:00Z,procurement,u301,3850,ingredients,false
+PR-1073,PO_SEND,2026-07-02T06:05:00Z,procurement,u301,3850,ingredients,false
+PR-1074,PR_SUBMIT,2026-07-02T10:09:00Z,requester,u016,3950,ingredients,true
+PR-1075,PR_SUBMIT,2026-07-02T10:20:00Z,requester,u012,21700,equipment,true
+PR-1074,PR_REVIEW,2026-07-03T07:37:00Z,line manager,u104,3950,ingredients,true
+PR-1075,PR_REVIEW,2026-07-03T14:25:00Z,line manager,u103,21700,equipment,true
+PR-1076,PR_SUBMIT,2026-07-03T16:16:00Z,requester,u022,38750,ingredients,false
+PR-1075,PO_CREATE,2026-07-03T17:42:00Z,procurement,u301,21700,equipment,true
+PR-1075,PO_SEND,2026-07-03T21:34:00Z,procurement,u301,21700,equipment,true
+PR-1074,PO_CREATE,2026-07-03T23:52:00Z,procurement,u301,3950,ingredients,true
+PR-1074,PO_SEND,2026-07-04T16:20:00Z,procurement,u301,3950,ingredients,true
+PR-1076,PR_REVIEW,2026-07-04T22:28:00Z,line manager,u103,38750,ingredients,false
+PR-1075,PR_APPROVE,2026-07-05T10:47:00Z,finance controller,u201,21700,equipment,true
+PR-1077,PR_SUBMIT,2026-07-06T14:27:00Z,requester,u011,8150,facilities,false
+PR-1078,PR_SUBMIT,2026-07-07T16:33:00Z,requester,u013,9300,equipment,true
+PR-1077,PR_REVIEW,2026-07-08T07:51:00Z,line manager,u103,8150,facilities,false
+PR-1076,PR_APPROVE,2026-07-08T17:15:00Z,finance controller,u201,38750,ingredients,false
+PR-1076,PO_CREATE,2026-07-09T12:49:00Z,procurement,u301,38750,ingredients,false
+PR-1078,PR_REVIEW,2026-07-09T15:09:00Z,line manager,u103,9300,equipment,true
+PR-1079,PR_SUBMIT,2026-07-09T15:32:00Z,requester,u034,800,equipment,false
+PR-1077,PO_CREATE,2026-07-09T17:15:00Z,procurement,u301,8150,facilities,false
+PR-1077,PO_SEND,2026-07-09T21:54:00Z,procurement,u301,8150,facilities,false
+PR-1079,PR_REVIEW,2026-07-10T00:13:00Z,line manager,u104,800,equipment,false
+PR-1078,PO_CREATE,2026-07-10T04:48:00Z,procurement,u302,9300,equipment,true
+PR-1079,PO_CREATE,2026-07-10T05:57:00Z,procurement,u301,800,equipment,false
+PR-1078,PO_SEND,2026-07-10T08:59:00Z,procurement,u302,9300,equipment,true
+PR-1076,PO_SEND,2026-07-10T10:45:00Z,procurement,u301,38750,ingredients,false
+PR-1079,PO_SEND,2026-07-10T14:20:00Z,procurement,u301,800,equipment,false
+PR-1080,PR_SUBMIT,2026-07-14T13:06:00Z,requester,u025,53500,equipment,false
+PR-1081,PR_SUBMIT,2026-07-14T14:18:00Z,requester,u030,6450,ingredients,false
+PR-1082,PR_SUBMIT,2026-07-14T14:35:00Z,requester,u023,8300,ingredients,false
+PR-1083,PR_SUBMIT,2026-07-15T12:24:00Z,requester,u013,4750,equipment,false
+PR-1080,PR_REVIEW,2026-07-15T23:24:00Z,line manager,u104,53500,equipment,false
+PR-1081,PR_REVIEW,2026-07-16T08:50:00Z,line manager,u103,6450,ingredients,false
+PR-1083,PR_REVIEW,2026-07-16T11:27:00Z,line manager,u102,4750,equipment,false
+PR-1082,PR_REVIEW,2026-07-16T11:42:00Z,line manager,u104,8300,ingredients,false
+PR-1083,PO_CREATE,2026-07-17T06:36:00Z,procurement,u301,4750,equipment,false
+PR-1084,PR_SUBMIT,2026-07-17T12:05:00Z,requester,u021,48350,it,false
+PR-1081,PO_CREATE,2026-07-17T14:31:00Z,procurement,u302,6450,ingredients,false
+PR-1080,PR_APPROVE,2026-07-17T17:27:00Z,finance controller,u201,53500,equipment,false
+PR-1083,PO_SEND,2026-07-17T23:25:00Z,procurement,u301,4750,equipment,false
+PR-1081,PO_SEND,2026-07-18T03:58:00Z,procurement,u302,6450,ingredients,false
+PR-1084,PR_REVIEW,2026-07-18T09:53:00Z,line manager,u102,48350,it,false
+PR-1082,PR_REVISE,2026-07-18T11:36:00Z,requester,u023,8300,ingredients,false
+PR-1080,PO_CREATE,2026-07-18T19:20:00Z,procurement,u301,53500,equipment,false
+PR-1082,PR_REVIEW,2026-07-19T07:08:00Z,line manager,u104,8300,ingredients,false
+PR-1080,PO_SEND,2026-07-19T12:53:00Z,procurement,u301,53500,equipment,false
+PR-1082,PO_CREATE,2026-07-20T00:31:00Z,procurement,u302,8300,ingredients,false
+PR-1085,PR_SUBMIT,2026-07-20T09:46:00Z,requester,u023,5600,facilities,false
+PR-1082,PO_SEND,2026-07-20T17:59:00Z,procurement,u302,8300,ingredients,false
+PR-1085,PR_REVIEW,2026-07-20T18:25:00Z,line manager,u102,5600,facilities,false
+PR-1084,PR_APPROVE,2026-07-21T08:46:00Z,finance controller,u201,48350,it,false
+PR-1086,PR_SUBMIT,2026-07-21T10:10:00Z,requester,u034,9200,equipment,false
+PR-1087,PR_SUBMIT,2026-07-21T12:28:00Z,requester,u017,2550,packaging,true
+PR-1085,PO_CREATE,2026-07-21T18:11:00Z,procurement,u301,5600,facilities,false
+PR-1084,PO_CREATE,2026-07-21T22:58:00Z,procurement,u301,48350,it,false
+PR-1084,PO_SEND,2026-07-22T07:11:00Z,procurement,u301,48350,it,false
+PR-1088,PR_SUBMIT,2026-07-22T11:24:00Z,requester,u018,3900,ingredients,false
+PR-1085,PO_SEND,2026-07-22T12:13:00Z,procurement,u301,5600,facilities,false
+PR-1089,PR_SUBMIT,2026-07-22T15:28:00Z,requester,u026,45600,ingredients,false
+PR-1088,PR_REVIEW,2026-07-23T06:43:00Z,line manager,u104,3900,ingredients,false
+PR-1089,PR_REVIEW,2026-07-23T06:56:00Z,line manager,u102,45600,ingredients,false
+PR-1086,PR_REVIEW,2026-07-23T09:14:00Z,line manager,u103,9200,equipment,false
+PR-1087,PR_REVIEW,2026-07-23T09:28:00Z,line manager,u102,2550,packaging,true
+PR-1087,PO_CREATE,2026-07-23T15:36:00Z,procurement,u302,2550,packaging,true
+PR-1087,PO_SEND,2026-07-23T23:03:00Z,procurement,u302,2550,packaging,true
+PR-1086,PO_CREATE,2026-07-24T07:11:00Z,procurement,u302,9200,equipment,false
+PR-1088,PO_CREATE,2026-07-24T10:45:00Z,procurement,u302,3900,ingredients,false
+PR-1090,PR_SUBMIT,2026-07-24T12:52:00Z,requester,u039,25000,facilities,false
+PR-1091,PR_SUBMIT,2026-07-24T15:23:00Z,requester,u029,2450,ingredients,false
+PR-1088,PO_SEND,2026-07-24T21:30:00Z,procurement,u302,3900,ingredients,false
+PR-1086,PO_SEND,2026-07-25T03:53:00Z,procurement,u302,9200,equipment,false
+PR-1091,PR_REVIEW,2026-07-25T13:37:00Z,line manager,u103,2450,ingredients,false
+PR-1091,PR_REJECT,2026-07-25T16:18:00Z,line manager,u103,2450,ingredients,false
+PR-1090,PR_REVIEW,2026-07-26T03:11:00Z,line manager,u103,25000,facilities,false
+PR-1089,PR_APPROVE,2026-07-27T02:39:00Z,finance controller,u201,45600,ingredients,false
+PR-1089,PO_CREATE,2026-07-27T15:43:00Z,procurement,u302,45600,ingredients,false
+PR-1089,PO_SEND,2026-07-28T08:16:00Z,procurement,u302,45600,ingredients,false
+PR-1090,PR_APPROVE,2026-07-29T07:35:00Z,finance controller,u201,25000,facilities,false
+PR-1092,PR_SUBMIT,2026-07-29T12:18:00Z,requester,u030,55750,ingredients,true
+PR-1090,PO_CREATE,2026-07-29T16:24:00Z,procurement,u301,25000,facilities,false
+PR-1090,PO_SEND,2026-07-30T11:55:00Z,procurement,u301,25000,facilities,false
+PR-1092,PR_REVIEW,2026-07-30T20:31:00Z,line manager,u103,55750,ingredients,true
+PR-1092,PR_REVISE,2026-08-01T13:53:00Z,requester,u030,55750,ingredients,true
+PR-1092,PR_REVIEW,2026-08-02T18:41:00Z,line manager,u103,55750,ingredients,true
+PR-1092,PO_CREATE,2026-08-02T20:11:00Z,procurement,u301,55750,ingredients,true
+PR-1092,PO_SEND,2026-08-02T23:54:00Z,procurement,u301,55750,ingredients,true
+PR-1092,PR_APPROVE,2026-08-06T08:57:00Z,finance controller,u201,55750,ingredients,true
+PR-1093,PR_SUBMIT,2026-08-07T13:20:00Z,requester,u011,3000,it,true
+PR-1094,PR_SUBMIT,2026-08-07T14:42:00Z,requester,u037,32000,it,false
+PR-1093,PR_REVIEW,2026-08-07T19:41:00Z,line manager,u102,3000,it,true
+PR-1093,PO_CREATE,2026-08-08T22:07:00Z,procurement,u302,3000,it,true
+PR-1094,PR_REVIEW,2026-08-09T10:17:00Z,line manager,u101,32000,it,false
+PR-1093,PO_SEND,2026-08-09T15:08:00Z,procurement,u302,3000,it,true
+PR-1094,PR_APPROVE,2026-08-10T05:01:00Z,finance controller,u201,32000,it,false
+PR-1095,PR_SUBMIT,2026-08-10T11:36:00Z,requester,u010,12450,equipment,true
+PR-1094,PO_CREATE,2026-08-10T15:36:00Z,procurement,u301,32000,it,false
+PR-1095,PR_REVIEW,2026-08-10T16:32:00Z,line manager,u102,12450,equipment,true
+PR-1094,PO_SEND,2026-08-10T22:23:00Z,procurement,u301,32000,it,false
+PR-1095,PR_REVISE,2026-08-11T14:31:00Z,requester,u010,12450,equipment,true
+PR-1095,PR_REVIEW,2026-08-12T01:27:00Z,line manager,u102,12450,equipment,true
+PR-1096,PR_SUBMIT,2026-08-12T16:13:00Z,requester,u038,3300,ingredients,false
+PR-1097,PR_SUBMIT,2026-08-12T16:53:00Z,requester,u032,7900,facilities,false
+PR-1097,PR_REVIEW,2026-08-13T06:29:00Z,line manager,u102,7900,facilities,false
+PR-1098,PR_SUBMIT,2026-08-13T11:49:00Z,requester,u026,35400,ingredients,false
+PR-1096,PR_REVIEW,2026-08-13T15:06:00Z,line manager,u102,3300,ingredients,false
+PR-1097,PO_CREATE,2026-08-13T17:25:00Z,procurement,u301,7900,facilities,false
+PR-1097,PO_SEND,2026-08-13T20:01:00Z,procurement,u301,7900,facilities,false
+PR-1098,PR_REVIEW,2026-08-13T21:55:00Z,line manager,u104,35400,ingredients,false
+PR-1095,PR_APPROVE,2026-08-14T06:49:00Z,finance controller,u201,12450,equipment,true
+PR-1095,PO_CREATE,2026-08-14T22:08:00Z,procurement,u301,12450,equipment,true
+PR-1095,PO_SEND,2026-08-15T07:20:00Z,procurement,u301,12450,equipment,true
+PR-1096,PR_REVISE,2026-08-15T21:21:00Z,requester,u038,3300,ingredients,false
+PR-1096,PR_REVIEW,2026-08-17T02:33:00Z,line manager,u102,3300,ingredients,false
+PR-1098,PR_APPROVE,2026-08-17T14:46:00Z,finance controller,u201,35400,ingredients,false
+PR-1099,PR_SUBMIT,2026-08-17T15:15:00Z,requester,u018,6200,equipment,false
+PR-1100,PR_SUBMIT,2026-08-17T16:31:00Z,requester,u028,6800,equipment,true
+PR-1096,PO_CREATE,2026-08-17T22:09:00Z,procurement,u302,3300,ingredients,false
+PR-1099,PR_REVIEW,2026-08-17T22:29:00Z,line manager,u103,6200,equipment,false
+PR-1100,PR_REVIEW,2026-08-18T05:46:00Z,line manager,u104,6800,equipment,true
+PR-1099,PO_CREATE,2026-08-18T06:17:00Z,procurement,u302,6200,equipment,false
+PR-1101,PR_SUBMIT,2026-08-18T09:18:00Z,requester,u018,8900,it,false
+PR-1102,PR_SUBMIT,2026-08-18T10:38:00Z,requester,u010,44200,packaging,false
+PR-1100,PO_CREATE,2026-08-18T14:16:00Z,procurement,u302,6800,equipment,true
+PR-1099,PO_SEND,2026-08-18T18:50:00Z,procurement,u302,6200,equipment,false
+PR-1096,PO_SEND,2026-08-18T19:05:00Z,procurement,u302,3300,ingredients,false
+PR-1098,PO_CREATE,2026-08-19T02:18:00Z,procurement,u301,35400,ingredients,false
+PR-1100,PO_SEND,2026-08-19T11:51:00Z,procurement,u302,6800,equipment,true
+PR-1103,PR_SUBMIT,2026-08-19T16:13:00Z,requester,u035,34400,ingredients,false
+PR-1102,PR_REVIEW,2026-08-19T21:51:00Z,line manager,u102,44200,packaging,false
+PR-1103,PR_REVIEW,2026-08-19T22:55:00Z,line manager,u103,34400,ingredients,false
+PR-1098,PO_SEND,2026-08-20T00:35:00Z,procurement,u301,35400,ingredients,false
+PR-1101,PR_REVIEW,2026-08-20T01:16:00Z,line manager,u102,8900,it,false
+PR-1101,PO_CREATE,2026-08-20T22:11:00Z,procurement,u301,8900,it,false
+PR-1101,PO_SEND,2026-08-21T03:15:00Z,procurement,u301,8900,it,false
+PR-1104,PR_SUBMIT,2026-08-21T15:51:00Z,requester,u017,850,packaging,false
+PR-1104,PR_REVIEW,2026-08-22T11:27:00Z,line manager,u102,850,packaging,false
+PR-1103,PR_REVISE,2026-08-22T22:51:00Z,requester,u035,34400,ingredients,false
+PR-1102,PR_APPROVE,2026-08-23T00:36:00Z,finance controller,u201,44200,packaging,false
+PR-1103,PR_REVIEW,2026-08-23T07:23:00Z,line manager,u103,34400,ingredients,false
+PR-1102,PO_CREATE,2026-08-23T09:38:00Z,procurement,u301,44200,packaging,false
+PR-1102,PO_SEND,2026-08-23T14:33:00Z,procurement,u301,44200,packaging,false
+PR-1104,PO_CREATE,2026-08-23T15:00:00Z,procurement,u302,850,packaging,false
+PR-1103,PR_APPROVE,2026-08-23T20:18:00Z,finance controller,u201,34400,ingredients,false
+PR-1104,PO_SEND,2026-08-23T20:38:00Z,procurement,u302,850,packaging,false
+PR-1103,PO_CREATE,2026-08-24T04:54:00Z,procurement,u302,34400,ingredients,false
+PR-1103,PO_SEND,2026-08-24T08:50:00Z,procurement,u302,34400,ingredients,false
+PR-1105,PR_SUBMIT,2026-08-25T08:59:00Z,requester,u039,6900,packaging,false
+PR-1105,PR_REVIEW,2026-08-26T06:53:00Z,line manager,u104,6900,packaging,false
+PR-1105,PR_REVISE,2026-08-28T01:33:00Z,requester,u039,6900,packaging,false
+PR-1105,PR_REVIEW,2026-08-28T09:19:00Z,line manager,u104,6900,packaging,false
+PR-1105,PO_CREATE,2026-08-29T09:43:00Z,procurement,u302,6900,packaging,false
+PR-1105,PO_SEND,2026-08-29T14:54:00Z,procurement,u302,6900,packaging,false
+PR-1106,PR_SUBMIT,2026-08-31T16:26:00Z,requester,u024,59650,ingredients,false
+PR-1106,PR_REVIEW,2026-08-31T22:05:00Z,line manager,u101,59650,ingredients,false
+PR-1107,PR_SUBMIT,2026-09-03T09:32:00Z,requester,u037,25600,equipment,false
+PR-1106,PR_APPROVE,2026-09-03T12:36:00Z,finance controller,u201,59650,ingredients,false
+PR-1107,PR_REVIEW,2026-09-03T15:48:00Z,line manager,u103,25600,equipment,false
+PR-1106,PO_CREATE,2026-09-04T03:49:00Z,procurement,u302,59650,ingredients,false
+PR-1106,PO_SEND,2026-09-04T10:56:00Z,procurement,u302,59650,ingredients,false
+PR-1107,PR_APPROVE,2026-09-04T13:48:00Z,finance controller,u201,25600,equipment,false
+PR-1107,PO_CREATE,2026-09-05T17:23:00Z,procurement,u302,25600,equipment,false
+PR-1107,PO_SEND,2026-09-06T16:56:00Z,procurement,u302,25600,equipment,false
+PR-1108,PR_SUBMIT,2026-09-07T11:30:00Z,requester,u012,20400,it,false
+PR-1108,PR_REVIEW,2026-09-07T19:26:00Z,line manager,u104,20400,it,false
+PR-1108,PR_APPROVE,2026-09-09T02:27:00Z,finance controller,u201,20400,it,false
+PR-1109,PR_SUBMIT,2026-09-09T13:26:00Z,requester,u030,4850,facilities,true
+PR-1110,PR_SUBMIT,2026-09-09T13:59:00Z,requester,u015,2050,ingredients,true
+PR-1111,PR_SUBMIT,2026-09-09T16:13:00Z,requester,u035,43850,ingredients,false
+PR-1108,PO_CREATE,2026-09-10T02:54:00Z,procurement,u302,20400,it,false
+PR-1108,PO_SEND,2026-09-10T05:45:00Z,procurement,u302,20400,it,false
+PR-1111,PR_REVIEW,2026-09-10T09:29:00Z,line manager,u102,43850,ingredients,false
+PR-1112,PR_SUBMIT,2026-09-10T09:56:00Z,requester,u033,3100,packaging,false
+PR-1110,PR_REVIEW,2026-09-10T10:05:00Z,line manager,u101,2050,ingredients,true
+PR-1113,PR_SUBMIT,2026-09-10T12:57:00Z,requester,u035,9050,it,false
+PR-1114,PR_SUBMIT,2026-09-10T16:44:00Z,requester,u034,8850,packaging,true
+PR-1110,PO_CREATE,2026-09-10T17:30:00Z,procurement,u301,2050,ingredients,true
+PR-1110,PO_SEND,2026-09-11T06:49:00Z,procurement,u301,2050,ingredients,true
+PR-1109,PR_REVIEW,2026-09-11T12:36:00Z,line manager,u104,4850,facilities,true
+PR-1113,PR_REVIEW,2026-09-11T14:43:00Z,line manager,u104,9050,it,false
+PR-1114,PR_REVIEW,2026-09-11T16:07:00Z,line manager,u104,8850,packaging,true
+PR-1112,PR_REVIEW,2026-09-12T05:48:00Z,line manager,u101,3100,packaging,false
+PR-1109,PR_REVISE,2026-09-12T06:55:00Z,requester,u030,4850,facilities,true
+PR-1114,PO_CREATE,2026-09-12T16:04:00Z,procurement,u301,8850,packaging,true
+PR-1109,PR_REVIEW,2026-09-12T19:37:00Z,line manager,u104,4850,facilities,true
+PR-1109,PO_CREATE,2026-09-13T01:43:00Z,procurement,u301,4850,facilities,true
+PR-1112,PO_CREATE,2026-09-13T08:29:00Z,procurement,u301,3100,packaging,false
+PR-1114,PO_SEND,2026-09-13T13:44:00Z,procurement,u301,8850,packaging,true
+PR-1111,PR_APPROVE,2026-09-13T17:37:00Z,finance controller,u201,43850,ingredients,false
+PR-1113,PR_REVISE,2026-09-13T21:30:00Z,requester,u035,9050,it,false
+PR-1109,PO_SEND,2026-09-13T23:51:00Z,procurement,u301,4850,facilities,true
+PR-1112,PO_SEND,2026-09-14T03:58:00Z,procurement,u301,3100,packaging,false
+PR-1113,PR_REVIEW,2026-09-14T13:31:00Z,line manager,u104,9050,it,false
+PR-1111,PO_CREATE,2026-09-15T05:20:00Z,procurement,u301,43850,ingredients,false
+PR-1115,PR_SUBMIT,2026-09-15T10:24:00Z,requester,u022,6450,it,false
+PR-1111,PO_SEND,2026-09-15T15:42:00Z,procurement,u301,43850,ingredients,false
+PR-1115,PR_REVIEW,2026-09-15T16:54:00Z,line manager,u104,6450,it,false
+PR-1113,PO_CREATE,2026-09-15T20:37:00Z,procurement,u302,9050,it,false
+PR-1115,PO_CREATE,2026-09-16T00:27:00Z,procurement,u302,6450,it,false
+PR-1116,PR_SUBMIT,2026-09-16T08:53:00Z,requester,u010,850,equipment,false
+PR-1113,PO_SEND,2026-09-16T09:39:00Z,procurement,u302,9050,it,false
+PR-1115,PO_SEND,2026-09-16T15:37:00Z,procurement,u302,6450,it,false
+PR-1116,PR_REVIEW,2026-09-17T14:30:00Z,line manager,u103,850,equipment,false
+PR-1117,PR_SUBMIT,2026-09-17T15:44:00Z,requester,u039,3100,it,false
+PR-1116,PO_CREATE,2026-09-17T20:48:00Z,procurement,u302,850,equipment,false
+PR-1116,PO_SEND,2026-09-18T07:44:00Z,procurement,u302,850,equipment,false
+PR-1118,PR_SUBMIT,2026-09-18T10:59:00Z,requester,u019,3450,facilities,false
+PR-1117,PR_REVIEW,2026-09-18T13:19:00Z,line manager,u102,3100,it,false
+PR-1117,PO_CREATE,2026-09-19T13:34:00Z,procurement,u301,3100,it,false
+PR-1118,PR_REVIEW,2026-09-20T05:41:00Z,line manager,u101,3450,facilities,false
+PR-1118,PR_REJECT,2026-09-20T07:41:00Z,line manager,u101,3450,facilities,false
+PR-1117,PO_SEND,2026-09-20T11:47:00Z,procurement,u301,3100,it,false
+PR-1119,PR_SUBMIT,2026-09-22T08:08:00Z,requester,u022,54250,it,false
+PR-1119,PR_REVIEW,2026-09-23T09:33:00Z,line manager,u101,54250,it,false
+PR-1120,PR_SUBMIT,2026-09-24T12:28:00Z,requester,u031,39250,ingredients,false
+PR-1119,PR_APPROVE,2026-09-25T03:16:00Z,finance controller,u201,54250,it,false
+PR-1120,PR_REVIEW,2026-09-25T18:00:00Z,line manager,u102,39250,ingredients,false
+PR-1119,PO_CREATE,2026-09-25T20:49:00Z,procurement,u302,54250,it,false
+PR-1119,PO_SEND,2026-09-26T04:54:00Z,procurement,u302,54250,it,false
+PR-1120,PR_APPROVE,2026-09-27T16:25:00Z,finance controller,u201,39250,ingredients,false
+PR-1120,PO_CREATE,2026-09-28T07:34:00Z,procurement,u302,39250,ingredients,false
+PR-1120,PO_SEND,2026-09-29T01:19:00Z,procurement,u302,39250,ingredients,false

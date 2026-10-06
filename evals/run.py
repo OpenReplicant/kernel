@@ -97,7 +97,7 @@ def verdict(result: dict[str, Any], thresholds: dict[str, Any]) -> list[str]:
 def summary_row(result: dict[str, Any]) -> str:
     c: Comparison = result["comparison"]
     return (
-        f"{result['fixture']:<20} entities P {c.entities.precision:.2f} R {c.entities.recall:.2f}   "
+        f"{result['fixture']:<28} entities P {c.entities.precision:.2f} R {c.entities.recall:.2f}   "
         f"edges P {c.edges.precision:.2f} R {c.edges.recall:.2f}   attributes {c.attribute_accuracy:.2f}   "
         f"calls {result['tool_calls']}, rejections {result['rejections']}, "
         f"replay {'ok' if not result['replay']['diff'] else 'DIFF'} ({result['replay']['entries']} entries)"

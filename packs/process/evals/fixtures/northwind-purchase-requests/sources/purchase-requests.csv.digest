@@ -1,0 +1,28 @@
+Event log digest: Purchase requests
+Log: purchase-requests.csv (csv, sha256 aa3293a34e936317cab36d4dbd997bdf8f5ceb1ab78e92d050f500cad38cb37b)
+Cases: 120 (purchase requests), 543 events, from 2026-01-02 to 2026-09-29
+System: Coupa
+Median cycle time: 3.0 days (first to last event of a case)
+
+Steps (executions, cases, roles):
+- Review purchase request (label PR_REVIEW): 137 executions in 120 cases; roles: line manager 137
+- Submit purchase request (label PR_SUBMIT): 120 executions in 120 cases; roles: requester 120
+- Create purchase order (label PO_CREATE): 113 executions in 113 cases; roles: procurement 113
+- Send purchase order (label PO_SEND): 113 executions in 113 cases; roles: procurement 113
+- Approve purchase request (label PR_APPROVE): 36 executions in 36 cases; roles: finance controller 36
+- Revise purchase request (label PR_REVISE): 17 executions in 17 cases; roles: requester 17
+- Reject purchase request (label PR_REJECT): 7 executions in 7 cases; roles: line manager 7
+
+Directly follows (times, cases, example cases):
+- Submit purchase request -> Review purchase request: 120 times in 120 cases (PR-1001, PR-1002, PR-1003)
+- Create purchase order -> Send purchase order: 113 times in 113 cases (PR-1001, PR-1002, PR-1004)
+- Review purchase request -> Create purchase order: 83 times in 83 cases (PR-1004, PR-1005, PR-1006)
+- Approve purchase request -> Create purchase order: 30 times in 30 cases (PR-1001, PR-1002, PR-1008)
+- Review purchase request -> Approve purchase request: 30 times in 30 cases (PR-1001, PR-1002, PR-1008)
+- Review purchase request -> Revise purchase request: 17 times in 17 cases (PR-1010, PR-1023, PR-1028)
+- Revise purchase request -> Review purchase request: 17 times in 17 cases (PR-1010, PR-1023, PR-1028)
+- Review purchase request -> Reject purchase request: 7 times in 7 cases (PR-1003, PR-1033, PR-1060)
+- Send purchase order -> Approve purchase request: 6 times in 6 cases (PR-1019, PR-1020, PR-1035)
+
+Starts: Submit purchase request 120
+Ends: Send purchase order 107, Reject purchase request 7, Approve purchase request 6

@@ -1,0 +1,17 @@
+# wmk-process configuration for Northwind's purchase-request log (see generate.py).
+process: Purchase requests
+log:
+  file: log/purchase-requests.csv
+  columns: {case: case_id, activity: activity, timestamp: timestamp, role: role}
+  attributes: [amount, category, urgent]
+case_object: Purchase request
+system: Coupa
+origin: system:northwind-coupa
+labels:
+  PR_SUBMIT: Submit purchase request
+  PR_REVIEW: Review purchase request
+  PR_REVISE: Revise purchase request
+  PR_REJECT: Reject purchase request
+  PR_APPROVE: Approve purchase request
+  PO_CREATE: Create purchase order
+  PO_SEND: Send purchase order
