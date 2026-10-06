@@ -1,0 +1,32 @@
+# process: ontology rules, checked inside every write. Categories and params as in
+# kernel.rules (kernel/sql/30_ontology.sql). Rule ids start with one of the pack's namespaces.
+rules:
+- id: process.allowed_kinds
+  category: types
+  namespace: process
+  label: Process kinds
+  description: >-
+    The process namespace allows processes, activities, gateways, triggers, outcomes, roles, organisational units and KPIs.
+  params: {kinds: [process, activity, gateway, trigger, outcome, role, unit, kpi]}
+- id: process.flows_between_steps
+  category: domain_range
+  namespace: process
+  label: Flows connect steps
+  description: >-
+    flows_to goes from an activity, gateway or trigger to an activity, gateway, trigger or outcome: a trigger starts a case or is waited for, an outcome ends it.
+  params: {edge: flows_to, from: {kinds: [activity, gateway, trigger]}, to: {kinds: [activity, gateway, trigger, outcome]}}
+- id: process.performed_in_component
+  category: domain_range
+  label: Steps are performed in systems
+  description: performed_in goes from an activity to a component.
+  params: {edge: depends_on, kind: performed_in, from: {kinds: [activity]}, to: {kinds: [component]}}
+- id: process.handles_data
+  category: domain_range
+  label: Steps and processes handle business objects
+  description: handles goes from an activity or a process to a data entity.
+  params: {edge: depends_on, kind: handles, from: {kinds: [activity, process]}, to: {kinds: [data]}}
+- id: process.kpi_measures
+  category: domain_range
+  label: KPIs measure processes and steps
+  description: measures goes from a KPI to a process or an activity.
+  params: {edge: monitors, kind: measures, from: {kinds: [kpi]}, to: {kinds: [process, activity]}}

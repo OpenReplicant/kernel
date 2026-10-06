@@ -1,0 +1,76 @@
+# The graph a reading of sources/purchase-requests.csv.digest should give, written by hand
+# from the digest. Entities match on type, kind and name; edges on edge, kind and endpoint
+# names. The machine agent that writes is left out.
+entities:
+  - {type: Entity, kind: process, name: Purchase requests}
+  - {type: Entity, kind: data, name: Purchase request}
+  - {type: Entity, kind: component, name: Coupa}
+  # Steps, by their names in the label map
+  - {type: Entity, kind: activity, name: Submit purchase request}
+  - {type: Entity, kind: activity, name: Review purchase request}
+  - {type: Entity, kind: activity, name: Revise purchase request}
+  - {type: Entity, kind: activity, name: Reject purchase request}
+  - {type: Entity, kind: activity, name: Approve purchase request}
+  - {type: Entity, kind: activity, name: Create purchase order}
+  - {type: Entity, kind: activity, name: Send purchase order}
+  # Roles from the log's role column; no people
+  - {type: Entity, kind: role, name: requester}
+  - {type: Entity, kind: role, name: line manager}
+  - {type: Entity, kind: role, name: finance controller}
+  - {type: Entity, kind: role, name: procurement}
+  # KPIs
+  - {type: Entity, kind: kpi, name: Cases of Purchase requests}
+  - {type: Entity, kind: kpi, name: Median cycle time of Purchase requests}
+  - {type: Entity, kind: kpi, name: Executions of Submit purchase request}
+  - {type: Entity, kind: kpi, name: Executions of Review purchase request}
+  - {type: Entity, kind: kpi, name: Executions of Revise purchase request}
+  - {type: Entity, kind: kpi, name: Executions of Reject purchase request}
+  - {type: Entity, kind: kpi, name: Executions of Approve purchase request}
+  - {type: Entity, kind: kpi, name: Executions of Create purchase order}
+  - {type: Entity, kind: kpi, name: Executions of Send purchase order}
+  # One extraction run over the digest, closed when its claims are written
+  - {type: Event, kind: extraction, name: "wmk-process over purchase-requests.csv.digest @ 5bdeac9c6845", status: completed}
+edges:
+  - {edge: depends_on, kind: handles, from: Purchase requests, to: Purchase request, belief_status: accepted}
+  - {edge: monitors, kind: measures, from: Cases of Purchase requests, to: Purchase requests, valid_from: "2026-01-02", valid_to: "2026-09-30"}
+  - {edge: monitors, kind: measures, from: Median cycle time of Purchase requests, to: Purchase requests, valid_from: "2026-01-02", valid_to: "2026-09-30"}
+  # Every step is part of the process, done in Coupa, and counted
+  - {edge: part_of, from: Submit purchase request, to: Purchase requests, belief_status: accepted}
+  - {edge: part_of, from: Review purchase request, to: Purchase requests}
+  - {edge: part_of, from: Revise purchase request, to: Purchase requests}
+  - {edge: part_of, from: Reject purchase request, to: Purchase requests}
+  - {edge: part_of, from: Approve purchase request, to: Purchase requests}
+  - {edge: part_of, from: Create purchase order, to: Purchase requests}
+  - {edge: part_of, from: Send purchase order, to: Purchase requests}
+  - {edge: depends_on, kind: performed_in, from: Submit purchase request, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Review purchase request, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Revise purchase request, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Reject purchase request, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Approve purchase request, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Create purchase order, to: Coupa}
+  - {edge: depends_on, kind: performed_in, from: Send purchase order, to: Coupa}
+  - {edge: monitors, kind: measures, from: Executions of Submit purchase request, to: Submit purchase request}
+  - {edge: monitors, kind: measures, from: Executions of Review purchase request, to: Review purchase request}
+  - {edge: monitors, kind: measures, from: Executions of Revise purchase request, to: Revise purchase request}
+  - {edge: monitors, kind: measures, from: Executions of Reject purchase request, to: Reject purchase request}
+  - {edge: monitors, kind: measures, from: Executions of Approve purchase request, to: Approve purchase request}
+  - {edge: monitors, kind: measures, from: Executions of Create purchase order, to: Create purchase order}
+  - {edge: monitors, kind: measures, from: Executions of Send purchase order, to: Send purchase order}
+  # Who does each step
+  - {edge: responsible_for, from: requester, to: Submit purchase request}
+  - {edge: responsible_for, from: requester, to: Revise purchase request}
+  - {edge: responsible_for, from: line manager, to: Review purchase request}
+  - {edge: responsible_for, from: line manager, to: Reject purchase request}
+  - {edge: responsible_for, from: finance controller, to: Approve purchase request}
+  - {edge: responsible_for, from: procurement, to: Create purchase order}
+  - {edge: responsible_for, from: procurement, to: Send purchase order}
+  # Directly-follows flows, including the urgent requests approved after the order is sent
+  - {edge: flows_to, from: Submit purchase request, to: Review purchase request, belief_status: accepted}
+  - {edge: flows_to, from: Review purchase request, to: Create purchase order}
+  - {edge: flows_to, from: Review purchase request, to: Approve purchase request}
+  - {edge: flows_to, from: Review purchase request, to: Revise purchase request}
+  - {edge: flows_to, from: Review purchase request, to: Reject purchase request}
+  - {edge: flows_to, from: Revise purchase request, to: Review purchase request}
+  - {edge: flows_to, from: Approve purchase request, to: Create purchase order}
+  - {edge: flows_to, from: Create purchase order, to: Send purchase order}
+  - {edge: flows_to, from: Send purchase order, to: Approve purchase request, belief_status: accepted}

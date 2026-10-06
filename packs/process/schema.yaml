@@ -1,0 +1,45 @@
+# process: the pack's ontology (ADR 0027). Applied by the kernel's pack installer
+# (kernel/packs.py, kernel.install_pack); every entry has a label and a description for
+# schema slicing. Core kinds it uses: process, activity, gateway, role (allowed in the
+# namespace by rules.yaml), component and data (kept in core).
+namespaces:
+- name: process
+  label: Business processes
+  description: >-
+    How work happens in an organisation, as told, as written and as done: processes made of steps (activities and gateways) joined by flows with conditions, what starts and ends them, the roles and units responsible, the systems and business objects they use, and their measures.
+kinds:
+- name: unit
+  node_type: Entity
+  label: Organisational unit
+  description: >-
+    A department, team or other unit of an organisation that owns processes or roles.
+- name: trigger
+  node_type: Entity
+  label: Trigger
+  description: >-
+    What starts a case of a process, or what a step waits for before it continues: a request, a message, a form, a schedule or a deadline, such as "a purchase request is submitted".
+- name: outcome
+  node_type: Entity
+  label: Outcome
+  description: >-
+    How a case of a process ends, such as "purchase order sent" or "request rejected".
+- name: kpi
+  node_type: Entity
+  label: KPI
+  description: >-
+    A measure of a process or a step, such as its case volume, cycle time, cost or error rate, named for what it measures: "Median cycle time of Purchase requests".
+edge_kinds:
+- name: performed_in
+  edge: depends_on
+  label: performed in
+  description: A step is carried out in a system or tool, such as a purchase request reviewed in Coupa.
+- name: handles
+  edge: depends_on
+  label: handles
+  description: >-
+    A step or process works on a business object, such as a purchase request or an invoice; props.qualifier says how (creates, reads, approves, case) when the source says.
+- name: measures
+  edge: monitors
+  label: measures
+  description: >-
+    A KPI's observed value for a process or step: props.value and props.unit, over the edge's validity window (the period measured).

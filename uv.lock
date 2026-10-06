@@ -8,7 +8,9 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "wmk-adapter-kit",
     "wmk-papers",
+    "wmk-process",
     "wmk-software",
     "world-model-kernel",
 ]
@@ -1359,6 +1361,17 @@ wheels = [
 ]
 
 [[package]]
+name = "wmk-adapter-kit"
+version = "0.1.0"
+source = { editable = "adapter-kit" }
+dependencies = [
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pyyaml", specifier = ">=6.0,<7" }]
+
+[[package]]
 name = "wmk-papers"
 version = "0.2.0"
 source = { editable = "packs/research/mcp" }
@@ -1378,6 +1391,25 @@ requires-dist = [
 ]
 
 [[package]]
+name = "wmk-process"
+version = "0.1.0"
+source = { editable = "packs/process/adapter" }
+dependencies = [
+    { name = "anyio" },
+    { name = "mcp" },
+    { name = "pyyaml" },
+    { name = "wmk-adapter-kit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anyio", specifier = ">=4.5,<5" },
+    { name = "mcp", specifier = ">=2.3,<3" },
+    { name = "pyyaml", specifier = ">=6.0,<7" },
+    { name = "wmk-adapter-kit", editable = "adapter-kit" },
+]
+
+[[package]]
 name = "wmk-software"
 version = "0.3.0"
 source = { editable = "packs/software/adapter" }
@@ -1386,6 +1418,7 @@ dependencies = [
     { name = "mcp" },
     { name = "packaging" },
     { name = "pyyaml" },
+    { name = "wmk-adapter-kit" },
 ]
 
 [package.metadata]
@@ -1394,6 +1427,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=2.3,<3" },
     { name = "packaging", specifier = ">=24,<27" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
+    { name = "wmk-adapter-kit", editable = "adapter-kit" },
 ]
 
 [[package]]
@@ -1417,6 +1451,7 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
     { name = "wmk-papers" },
+    { name = "wmk-process" },
     { name = "wmk-software" },
 ]
 
@@ -1438,5 +1473,6 @@ dev = [
     { name = "pytest", specifier = ">=9.1,<10" },
     { name = "ruff", specifier = ">=0.16,<1" },
     { name = "wmk-papers", editable = "packs/research/mcp" },
+    { name = "wmk-process", editable = "packs/process/adapter" },
     { name = "wmk-software", editable = "packs/software/adapter" },
 ]

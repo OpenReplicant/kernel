@@ -55,6 +55,14 @@ what changed and retracts what a file no longer says. `make map-self` maps this 
 with the self boundary: the system this kernel instance is, and its parts, each a claim
 with its own belief ([ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)).
 
+For business processes, the process pack maps how work happens as told (interviews), as
+written (SOPs) and as done (event logs), with steps joined by flows whose conditions any
+workflow runtime can compile. Its adapter reads CSV, XES and OCEL 2.0 logs:
+`uv run wmk-process discover <config> --url ...` writes the log's view, and
+`uv run wmk-process conform <config> --url ...` checks the mapped process against the
+log. A step or branch the SOP states and the log denies becomes contested
+([ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)).
+
 ## The tools
 
 | Tool | Tier | Does |
@@ -95,7 +103,8 @@ Rejections are RFC 9457 problem documents naming the broken rule:
 | `kernel/sql/` | The kernel, applied in order: sources, chunks, data keys and the erasure ledger, log, claims, assertions, cites, ontology, graph and AGE mirror, belief, resolution, projection, `kernel.write`, `kernel.ingest_source`, `kernel.cite`, read helpers, `kernel.erase`, roles |
 | `gateway/` | The MCP server (official Python SDK): tools, RFC 9457 problems (`problems.py`), OTel names (`otel.py`) |
 | `skills/` | Agent Skills: `core` (read, extract, write, cite) and `interview` (consent, gap queries, follow-ups) |
-| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
+| `packs/` | Self-contained packs, each with its ontology (`schema.yaml`, `rules.yaml`), skill, tests, fixtures and servers ([writing a pack](docs/packs.md)): `research` (papers, per-paper findings, evidence queries, a paper-source server; [ADR 0013](docs/decisions/0013-research-findings-are-claims.md)), `software` (repositories, packages, images, services, stacks, pipelines and the self boundary, with a repository adapter; [ADR 0017](docs/decisions/0017-software-pack-and-the-self-boundary.md)), `process` (processes as told, written and done, with an event-log adapter; [ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)) and `bpm-reference` (the kernel's toy business-process test pack) |
+| `adapter-kit/` | What the packs' deterministic adapters share: a plan of sources and claims, played through the gateway as an MCP client, and rendered as an eval fixture script |
 | `profiles/` | ACP profiles `interactive.yaml` and `eval.yaml` |
 | `evals/` | Fixtures with expected graphs, the resolution set, the eval runners, the replay check, the seeder |
 | `tests/` | Unit, SQL, invariant and regression tests; the shared test kit is `kernel/testing.py` |
@@ -168,7 +177,9 @@ Tests and evals create throwaway databases through `WMK_ADMIN_DSN` (default
 
 Research is the first product pack: papers are found with the paper-source server and
 mapped from their abstracts by any MCP harness following the core and research skills.
-The software pack maps what a repository declares, not what is running; its self
+The process pack's adapter maps event logs without people (`org:resource` is dropped) and
+checks decisions one gateway deep. The software pack maps what a repository declares, not
+what is running; its self
 boundary is a set of claims, and changing the system stays with people (the approval
 channel is the next ADR). Full text comes from open-access PDFs parsed by GROBID
 ([ADR 0025](docs/decisions/0025-full-text-through-grobid.md)). Not yet built: workers

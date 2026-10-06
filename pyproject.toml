@@ -23,6 +23,7 @@ dev = [
     # Pack packages, so `make test` runs every pack's tests.
     "wmk-papers",
     "wmk-software",
+    "wmk-process",
 ]
 
 [project.scripts]
@@ -39,12 +40,15 @@ packages = ["gateway", "kernel", "evals"]
 "kernel/sql" = "kernel/sql"
 
 [tool.uv.workspace]
-# Packs that ship Python (servers, adapters) are workspace members with their own pyproject.
-members = ["packs/*/mcp", "packs/*/adapter"]
+# Packs that ship Python (servers, adapters) are workspace members with their own pyproject;
+# adapter-kit is what their adapters share.
+members = ["packs/*/mcp", "packs/*/adapter", "adapter-kit"]
 
 [tool.uv.sources]
 wmk-papers = { workspace = true }
 wmk-software = { workspace = true }
+wmk-process = { workspace = true }
+wmk-adapter-kit = { workspace = true }
 
 [tool.ruff]
 line-length = 110
@@ -54,7 +58,7 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gateway", "kernel", "evals", "tests", "wmk_papers", "wmk_software"]
+known-first-party = ["gateway", "kernel", "evals", "tests", "wmk_adapter", "wmk_papers", "wmk_process", "wmk_software"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "packs"]

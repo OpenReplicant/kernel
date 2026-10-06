@@ -1,0 +1,35 @@
+name: northwind-purchase-requests
+description: 'Northwind''s synthetic purchase-request log (generate.py: 120 cases, January to September 2026), mapped
+  by the process pack''s adapter as the view as done: steps, directly-follows flows, roles, the system and case
+  object, and KPIs over the period. Refresh with `uv run wmk-process snapshot packs/process/evals/fixtures/northwind-purchase-requests/northwind.yaml
+  packs/process/evals/fixtures/northwind-purchase-requests`, then update expected.yaml by hand.'
+namespaces:
+- process
+packs:
+- process
+sources:
+  purchase-requests.csv.digest:
+    file: sources/purchase-requests.csv.digest
+    media_type: text/plain
+    title: 'Event log digest: Purchase requests'
+    uri: event-log:purchase-requests.csv
+    collection: event-log:purchase-requests
+    origins:
+    - system:northwind-coupa
+    metadata:
+      log: purchase-requests.csv
+      format: csv
+      sha256: aa3293a34e936317cab36d4dbd997bdf8f5ceb1ab78e92d050f500cad38cb37b
+      cases: 120
+      events: 543
+      from: '2026-01-02T09:07:00+00:00'
+      to: '2026-09-29T01:19:00+00:00'
+script: script.yaml
+expected: expected.yaml
+thresholds:
+  entities:
+    precision: 1.0
+    recall: 1.0
+  edges:
+    precision: 1.0
+    recall: 1.0

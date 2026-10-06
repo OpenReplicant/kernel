@@ -14,6 +14,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 # Only this pack's package and its dependencies: wmk-papers is a uv workspace member.
 COPY pyproject.toml uv.lock README.md ./
 COPY packs ./packs
+COPY adapter-kit ./adapter-kit
 RUN uv sync --frozen --package wmk-papers --no-default-groups
 
 EXPOSE 8001

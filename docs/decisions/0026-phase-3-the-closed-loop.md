@@ -24,8 +24,8 @@ What Phase 2 taught:
 - **Agent loops are the wrong shape for bulk work.** Most of the cost was harness overhead.
 - **Existing MCP servers cover the edges:**
   - parsers (docling-mcp, markitdown-mcp);
-  - process mining (pm4py-mcp);
-  - process runtimes (Camunda, n8n);
+  - process mining (pm4py-mcp, though pm4py is AGPL: see below);
+  - process runtimes (Operaton or Camunda, n8n);
   - forges and clusters.
 
   What none of them provides is a validated, sourced, versioned record of belief shared by
@@ -56,8 +56,10 @@ demo.**
 - *As told:* interviews.
 - *As written:* SOPs and documents.
 - *As done:* exports and event logs (CSV, XES, OCEL 2.0). Process discovery and
-  conformance checking come from an existing server (pm4py-mcp), and their results are
-  ingested as observed claims.
+  conformance checking results are ingested as observed claims. (Amended by ADR 0027:
+  pm4py is AGPL, so the pack's adapter computes the directly-follows graph and replays
+  cases itself; pm4py-mcp runs only as a service an operator installs after legal review.
+  Camunda 8 needs a paid licence in production; Operaton is the open Camunda 7 fork.)
 
 Where the views disagree, belief marks the fact contested, and the discovery deliverable
 is built from those contested facts.

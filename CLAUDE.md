@@ -52,14 +52,17 @@ demo: map it, choose what to automate, automate it, govern what runs, and let th
 propose changes to what it deployed, approved by a person. Each item starts with a short
 ADR, then code. In this order:
 
-1. **A general process pack.** A runtime-neutral representation, not BPMN: processes made
-   of steps (`activity` entities) joined by `flows_to` edges that carry a `condition`, with
-   roles, actors, systems, data, events, handoffs, exceptions and KPIs. It must translate to
+1. **A general process pack** (ADR 0027, built: `packs/process`). A runtime-neutral
+   representation, not BPMN: processes made of steps (`activity` and `gateway` entities)
+   joined by `flows_to` edges whose `props.when` is the branch condition, with roles,
+   actors, systems, data, triggers, outcomes and KPIs. It must translate to
    and from runtime configurations. Three views of how work happens, each a source:
    - **as told**, from interviews (interview skill);
    - **as written**, from SOPs and documents (parsers at the edge);
-   - **as done**, from system exports and event logs (CSV, XES, OCEL 2.0; process
-     discovery and conformance through an existing server such as pm4py-mcp).
+   - **as done**, from system exports and event logs (CSV, XES, OCEL 2.0), read by the
+     pack's deterministic adapter (`wmk-process discover`, then `conform` against the
+     mapped process). pm4py is AGPL: never imported, at most a separate service an
+     operator installs (ADR 0012).
 
    Where the views disagree, belief shows it as contested: that is the discovery
    deliverable. `bpm-reference` stays as the kernel's test pack.
@@ -73,7 +76,8 @@ ADR, then code. In this order:
      OpenID Connect provider) or GitLab, with branch protection and required reviews;
    - the explorer's signed-in Proposals page for decisions that are not code (activating
      an automation, an erasure, a policy).
-4. **Workflow adapters, one per runtime.** Camunda, n8n, RuleGo, any rules engine, runner
+4. **Workflow adapters, one per runtime.** Operaton or Camunda (Camunda 8 is licensed for
+   non-production use only without a paid licence), n8n, RuleGo, any rules engine, runner
    or plain code. Each compiles the process representation into its runtime's
    configuration, and reads deployments and runs back as observed claims and events, so
    conformance compares what ran with what was mapped. The representation never depends on
