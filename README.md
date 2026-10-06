@@ -9,9 +9,15 @@ the log rebuilds it exactly.
 Every fact keeps who said it and where, when it was true in the world and when the
 kernel learned it, and whether credible sources agree (accepted) or disagree (contested).
 
-Design: [`docs/design-v1.md`](docs/design-v1.md). Decisions taken while building
-Phase 1: [`docs/decisions/`](docs/decisions/). Libraries to adopt for later adapters:
+Design: [`docs/design-v1.md`](docs/design-v1.md). Decisions:
+[`docs/decisions/`](docs/decisions/); where it goes next is
+[ADR 0026](docs/decisions/0026-phase-3-the-closed-loop.md). Libraries to adopt for adapters:
 [`docs/adapters.md`](docs/adapters.md).
+
+**Next (Phase 3):** one synthetic company taken around the whole loop. It is mapped from
+interviews, documents and event logs; one part of its work is automated on a process
+runtime; what runs is observed and checked against the map; and the system proposes
+changes to what it deployed, which a person approves.
 
 ## Quick start
 
