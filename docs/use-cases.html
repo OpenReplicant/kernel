@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Model Kernel Use Cases</title>
+<meta name="description" content="What the World Model Kernel enables: use cases by domain and status, products to build from it, places to contribute, and where it does not fit.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column; a sticky filter bar over use cases set as ruled rows grouped by domain,
+   then products as cards, contributions and limits as plain lists. Palette follows the kernel's explorer. */
+:root {
+  --bg: #fbfbfa;
+  --fg: #1d1f21;
+  --muted: #5f646a;
+  --line: #e2e3e1;
+  --panel: #ffffff;
+  --link: #1f5fbf;
+  --code-bg: #f0f1ee;
+  --today: #1d7a46;
+  --today-bg: #e5f4ea;
+  --road: #1f5fbf;
+  --road-bg: #e8eff9;
+  --step: #8a5200;
+  --step-bg: #fbefd9;
+  --pack: #575b61;
+  --pack-bg: #ececea;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --fg: #e4e6e8; --muted: #9ba0a7; --line: #2c3036; --panel: #1c1f23; --link: #8ab4f8;
+    --code-bg: #22262b; --today: #7fd3a0; --today-bg: #173022; --road: #8ab4f8; --road-bg: #1f2a3a;
+    --step: #f2c070; --step-bg: #3a2c12; --pack: #b8bcc2; --pack-bg: #2a2d32; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --fg: #e4e6e8; --muted: #9ba0a7; --line: #2c3036; --panel: #1c1f23; --link: #8ab4f8;
+  --code-bg: #22262b; --today: #7fd3a0; --today-bg: #173022; --road: #8ab4f8; --road-bg: #1f2a3a;
+  --step: #f2c070; --step-bg: #3a2c12; --pack: #b8bcc2; --pack-bg: #2a2d32; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+a { color: var(--link); }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 3px; }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: grid; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; font-weight: 600; }
+h3 { font-size: 1.12rem; font-weight: 600; font-family: var(--body); }
+p { margin: 0; }
+.eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.1rem; max-width: 64ch; }
+.intro { display: grid; gap: 16px; }
+.intro p { max-width: 66ch; }
+.section-head { display: grid; gap: 8px; }
+.section-head p { color: var(--muted); max-width: 66ch; }
+
+/* The kernel's parts */
+.parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 28px; margin: 0; }
+.parts div { display: grid; gap: 4px; align-content: start; padding-top: 12px; border-top: 1px solid var(--line); min-width: 0; }
+.parts dt code { font-size: 0.9rem; font-weight: 500; }
+.parts dd { margin: 0; color: var(--fg); }
+
+.example { display: grid; gap: 8px; }
+.example pre { margin: 0; overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; }
+.example figcaption { color: var(--muted); font-size: 0.9rem; }
+.example .c { color: var(--step); font-weight: 500; }
+
+/* Status pills */
+.pill { display: inline-block; font-family: var(--mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.today { color: var(--today); background: var(--today-bg); }
+.pill.roadmap { color: var(--road); background: var(--road-bg); }
+.pill.step { color: var(--step); background: var(--step-bg); }
+.pill.pack { color: var(--pack); background: var(--pack-bg); }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 20px; }
+.legend div { display: grid; gap: 4px; align-content: start; justify-items: start; }
+.legend p { font-size: 0.9rem; color: var(--muted); }
+
+/* Filter bar */
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 0.85rem; border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 4px 11px; border-radius: 999px; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--fg); background: var(--fg); color: var(--bg); }
+.chip:focus-visible, .search:focus-visible, a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.search { font: inherit; font-size: 0.9rem; flex: 1 1 200px; min-width: 0; max-width: 320px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); }
+.count { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.92rem; }
+
+/* Use cases */
+.domain { display: grid; gap: 6px; scroll-margin-top: 120px; }
+.domain-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.domain-head span { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.domain > p { color: var(--muted); max-width: 66ch; }
+.uc-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.uc { display: grid; gap: 6px; padding-block: 14px; border-top: 1px solid var(--line); min-width: 0; }
+.uc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; }
+.uc p { max-width: 70ch; }
+.uses { display: flex; flex-wrap: wrap; gap: 6px; }
+.uses code { font-size: 0.75rem; color: var(--muted); }
+.empty { color: var(--muted); padding-block: 12px; }
+
+/* Products */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card .for { font-size: 0.9rem; color: var(--muted); }
+.card dl { margin: 0; display: grid; gap: 6px; font-size: 0.92rem; }
+.card dt { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.card dd { margin: 0 0 4px; }
+.card.lead { border-color: var(--today); }
+.card .tag { justify-self: start; }
+
+/* Contribute and limits */
+.plain { list-style: none; margin: 0; padding: 0; display: grid; }
+.plain li { padding-block: 12px; border-top: 1px solid var(--line); display: grid; gap: 4px; min-width: 0; }
+.plain li strong { font-weight: 600; }
+.plain .start { font-size: 0.88rem; color: var(--muted); }
+footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 520px) {
+  .wrap { padding-block: 28px 56px; gap: 40px; }
+  h2 { font-size: 1.4rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="intro">
+  <p class="eyebrow">OpenReplicant · World Model Kernel</p>
+  <h1>What a world model with receipts makes possible</h1>
+  <p class="lede">The kernel keeps one model of how a business, a system or a field of research works. Every fact in it is a claim with a source, the words it rests on, a time and a basis. Belief is computed from independent sources, so disagreements stay visible instead of being overwritten. Changes are proposals that a signed-in person approves. Agents read and write the model through MCP, with any model.</p>
+  <p>This page lists what that enables. It is for anyone curious what the project is, for developers looking for something to build, and for anyone looking for a product to make from it.</p>
+</header>
+
+<section class="section-head" aria-labelledby="parts-h">
+  <h2 id="parts-h">The parts every use case draws on</h2>
+  <p>Each use case below names the parts it relies on, in the kernel's own terms.</p>
+  <dl class="parts">
+    <div><dt><code>claims</code></dt><dd>Every fact cites its source. A reported claim quotes the words it rests on, and the kernel refuses it if they are not there.</dd></div>
+    <div><dt><code>belief</code></dt><dd>Computed from independent origins: ten documents from one author count once. Sources that disagree make a fact contested.</dd></div>
+    <div><dt><code>as-of</code></dt><dd>Two clocks: when a fact was true in the world, and when the model learned it. Ask what was known on any date.</dd></div>
+    <div><dt><code>log</code></dt><dd>Append-only. Replaying it rebuilds the graph exactly, so every past state can be audited.</dd></div>
+    <div><dt><code>rules</code></dt><dd>Policies and targets are normative claims, kept apart from what happens and linked with <code>contradicts</code> when practice breaks them.</dd></div>
+    <div><dt><code>seal</code></dt><dd>What people say is encrypted under a key of their own. Erasing a person destroys the key and leaves the log whole.</dd></div>
+    <div><dt><code>decide</code></dt><dd>A change is a proposal. Only a signed-in person approves it: never its proposer, never an agent.</dd></div>
+    <div><dt><code>adapters</code></dt><dd>Deterministic readers for exports, event logs, repositories and running systems write what they observe.</dd></div>
+    <div><dt><code>conform</code></dt><dd>What was written or declared, checked against what ran. Drift and process conformance are both this.</dd></div>
+    <div><dt><code>cite</code></dt><dd>Answers carry the ids of what they relied on. A sentence that relied on nothing is marked untraced.</dd></div>
+  </dl>
+</section>
+
+<figure class="example" style="margin:0">
+  <p class="eyebrow">What it looks like</p>
+<pre>Contested (some source asserts, some denies):
+- Check budget [<span class="c">contested</span>]: as written asserts; as told denies; as done denies.
+- Over 10,000 euros? -> Approve purchase request, when amount > 10000 [<span class="c">contested</span>]:
+  as written asserts; as told divided (interview:nw-2026-09-15-a denies,
+  interview:nw-2026-09-16-b asserts from 2026-08-01); as done denies.</pre>
+  <figcaption>From <code>make northwind</code>: a procedure document, two interviews and a purchase-request log, compared. The SOP and the controller say large requests always get approved first; the procurement lead and 120 logged cases say otherwise.</figcaption>
+</figure>
+
+<section class="section-head" aria-labelledby="status-h">
+  <h2 id="status-h">How far each one is</h2>
+  <div class="legend">
+    <div><span class="pill today">Works today</span><p>Built and tested in this repository.</p></div>
+    <div><span class="pill roadmap">On the roadmap</span><p>Planned in the current phase or named as the direction.</p></div>
+    <div><span class="pill step">Small step</span><p>An existing pack plus an adapter, a query or a report.</p></div>
+    <div><span class="pill pack">New pack</span><p>Needs its own ontology and adapters: a project of its own.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="uc-h" style="display:grid; gap:20px">
+  <div class="section-head">
+    <h2 id="uc-h">Use cases</h2>
+    <nav class="toc" aria-label="Domains">
+      <a href="#processes">Business processes</a>
+      <a href="#software">Software and IT</a>
+      <a href="#compliance">Compliance and legal</a>
+      <a href="#research">Research and evidence</a>
+      <a href="#agents">AI agents</a>
+      <a href="#people">Teams and knowledge</a>
+      <a href="#data">Data and integration</a>
+      <a href="#sectors">Sectors</a>
+    </nav>
+  </div>
+
+  <div class="filters" role="search">
+    <div class="chips" role="group" aria-label="Filter by status">
+      <button class="chip" type="button" id="f-all" data-filter="all" aria-pressed="true">All</button>
+      <button class="chip" type="button" id="f-today" data-filter="today" aria-pressed="false">Works today</button>
+      <button class="chip" type="button" id="f-roadmap" data-filter="roadmap" aria-pressed="false">On the roadmap</button>
+      <button class="chip" type="button" id="f-step" data-filter="step" aria-pressed="false">Small step</button>
+      <button class="chip" type="button" id="f-pack" data-filter="pack" aria-pressed="false">New pack</button>
+    </div>
+    <input class="search" id="q" type="search" placeholder="Search use cases" aria-label="Search use cases">
+    <span class="count" id="count" aria-live="polite"></span>
+  </div>
+
+  <!-- Business processes -->
+  <section class="domain" id="processes">
+    <div class="domain-head"><h2>Business processes</h2><span></span></div>
+    <p>The process pack maps how work happens as told, as written and as done, with steps joined by flows whose conditions a workflow runtime can run.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Process discovery</h3><span class="pill today">Works today</span></div>
+        <p>Map a process three ways: from interviews, from SOPs and from event logs. Deliver the facts the views disagree on, with each side's words and the cases that show it. Today an agent with the core and interview skills writes the claims from interviews and documents; the Northwind demo scripts that part until the extractor does it.</p>
+        <p class="uses"><code>belief</code><code>conform</code><code>seal</code><code>cite</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>Discovery report with receipts</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>One page per process: the map, the disagreements, the gaps, the measures and the questions for the next interview, each sentence linked to its source.</p>
+        <p class="uses"><code>cite</code><code>belief</code><code>as-of</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>Ranking what to automate</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>Score each step on volume, cycle time, rework, handoffs and rule breaks, computed from the model itself, with every input shown next to the score.</p>
+        <p class="uses"><code>adapters</code><code>conform</code><code>rules</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>Compile and run a mapped process</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>Turn the mapped process into a runtime's configuration (Operaton first, then others), run it, and read the runs back so conformance compares what ran with what was mapped.</p>
+        <p class="uses"><code>decide</code><code>adapters</code><code>conform</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>SOP drift monitor</h3><span class="pill step">Small step</span></div>
+        <p>Check every new log export against the written procedure and tell its owner which statements the log now denies.</p>
+        <p class="uses"><code>conform</code><code>rules</code><code>as-of</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Controls testing</h3><span class="pill step">Small step</span></div>
+        <p>A control such as "orders over 10,000 need the controller's approval" becomes a routing rule tested against every case, with each exception named and dated.</p>
+        <p class="uses"><code>rules</code><code>conform</code><code>as-of</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Key-person knowledge</h3><span class="pill today">Works today</span></div>
+        <p>Interview the people a process depends on, then list the facts only one person has stated. That list is the organisation's key-person risk.</p>
+        <p class="uses"><code>belief</code><code>seal</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Role history and handovers</h3><span class="pill today">Works today</span></div>
+        <p>Who held which role from when to when, with conflicting accounts kept side by side until someone settles them.</p>
+        <p class="uses"><code>as-of</code><code>belief</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Ownership gaps</h3><span class="pill today">Works today</span></div>
+        <p>Steps nobody is responsible for, roles nobody holds and steps with no next step. Every interview starts from these queries.</p>
+        <p class="uses"><code>claims</code><code>belief</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Measures with provenance</h3><span class="pill today">Works today</span></div>
+        <p>Case volumes, cycle times and executions per step, each tied to the log lines it came from and the period it covers.</p>
+        <p class="uses"><code>adapters</code><code>as-of</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Merger integration</h3><span class="pill step">Small step</span></div>
+        <p>Map both companies' versions of the same process as separate views and compare them before choosing one.</p>
+        <p class="uses"><code>belief</code><code>conform</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Outsourcing handover</h3><span class="pill step">Small step</span></div>
+        <p>Capture the process with evidence before it moves to a provider, then check the provider's logs against the same map.</p>
+        <p class="uses"><code>conform</code><code>as-of</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Answers for new staff</h3><span class="pill today">Works today</span></div>
+        <p>New people ask how something works and get an answer that cites its sources and says where colleagues disagree.</p>
+        <p class="uses"><code>cite</code><code>belief</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- Software -->
+  <section class="domain" id="software">
+    <div class="domain-head"><h2>Software and IT</h2><span></span></div>
+    <p>The software pack reads what a repository declares, observes what runs, and records how changes were reviewed.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Living architecture map</h3><span class="pill today">Works today</span></div>
+        <p>Repositories, packages, images, services and pipelines read from the files that declare them, kept current as those files change.</p>
+        <p class="uses"><code>adapters</code><code>log</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Drift detection</h3><span class="pill today">Works today</span></div>
+        <p>Declared configuration against what is running, contested where they disagree. Docker works today; Kubernetes and Terraform state need adapters.</p>
+        <p class="uses"><code>conform</code><code>belief</code><code>adapters</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Change-approval audit</h3><span class="pill today">Works today</span></div>
+        <p>Which changes reached the default branch, and which deployments run code, without an approved pull request. Evidence for SOC 2 or ISO 27001 change management.</p>
+        <p class="uses"><code>adapters</code><code>as-of</code><code>decide</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>Agents that propose, people who approve</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>An operations agent notices a problem and proposes a pull request. It cannot approve its own change, and the actuator applies only what a person approved.</p>
+        <p class="uses"><code>decide</code><code>conform</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Incident timelines</h3><span class="pill step">Small step</span></div>
+        <p>Every event sourced to a log line, alert or message. Responders' conflicting accounts stay apart, and the model can be read as it stood at any minute.</p>
+        <p class="uses"><code>as-of</code><code>belief</code><code>seal</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>What changed before it broke</h3><span class="pill step">Small step</span></div>
+        <p>Changes, deployments and health between two times, read as of the moment the incident began.</p>
+        <p class="uses"><code>as-of</code><code>adapters</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Blast radius</h3><span class="pill today">Works today</span></div>
+        <p>What depends on a service, an image or a package, through the dependency edges the adapters write.</p>
+        <p class="uses"><code>adapters</code><code>claims</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Dependency and licence inventory</h3><span class="pill step">Small step</span></div>
+        <p>Packages and images with the manifest that declares each, ready for licence and vulnerability checks by another adapter.</p>
+        <p class="uses"><code>adapters</code><code>claims</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Runbooks against practice</h3><span class="pill step">Small step</span></div>
+        <p>Runbook steps as written against CI and deployment history as done.</p>
+        <p class="uses"><code>conform</code><code>rules</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- Compliance -->
+  <section class="domain" id="compliance">
+    <div class="domain-head"><h2>Compliance, risk and legal</h2><span></span></div>
+    <p>Rules kept apart from practice, an audit trail that cannot be rewritten, and personal data that can be erased.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Policy against practice</h3><span class="pill today">Works today</span></div>
+        <p>A policy becomes normative claims. Observed practice that breaks it is linked with <code>contradicts</code>, so the gap is a query rather than something someone has to remember.</p>
+        <p class="uses"><code>rules</code><code>belief</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Control frameworks mapped to evidence</h3><span class="pill pack">New pack</span></div>
+        <p>ISO 27001, SOC 2 or NIST controls as rules about processes and systems, each linked to the evidence that tests it.</p>
+        <p class="uses"><code>rules</code><code>conform</code><code>cite</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Personal-data requests and erasure</h3><span class="pill today">Works today</span></div>
+        <p>What the model holds about a person, and an erasure that destroys their key while the log stays whole and replayable.</p>
+        <p class="uses"><code>seal</code><code>log</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>AI oversight records</h3><span class="pill today">Works today</span></div>
+        <p>Which agent read what, wrote which claim, and which person approved which change: the record-keeping and human-oversight evidence AI regulation asks for.</p>
+        <p class="uses"><code>log</code><code>decide</code><code>as-of</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Contract obligations</h3><span class="pill pack">New pack</span></div>
+        <p>Obligations as rules with validity windows, linked to what the systems show was delivered.</p>
+        <p class="uses"><code>rules</code><code>as-of</code><code>adapters</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Litigation chronologies</h3><span class="pill pack">New pack</span></div>
+        <p>Events dated in the world and in the record, each sourced to a page of a document, with conflicting testimony kept side by side.</p>
+        <p class="uses"><code>as-of</code><code>claims</code><code>belief</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Third-party risk</h3><span class="pill pack">New pack</span></div>
+        <p>A vendor's questionnaire answers, its certificates and what your own systems observe, compared as three views.</p>
+        <p class="uses"><code>belief</code><code>conform</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- Research -->
+  <section class="domain" id="research">
+    <div class="domain-head"><h2>Research and evidence</h2><span></span></div>
+    <p>The research pack reads papers into findings with quotes, and counts agreement by independent origin.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Living literature review</h3><span class="pill today">Works today</span></div>
+        <p>Findings from papers as quoted claims, contested where studies disagree, updated as new papers arrive.</p>
+        <p class="uses"><code>claims</code><code>belief</code><code>cite</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Evidence that resists citation cascades</h3><span class="pill today">Works today</span></div>
+        <p>Belief counts independent origins, so many papers repeating one lab's result count once.</p>
+        <p class="uses"><code>belief</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Frontier tracking</h3><span class="pill step">Small step</span></div>
+        <p>Read the daily arXiv stream for a field and report which new papers support or contradict what the model holds.</p>
+        <p class="uses"><code>adapters</code><code>belief</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Replication tracking</h3><span class="pill step">Small step</span></div>
+        <p>Which findings were replicated, which failed to replicate, and when each result appeared.</p>
+        <p class="uses"><code>belief</code><code>as-of</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Systematic review support</h3><span class="pill step">Small step</span></div>
+        <p>Screening and data extraction with every extracted value quoted and checkable against its paper.</p>
+        <p class="uses"><code>claims</code><code>cite</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Due diligence</h3><span class="pill pack">New pack</span></div>
+        <p>Filings, management interviews and expert calls as sources, with the facts they disagree on listed by who said what.</p>
+        <p class="uses"><code>belief</code><code>seal</code><code>cite</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Fact-checking and journalism</h3><span class="pill step">Small step</span></div>
+        <p>Who said what and when, corrections recorded as supersessions, and every published sentence cited.</p>
+        <p class="uses"><code>claims</code><code>as-of</code><code>cite</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Competitive intelligence</h3><span class="pill step">Small step</span></div>
+        <p>Claims about competitors from public sources, by origin and date, so stale and single-source claims stand out.</p>
+        <p class="uses"><code>belief</code><code>as-of</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- Agents -->
+  <section class="domain" id="agents">
+    <div class="domain-head"><h2>AI agents and context</h2><span></span></div>
+    <p>The gateway is an MCP server any harness can use; the kernel keeps what agents write honest and reviewable.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Shared memory for agents</h3><span class="pill today">Works today</span></div>
+        <p>Any MCP harness reads and writes one model. Conflicting observations from different agents are kept, never overwritten.</p>
+        <p class="uses"><code>claims</code><code>belief</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>Recall with receipts</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>The facts relevant to a task delivered into an agent's context with belief, windows, contested sides and quotes, and a trace of what it was shown.</p>
+        <p class="uses"><code>belief</code><code>as-of</code><code>cite</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Quote-checked extraction</h3><span class="pill today">Works today</span></div>
+        <p>A reported claim is refused unless the words it quotes are in its source, which keeps invented support out of the model.</p>
+        <p class="uses"><code>claims</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>An approval channel for agent actions</h3><span class="pill today">Works today</span></div>
+        <p>Agents write proposals; people decide on them in the explorer. Agents cannot approve, and nobody can approve their own proposal.</p>
+        <p class="uses"><code>decide</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Reproducible agent decisions</h3><span class="pill today">Works today</span></div>
+        <p>Every write records the log offset its agent had read. Read the graph as of that offset to see what the agent knew.</p>
+        <p class="uses"><code>as-of</code><code>log</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Measuring extraction</h3><span class="pill today">Works today</span></div>
+        <p>Fixtures check the plumbing; data annotated by others measures how well a model extracts, with intervals.</p>
+        <p class="uses"><code>claims</code><code>cite</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>A system that models itself</h3><span class="pill today">Works today</span></div>
+        <p>The kernel maps its own code, deployment and change history, and audits which of its running parts no person approved.</p>
+        <p class="uses"><code>adapters</code><code>conform</code><code>decide</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>A research agent that improves itself</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>The long-term direction: read new research daily, test techniques against the system's own evals, and propose the ones that help, for a person to approve.</p>
+        <p class="uses"><code>belief</code><code>decide</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- People -->
+  <section class="domain" id="people">
+    <div class="domain-head"><h2>Teams and knowledge</h2><span></span></div>
+    <p>The interview skill asks one question at a time, starting from what the model lacks, and seals each answer under the speaker's key.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Expert knowledge capture</h3><span class="pill today">Works today</span></div>
+        <p>Consented interviews that start from what the model is missing or disputes, recorded word for word and attributed.</p>
+        <p class="uses"><code>seal</code><code>belief</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Meeting memory</h3><span class="pill step">Small step</span></div>
+        <p>Decisions and commitments from meeting transcripts, attributed to whoever said them and sealed under their key.</p>
+        <p class="uses"><code>seal</code><code>rules</code><code>as-of</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Requirements from stakeholders</h3><span class="pill step">Small step</span></div>
+        <p>Stakeholder interviews turned into requirements as rules about the system to build, with conflicting requirements found before anyone builds.</p>
+        <p class="uses"><code>rules</code><code>belief</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Customer discovery</h3><span class="pill step">Small step</span></div>
+        <p>Needs and pains from customer interviews, counted once per customer rather than once per mention.</p>
+        <p class="uses"><code>belief</code><code>seal</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Org chart against reality</h3><span class="pill step">Small step</span></div>
+        <p>Who the HR system says holds a role against who performs the work in the logs.</p>
+        <p class="uses"><code>conform</code><code>as-of</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Goals and measures</h3><span class="pill step">Small step</span></div>
+        <p>Goals as rules linked to the measures systems report, with the period each measure covers.</p>
+        <p class="uses"><code>rules</code><code>adapters</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- Data -->
+  <section class="domain" id="data">
+    <div class="domain-head"><h2>Data and integration</h2><span></span></div>
+    <p>Systems of record become sources like any other, so their disagreements show instead of the last write winning.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="step"><div class="uc-top"><h3>System-of-record reconciliation</h3><span class="pill step">Small step</span></div>
+        <p>CRM, ERP and billing as separate origins. Where they disagree about a customer or a contract, the fact is contested.</p>
+        <p class="uses"><code>belief</code><code>adapters</code></p></li>
+      <li class="uc" data-status="today"><div class="uc-top"><h3>Entity resolution with identity rules</h3><span class="pill today">Works today</span></div>
+        <p>Identity keys, normalised names, trigrams and embeddings propose matches. Duplicates are linked, never merged, so a wrong link can be undone.</p>
+        <p class="uses"><code>claims</code><code>log</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Data lineage</h3><span class="pill pack">New pack</span></div>
+        <p>Datasets, transformations and reports, with what each was derived from and when.</p>
+        <p class="uses"><code>adapters</code><code>as-of</code></p></li>
+      <li class="uc" data-status="roadmap"><div class="uc-top"><h3>A model of the whole organisation</h3><span class="pill roadmap">On the roadmap</span></div>
+        <p>Processes, systems, people, rules and measures in one model that runtimes and agents read, and propose changes to.</p>
+        <p class="uses"><code>belief</code><code>decide</code><code>conform</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+
+  <!-- Sectors -->
+  <section class="domain" id="sectors">
+    <div class="domain-head"><h2>Sectors</h2><span></span></div>
+    <p>The same parts, specialised by a pack's ontology and adapters for one industry.</p>
+    <ul class="uc-list">
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Finance operations</h3><span class="pill step">Small step</span></div>
+        <p>Procure-to-pay, order-to-cash and month-end close. The process pack fits as it is; each accounting system's export needs an adapter.</p>
+        <p class="uses"><code>conform</code><code>rules</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Logistics</h3><span class="pill step">Small step</span></div>
+        <p>Handling procedures against scan events, with exceptions by depot and date.</p>
+        <p class="uses"><code>conform</code><code>as-of</code></p></li>
+      <li class="uc" data-status="step"><div class="uc-top"><h3>Grants and nonprofits</h3><span class="pill step">Small step</span></div>
+        <p>Grant conditions as rules, checked against what spending records show.</p>
+        <p class="uses"><code>rules</code><code>conform</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Care pathways</h3><span class="pill pack">New pack</span></div>
+        <p>Clinical guidelines as written against care events as done, with patient data sealed. Real use needs clinical governance first.</p>
+        <p class="uses"><code>conform</code><code>seal</code><code>rules</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Manufacturing quality</h3><span class="pill pack">New pack</span></div>
+        <p>Work instructions against MES logs, with deviations and corrective actions and who approved each.</p>
+        <p class="uses"><code>conform</code><code>decide</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Public-sector casework</h3><span class="pill pack">New pack</span></div>
+        <p>Statutory rules against case-management logs, with an audit trail ready for information requests.</p>
+        <p class="uses"><code>rules</code><code>log</code><code>seal</code></p></li>
+      <li class="uc" data-status="pack"><div class="uc-top"><h3>Construction projects</h3><span class="pill pack">New pack</span></div>
+        <p>Change orders, requests for information and their approvals, with conflicting site accounts kept.</p>
+        <p class="uses"><code>decide</code><code>belief</code><code>as-of</code></p></li>
+    </ul>
+    <p class="empty" hidden>No use cases here match the filter.</p>
+  </section>
+</section>
+
+<section style="display:grid; gap:18px" aria-labelledby="products-h">
+  <div class="section-head">
+    <h2 id="products-h">Products to build from it</h2>
+    <p>Ways to package the use cases above. The first needs the least that does not exist yet.</p>
+  </div>
+  <div class="cards">
+    <article class="card lead">
+      <span class="pill today tag">Shortest path</span>
+      <h3>Discovery kit</h3>
+      <p class="for">For consultants and internal improvement teams.</p>
+      <p>Map a client's process from interviews, documents and a log export; deliver the report; pilot one automation.</p>
+      <dl><dt>Exists</dt><dd>Mapping, conformance, comparison of the views, sealing, approvals.</dd>
+          <dt>Missing</dt><dd>Ranking, the report, intake from a client's folder.</dd></dl>
+    </article>
+    <article class="card">
+      <h3>Process monitor</h3>
+      <p class="for">For operations leads with a workflow or ERP system.</p>
+      <p>Monthly conformance and SOP drift from scheduled exports, with each exception traced to its cases.</p>
+      <dl><dt>Exists</dt><dd>Log mapping and conformance.</dd>
+          <dt>Missing</dt><dd>Scheduled intake, notifications, hosting.</dd></dl>
+    </article>
+    <article class="card">
+      <h3>Audit evidence</h3>
+      <p class="for">For companies preparing for SOC 2 or ISO 27001.</p>
+      <p>Change approvals and control tests with receipts, read as of the audit period.</p>
+      <dl><dt>Exists</dt><dd>Forge audit, drift, as-of reads, the append-only log.</dd>
+          <dt>Missing</dt><dd>A controls pack and an evidence export.</dd></dl>
+    </article>
+    <article class="card">
+      <h3>Interview copilot</h3>
+      <p class="for">For consultants, researchers and product teams.</p>
+      <p>Consented interviews guided by what the model lacks, each answer sealed and attributed.</p>
+      <dl><dt>Exists</dt><dd>The interview skill, sealing, gap queries.</dd>
+          <dt>Missing</dt><dd>Transcript intake and a guided interface.</dd></dl>
+    </article>
+    <article class="card">
+      <h3>Agent memory server</h3>
+      <p class="for">For teams building agents.</p>
+      <p>An MCP memory with provenance, computed belief and a human approval channel.</p>
+      <dl><dt>Exists</dt><dd>The kernel and the gateway.</dd>
+          <dt>Missing</dt><dd>Recall into context, packaging for self-hosting.</dd></dl>
+    </article>
+    <article class="card">
+      <h3>Living review</h3>
+      <p class="for">For labs, policy teams and analysts.</p>
+      <p>A field's findings, contested where studies disagree, refreshed from new papers every day.</p>
+      <dl><dt>Exists</dt><dd>The research pack and the paper-source server.</dd>
+          <dt>Missing</dt><dd>Scheduled reading and a reader-facing view.</dd></dl>
+    </article>
+    <article class="card">
+      <h3>Due-diligence workspace</h3>
+      <p class="for">For acquirers and investors.</p>
+      <p>Every claim in a data room traced to a page, with contradictions between management and documents listed.</p>
+      <dl><dt>Exists</dt><dd>The core: claims, belief, sealing, citations.</dd>
+          <dt>Missing</dt><dd>A deal pack and document parsers.</dd></dl>
+    </article>
+  </div>
+</section>
+
+<section style="display:grid; gap:12px" aria-labelledby="contrib-h">
+  <div class="section-head">
+    <h2 id="contrib-h">Where developers can contribute</h2>
+    <p>Each of these extends the kernel without changing it: packs and adapters live in their own folders and reach the kernel only through the gateway.</p>
+  </div>
+  <ul class="plain">
+    <li><strong>Adapters for structured sources</strong>
+      <span>Kubernetes, Terraform state, Prometheus, GitLab and Forgejo forges, Jira and Linear, exports from Odoo, SAP and Xero, HubSpot and Salesforce, HR systems.</span>
+      <span class="start">Start from <code>packs/software/adapter</code>, <code>packs/process/adapter</code> and <code>adapter-kit/</code>.</span></li>
+    <li><strong>Workflow runtimes</strong>
+      <span>Operaton comes first; n8n, Temporal, Camunda 8, Airflow and GitHub Actions could follow. Each compiles the process representation and reads runs back.</span>
+      <span class="start">Start from the process pack's <code>SKILL.md</code> and ADR 0027.</span></li>
+    <li><strong>New packs</strong>
+      <span>Security controls, contracts, care pathways, manufacturing quality, customer research, meetings.</span>
+      <span class="start">Start from <code>docs/packs.md</code>: an ontology in <code>schema.yaml</code> and <code>rules.yaml</code>, a skill, fixtures and tests.</span></li>
+    <li><strong>Document parsers at the edge</strong>
+      <span>MCP servers wrapping existing converters for PDF, Word and slides, so documents reach the gateway as Markdown with no model in between.</span>
+      <span class="start">Start from ADR 0024.</span></li>
+    <li><strong>Explorer views</strong>
+      <span>A BPMN rendering of a mapped process, a timeline with an as-of slider, an inbox of contested facts, swimlane diagrams.</span>
+      <span class="start">Start from <code>ui/site</code>.</span></li>
+    <li><strong>Evals</strong>
+      <span>Annotated sets for process and interview extraction, a cross-paper research eval, a second independent reader.</span>
+      <span class="start">Start from <code>evals/</code> and <code>evals/annotated/RESULTS.md</code>.</span></li>
+    <li><strong>Harness integrations and skills</strong>
+      <span>Recall hooks for Claude Code and other MCP clients, and skills for new domains in plain Markdown any harness can load.</span>
+      <span class="start">Start from <code>skills/core</code> and <code>skills/interview</code>.</span></li>
+  </ul>
+</section>
+
+<section style="display:grid; gap:12px" aria-labelledby="limits-h">
+  <div class="section-head">
+    <h2 id="limits-h">Where it does not fit</h2>
+  </div>
+  <ul class="plain">
+    <li><strong>It is not a metrics store.</strong><span>It keeps observations and summaries. Raw telemetry belongs in a time-series database, read by an adapter.</span></li>
+    <li><strong>It does not act.</strong><span>The kernel records and answers. Anything that changes a system goes through a proposal a person approved and an adapter outside the kernel.</span></li>
+    <li><strong>It maps work, not people's performance.</strong><span>Consent before interviews, sealed answers and no personal data in telemetry are part of its design. Using it to score or watch individuals works against that design.</span></li>
+    <li><strong>It shows disagreement; it does not settle it.</strong><span>People or new evidence settle a contested fact, and the model records how.</span></li>
+    <li><strong>Extraction is model work.</strong><span>Quotes are checked; interpretation is not. Extraction quality has been measured on SciFact only so far, so review what a model writes before relying on it.</span></li>
+  </ul>
+</section>
+
+<footer>Status as of 6 October 2026: kernel 0.6.1, the MCP gateway, the process, software and research packs, the interview skill and the explorer are built. The current phase takes one synthetic company, Northwind, around the whole loop: map it, choose what to automate, automate it, govern what runs. Each status changes as that work lands; corrections and new use cases are welcome as pull requests to <code>docs/use-cases.html</code>.</footer>
+
+</div>
+
+<script>
+(function () {
+  var items = Array.prototype.slice.call(document.querySelectorAll('.uc'));
+  var domains = Array.prototype.slice.call(document.querySelectorAll('.domain'));
+  var chips = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
+  var search = document.getElementById('q');
+  var count = document.getElementById('count');
+  var status = 'all';
+
+  chips.forEach(function (chip) {
+    var key = chip.getAttribute('data-filter');
+    var n = key === 'all' ? items.length : items.filter(function (li) { return li.dataset.status === key; }).length;
+    chip.textContent = chip.textContent + ' ' + n;
+    chip.addEventListener('click', function () {
+      status = key;
+      chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+      apply();
+    });
+  });
+  search.addEventListener('input', apply);
+
+  function apply() {
+    var q = search.value.trim().toLowerCase();
+    var shown = 0;
+    items.forEach(function (li) {
+      var ok = (status === 'all' || li.dataset.status === status) && (!q || li.textContent.toLowerCase().indexOf(q) !== -1);
+      li.hidden = !ok;
+      if (ok) shown++;
+    });
+    domains.forEach(function (d) {
+      var all = d.querySelectorAll('.uc').length;
+      var vis = d.querySelectorAll('.uc:not([hidden])').length;
+      d.querySelector('.domain-head span').textContent = vis === all ? all + ' use cases' : vis + ' of ' + all;
+      d.querySelector('.empty').hidden = vis !== 0;
+    });
+    count.textContent = shown === items.length ? items.length + ' use cases' : 'Showing ' + shown + ' of ' + items.length;
+  }
+  apply();
+})();
+</script>
+</body>
+</html>
