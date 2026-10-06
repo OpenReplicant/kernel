@@ -8,6 +8,7 @@
 | `urn:wmk:rule:time` | `valid_from` not before `valid_to`, or an event ending before it starts | Fix the dates |
 | `urn:wmk:rule:identity` | Identity key malformed or not declared for that kind | Fix the value; use a key from `nearest` |
 | `urn:wmk:rule:provenance` | Basis too weak for this edge, a reported claim without a source or quote (`core.reported_needs_quote`), a quote not in the chunk (`kernel.quote_in_source`, with `nearest`: the chunk's closest sentence), or a claim outside its run's source (`kernel.run_source`) | Cite the chunk and copy its words exactly; if no words say it, the claim is `inferred`, not reported |
+| `urn:wmk:rule:governance` | A decision on a proposal not made by a signed-in person (`core.decided_by_person`), a proposed or hypothetical claim stating facts about other nodes (`core.proposals_are_data`), or withdrawing someone else's proposal (`core.withdraw_own`) | Do not retry: propose, and let a person decide. Move a proposal's facts into `props.change`; relate it only through its own Claim node |
 | `urn:wmk:write:duplicate` | The node probably exists (`candidates`) | Use the candidate's id; if it is truly different, add it to `distinct_from` (not possible for identity-key matches) |
 | `urn:wmk:write:stale-read` | Nodes you touch changed since `read_at_offset` (`changed`) | Read them again, rethink, resubmit with the new `head_offset` |
 | `urn:wmk:write:unknown-reference` | An id or `$ref` does not exist (`candidates` may suggest ids for a name) | Look the name up; define refs before using them |

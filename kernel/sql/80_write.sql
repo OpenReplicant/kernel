@@ -1108,6 +1108,9 @@ BEGIN
       jsonb_build_object('changed', v_stale, 'head_offset', v_offset - 1));
   END IF;
 
+  -- 4. Governance: who may decide on proposals; proposals and hypotheses are data (ADR 0029)
+  PERFORM kernel.check_governance(resolved, v_agent, v_modality, v_claim_id, v_promoted);
+
   -- 5. Project, check cardinality, append the log entry, apply conflicts --------------------
   v_source_key := CASE WHEN v_source.id IS NOT NULL THEN coalesce(v_source.collection, v_source.id)
                        ELSE 'agent:' || v_agent END;

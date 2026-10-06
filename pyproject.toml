@@ -1,6 +1,6 @@
 [project]
 name = "world-model-kernel"
-version = "0.5.0"
+version = "0.6.0"
 description = "A lightweight world model any agent can plug into: an append-only claim log, its graph projection and an MCP gateway."
 readme = "README.md"
 requires-python = ">=3.12"

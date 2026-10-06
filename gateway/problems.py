@@ -30,6 +30,7 @@ PROBLEM_TYPES: dict[str, ProblemType] = {
     "time": ProblemType("urn:wmk:rule:time", "Invalid time window", 422),
     "identity": ProblemType("urn:wmk:rule:identity", "Invalid identity key", 422),
     "provenance": ProblemType("urn:wmk:rule:provenance", "Insufficient provenance", 422),
+    "governance": ProblemType("urn:wmk:rule:governance", "Not a decision this writer may make", 403),
     "duplicate": ProblemType("urn:wmk:write:duplicate", "Probable duplicate", 409),
     "stale": ProblemType("urn:wmk:write:stale-read", "Stale read", 409),
     "reference": ProblemType("urn:wmk:write:unknown-reference", "Unknown reference", 422),

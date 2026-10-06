@@ -109,7 +109,9 @@ BEGIN
     WHEN 'promote' THEN
       -- The claim's text in the clear; '[erased]' once a sealed text's key is gone.
       v_text := CASE WHEN c ? 'text_key' THEN coalesce(kernel.unseal(c ->> 'text'), '[erased]') ELSE c ->> 'text' END;
-      INSERT INTO kernel.nodes (id, type, kind, namespace, name, props, belief_status,
+      -- A proposal's status is decided, not believed (ADR 0029): it starts open with no
+      -- status assertion, so only decisions and its writer's withdrawal set one.
+      INSERT INTO kernel.nodes (id, type, kind, namespace, name, props, belief_status, status,
                                 sealed_key, claim_id, created_offset, updated_offset, created_at, updated_at)
       VALUES (op ->> 'node_id', 'Claim', c ->> 'modality', 'core', kernel.claim_node_name(v_text),
               coalesce(op -> 'props', '{}') || jsonb_build_object(
@@ -117,11 +119,14 @@ BEGIN
                 'polarity', (c ->> 'polarity')::int, 'confidence', c ->> 'confidence', 'claim_id', c ->> 'id')
               || CASE WHEN jsonb_array_length(coalesce(op -> 'about_edges', '[]')) > 0
                       THEN jsonb_build_object('about_edges', op -> 'about_edges') ELSE '{}' END,
-              'unknown', c ->> 'text_key', c ->> 'id', v_offset, v_offset, v_at, v_at);
-      INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
-                                     polarity, value, basis, modality, confidence, weight, recorded_at)
-      VALUES (v_asr || idx || 's', v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status', op ->> 'node_id',
-              1, 'open', c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
+              'unknown', CASE WHEN c ->> 'modality' = 'proposed' THEN 'open' END,
+              c ->> 'text_key', c ->> 'id', v_offset, v_offset, v_at, v_at);
+      IF c ->> 'modality' IS DISTINCT FROM 'proposed' THEN
+        INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type,
+                                       target_id, polarity, value, basis, modality, confidence, weight, recorded_at)
+        VALUES (v_asr || idx || 's', v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'status',
+                op ->> 'node_id', 1, 'open', c ->> 'basis', c ->> 'modality', c ->> 'confidence', v_weight, v_at);
+      END IF;
       INSERT INTO kernel.assertions (id, log_offset, op_index, claim_id, agent_id, source_key, origins, target_type, target_id,
                                      polarity, basis, modality, confidence, weight, recorded_at)
       VALUES (v_asr || idx, v_offset, idx, c ->> 'id', v_agent, c ->> 'source_key', v_origins, 'claim', op ->> 'node_id',

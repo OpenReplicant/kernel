@@ -222,6 +222,6 @@ def test_the_kernel_range_is_enforced(tmp_path: Path, dbname: str) -> None:
     )
     with (
         psycopg.connect(admin.dsn_for(admin.admin_dsn(), dbname)) as conn,
-        pytest.raises(PackError, match=r"supports kernel >=9\.0, not 0\.5\.0"),
+        pytest.raises(PackError, match=r"supports kernel >=9\.0, not 0\.6\.0"),
     ):
         packs_mod.install(conn, packs_mod.load(future))

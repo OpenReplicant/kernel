@@ -34,9 +34,10 @@ ADR 0026). Read the relevant ones before changing anything architectural.
 
 Keep all of it working; its invariants and tests still apply.
 
-- Kernel 0.5.0 (`kernel/sql/`): the log and seven operations, quotes checked against their
+- Kernel 0.6.0 (`kernel/sql/`): the log and seven operations, quotes checked against their
   source, extraction runs, belief v2 counting independent origins, the two clocks and
-  as-of reads, the resolution cascade, sealing and erasure of personal data (ADR 0022).
+  as-of reads, the resolution cascade, sealing and erasure of personal data (ADR 0022),
+  and governance: proposals are data, only a signed-in person decides (ADR 0029).
 - Gateway (`gateway/`): `write`, `write_batch`, `lookup_entities`, `get_schema_slice`,
   `query_graph`, `query_log`, `ingest_source`, `cite`; RFC 9457 problems; OTel; profiles.
 - Skills: `skills/core`, `skills/interview`. Packs (`packs/`): `research` (papers, the
@@ -72,8 +73,11 @@ ADR, then code. In this order:
    `observe`, `drift`); Kubernetes, Grafana or Prometheus and the forge are later readers of
    the same model. Drift is the declared view contradicting the observed one, shown as
    contested; `make observe-self` observes the kernel's own stack.
-3. **The approval channel (ADR 0019, now to be built).** People approve, the actuator
-   enforces, the kernel records. Approval adapters per channel:
+3. **The approval channel (ADR 0019, built by ADR 0029).** People approve, the actuator
+   enforces, the kernel records. The kernel part is built: `kernel.decide`, run only as
+   `kernel_approver` for the person a verified token names, and governance rules in
+   `kernel.write` (no machine decides, no self-approval, approvers outside the system they
+   change, instruments need two people). Next, approval adapters per channel:
    - a forge for code and configuration: GitHub, or a self-hosted Forgejo (also an
      OpenID Connect provider) or GitLab, with branch protection and required reviews;
    - the explorer's signed-in Proposals page for decisions that are not code (activating
@@ -148,7 +152,8 @@ Keep these working; add `make demo` in Phase 3.
 
 1. **One write path.** Only `kernel.write`, `kernel.ingest_source` and `kernel.cite`
    change data, plus `kernel.erase`, which destroys data keys and is run only by an operator
-   as `kernel_eraser`, never by an agent (ADR 0022). Gateway code never issues INSERT,
+   as `kernel_eraser`, never by an agent (ADR 0022). `kernel.decide` writes a person's
+   decision through `kernel.write` (ADR 0029). Gateway code never issues INSERT,
    UPDATE or DELETE directly. Bulk loading and every adapter are many payloads through the
    gateway, never a direct import.
 2. **The log is append-only.** No UPDATE or DELETE on log tables, enforced by
@@ -177,7 +182,8 @@ Keep these working; add `make demo` in Phase 3.
     answer; they never act on the outside world. Adapters that change a runtime, a
     repository or a system live in packs, act only on a change a person approved through
     the approval channel (ADR 0019), and hold no credential that bypasses it. Agents never
-    approve.
+    approve: `kernel.write` refuses any decision on a proposal not made by a signed-in
+    person through `kernel.decide` (ADR 0029).
 
 ## The write payload
 
@@ -272,8 +278,11 @@ provenance, no ops). Never drop it.
   configuration and reads its deployments and runs back.
 - **Drift:** the declared view of a system contradicted by the observed one.
 - **Conformance:** how far what ran matches what was mapped.
-- **Proposal, approval:** a claim of modality `proposed` describing a change; a decision
-  on it by an authenticated person who did not propose it (ADR 0019).
+- **Proposal, approval:** a claim of modality `proposed` describing a change in
+  `props.change`, stating no facts; a decision on it by an authenticated person who did not
+  propose it, through `kernel.decide` (ADR 0019, 0029).
+- **Instrument:** what judges changes (fixtures, CI, rules, the approval rules); a node a
+  protecting claim is about. Proposals about one need two people and stand alone.
 
 ## When unsure
 

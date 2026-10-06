@@ -1,7 +1,7 @@
 -- 95_roles.sql
 -- Privileges. The writer may only execute the three write functions; the reader may
 -- only select (redaction-aware where text is involved) and call read functions; the
--- eraser may only review and carry out erasures. Nobody but the owner may change a table,
+-- eraser may only review and carry out erasures; the approver reads and decides. Nobody but the owner may change a table,
 -- and the log tables refuse UPDATE, DELETE and TRUNCATE even for the owner.
 
 SET ROLE kernel_owner;
@@ -62,5 +62,19 @@ TO kernel_reader;
 
 -- Eraser: review and carry out erasures, nothing else (ADR 0022).
 GRANT EXECUTE ON FUNCTION kernel.erasure_scope(text), kernel.erase(jsonb) TO kernel_eraser;
+
+-- Readers see where proposals stand (ADR 0029).
+GRANT EXECUTE ON FUNCTION
+  kernel.is_instrument(text),
+  kernel.proposal_about(text),
+  kernel.proposal_approvers(text),
+  kernel.approvals_needed(text),
+  kernel.systems_of(text)
+TO kernel_reader;
+
+-- Approver: a signed-in person reads like any reader (the role is granted kernel_reader in
+-- 00_extensions.sql) and decides through kernel.decide, nothing else; no gateway login
+-- holds it (ADR 0029).
+GRANT EXECUTE ON FUNCTION kernel.decide(jsonb), kernel.signed_in_agent(), kernel.signed_in_email() TO kernel_approver;
 
 RESET ROLE;

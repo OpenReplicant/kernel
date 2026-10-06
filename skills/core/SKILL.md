@@ -71,6 +71,12 @@ commit, or hands it back with the reason. Nothing is deleted; corrections are ne
    - Goals, rules, requirements and proposals are claims: `promote` them into Claim
      nodes `about` the nodes they concern; relate claims with `supports`, `contradicts`,
      `supersedes`, `refines`, `assumes`.
+   - A `proposed` or `hypothetical` claim states no facts: promote it, relate it with edges
+     to or from its own Claim node, and put the change a proposal describes in
+     `props.change` (a pull request, a setting, a payload to submit once approved). Create
+     what it is about in a descriptive claim first. Only a signed-in person decides on a
+     proposal (ADR 0029): never assert `approved_by` or `rejected_by` from one, or move it
+     to approved or rejected. You may withdraw your own.
    - Duplicates you discover later: `link` them (`same_as`); nodes are never merged.
 5. **Write** with `write`. On success keep the returned `refs` (your `$refs` mapped to
    ids) and use the returned `offset` as your next `read_at_offset`. The returned
