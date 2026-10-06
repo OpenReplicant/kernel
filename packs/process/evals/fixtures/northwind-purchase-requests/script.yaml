@@ -3,9 +3,9 @@
 # a node created by an earlier write, {{agent:self}} the agent writing through the gateway.
 - ingest: purchase-requests.csv.digest
 - write:
-    claim: {text: wmk-process 0.1.0 maps purchase-requests.csv.digest., basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:0}}'}
+    claim: {text: wmk-process 0.2.0 maps purchase-requests.csv.digest., basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:0}}'}
     ops:
-      - {op: create, ref: $run_purchase_requests_csv_digest, type: Event, kind: extraction, name: wmk-process over purchase-requests.csv.digest @ 5bdeac9c6845, props: {extractor: wmk-process, version: 0.1.0, source: purchase-requests.csv.digest}}
+      - {op: create, ref: $run_purchase_requests_csv_digest, type: Event, kind: extraction, name: wmk-process over purchase-requests.csv.digest @ eb546307b153, props: {extractor: wmk-process, version: 0.2.0, source: purchase-requests.csv.digest}}
 - write:
     claim: {text: Purchase requests had 120 cases between 2026-01-02 and 2026-09-29 in the event log purchase-requests.csv., basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:142}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
@@ -20,7 +20,7 @@
       - {op: create, ref: $kpi_median_cycle_time_of_purchase_requests, type: Entity, kind: kpi, namespace: process, name: Median cycle time of Purchase requests}
       - {op: assert, edge: measures, from: $kpi_median_cycle_time_of_purchase_requests, to: '{{ref:process}}', props: {value: 3.0, unit: days}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Review purchase request is a step of Purchase requests, run 137 times in 120 cases by the role line manager, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:325}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Review purchase request is a step of Purchase requests, run 137 times in 120 cases by the role line manager, in Coupa. Cases ran it again 17 times; it came a median of 23.1 hours after the case''s previous event, 3418.2 hours in total; 137 times it followed another role''s step.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:401}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_review_purchase_request, type: Entity, kind: activity, namespace: process, name: Review purchase request}
       - {op: assert, edge: part_of, from: $step_review_purchase_request, to: '{{ref:process}}'}
@@ -30,8 +30,16 @@
       - {op: assert, edge: performed_in, from: $step_review_purchase_request, to: $system}
       - {op: create, ref: $kpi_executions_of_review_purchase_request, type: Entity, kind: kpi, namespace: process, name: Executions of Review purchase request}
       - {op: assert, edge: measures, from: $kpi_executions_of_review_purchase_request, to: $step_review_purchase_request, props: {value: 137, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_review_purchase_request, type: Entity, kind: kpi, namespace: process, name: Repeats of Review purchase request}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_review_purchase_request, to: $step_review_purchase_request, props: {value: 17, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_median_time_before_review_purchase_request, type: Entity, kind: kpi, namespace: process, name: Median time before Review purchase request}
+      - {op: assert, edge: measures, from: $kpi_median_time_before_review_purchase_request, to: $step_review_purchase_request, props: {value: 23.1, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_total_time_before_review_purchase_request, type: Entity, kind: kpi, namespace: process, name: Total time before Review purchase request}
+      - {op: assert, edge: measures, from: $kpi_total_time_before_review_purchase_request, to: $step_review_purchase_request, props: {value: 3418.2, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_handoffs_into_review_purchase_request, type: Entity, kind: kpi, namespace: process, name: Handoffs into Review purchase request}
+      - {op: assert, edge: measures, from: $kpi_handoffs_into_review_purchase_request, to: $step_review_purchase_request, props: {value: 137, unit: handoffs}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Submit purchase request is a step of Purchase requests, run 120 times in 120 cases by the role requester, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:423}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Submit purchase request is a step of Purchase requests, run 120 times in 120 cases by the role requester, in Coupa. Cases ran it again 0 times.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:621}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_submit_purchase_request, type: Entity, kind: activity, namespace: process, name: Submit purchase request}
       - {op: assert, edge: part_of, from: $step_submit_purchase_request, to: '{{ref:process}}'}
@@ -40,8 +48,10 @@
       - {op: assert, edge: performed_in, from: $step_submit_purchase_request, to: '{{ref:system}}'}
       - {op: create, ref: $kpi_executions_of_submit_purchase_request, type: Entity, kind: kpi, namespace: process, name: Executions of Submit purchase request, distinct_from: ['{{ref:kpi_executions_of_review_purchase_request}}']}
       - {op: assert, edge: measures, from: $kpi_executions_of_submit_purchase_request, to: $step_submit_purchase_request, props: {value: 120, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_submit_purchase_request, type: Entity, kind: kpi, namespace: process, name: Repeats of Submit purchase request, distinct_from: ['{{ref:kpi_repeats_of_review_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_submit_purchase_request, to: $step_submit_purchase_request, props: {value: 0, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Create purchase order is a step of Purchase requests, run 113 times in 113 cases by the role procurement, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:518}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Create purchase order is a step of Purchase requests, run 113 times in 113 cases by the role procurement, in Coupa. Cases ran it again 0 times; it came a median of 18.6 hours after the case''s previous event, 2202.3 hours in total; 113 times it followed another role''s step.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:728}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_create_purchase_order, type: Entity, kind: activity, namespace: process, name: Create purchase order}
       - {op: assert, edge: part_of, from: $step_create_purchase_order, to: '{{ref:process}}'}
@@ -50,8 +60,16 @@
       - {op: assert, edge: performed_in, from: $step_create_purchase_order, to: '{{ref:system}}'}
       - {op: create, ref: $kpi_executions_of_create_purchase_order, type: Entity, kind: kpi, namespace: process, name: Executions of Create purchase order}
       - {op: assert, edge: measures, from: $kpi_executions_of_create_purchase_order, to: $step_create_purchase_order, props: {value: 113, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_create_purchase_order, type: Entity, kind: kpi, namespace: process, name: Repeats of Create purchase order}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_create_purchase_order, to: $step_create_purchase_order, props: {value: 0, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_median_time_before_create_purchase_order, type: Entity, kind: kpi, namespace: process, name: Median time before Create purchase order}
+      - {op: assert, edge: measures, from: $kpi_median_time_before_create_purchase_order, to: $step_create_purchase_order, props: {value: 18.6, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_total_time_before_create_purchase_order, type: Entity, kind: kpi, namespace: process, name: Total time before Create purchase order}
+      - {op: assert, edge: measures, from: $kpi_total_time_before_create_purchase_order, to: $step_create_purchase_order, props: {value: 2202.3, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_handoffs_into_create_purchase_order, type: Entity, kind: kpi, namespace: process, name: Handoffs into Create purchase order}
+      - {op: assert, edge: measures, from: $kpi_handoffs_into_create_purchase_order, to: $step_create_purchase_order, props: {value: 113, unit: handoffs}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Send purchase order is a step of Purchase requests, run 113 times in 113 cases by the role procurement, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:613}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Send purchase order is a step of Purchase requests, run 113 times in 113 cases by the role procurement, in Coupa. Cases ran it again 0 times; it came a median of 12.0 hours after the case''s previous event, 1337.7 hours in total; 0 times it followed another role''s step.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:944}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_send_purchase_order, type: Entity, kind: activity, namespace: process, name: Send purchase order}
       - {op: assert, edge: part_of, from: $step_send_purchase_order, to: '{{ref:process}}'}
@@ -59,8 +77,16 @@
       - {op: assert, edge: performed_in, from: $step_send_purchase_order, to: '{{ref:system}}'}
       - {op: create, ref: $kpi_executions_of_send_purchase_order, type: Entity, kind: kpi, namespace: process, name: Executions of Send purchase order, distinct_from: ['{{ref:kpi_executions_of_create_purchase_order}}']}
       - {op: assert, edge: measures, from: $kpi_executions_of_send_purchase_order, to: $step_send_purchase_order, props: {value: 113, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_send_purchase_order, type: Entity, kind: kpi, namespace: process, name: Repeats of Send purchase order, distinct_from: ['{{ref:kpi_repeats_of_create_purchase_order}}']}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_send_purchase_order, to: $step_send_purchase_order, props: {value: 0, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_median_time_before_send_purchase_order, type: Entity, kind: kpi, namespace: process, name: Median time before Send purchase order, distinct_from: ['{{ref:kpi_median_time_before_create_purchase_order}}']}
+      - {op: assert, edge: measures, from: $kpi_median_time_before_send_purchase_order, to: $step_send_purchase_order, props: {value: 12.0, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_total_time_before_send_purchase_order, type: Entity, kind: kpi, namespace: process, name: Total time before Send purchase order, distinct_from: ['{{ref:kpi_total_time_before_create_purchase_order}}']}
+      - {op: assert, edge: measures, from: $kpi_total_time_before_send_purchase_order, to: $step_send_purchase_order, props: {value: 1337.7, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_handoffs_into_send_purchase_order, type: Entity, kind: kpi, namespace: process, name: Handoffs into Send purchase order, distinct_from: ['{{ref:kpi_handoffs_into_create_purchase_order}}']}
+      - {op: assert, edge: measures, from: $kpi_handoffs_into_send_purchase_order, to: $step_send_purchase_order, props: {value: 0, unit: handoffs}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Approve purchase request is a step of Purchase requests, run 36 times in 36 cases by the role finance controller, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:704}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Approve purchase request is a step of Purchase requests, run 36 times in 36 cases by the role finance controller, in Coupa. Cases ran it again 0 times; it came a median of 52.2 hours after the case''s previous event, 1958.2 hours in total; 36 times it followed another role''s step.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1154}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_approve_purchase_request, type: Entity, kind: activity, namespace: process, name: Approve purchase request}
       - {op: assert, edge: part_of, from: $step_approve_purchase_request, to: '{{ref:process}}'}
@@ -69,8 +95,16 @@
       - {op: assert, edge: performed_in, from: $step_approve_purchase_request, to: '{{ref:system}}'}
       - {op: create, ref: $kpi_executions_of_approve_purchase_request, type: Entity, kind: kpi, namespace: process, name: Executions of Approve purchase request, distinct_from: ['{{ref:kpi_executions_of_review_purchase_request}}', '{{ref:kpi_executions_of_submit_purchase_request}}']}
       - {op: assert, edge: measures, from: $kpi_executions_of_approve_purchase_request, to: $step_approve_purchase_request, props: {value: 36, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_approve_purchase_request, type: Entity, kind: kpi, namespace: process, name: Repeats of Approve purchase request, distinct_from: ['{{ref:kpi_repeats_of_review_purchase_request}}', '{{ref:kpi_repeats_of_submit_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_approve_purchase_request, to: $step_approve_purchase_request, props: {value: 0, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_median_time_before_approve_purchase_request, type: Entity, kind: kpi, namespace: process, name: Median time before Approve purchase request, distinct_from: ['{{ref:kpi_median_time_before_review_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_median_time_before_approve_purchase_request, to: $step_approve_purchase_request, props: {value: 52.2, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_total_time_before_approve_purchase_request, type: Entity, kind: kpi, namespace: process, name: Total time before Approve purchase request, distinct_from: ['{{ref:kpi_total_time_before_review_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_total_time_before_approve_purchase_request, to: $step_approve_purchase_request, props: {value: 1958.2, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_handoffs_into_approve_purchase_request, type: Entity, kind: kpi, namespace: process, name: Handoffs into Approve purchase request, distinct_from: ['{{ref:kpi_handoffs_into_review_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_handoffs_into_approve_purchase_request, to: $step_approve_purchase_request, props: {value: 36, unit: handoffs}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Revise purchase request is a step of Purchase requests, run 17 times in 17 cases by the role requester, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:807}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Revise purchase request is a step of Purchase requests, run 17 times in 17 cases by the role requester, in Coupa. Cases ran it again 0 times; it came a median of 42.7 hours after the case''s previous event, 731.9 hours in total; 17 times it followed another role''s step.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1377}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_revise_purchase_request, type: Entity, kind: activity, namespace: process, name: Revise purchase request, distinct_from: ['{{ref:step_review_purchase_request}}', '{{ref:step_submit_purchase_request}}']}
       - {op: assert, edge: part_of, from: $step_revise_purchase_request, to: '{{ref:process}}'}
@@ -78,8 +112,16 @@
       - {op: assert, edge: performed_in, from: $step_revise_purchase_request, to: '{{ref:system}}'}
       - {op: create, ref: $kpi_executions_of_revise_purchase_request, type: Entity, kind: kpi, namespace: process, name: Executions of Revise purchase request, distinct_from: ['{{ref:kpi_executions_of_review_purchase_request}}', '{{ref:kpi_executions_of_submit_purchase_request}}', '{{ref:kpi_executions_of_approve_purchase_request}}']}
       - {op: assert, edge: measures, from: $kpi_executions_of_revise_purchase_request, to: $step_revise_purchase_request, props: {value: 17, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_revise_purchase_request, type: Entity, kind: kpi, namespace: process, name: Repeats of Revise purchase request, distinct_from: ['{{ref:kpi_repeats_of_review_purchase_request}}', '{{ref:kpi_repeats_of_submit_purchase_request}}', '{{ref:kpi_repeats_of_approve_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_revise_purchase_request, to: $step_revise_purchase_request, props: {value: 0, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_median_time_before_revise_purchase_request, type: Entity, kind: kpi, namespace: process, name: Median time before Revise purchase request, distinct_from: ['{{ref:kpi_median_time_before_review_purchase_request}}', '{{ref:kpi_total_time_before_review_purchase_request}}', '{{ref:kpi_median_time_before_approve_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_median_time_before_revise_purchase_request, to: $step_revise_purchase_request, props: {value: 42.7, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_total_time_before_revise_purchase_request, type: Entity, kind: kpi, namespace: process, name: Total time before Revise purchase request, distinct_from: ['{{ref:kpi_median_time_before_review_purchase_request}}', '{{ref:kpi_total_time_before_review_purchase_request}}', '{{ref:kpi_total_time_before_approve_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_total_time_before_revise_purchase_request, to: $step_revise_purchase_request, props: {value: 731.9, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_handoffs_into_revise_purchase_request, type: Entity, kind: kpi, namespace: process, name: Handoffs into Revise purchase request, distinct_from: ['{{ref:kpi_handoffs_into_review_purchase_request}}', '{{ref:kpi_handoffs_into_approve_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_handoffs_into_revise_purchase_request, to: $step_revise_purchase_request, props: {value: 17, unit: handoffs}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'Reject purchase request is a step of Purchase requests, run 7 times in 7 cases by the role line manager, in Coupa.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:899}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'Reject purchase request is a step of Purchase requests, run 7 times in 7 cases by the role line manager, in Coupa. Cases ran it again 0 times; it came a median of 2.0 hours after the case''s previous event, 12.8 hours in total; 0 times it followed another role''s step.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1588}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: create, ref: $step_reject_purchase_request, type: Entity, kind: activity, namespace: process, name: Reject purchase request, distinct_from: ['{{ref:step_review_purchase_request}}', '{{ref:step_revise_purchase_request}}']}
       - {op: assert, edge: part_of, from: $step_reject_purchase_request, to: '{{ref:process}}'}
@@ -87,40 +129,48 @@
       - {op: assert, edge: performed_in, from: $step_reject_purchase_request, to: '{{ref:system}}'}
       - {op: create, ref: $kpi_executions_of_reject_purchase_request, type: Entity, kind: kpi, namespace: process, name: Executions of Reject purchase request, distinct_from: ['{{ref:kpi_executions_of_review_purchase_request}}', '{{ref:kpi_executions_of_submit_purchase_request}}', '{{ref:kpi_executions_of_approve_purchase_request}}', '{{ref:kpi_executions_of_revise_purchase_request}}']}
       - {op: assert, edge: measures, from: $kpi_executions_of_reject_purchase_request, to: $step_reject_purchase_request, props: {value: 7, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_repeats_of_reject_purchase_request, type: Entity, kind: kpi, namespace: process, name: Repeats of Reject purchase request, distinct_from: ['{{ref:kpi_repeats_of_review_purchase_request}}', '{{ref:kpi_repeats_of_submit_purchase_request}}', '{{ref:kpi_repeats_of_approve_purchase_request}}', '{{ref:kpi_repeats_of_revise_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_repeats_of_reject_purchase_request, to: $step_reject_purchase_request, props: {value: 0, unit: executions}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_median_time_before_reject_purchase_request, type: Entity, kind: kpi, namespace: process, name: Median time before Reject purchase request, distinct_from: ['{{ref:kpi_median_time_before_review_purchase_request}}', '{{ref:kpi_median_time_before_approve_purchase_request}}', '{{ref:kpi_median_time_before_revise_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_median_time_before_reject_purchase_request, to: $step_reject_purchase_request, props: {value: 2.0, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_total_time_before_reject_purchase_request, type: Entity, kind: kpi, namespace: process, name: Total time before Reject purchase request, distinct_from: ['{{ref:kpi_total_time_before_review_purchase_request}}', '{{ref:kpi_total_time_before_approve_purchase_request}}', '{{ref:kpi_total_time_before_revise_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_total_time_before_reject_purchase_request, to: $step_reject_purchase_request, props: {value: 12.8, unit: hours}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
+      - {op: create, ref: $kpi_handoffs_into_reject_purchase_request, type: Entity, kind: kpi, namespace: process, name: Handoffs into Reject purchase request, distinct_from: ['{{ref:kpi_handoffs_into_review_purchase_request}}', '{{ref:kpi_handoffs_into_approve_purchase_request}}', '{{ref:kpi_handoffs_into_revise_purchase_request}}']}
+      - {op: assert, edge: measures, from: $kpi_handoffs_into_reject_purchase_request, to: $step_reject_purchase_request, props: {value: 0, unit: handoffs}, valid_from: '2026-01-02', valid_to: '2026-09-30'}
 - write:
-    claim: {text: 'In Purchase requests, Submit purchase request was directly followed by Review purchase request 120 times in 120 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1040}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Submit purchase request was directly followed by Review purchase request 120 times in 120 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1845}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_submit_purchase_request}}', to: '{{ref:step_review_purchase_request}}'}
 - write:
-    claim: {text: 'In Purchase requests, Create purchase order was directly followed by Send purchase order 113 times in 113 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1145}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Create purchase order was directly followed by Send purchase order 113 times in 113 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1950}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_create_purchase_order}}', to: '{{ref:step_send_purchase_order}}'}
 - write:
-    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Create purchase order 83 times in 83 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1244}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Create purchase order 83 times in 83 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2049}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_review_purchase_request}}', to: '{{ref:step_create_purchase_order}}'}
 - write:
-    claim: {text: 'In Purchase requests, Approve purchase request was directly followed by Create purchase order 30 times in 30 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1345}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Approve purchase request was directly followed by Create purchase order 30 times in 30 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2150}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_approve_purchase_request}}', to: '{{ref:step_create_purchase_order}}'}
 - write:
-    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Approve purchase request 30 times in 30 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1447}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Approve purchase request 30 times in 30 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2252}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_review_purchase_request}}', to: '{{ref:step_approve_purchase_request}}'}
 - write:
-    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Revise purchase request 17 times in 17 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1551}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Revise purchase request 17 times in 17 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2356}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_review_purchase_request}}', to: '{{ref:step_revise_purchase_request}}'}
 - write:
-    claim: {text: 'In Purchase requests, Revise purchase request was directly followed by Review purchase request 17 times in 17 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1654}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Revise purchase request was directly followed by Review purchase request 17 times in 17 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2459}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_revise_purchase_request}}', to: '{{ref:step_review_purchase_request}}'}
 - write:
-    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Reject purchase request 7 times in 7 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1757}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Review purchase request was directly followed by Reject purchase request 7 times in 7 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2562}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_review_purchase_request}}', to: '{{ref:step_reject_purchase_request}}'}
 - write:
-    claim: {text: 'In Purchase requests, Send purchase order was directly followed by Approve purchase request 6 times in 6 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:1858}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
+    claim: {text: 'In Purchase requests, Send purchase order was directly followed by Approve purchase request 6 times in 6 cases.', basis: observed, modality: descriptive, confidence: high, source: '{{at:purchase-requests.csv.digest:2663}}', run: '{{ref:run_purchase_requests_csv_digest}}'}
     ops:
       - {op: assert, edge: flows_to, from: '{{ref:step_send_purchase_order}}', to: '{{ref:step_approve_purchase_request}}'}
 - write:

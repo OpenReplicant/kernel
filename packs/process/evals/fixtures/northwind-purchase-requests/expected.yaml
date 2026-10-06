@@ -28,8 +28,35 @@ entities:
   - {type: Entity, kind: kpi, name: Executions of Approve purchase request}
   - {type: Entity, kind: kpi, name: Executions of Create purchase order}
   - {type: Entity, kind: kpi, name: Executions of Send purchase order}
+  # What each step's line of the digest measures (ADR 0033): repeats for every step; the time
+  # since the case's previous event and handoffs from another role for every step but the first
+  - {type: Entity, kind: kpi, name: Repeats of Submit purchase request}
+  - {type: Entity, kind: kpi, name: Repeats of Review purchase request}
+  - {type: Entity, kind: kpi, name: Repeats of Revise purchase request}
+  - {type: Entity, kind: kpi, name: Repeats of Reject purchase request}
+  - {type: Entity, kind: kpi, name: Repeats of Approve purchase request}
+  - {type: Entity, kind: kpi, name: Repeats of Create purchase order}
+  - {type: Entity, kind: kpi, name: Repeats of Send purchase order}
+  - {type: Entity, kind: kpi, name: Median time before Review purchase request}
+  - {type: Entity, kind: kpi, name: Total time before Review purchase request}
+  - {type: Entity, kind: kpi, name: Handoffs into Review purchase request}
+  - {type: Entity, kind: kpi, name: Median time before Revise purchase request}
+  - {type: Entity, kind: kpi, name: Total time before Revise purchase request}
+  - {type: Entity, kind: kpi, name: Handoffs into Revise purchase request}
+  - {type: Entity, kind: kpi, name: Median time before Reject purchase request}
+  - {type: Entity, kind: kpi, name: Total time before Reject purchase request}
+  - {type: Entity, kind: kpi, name: Handoffs into Reject purchase request}
+  - {type: Entity, kind: kpi, name: Median time before Approve purchase request}
+  - {type: Entity, kind: kpi, name: Total time before Approve purchase request}
+  - {type: Entity, kind: kpi, name: Handoffs into Approve purchase request}
+  - {type: Entity, kind: kpi, name: Median time before Create purchase order}
+  - {type: Entity, kind: kpi, name: Total time before Create purchase order}
+  - {type: Entity, kind: kpi, name: Handoffs into Create purchase order}
+  - {type: Entity, kind: kpi, name: Median time before Send purchase order}
+  - {type: Entity, kind: kpi, name: Total time before Send purchase order}
+  - {type: Entity, kind: kpi, name: Handoffs into Send purchase order}
   # One extraction run over the digest, closed when its claims are written
-  - {type: Event, kind: extraction, name: "wmk-process over purchase-requests.csv.digest @ 5bdeac9c6845", status: completed}
+  - {type: Event, kind: extraction, name: "wmk-process over purchase-requests.csv.digest @ eb546307b153", status: completed}
 edges:
   - {edge: depends_on, kind: handles, from: Purchase requests, to: Purchase request, belief_status: accepted}
   - {edge: monitors, kind: measures, from: Cases of Purchase requests, to: Purchase requests, valid_from: "2026-01-02", valid_to: "2026-09-30"}
@@ -56,6 +83,32 @@ edges:
   - {edge: monitors, kind: measures, from: Executions of Approve purchase request, to: Approve purchase request}
   - {edge: monitors, kind: measures, from: Executions of Create purchase order, to: Create purchase order}
   - {edge: monitors, kind: measures, from: Executions of Send purchase order, to: Send purchase order}
+  # Each step's measures over the log's period
+  - {edge: monitors, kind: measures, from: Repeats of Submit purchase request, to: Submit purchase request}
+  - {edge: monitors, kind: measures, from: Repeats of Review purchase request, to: Review purchase request}
+  - {edge: monitors, kind: measures, from: Repeats of Revise purchase request, to: Revise purchase request}
+  - {edge: monitors, kind: measures, from: Repeats of Reject purchase request, to: Reject purchase request}
+  - {edge: monitors, kind: measures, from: Repeats of Approve purchase request, to: Approve purchase request}
+  - {edge: monitors, kind: measures, from: Repeats of Create purchase order, to: Create purchase order}
+  - {edge: monitors, kind: measures, from: Repeats of Send purchase order, to: Send purchase order}
+  - {edge: monitors, kind: measures, from: Median time before Review purchase request, to: Review purchase request}
+  - {edge: monitors, kind: measures, from: Total time before Review purchase request, to: Review purchase request}
+  - {edge: monitors, kind: measures, from: Handoffs into Review purchase request, to: Review purchase request}
+  - {edge: monitors, kind: measures, from: Median time before Revise purchase request, to: Revise purchase request}
+  - {edge: monitors, kind: measures, from: Total time before Revise purchase request, to: Revise purchase request}
+  - {edge: monitors, kind: measures, from: Handoffs into Revise purchase request, to: Revise purchase request}
+  - {edge: monitors, kind: measures, from: Median time before Reject purchase request, to: Reject purchase request}
+  - {edge: monitors, kind: measures, from: Total time before Reject purchase request, to: Reject purchase request}
+  - {edge: monitors, kind: measures, from: Handoffs into Reject purchase request, to: Reject purchase request}
+  - {edge: monitors, kind: measures, from: Median time before Approve purchase request, to: Approve purchase request}
+  - {edge: monitors, kind: measures, from: Total time before Approve purchase request, to: Approve purchase request}
+  - {edge: monitors, kind: measures, from: Handoffs into Approve purchase request, to: Approve purchase request}
+  - {edge: monitors, kind: measures, from: Median time before Create purchase order, to: Create purchase order}
+  - {edge: monitors, kind: measures, from: Total time before Create purchase order, to: Create purchase order}
+  - {edge: monitors, kind: measures, from: Handoffs into Create purchase order, to: Create purchase order}
+  - {edge: monitors, kind: measures, from: Median time before Send purchase order, to: Send purchase order}
+  - {edge: monitors, kind: measures, from: Total time before Send purchase order, to: Send purchase order}
+  - {edge: monitors, kind: measures, from: Handoffs into Send purchase order, to: Send purchase order}
   # Who does each step
   - {edge: responsible_for, from: requester, to: Submit purchase request}
   - {edge: responsible_for, from: requester, to: Revise purchase request}

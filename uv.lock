@@ -1392,7 +1392,7 @@ requires-dist = [
 
 [[package]]
 name = "wmk-process"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packs/process/adapter" }
 dependencies = [
     { name = "anyio" },

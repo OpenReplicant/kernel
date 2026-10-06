@@ -41,7 +41,7 @@ async def assemble(gateway: Any) -> config.Config:
     mapped = await apply(gateway, discover.build(cfg, log))
     # The log meets the views on the same process, steps, roles and system; it adds the
     # case object and its KPIs.
-    assert mapped.failures == [] and (mapped.reused, mapped.created) == (13, 10)
+    assert mapped.failures == [] and (mapped.reused, mapped.created) == (13, 35)
     checked = await apply(gateway, conform.build(cfg, log, await conform.read_model(gateway, cfg)))
     assert checked.failures == [] and checked.denied == 3
     return cfg

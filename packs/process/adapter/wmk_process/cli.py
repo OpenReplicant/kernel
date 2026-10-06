@@ -5,6 +5,7 @@ wmk-process plan northwind.yaml                    # the claims discover would w
 wmk-process discover northwind.yaml --url http://localhost:8000/mcp
 wmk-process conform northwind.yaml --url http://localhost:8000/mcp
 wmk-process compare northwind.yaml --url http://localhost:8000/mcp   # where the views disagree
+wmk-process rank northwind.yaml --url http://localhost:8000/mcp      # what to automate first
 wmk-process snapshot northwind.yaml packs/process/evals/fixtures/<name>
 """
 
@@ -20,7 +21,7 @@ from mcp import Client
 
 from wmk_adapter.apply import ApplyError, apply
 from wmk_adapter.script import script_text
-from wmk_process import compare, conform, discover, fixture
+from wmk_process import compare, conform, discover, fixture, rank
 from wmk_process.config import Config, ConfigError, load
 from wmk_process.logs import LogError
 
@@ -37,10 +38,14 @@ def main() -> None:
         p.add_argument("config", type=Path)
         p.add_argument("--url", default="http://localhost:8000/mcp", help="the gateway's MCP endpoint")
         p.add_argument("--force", action="store_true", help="write claims even when the digest is unchanged")
-    comp = sub.add_parser("compare", help="where the configured views of the process agree and disagree")
-    comp.add_argument("config", type=Path)
-    comp.add_argument("--url", default="http://localhost:8000/mcp", help="the gateway's MCP endpoint")
-    comp.add_argument("--json", action="store_true", help="print JSON instead of text")
+    for name, text in (
+        ("compare", "where the configured views of the process agree and disagree"),
+        ("rank", "the process's steps ranked by where automation would pay"),
+    ):
+        p = sub.add_parser(name, help=text)
+        p.add_argument("config", type=Path)
+        p.add_argument("--url", default="http://localhost:8000/mcp", help="the gateway's MCP endpoint")
+        p.add_argument("--json", action="store_true", help="print JSON instead of text")
     snap = sub.add_parser("snapshot", help="write an eval fixture from a log")
     snap.add_argument("config", type=Path)
     snap.add_argument("fixture", type=Path, help="the fixture folder")
@@ -49,8 +54,8 @@ def main() -> None:
 
     try:
         cfg = load(args.config)
-        if args.command == "compare":
-            sys.exit(anyio.run(_compare, args.url, cfg, args.json))
+        if args.command in ("compare", "rank"):
+            sys.exit(anyio.run(_read, args.command, args.url, cfg, args.json))
         log = cfg.read()
         if args.command == "plan":
             print(script_text(discover.build(cfg, log), "wmk-process plan"), end="")
@@ -81,10 +86,14 @@ async def _run(command: str, url: str, cfg: Config, force: bool) -> int:
     return 1 if report.failures else 0
 
 
-async def _compare(url: str, cfg: Config, as_json: bool) -> int:
+async def _read(command: str, url: str, cfg: Config, as_json: bool) -> int:
     try:
         async with Client(url) as client:
-            result = await compare.read(client, cfg)
+            result: compare.Comparison | rank.Ranking
+            if command == "compare":
+                result = await compare.read(client, cfg)
+            else:
+                result = await rank.read(client, cfg)
     except conform.ModelError as exc:
         print(f"stopped: {exc}", file=sys.stderr)
         return 1

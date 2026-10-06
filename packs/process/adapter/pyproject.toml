@@ -1,6 +1,6 @@
 [project]
 name = "wmk-process"
-version = "0.1.0"
+version = "0.2.0"
 description = "The process pack's event-log adapter: maps CSV, XES and OCEL 2.0 event logs into the World Model Kernel as the view of a process as done, and checks the mapped process against them."
 requires-python = ">=3.12"
 dependencies = [

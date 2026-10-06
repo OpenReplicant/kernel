@@ -8,7 +8,7 @@ description: >
   core skill when mapping or comparing how a process runs, finding where practice departs
   from the documented process, or preparing a process for automation.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   kernel: ">=0.5 <1.0"
   namespace: process
   requires: world-model-core
@@ -106,13 +106,15 @@ uv run wmk-process plan northwind.yaml                                # the clai
 uv run wmk-process discover northwind.yaml --url http://localhost:8000/mcp
 uv run wmk-process conform northwind.yaml --url http://localhost:8000/mcp
 uv run wmk-process compare northwind.yaml --url http://localhost:8000/mcp   # writes nothing
+uv run wmk-process rank northwind.yaml --url http://localhost:8000/mcp      # writes nothing
 ```
 
 - **`discover`** writes the log's view without reading the model: a digest of the log as
   the source, then observed claims citing its lines. The claims cover the steps, the
-  directly-follows flows, the roles (from `org:role`), the system, the case object, and
-  three KPIs: cases, median cycle time and executions per step. People (`org:resource`)
-  are not mapped.
+  directly-follows flows, the roles (from `org:role`), the system and the case object. Its
+  KPIs: cases and median cycle time of the process; for each step, executions, repeats (a
+  case running it again), the median and total hours since the case's previous event, and
+  handoffs (the previous event was another role's). People (`org:resource`) are not mapped.
 - **`conform`** checks the process as the kernel holds it against the same log. It writes
   one verdict per step, flow between steps, and decision branch whose condition the log
   can evaluate. A branch is denied when some cases that met its condition went elsewhere,
@@ -125,10 +127,17 @@ uv run wmk-process compare northwind.yaml --url http://localhost:8000/mcp   # wr
   and each view's stance: asserts (with its window), denies, divided (its sources
   disagree) or silent. It groups them: contested, denied, stated by one view only, agreed.
   It reads the log's operations, never claim text, so it shows nothing sealed.
+- **`rank`** scores each step with executions measured on six factors from 0 to 1: volume,
+  waiting (total time before it), rework, handoffs, rule (a routing rule into it that some
+  source denies) and system (performed in one). The score is their sum, each times its
+  weight (`rank.weights` in the file, 1 by default). Each step lists the contested facts to
+  settle before automating it; steps never measured and decisions already written as rules
+  are listed apart. `--json` gives every input's edge id, belief and window. A score says
+  where automation would pay, not whether a step can be automated: ask the people who run it.
 
 Run `discover` after a new export, and `conform` after the told and written views are
 mapped and again after they change. Map the label map before conforming: a step whose
-name matches no log label is reported as never run. Run `compare` after `conform`.
+name matches no log label is reported as never run. Run `compare` and `rank` after `conform`.
 `make northwind` does all of it for the Northwind scenario: its SOP and interviews are the
 `northwind-views` fixture, the tool calls you would make for them.
 
