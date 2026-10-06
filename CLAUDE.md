@@ -1,97 +1,139 @@
-# World Model Kernel
+# World Model Kernel (OpenReplicant)
 
-A lightweight world model any agent can plug into. Agents write **claims** plus the
-**graph operations** they justify; the kernel validates them against ontology rules and
-commits the claim, the log entry and the graph change in one Postgres transaction. The
-log is append-only and is the source of truth; the graph is its projection.
+The substrate for an entity that senses and remembers. It observes through any channel
+(endpoints, streams, watchers, bulk ingestion, conversation), interprets what it senses
+into sourced **claims**, and keeps them as one persistent, interconnected world model whose
+belief is computed, never asserted. Agents write claims plus the **graph operations** they
+justify; the kernel validates them against ontology rules and commits the claim, the log
+entry and the graph change in one Postgres transaction. The log is append-only and is the
+source of truth; the graph is its projection.
 
-Full design: `docs/design-v1.md` (export of "World Model Kernel — Design v1.0").
-Read the relevant section before changing anything architectural.
+Everything else builds on this core: recalling the relevant claims into an agent's context,
+mapping businesses and systems, automating and governing them, and later the cognitive
+model. Design: `docs/design-v1.md`; decisions: `docs/decisions/` (Phase 3 direction:
+ADR 0026). Read the relevant ones before changing anything architectural.
 
-## Current phase: Phase 2, research track (approved 2026-10-04)
+## Direction
 
-Phase 1 (the MVP) is complete: `kernel/sql/`, the gateway's tools, `skills/core/`
-(plus `skills/interview/`), `docker-compose.yml`, `evals/`, `profiles/`. Keep all of it
-working; its invariants and tests still apply.
+- **Epistemic at the core.** Every system built on this knows what it knows, who said so,
+  since when and how sure, and shows its disagreements instead of resolving them. A
+  history ingested in bulk (implanted memories) and one observed first-hand (lived ones)
+  stay distinguishable through basis, source and origin.
+- **The database thinks where it can.** Prefer deterministic logic over the persistent
+  structure (belief, resolution, conformance, drift, recall ranking) to model calls.
+  Models interpret what is sensed and judge what the structure cannot.
+- **Harness- and model-agnostic.** The gateway is an MCP server any harness can use; the
+  extractor runs on any configured model endpoint; adapters talk to any runtime. Use
+  existing MCP servers at the edges (parsers, paper sources, forges, clusters, process
+  mining) and keep the kernel small.
+- **The north star** is a cognitive model that improves itself by reading new research
+  (the research pack over the daily arXiv stream) and testing techniques against its own
+  evals. It comes after Phase 3; nothing here builds it yet.
 
-Research is the first product (ADR 0013). In scope, in this order:
+## Built so far (Phases 1 and 2, complete)
 
-1. `packs/research/` — the research pack: ontology, skill, evidence queries, fixtures.
-   Packs declare their ontology in `schema.yaml`/`rules.yaml`; the kernel installs them
-   (`kernel/packs.py`, `kernel.install_pack`, ADR 0015). See `docs/packs.md`.
-2. A paper-source pack container (arXiv, OpenAlex, Crossref) exposed as an MCP server.
-   It never gets database credentials. Libraries per `docs/adapters.md`.
-3. A live research eval: a real model maps papers through the eval profile.
-4. The parser container (full text, GROBID or Docling) and workers for bulk extraction,
-   once the live eval shows extraction quality. Workers need an ADR first on how job
-   queues fit invariant 1.
+Keep all of it working; its invariants and tests still apply.
 
-Also approved (2026-10-04):
+- Kernel 0.5.0 (`kernel/sql/`): the log and seven operations, quotes checked against their
+  source, extraction runs, belief v2 counting independent origins, the two clocks and
+  as-of reads, the resolution cascade, sealing and erasure of personal data (ADR 0022).
+- Gateway (`gateway/`): `write`, `write_batch`, `lookup_entities`, `get_schema_slice`,
+  `query_graph`, `query_log`, `ingest_source`, `cite`; RFC 9457 problems; OTel; profiles.
+- Skills: `skills/core`, `skills/interview`. Packs (`packs/`): `research` (papers, the
+  papers server with GROBID full text), `software` (repository adapter, the self-model),
+  `bpm-reference` (the kernel's test pack).
+- `ui/`, the read-only explorer. Evals: fixtures, resolution set, replay, live runs, and
+  the independently annotated SciFact eval (`evals/annotated/RESULTS.md`).
 
-- `ui/`, a read-only explorer (ADR 0016): Alpine.js pages served by Caddy, data from
-  PostgREST running as the reader role, with a graph view (Cytoscape.js) and an index of
-  models (learned areas computed from namespaces and sources). It never writes; keep
-  `make ui-smoke` passing when kernel views or columns change.
-- `packs/software/`, the software pack: repositories, packages, images, services,
-  stacks, endpoints, pipelines and changes. Its structured-data adapter maps compose
-  files, Dockerfiles, `pyproject.toml`, CI workflows and git merges into observed claims
-  through the gateway, never with database credentials. Its first fixture is this
-  repository's own stack: the start of the self-model, where the self boundary is
-  `part_of` edges into a `system` node, each a claim with its own belief.
-- Proposed, not built (no code until reviewed): sub-models as lenses and forks
-  (ADR 0018); the approval channel (ADR 0019): approvals written only by an authenticated
-  person outside the self, never by a machine or the proposer; instruments (evals, CI,
-  rules, setpoints) in a two-person tier; the actuator (branch protection, required
-  reviews) enforces, the kernel records. Until 0019 is built, an `approved_by` edge in the
-  graph is a claim, not a decision.
+## Current phase: Phase 3, the closed loop (approved 2026-10-06)
 
-Also approved (2026-10-05), from the review of ingestion:
+One synthetic company (the `northwind` scenario) taken around the whole loop, as an open
+demo: map it, choose what to automate, automate it, govern what runs, and let the system
+propose changes to what it deployed, approved by a person. Each item starts with a short
+ADR, then code. In this order:
 
-- `make annotated` (`evals/annotated.py`): extraction measured against an independently
-  annotated corpus (a fixed SciFact sample in `evals/annotated/`), reported apart from the
-  plumbing scores. It is a live run, not CI; its scorer has offline tests.
-- Belief v2 (ADR 0021): sources declare origins (authors, speaker, publisher, repository)
-  and belief counts each origin once. Kernel 0.4.0.
-- `write_batch` (ADR 0023): several writes per call, each its own `kernel.write`.
-- The software adapter maps Kubernetes manifests and OpenAPI documents; ingest returns the
-  abbreviations a document defines (`terms`).
-- Research item 4's parser container: GROBID (CRF models) beside the papers server, whose
-  `get_full_text` returns a paper's full text as Markdown in the abstract's collection
-  (ADR 0025). Workers stay a proposal.
-- Erasing personal data by destroying keys (ADR 0022), built in kernel 0.5.0: sources with
-  subjects, claim text from them and human agents' fields are sealed when written;
-  `kernel.erase`, run only by an operator as `kernel_eraser` (standing in for ADR 0019's
-  approval channel), destroys a person's keys, re-projects what they sealed and records the
-  erasure in an append-only ledger. Data ingested before 0.5.0 is in the clear.
-- Proposed, not built: extraction workers (ADR 0024, revised): a script moves documents from
-  existing parser servers (the papers server, docling-mcp, markitdown-mcp) to the gateway
-  with no model in between, then a headless session writes the claims; job state in a JSONL
-  manifest. Gated on the annotated eval's floors.
+1. **A general process pack.** A runtime-neutral representation, not BPMN: processes made
+   of steps (`activity` entities) joined by `flows_to` edges that carry a `condition`, with
+   roles, actors, systems, data, events, handoffs, exceptions and KPIs. It must translate to
+   and from runtime configurations. Three views of how work happens, each a source:
+   - **as told**, from interviews (interview skill);
+   - **as written**, from SOPs and documents (parsers at the edge);
+   - **as done**, from system exports and event logs (CSV, XES, OCEL 2.0; process
+     discovery and conformance through an existing server such as pm4py-mcp).
 
-**Out of scope for now** (do not build, do not stub): observer runs, a pack registry or
-fetching packs by URL, pack SQL, workflows, ops loop, vital signs, concept formation,
-habit formation, the BPM product. If a task seems to need one of these, stop and ask.
+   Where the views disagree, belief shows it as contested: that is the discovery
+   deliverable. `bpm-reference` stays as the kernel's test pack.
+2. **A sysops and self pack.** Extends the software pack from what a repository declares to
+   what runs: deployments, versions, health and changes, read by deterministic observation
+   adapters from existing servers and APIs (Kubernetes, Docker, Grafana or Prometheus, the
+   forge). Drift is the declared view contradicting the observed one.
+3. **The approval channel (ADR 0019, now to be built).** People approve, the actuator
+   enforces, the kernel records. Approval adapters per channel:
+   - a forge for code and configuration: GitHub, or a self-hosted Forgejo (also an
+     OpenID Connect provider) or GitLab, with branch protection and required reviews;
+   - the explorer's signed-in Proposals page for decisions that are not code (activating
+     an automation, an erasure, a policy).
+4. **Workflow adapters, one per runtime.** Camunda, n8n, RuleGo, any rules engine, runner
+   or plain code. Each compiles the process representation into its runtime's
+   configuration, and reads deployments and runs back as observed claims and events, so
+   conformance compares what ran with what was mapped. The representation never depends on
+   one runtime.
+5. **The demo and its write-up.** `make demo` runs the loop on Northwind end to end, with
+   the extractor (item below) and scripted fallbacks so CI can run it; a short video and a
+   write-up with honest numbers.
+
+Also in scope:
+
+- **The extractor** (ADR 0024, revised): a CLI for bulk ingestion and an MCP server that
+  takes `map_source` work from any harness, on configured model endpoints (the Anthropic
+  API, or an OpenAI-compatible server for local models). It moves documents from parser
+  servers to the gateway with no model in between; models only write claims. Built first
+  as an eval harness (comparing models, the raw-text control); bulk use waits for the
+  annotated eval's floors.
+- **Research eval improvements:** a dev/test split, the raw-abstract control, structured
+  findings (population, measure, direction) and `directness` on relations, a second
+  reader, a cross-paper eval.
+- **Recall into context** (the read side of context engineering): a proposed ADR first, no
+  code until reviewed. The facts relevant to a task, with belief, contested sides, windows,
+  quotes and the read offset, delivered through MCP resources, harness hooks or the
+  extractor's loop; retrieval traces record what an agent was shown.
+
+**Out of scope for now** (do not build, do not stub): a pack registry or fetching packs by
+URL, pack SQL, automatic capture of agents' own sessions (observer runs that write from
+what they watch, beyond deterministic observation adapters), vital signs beyond the demo's
+health and drift checks, generative ops strategies beyond proposing a pull request,
+concept formation, habit formation, the cognitive model itself. If a task seems to need
+one of these, stop and ask.
+
+## Open and private
+
+This repository is public. It holds the kernel, the gateway, the skills, the general packs
+(process, software, sysops and self, research), the demo, the evals and their results.
+Client data, packs and adapters refined on engagements, enterprise adapters, playbooks,
+pricing and labelled client datasets live in private repositories that install packs from
+local folders. The kernel and this repository's CI never depend on or reference them. The
+licence is the owner's decision: do not add or change one.
 
 ## Stack
 
 - Python 3.12, dependencies managed with `uv`
 - Official MCP Python SDK; `psycopg` 3 for Postgres
-- Postgres 18 with Apache AGE, pgvector, pg_trgm
+- Postgres 18 with Apache AGE, pgvector, pg_trgm, pgcrypto
 - OpenTelemetry Python SDK
 - `pytest` for tests, `ruff` for lint and format
 
 ## Commands
 
-Create these as Makefile targets early; keep them working.
+Keep these working; add `make demo` in Phase 3.
 
-- `make up` — start the stack
-- `make down` — stop it and remove volumes
+- `make up` / `make down` — start the stack / stop it and remove volumes
 - `make test` — unit, SQL and regression tests
 - `make replay` — rebuild the graph from the log and diff against the live graph
-- `make eval` — run the eval fixtures through the eval profile
+- `make eval` — the fixtures through the eval profile, then the resolution set
 - `make lint` — ruff check and format check
 - `make up-ui`, `make ui-smoke` — the read-only explorer and its smoke check
-- `make annotated` — a real model maps and judges the SciFact sample (costs model usage)
+- `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
+- `make live`, `make annotated` — real-model runs (cost model usage; not CI)
 - `make erase-scope SUBJECT=…`, `make erase SUBJECT=… REQUESTED_BY=… APPROVED_BY=… YES=1` —
   review and carry out an approved erasure (operators only)
 
@@ -100,8 +142,8 @@ Create these as Makefile targets early; keep them working.
 1. **One write path.** Only `kernel.write`, `kernel.ingest_source` and `kernel.cite`
    change data, plus `kernel.erase`, which destroys data keys and is run only by an operator
    as `kernel_eraser`, never by an agent (ADR 0022). Gateway code never issues INSERT,
-   UPDATE or DELETE directly. Bulk loading is many payloads through `kernel.write`, never a
-   direct import.
+   UPDATE or DELETE directly. Bulk loading and every adapter are many payloads through the
+   gateway, never a direct import.
 2. **The log is append-only.** No UPDATE or DELETE on log tables, enforced by
    permissions and a trigger. There is no delete operation; retraction is a new
    assertion with opposite polarity, or a `supersedes`. The only rows ever deleted are data
@@ -124,8 +166,11 @@ Create these as Makefile targets early; keep them working.
    candidates or nearest allowed kinds where relevant.
 9. **No personal data in telemetry.** Spans and app logs carry IDs, never claim text,
    source content or message content.
-10. **The kernel is passive.** It records and answers. Nothing in this repo acts on
-    the outside world.
+10. **The kernel is passive; actuation is gated.** The kernel and the gateway record and
+    answer; they never act on the outside world. Adapters that change a runtime, a
+    repository or a system live in packs, act only on a change a person approved through
+    the approval channel (ADR 0019), and hold no credential that bypasses it. Agents never
+    approve.
 
 ## The write payload
 
@@ -144,12 +189,14 @@ and a transition before logging (ADR 0020): the log only ever holds the seven.
 A reported claim quotes the words of its chunk it rests on; the kernel finds them in the
 source and records their span, or refuses the claim. Extraction of a whole source happens
 in a run (an Event of kind `extraction`); closing it retracts what older runs over the
-same source found and it did not.
+same source found and it did not. Sources about people list them as `subjects` and are
+stored sealed, so erasing a person makes them unreadable (ADR 0022).
 
 `kernel.write` steps, in order: take the append lock and assign the next offset →
-check provenance (source, quote, run) → validate every op against ontology rules → reject if any touched node changed after
-`read_at_offset` → run the resolution cascade on every `create` → append the log entry
-and apply graph changes → update belief.
+check provenance (source, quote, run) → validate every op against ontology rules → reject
+if any touched node changed after `read_at_offset` → run the resolution cascade on every
+`create` → seal personal data → append the log entry and apply graph changes → update
+belief.
 
 A claim that maps to no ontology term is stored as an **unresolved claim** (text and
 provenance, no ops). Never drop it.
@@ -157,8 +204,7 @@ provenance, no ops). Never drop it.
 ## Conventions
 
 - **SQL:** kernel objects live in schema `kernel`; files in `kernel/sql/` are numbered
-  and applied in order (`00_extensions.sql`, `10_log.sql`, …). Every function has a
-  comment stating its contract.
+  and applied in order. Every function has a comment stating its contract.
 - **Python:** fully typed; small modules; no ORM.
 - **Errors:** build problem documents in one place (`gateway/problems.py`).
 - **OTel:** all span and attribute names live in `gateway/otel.py`. The GenAI and MCP
@@ -168,9 +214,15 @@ provenance, no ops). Never drop it.
   offset (when learned). Keep them separate in every query and test.
 - **Decisions:** anything that changes the design gets a short ADR in `docs/decisions/`.
 - **Packs:** self-contained folders (`docs/packs.md`): ontology in `schema.yaml` and
-  `rules.yaml`, never SQL; their tests, fixtures, live scenarios and servers inside the
-  folder; servers and adapters are uv workspace members. The kernel never depends on a
-  pack; its own tests use only `bpm-reference`.
+  `rules.yaml`, never SQL; their tests, fixtures, live scenarios, servers and adapters
+  inside the folder; servers and adapters are uv workspace members. The kernel never
+  depends on a pack; its own tests use only `bpm-reference`.
+- **Adapters:** deterministic wherever the input is structured (configs, exports, event
+  logs, runtime APIs), writing observed claims that cite what they read; one adapter per
+  system or runtime; they reach the kernel only through the gateway, never with database
+  credentials. Prefer an existing MCP server or library at the edge over writing a client.
+- **Models:** never in the kernel or the gateway. The extractor and the harnesses call
+  them, on configured endpoints; skills stay plain Markdown that any harness can load.
 
 ## Testing
 
@@ -184,19 +236,9 @@ provenance, no ops). Never drop it.
   precision and recall for entities and edges separately.
 - Fixture evals measure the plumbing; extraction quality is measured only against data we
   did not annotate ourselves (`make annotated`), with intervals, never against fixtures.
-
-## Build order for Phase 1
-
-1. Compose stack with Postgres and extensions; `make up` works.
-2. Log, claims, assertions and graph tables; append-only enforcement; roles.
-3. `kernel.write` with ops, rule checks, stale-read check and offset lock.
-4. Resolution cascade: identity keys → normalized exact → pg_trgm → pgvector.
-5. Belief triggers and contested status.
-6. `kernel.ingest_source` (text and Markdown) and `kernel.cite`.
-7. Gateway with the seven tools, RFC 9457 errors and OTel spans.
-8. Core skill.
-9. Replay test, one reference pack, eval fixtures, eval profile in CI.
-10. Interactive profile.
+  Tune on a dev split and report on a held-out test split.
+- Adapters are tested on recorded inputs, so CI needs no network, cluster or runtime.
+- The demo runs in CI in its scripted form.
 
 ## Glossary
 
@@ -213,8 +255,20 @@ provenance, no ops). Never drop it.
   lists its subjects, and a human agent is its own.
 - **Sealed:** stored encrypted under a data key so that destroying the key erases it.
 - **Schema slice:** the kinds, edges and rules most relevant to one passage.
+- **Step, condition:** a process's unit of work (an `activity`) and the condition on the
+  `flows_to` edge to the next step.
+- **Three views:** how work happens as told, as written and as done; their disagreements
+  are contested facts.
+- **Observation adapter:** deterministic code that reads a system and writes what it sees
+  as observed claims.
+- **Workflow adapter:** code that compiles the process representation into one runtime's
+  configuration and reads its deployments and runs back.
+- **Drift:** the declared view of a system contradicted by the observed one.
+- **Conformance:** how far what ran matches what was mapped.
+- **Proposal, approval:** a claim of modality `proposed` describing a change; a decision
+  on it by an authenticated person who did not propose it (ADR 0019).
 
 ## When unsure
 
-Check the design doc. Prefer the smallest change that satisfies the invariants. Do not
-expand scope beyond the current phase without asking.
+Check the design doc and the ADRs. Prefer the smallest change that satisfies the
+invariants. Do not expand scope beyond the current phase without asking.
