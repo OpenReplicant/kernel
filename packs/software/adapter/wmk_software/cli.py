@@ -9,6 +9,11 @@ What runs (ADR 0028):
 wmk-software capture wmk -o capture.json [--host dev]   # the containers of a Compose project
 wmk-software observe capture.json --url http://localhost:8000/mcp [--repo URL] [--print | --snapshot FIXTURE]
 wmk-software drift capture.json --url http://localhost:8000/mcp
+
+The forge, as evidence (ADR 0031):
+wmk-software forge capture OWNER/REPO -o forge.json [--limit 50]   # pull requests, reviews, merges
+wmk-software forge map forge.json --url http://localhost:8000/mcp
+wmk-software forge audit https://github.com/OWNER/REPO --url http://localhost:8000/mcp [--json] [--check]
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ import anyio
 from mcp import Client
 
 from wmk_adapter.script import script_text
-from wmk_software import docker, drift, fixture, observe
+from wmk_software import audit, docker, drift, fixture, forge, observe
 from wmk_software.apply import ApplyError, Report, apply
 from wmk_software.mapping import build
 from wmk_software.plan import Plan
@@ -75,8 +80,27 @@ def main() -> None:
     dr = sub.add_parser("drift", help="check what the kernel holds as declared against a capture")
     dr.add_argument("capture", type=Path)
     gateway(dr)
+
+    fg = sub.add_parser("forge", help="pull requests, reviews and merges, as evidence (ADR 0031)")
+    fsub = fg.add_subparsers(dest="forge_command", required=True)
+    fcap = fsub.add_parser("capture", help="read a repository's pull requests from GitHub (read-only)")
+    fcap.add_argument("repository", help="owner/name on GitHub")
+    fcap.add_argument("--limit", type=int, default=50, help="the newest pull requests to read")
+    fcap.add_argument("-o", "--output", type=Path, help="write the capture here (default: stdout)")
+    fmap = fsub.add_parser("map", help="write a capture's pull requests through the gateway")
+    fmap.add_argument("capture", type=Path)
+    gateway(fmap)
+    faud = fsub.add_parser("audit", help="judge a repository's changes and deployments for approval")
+    faud.add_argument("repository", help="the repository's URL, as mapped")
+    gateway(faud)
+    faud.add_argument("--json", action="store_true", help="print the audit as JSON")
+    faud.add_argument(
+        "--check", action="store_true", help="exit 1 when a change or deployment lacks approval"
+    )
     args = parser.parse_args()
 
+    if args.command == "forge":
+        sys.exit(forge_command(args))
     if args.command not in REPO_COMMANDS:
         sys.exit(runtime(args))
     try:
@@ -95,6 +119,34 @@ def main() -> None:
         )
     else:
         sys.exit(anyio.run(_map, args.url, build(repo, self_system=args.self_system), args.force))
+
+
+def forge_command(args: argparse.Namespace) -> int:
+    try:
+        if args.forge_command == "capture":
+            text = forge.capture(args.repository, limit=args.limit).to_json()
+            if args.output:
+                args.output.write_text(text)
+            else:
+                print(text, end="")
+            return 0
+        if args.forge_command == "map":
+            return anyio.run(_map, args.url, forge.build(forge.load(args.capture)), False)
+    except forge.ForgeError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return anyio.run(_audit, args.url, args.repository, args.json, args.check)
+
+
+async def _audit(url: str, repository: str, as_json: bool, check: bool) -> int:
+    try:
+        async with Client(url) as client:
+            result = await audit.audit(client, repository)
+    except audit.AuditError as exc:
+        print(f"stopped: {exc}", file=sys.stderr)
+        return 1
+    print(result.to_json() if as_json else result.text(), end="")
+    return 1 if check and (result.unapproved() or result.deployed_without_approval()) else 0
 
 
 def runtime(args: argparse.Namespace) -> int:

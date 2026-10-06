@@ -4,9 +4,9 @@
 - ingest: wmk@dev-host.state
 - ingest: wmk@dev-host.history
 - write:
-    claim: {text: wmk-software 0.3.0 maps wmk@dev-host.state., basis: observed, modality: descriptive, confidence: high, source: '{{at:wmk@dev-host.state:0}}'}
+    claim: {text: wmk-software 0.4.0 maps wmk@dev-host.state., basis: observed, modality: descriptive, confidence: high, source: '{{at:wmk@dev-host.state:0}}'}
     ops:
-      - {op: create, ref: $run_wmk_dev_host_state, type: Event, kind: extraction, name: wmk-software over wmk@dev-host.state @ 5373b3a3dba6, props: {extractor: wmk-software, version: 0.3.0, source: wmk@dev-host.state}}
+      - {op: create, ref: $run_wmk_dev_host_state, type: Event, kind: extraction, name: wmk-software over wmk@dev-host.state @ 5373b3a3dba6, props: {extractor: wmk-software, version: 0.4.0, source: wmk@dev-host.state}}
 - write:
     claim: {text: 'On dev-host at 2026-10-06T04:28:03Z, wmk/db was running wmk-db:dev in the container wmk-db-1 (healthy).', basis: observed, modality: descriptive, confidence: high, source: '{{at:wmk@dev-host.state:98}}', run: '{{ref:run_wmk_dev_host_state}}'}
     ops:

@@ -38,6 +38,8 @@ jobs:
         run: make map-self
       - name: Observe the running stack and check it for drift against what was mapped
         run: make observe-self
+      - name: Map this repository's pull requests (a recorded capture) and audit its changes for approval
+        run: make forge-self FORGE_CAPTURE=packs/software/tests/data/github-kernel.json
       - name: Replay the live log (a non-empty diff fails the build)
         run: make replay
       - name: A throwaway secret for the explorer's sign-in (ADR 0030)

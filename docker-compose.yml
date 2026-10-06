@@ -10,6 +10,9 @@ services:
     build:
       context: .
       dockerfile: db/Dockerfile
+      # The commit the image is built from (ADR 0031): `make` sets WMK_REVISION.
+      labels:
+        org.opencontainers.image.revision: ${WMK_REVISION:-}
     image: wmk-db:dev
     environment:
       POSTGRES_USER: postgres
@@ -36,6 +39,9 @@ services:
     build:
       context: .
       dockerfile: gateway/Dockerfile
+      # The commit the image is built from (ADR 0031): `make` sets WMK_REVISION.
+      labels:
+        org.opencontainers.image.revision: ${WMK_REVISION:-}
     image: wmk-gateway:dev
     depends_on:
       db:
@@ -50,6 +56,9 @@ services:
     build:
       context: .
       dockerfile: gateway/Dockerfile
+      # The commit the image is built from (ADR 0031): `make` sets WMK_REVISION.
+      labels:
+        org.opencontainers.image.revision: ${WMK_REVISION:-}
     image: wmk-gateway:dev
     depends_on:
       db:
@@ -75,6 +84,9 @@ services:
     build:
       context: .
       dockerfile: packs/research/mcp/Dockerfile
+      # The commit the image is built from (ADR 0031): `make` sets WMK_REVISION.
+      labels:
+        org.opencontainers.image.revision: ${WMK_REVISION:-}
     image: wmk-papers:dev
     depends_on:
       grobid:

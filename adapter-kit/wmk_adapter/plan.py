@@ -37,6 +37,10 @@ class Source:
     # Who the content comes from: the files of one repository are not independent of each
     # other, so belief counts their repository once.
     origins: tuple[str, ...] = ()
+    # Node keys of the people the content is from or about (human agents): the kernel seals
+    # the source under their keys, so erasing one of them makes it unreadable (ADR 0022).
+    # `apply` creates them before ingesting; a plan with subjects has no script form.
+    subjects: tuple[str, ...] = ()
 
     def ingest_args(self) -> dict[str, Any]:
         args: dict[str, Any] = {
@@ -213,6 +217,8 @@ class Plan:
         """The plan as a fixture script for evals/player.py: `{{at:<alias>:<offset>}}` is the
         chunk holding that character, `{{ref:<slug>}}` a node created by an earlier write,
         `{{agent:self}}` the writing agent."""
+        if any(s.subjects for s in self.sources):
+            raise ValueError("a source with subjects needs a live kernel; it has no script form")
         steps: list[dict[str, Any]] = [{"ingest": s.alias} for s in self.sources]
         slugs = Slugs()
         created: dict[str, str] = {}

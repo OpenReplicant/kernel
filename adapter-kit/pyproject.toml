@@ -1,6 +1,6 @@
 [project]
 name = "wmk-adapter-kit"
-version = "0.1.0"
+version = "0.2.0"
 description = "What the World Model Kernel's deterministic adapters share: a plan of sources and claims, playing it through the gateway as an MCP client, and rendering it as an eval fixture script."
 requires-python = ">=3.12"
 dependencies = [

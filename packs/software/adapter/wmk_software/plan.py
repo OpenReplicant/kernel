@@ -7,7 +7,7 @@ from wmk_adapter.plan import SELF, Fact, Slugs, Source, normalize, similarity, t
 from wmk_adapter.plan import Plan as KitPlan
 
 EXTRACTOR = "wmk-software"
-EXTRACTOR_VERSION = "0.3.0"
+EXTRACTOR_VERSION = "0.4.0"
 
 
 class Plan(KitPlan):

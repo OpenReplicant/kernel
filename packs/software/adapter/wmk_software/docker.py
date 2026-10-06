@@ -2,8 +2,9 @@
 from the Docker Engine API over its unix socket and reduced to an allowlist.
 
 Only these fields are kept: id, name, creation time, the image reference and id, the
-Compose labels, state, health, restart count and published ports. Environment variables,
-commands, mounts and other labels are never read into a capture: they hold secrets. A
+Compose labels, the image's revision label (a commit hash, ADR 0031), state, health,
+restart count and published ports. Environment variables, commands, mounts and other
+labels are never read into a capture: they hold secrets. A
 capture is a JSON document; tests and fixtures replay recorded ones, so nothing but
 `capture` needs a Docker daemon.
 """
@@ -25,6 +26,8 @@ FORMAT = "wmk-docker-capture"
 VERSION = 1
 PROJECT = "com.docker.compose.project"
 SERVICE = "com.docker.compose.service"
+# The commit an image was built from (OCI image spec annotation, set as a build label).
+REVISION = "org.opencontainers.image.revision"
 
 
 class CaptureError(Exception):
@@ -54,6 +57,7 @@ class Container:
     failing_since: str | None = None  # start of the current run of failed health checks
     restarts: int = 0
     ports: tuple[Port, ...] = ()
+    revision: str | None = None  # the commit its image was built from, when the image says
 
     @property
     def short_id(self) -> str:
@@ -90,6 +94,9 @@ class Capture:
 
     def to_json(self) -> str:
         doc = {"format": FORMAT, "version": VERSION, **asdict(self)}
+        for c in doc["containers"]:
+            if c["revision"] is None:
+                del c["revision"]
         return json.dumps(doc, indent=2, sort_keys=False) + "\n"
 
 
@@ -155,7 +162,14 @@ def container(inspect: dict[str, Any]) -> Container:
         failing_since=failing_since(health),
         restarts=int(inspect.get("RestartCount") or 0),
         ports=ports((inspect.get("NetworkSettings") or {}).get("Ports")),
+        revision=revision(labels.get(REVISION)),
     )
+
+
+def revision(value: Any) -> str | None:
+    """A commit hash from the revision label, else None (an empty or other value says nothing)."""
+    text = str(value or "").strip().lower()
+    return text if re.fullmatch(r"[0-9a-f]{7,40}", text) else None
 
 
 def load(path: Path | str) -> Capture:
