@@ -13,11 +13,14 @@ and is divided otherwise. Each fact falls in one group:
 - agreed: two or more views assert it and none denies it;
 - unstated: no collection of these views states it (another source does).
 
-It reads through the gateway and writes nothing.
+It reads through the gateway and writes nothing. Each stance keeps the claim behind it, for
+the discovery report (ADR 0034); the comparison itself prints operations only, never claim
+text, so it prints nothing sealed.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -42,6 +45,9 @@ class Stance:
     holds: bool
     valid_from: str | None = None
     valid_to: str | None = None
+    # The claim of that assertion, and its log offset.
+    claim_id: str | None = field(default=None, compare=False)
+    offset: int | None = field(default=None, compare=False)
 
     def text(self) -> str:
         words = "asserts" if self.holds else "denies"
@@ -58,6 +64,31 @@ class Stance:
             "valid_from": self.valid_from,
             "valid_to": self.valid_to,
         }
+
+
+@dataclass(frozen=True)
+class Said:
+    """The claim behind a stance: its text, and the words of its source it quotes, if any.
+    Sealed text is opened for the reader, or reads [erased] once its key is destroyed."""
+
+    claim_id: str
+    offset: int
+    collection: str
+    basis: str
+    text: str
+    quote: str | None = None
+
+    @classmethod
+    def of(cls, entry: dict[str, Any], collection: str) -> Said:
+        claim = entry["claim"]
+        return cls(
+            str(claim["id"]),
+            int(entry["offset"]),
+            collection,
+            str(claim.get("basis", "")),
+            str(claim.get("text", "")),
+            claim.get("quote"),
+        )
 
 
 @dataclass
@@ -129,6 +160,17 @@ class Comparison:
     offset: int
     views: dict[str, tuple[str, ...]]
     facts: list[Fact]
+    # Stances on edges that are not facts (`also` in `read`), by edge id and view.
+    others: dict[str, dict[str, list[Stance]]] = field(default_factory=dict)
+    # The claim behind each stance, by claim id.
+    claims: dict[str, Said] = field(default_factory=dict)
+
+    def sources(self, edge_id: str) -> dict[str, list[Stance]]:
+        """Each view's stances on an edge, a fact or one of the others."""
+        for f in self.facts:
+            if f.edge_id == edge_id:
+                return f.views
+        return self.others.get(edge_id, {})
 
     def group(self, name: str) -> list[Fact]:
         return [f for f in self.facts if f.group == name]
@@ -189,7 +231,9 @@ def stances(entries: list[dict[str, Any]], collection: str, edges: set[str]) -> 
                 continue
             holds = op.get("polarity") in (1, "positive")
             window = _day(op.get("valid_from")), _day(op.get("valid_to"))
-            latest[op["edge_id"]] = Stance(collection, holds, *window)
+            claim = (entry.get("claim") or {}).get("id")
+            offset = int(entry["offset"]) if "offset" in entry else None
+            latest[op["edge_id"]] = Stance(collection, holds, *window, claim_id=claim, offset=offset)
     return latest
 
 
@@ -215,15 +259,23 @@ async def entries(client: Any, collection: str, through: int) -> list[dict[str, 
         after = int(page["entries"][-1]["offset"])
 
 
-async def read(client: Any, cfg: Config) -> Comparison:
-    """The views the configuration names, compared on the process the kernel holds now."""
-    model = await read_model(client, cfg)
+async def read(client: Any, cfg: Config, model: Model | None = None, also: Iterable[str] = ()) -> Comparison:
+    """The views the configuration names, compared on the process the kernel holds now (or on
+    `model`, read earlier). `also` names more edges to keep each collection's stance on, such
+    as the measures a ranking used."""
+    model = model or await read_model(client, cfg)
     found = facts(model)
+    others: dict[str, dict[str, list[Stance]]] = {e: {} for e in also if e not in found}
+    claims: dict[str, Said] = {}
     views = cfg.compared()
     for view, collections in views.items():
         for collection in collections:
             logged = await entries(client, collection, model.offset)
-            for edge_id, stance in stances(logged, collection, set(found)).items():
-                found[edge_id].views.setdefault(view, []).append(stance)
+            at = {int(e["offset"]): e for e in logged}
+            for edge_id, stance in stances(logged, collection, set(found) | set(others)).items():
+                held = found[edge_id].views if edge_id in found else others[edge_id]
+                held.setdefault(view, []).append(stance)
+                if stance.claim_id and stance.offset is not None:
+                    claims[stance.claim_id] = Said.of(at[stance.offset], collection)
     ordered = sorted(found.values(), key=lambda f: (f.sort, f.label, f.edge_id))
-    return Comparison(model.name, model.offset, views, ordered)
+    return Comparison(model.name, model.offset, views, ordered, others, claims)

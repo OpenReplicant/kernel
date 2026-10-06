@@ -8,7 +8,7 @@ description: >
   core skill when mapping or comparing how a process runs, finding where practice departs
   from the documented process, or preparing a process for automation.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   kernel: ">=0.5 <1.0"
   namespace: process
   requires: world-model-core
@@ -107,6 +107,7 @@ uv run wmk-process discover northwind.yaml --url http://localhost:8000/mcp
 uv run wmk-process conform northwind.yaml --url http://localhost:8000/mcp
 uv run wmk-process compare northwind.yaml --url http://localhost:8000/mcp   # writes nothing
 uv run wmk-process rank northwind.yaml --url http://localhost:8000/mcp      # writes nothing
+uv run wmk-process report northwind.yaml --url http://localhost:8000/mcp    # writes nothing
 ```
 
 - **`discover`** writes the log's view without reading the model: a digest of the log as
@@ -134,10 +135,18 @@ uv run wmk-process rank northwind.yaml --url http://localhost:8000/mcp      # wr
   settle before automating it; steps never measured and decisions already written as rules
   are listed apart. `--json` gives every input's edge id, belief and window. A score says
   where automation would pay, not whether a step can be automated: ask the people who run it.
+- **`report`** writes the discovery report in Markdown: the process as mapped in flow order,
+  every source's stance where the views disagree, the measures and the ranking. Each
+  sentence about a fact ends with footnotes citing the claims whose assertions count for
+  it, with the words of their sources. It opens sealed sources for the reader, attributes
+  claims to collections and never to people, and shows an erased person's words as
+  [erased]. `--json` gives each sentence with its edge and claim ids, the shape `cite`
+  takes. Conclusions and the questions for the next interview are yours to write.
 
 Run `discover` after a new export, and `conform` after the told and written views are
 mapped and again after they change. Map the label map before conforming: a step whose
-name matches no log label is reported as never run. Run `compare` and `rank` after `conform`.
+name matches no log label is reported as never run. Run `compare`, `rank` and `report` after
+`conform`.
 `make northwind` does all of it for the Northwind scenario: its SOP and interviews are the
 `northwind-views` fixture, the tool calls you would make for them.
 

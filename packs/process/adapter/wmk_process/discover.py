@@ -14,7 +14,8 @@ Counts stay in the claim text, never in edge props, so a newer export reasserts 
 edges. Each export is mapped in an extraction run in the log's collection, so closing the
 run retracts the flows and steps it no longer shows. KPI values are props of their
 `measures` edge over the period measured, so a new value is a new edge and the old one is
-retracted. KPI names follow `KPIS`, which `rank` reads them by.
+retracted. KPI names follow `PROCESS_KPIS` and `KPIS`, which `rank` and `report` read them
+by.
 """
 
 from __future__ import annotations
@@ -33,8 +34,12 @@ EXTRACTOR = "wmk-process"
 EXTRACTOR_VERSION = "0.2.0"
 NS = "process"
 EXAMPLES = 3
-# A step's KPIs by metric, named for what they measure (ADR 0033). With completion times
+# The process's KPIs, and a step's, by metric, named for what they measure (ADR 0033). With completion times
 # only, the time before a step covers both waiting for it and doing it.
+PROCESS_KPIS = {
+    "cases": "Cases of {process}",
+    "cycle_time": "Median cycle time of {process}",
+}
 KPIS = {
     "executions": "Executions of {step}",
     "repeats": "Repeats of {step}",
@@ -208,13 +213,13 @@ def build(cfg: Config, log: Log) -> Plan:
     if cfg.case_object:
         data = plan.node("data", type="Entity", kind="data", name=cfg.case_object)
         plan.edge(f, "handles", process, data, {"qualifier": "case"})
-    kpi(plan, f, f"Cases of {cfg.process}", process, len(log.cases), "cases", vf, vt)
+    kpi(plan, f, PROCESS_KPIS["cases"].format(process=cfg.process), process, len(log.cases), "cases", vf, vt)
     f = fact(
         f"The median cycle time of {cfg.process}, from a case's first event to its last, was {median} days "
         f"between {first.date().isoformat()} and {last.date().isoformat()}.",
         "cycle",
     )
-    kpi(plan, f, f"Median cycle time of {cfg.process}", process, median, "days", vf, vt)
+    kpi(plan, f, PROCESS_KPIS["cycle_time"].format(process=cfg.process), process, median, "days", vf, vt)
 
     system = plan.node("system", type="Entity", kind="component", name=cfg.system) if cfg.system else None
     for step in steps:

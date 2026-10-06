@@ -34,7 +34,7 @@ jobs:
         run: make eval
       - name: Seed the running stack through its gateway
         run: make seed
-      - name: Northwind's purchase requests as written, told and done, checked against the log and compared
+      - name: Northwind's purchase requests as written, told and done, checked against the log, and its discovery report
         run: make northwind
       - name: Map this repository into the stack with the software pack's adapter
         run: make map-self

@@ -242,6 +242,22 @@ def pick(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     )
 
 
+def measure(rows: list[dict[str, Any]]) -> Measure | None:
+    """The value to use among a KPI's edges (see `pick`), if it has a number."""
+    row = pick(rows)
+    props = row.get("props") or {} if row else {}
+    if not row or not isinstance(props.get("value"), int | float):
+        return None
+    return Measure(
+        float(props["value"]),
+        str(props.get("unit", "")),
+        row["edge"],
+        row.get("belief"),
+        row.get("valid_from"),
+        row.get("valid_to"),
+    )
+
+
 def score(steps: list[Step], weights: dict[str, float]) -> None:
     """Each step's factors and score, relative to the other steps of the process."""
     most = max((s.value("executions") for s in steps), default=0.0)
@@ -283,17 +299,8 @@ def build(
             if metric:
                 found.setdefault(metric, []).append(row)
         for metric, rows in found.items():
-            row = pick(rows)
-            props = row.get("props") or {} if row else {}
-            if row and isinstance(props.get("value"), int | float):
-                s.measures[metric] = Measure(
-                    float(props["value"]),
-                    str(props.get("unit", "")),
-                    row["edge"],
-                    row.get("belief"),
-                    row.get("valid_from"),
-                    row.get("valid_to"),
-                )
+            if used := measure(rows):
+                s.measures[metric] = used
         s.systems = sorted(
             (
                 Ref(r["edge"], str(r["system"]), r.get("belief"))
@@ -351,7 +358,8 @@ async def rows(client: Any, cypher: str, model: Model) -> list[dict[str, Any]]:
     return list(found["rows"])
 
 
-async def read(client: Any, cfg: Config) -> Ranking:
-    """The steps of the process the configuration names, ranked on what the kernel holds now."""
-    model = await read_model(client, cfg)
+async def read(client: Any, cfg: Config, model: Model | None = None) -> Ranking:
+    """The steps of the process the configuration names, ranked on what the kernel holds now
+    (or at the offset of `model`, read earlier)."""
+    model = model or await read_model(client, cfg)
     return build(model, cfg.weights, await rows(client, MEASURES, model), await rows(client, SYSTEMS, model))
