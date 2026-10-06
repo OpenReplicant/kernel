@@ -9,6 +9,14 @@ the log rebuilds it exactly.
 Every fact keeps who said it and where, when it was true in the world and when the
 kernel learned it, and whether credible sources agree (accepted) or disagree (contested).
 
+**What it enables:** [`docs/use-cases.html`](docs/use-cases.html) lists 62 use cases in
+business processes, software and IT, compliance, research, AI agents, teams, data
+integration and specific sectors. Each is marked as working today, on the roadmap, a small
+step from what exists, or needing a new pack. The page also suggests products to build on
+the kernel, places for developers to contribute, and where the kernel does not fit. It is
+an HTML page with a filter and search: open it in a browser from a clone, since GitHub
+shows its source.
+
 Design: [`docs/design-v1.md`](docs/design-v1.md). Decisions:
 [`docs/decisions/`](docs/decisions/); where it goes next is
 [ADR 0026](docs/decisions/0026-phase-3-the-closed-loop.md). Libraries to adopt for adapters:
