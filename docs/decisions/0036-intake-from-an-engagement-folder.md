@@ -160,6 +160,13 @@ that is merely known may be one intake stored for mapping. CI runs `make northwi
 
 **Evals:** the player's `reuse`, and seed's check.
 
+**Gateway:** its pools now check each connection before lending it. A database restart
+ends the connections a pool holds, and until now the next call failed as "not reachable".
+CI's new order exposed this: `make test` recreates the database container under the
+running gateway, and intake, now the first to call the gateway after that, failed once
+where `make seed` had absorbed the failure unnoticed. A test ends the pools' connections
+and calls again.
+
 **The kernel does not change.**
 
 **Tests:**

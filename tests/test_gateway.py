@@ -13,6 +13,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from gateway import otel, problems
 from gateway.tools import TOOL_NAMES
+from kernel.testing import KernelDB
 
 pytestmark = pytest.mark.anyio
 
@@ -422,6 +423,23 @@ async def test_profile_agent_registration_is_idempotent(gateway: Any) -> None:
     first = await ensure_agents(tools.kernel, profile)
     second = await ensure_agents(tools.kernel, profile)
     assert first == second and first.agent_id == tools.agents.agent_id and first.person_id
+
+
+async def test_the_gateway_survives_a_database_restart(gateway: Any, kdb: KernelDB) -> None:
+    """A restart ends the connections the gateway's pools hold (57P01); the next calls get new ones
+    instead of failing as unreachable."""
+    _, before = await call(gateway, "query_log", {"limit": 1})
+    ended = kdb.q(
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+        "WHERE datname = current_database() AND usename IN ('wmk_writer', 'wmk_reader')"
+    )
+    assert ended and all(ok for (ok,) in ended)
+    error, source = await call(
+        gateway, "ingest_source", {"content": "Written after a restart.", "title": "Note"}
+    )
+    assert not error, source
+    error, after = await call(gateway, "query_log", {"limit": 1})
+    assert not error and after["head_offset"] == before["head_offset"], after
 
 
 async def test_query_log_by_collection_spans_every_version_of_a_source(gateway: Any) -> None:
