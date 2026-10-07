@@ -1,6 +1,7 @@
 # 0033. Ranking what to automate, and the order of the next steps
 
-Date: 2026-10-06 · Status: accepted
+Date: 2026-10-06 · Status: accepted (the order of the next steps, from its third step, replaced
+by ADR 0035)
 
 ## Context
 

@@ -1,6 +1,7 @@
 # 0026. Phase 3: the closed loop, on a substrate that senses
 
-Date: 2026-10-06 · Status: accepted (direction; each item below gets its own ADR before code)
+Date: 2026-10-06 · Status: accepted (direction; each item below gets its own ADR before code;
+the order amended by ADR 0035)
 
 ## Context
 
