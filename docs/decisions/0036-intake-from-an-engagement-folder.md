@@ -140,7 +140,8 @@ each node before creating it, so it meets the people intake created and the node
 4. the report.
 
 `make seed` now counts a fixture as seeded once a claim cites its first source. A source
-that is merely known may be one intake stored for mapping.
+that is merely known may be one intake stored for mapping. CI runs `make northwind` before
+`make seed`, so it takes the path an engagement takes: intake first, on an empty stack.
 
 ## Consequences
 
