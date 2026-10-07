@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1090 940" width="1090" height="940" font-family="Helvetica Neue, Helvetica, Arial, Liberation Sans, sans-serif" role="img">
+<title>Toward a cognitive model: the entity, its learning and its vessels</title>
+<defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#c9d1d9"/></marker></defs>
+<rect width="1090" height="940" rx="14" fill="#0d1117"/>
+<text x="160.0" y="44" font-size="19" font-weight="700" letter-spacing="2.5" text-anchor="middle" fill="#e6edf3">TIMESCALES</text>
+<text x="160.0" y="66" font-size="13.5" text-anchor="middle" fill="#9198a1">fast layers stay in the vessel</text>
+<text x="540.0" y="44" font-size="19" font-weight="700" letter-spacing="2.5" text-anchor="middle" fill="#e6edf3">THE ENTITY</text>
+<text x="540.0" y="66" font-size="13.5" text-anchor="middle" fill="#9198a1">one log, many vessels, acting only as approved</text>
+<text x="930.0" y="44" font-size="19" font-weight="700" letter-spacing="2.5" text-anchor="middle" fill="#e6edf3">LEARNING</text>
+<text x="930.0" y="66" font-size="13.5" text-anchor="middle" fill="#9198a1">every change it wants is a proposal</text>
+<rect x="30" y="88" width="260" height="782" rx="18" fill="#161b22" stroke="#3d444d" stroke-width="1.5"/>
+<rect x="320" y="88" width="440" height="782" rx="18" fill="#161b22" stroke="#3d444d" stroke-width="1.5"/>
+<rect x="800" y="88" width="260" height="452" rx="18" fill="#161b22" stroke="#3d444d" stroke-width="1.5"/>
+<rect x="362" y="112" width="382" height="72" rx="10" fill="#cdeac5" stroke="#559b4c" stroke-width="1.6"/>
+<text x="553.0" y="136.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Decide</text>
+<text x="553.0" y="157.25" font-size="13" text-anchor="middle" fill="#1f2328">a person approves each proposal; later,</text>
+<text x="553.0" y="173.75" font-size="13" text-anchor="middle" fill="#1f2328">also policies people approved (stage 6)</text>
+<rect x="680.5" y="103" width="47.0" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="704" y="116" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">built</text>
+<rect x="362" y="212" width="382" height="72" rx="10" fill="#fbd9ae" stroke="#c98330" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="553.0" y="236.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Deliberate</text>
+<text x="553.0" y="257.25" font-size="13" text-anchor="middle" fill="#1f2328">the loop: wakes on what is new, recalls,</text>
+<text x="553.0" y="273.75" font-size="13" text-anchor="middle" fill="#1f2328">proposes; people write its goals</text>
+<rect x="669.9" y="203" width="60.199999999999996" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="700" y="216" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">stage 2</text>
+<rect x="362" y="312" width="382" height="72" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="553.0" y="336.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Recall</text>
+<text x="553.0" y="357.25" font-size="13" text-anchor="middle" fill="#1f2328">working memory: what a task needs, with</text>
+<text x="553.0" y="373.75" font-size="13" text-anchor="middle" fill="#1f2328">belief, quotes and the read offset</text>
+<rect x="669.9" y="303" width="60.199999999999996" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="700" y="316" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">stage 1</text>
+<rect x="362" y="412" width="382" height="104" rx="10" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.6"/>
+<text x="553.0" y="444.5" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Memory: the kernel</text>
+<text x="553.0" y="465.0" font-size="13" text-anchor="middle" fill="#1f2328">episodic log · semantic graph · belief</text>
+<text x="553.0" y="481.5" font-size="13" text-anchor="middle" fill="#1f2328">two clocks · self boundary · erasure</text>
+<text x="553.0" y="498.0" font-size="13" text-anchor="middle" fill="#1f2328">lived and implanted memories apart</text>
+<rect x="680.5" y="403" width="47.0" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="704" y="416" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">built</text>
+<rect x="362" y="544" width="185.0" height="72" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="454.5" y="568.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Actuators</text>
+<text x="454.5" y="589.25" font-size="13" text-anchor="middle" fill="#1f2328">effectors: act only</text>
+<text x="454.5" y="605.75" font-size="13" text-anchor="middle" fill="#1f2328">on approved changes</text>
+<rect x="470.9" y="535" width="60.199999999999996" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="501.0" y="548" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">Phase 3</text>
+<rect x="559.0" y="544" width="185.0" height="72" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="651.5" y="568.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Encoders</text>
+<text x="651.5" y="589.25" font-size="13" text-anchor="middle" fill="#1f2328">senses: observed and</text>
+<text x="651.5" y="605.75" font-size="13" text-anchor="middle" fill="#1f2328">reported claims</text>
+<rect x="680.5" y="535" width="47.0" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="704" y="548" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">built</text>
+<path d="M553.0 412 V386" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M553.0 312 V286" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M553.0 212 V186" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M651.5 544 V518" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M362 148 H346 V530 H454.5 V542" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="362.0" y="648" width="185.0" height="206" rx="12" fill="none" stroke="#3d444d" stroke-width="1.4"/>
+<text x="454.5" y="670" font-size="14.5" font-weight="700" text-anchor="middle" fill="#e6edf3">Digital</text>
+<rect x="374.0" y="682" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="454.5" y="700.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">its own stack</text>
+<rect x="374.0" y="716" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="454.5" y="734.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">repositories, forge</text>
+<rect x="374.0" y="750" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="454.5" y="768.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">conversation</text>
+<rect x="374.0" y="784" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="454.5" y="802.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">workflow runtimes</text>
+<rect x="374.0" y="818" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="454.5" y="836.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">browser, desktop</text>
+<rect x="559.0" y="648" width="185.0" height="206" rx="12" fill="none" stroke="#3d444d" stroke-width="1.4"/>
+<text x="651.5" y="670" font-size="14.5" font-weight="700" text-anchor="middle" fill="#e6edf3">Physical</text>
+<rect x="571.0" y="682" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="651.5" y="700.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">simulation first</text>
+<rect x="571.0" y="716" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="651.5" y="734.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">robots, through ROS 2</text>
+<rect x="571.0" y="750" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="651.5" y="768.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">buildings</text>
+<rect x="571.0" y="784" width="161.0" height="28" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="651.5" y="802.0" font-size="13" font-weight="700" text-anchor="middle" fill="#1f2328">vehicles</text>
+<path d="M651.5 648 V618" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M454.5 616 V646" fill="none" stroke="#c9d1d9" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#head)"/>
+<text x="160.0" y="132" font-size="13" font-style="italic" text-anchor="middle" fill="#9198a1">Each layer keeps its own pace;</text>
+<text x="160.0" y="150" font-size="13" font-style="italic" text-anchor="middle" fill="#9198a1">the log records the slow ones,</text>
+<text x="160.0" y="168" font-size="13" font-style="italic" text-anchor="middle" fill="#9198a1">never raw samples.</text>
+<rect x="74" y="212" width="204" height="72" rx="10" fill="#fbd9ae" stroke="#c98330" stroke-width="1.6"/>
+<text x="176.0" y="236.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Deliberation</text>
+<text x="176.0" y="257.25" font-size="13" text-anchor="middle" fill="#1f2328">seconds to days: the loop,</text>
+<text x="176.0" y="273.75" font-size="13" text-anchor="middle" fill="#1f2328">the kernel, models</text>
+<rect x="74" y="412" width="204" height="104" rx="10" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.6"/>
+<text x="176.0" y="444.5" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">One stream</text>
+<text x="176.0" y="465.0" font-size="13" text-anchor="middle" fill="#1f2328">every vessel writes one log,</text>
+<text x="176.0" y="481.5" font-size="13" text-anchor="middle" fill="#1f2328">in one order: what it lived,</text>
+<text x="176.0" y="498.0" font-size="13" text-anchor="middle" fill="#1f2328">and when</text>
+<rect x="74" y="544" width="204" height="72" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="176.0" y="568.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Routine</text>
+<text x="176.0" y="589.25" font-size="13" text-anchor="middle" fill="#1f2328">seconds to minutes: compiled</text>
+<text x="176.0" y="605.75" font-size="13" text-anchor="middle" fill="#1f2328">workflows, behaviour trees</text>
+<rect x="74" y="660" width="204" height="72" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="176.0" y="684.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Reflex</text>
+<text x="176.0" y="705.25" font-size="13" text-anchor="middle" fill="#1f2328">milliseconds: the vessel's</text>
+<text x="176.0" y="721.75" font-size="13" text-anchor="middle" fill="#1f2328">controller, in its envelope</text>
+<rect x="74" y="770" width="204" height="72" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="176.0" y="794.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Safety</text>
+<text x="176.0" y="815.25" font-size="13" text-anchor="middle" fill="#1f2328">stops and limits the</text>
+<text x="176.0" y="831.75" font-size="13" text-anchor="middle" fill="#1f2328">entity can never change</text>
+<path d="M64 212 H58 V616 H64" fill="none" stroke="#9198a1" stroke-width="1.4"/>
+<text x="51" y="414.0" font-size="12.5" font-style="italic" text-anchor="middle" fill="#9198a1" transform="rotate(-90 51 414.0)">in the log</text>
+<path d="M64 660 H58 V842 H64" fill="none" stroke="#9198a1" stroke-width="1.4"/>
+<text x="51" y="751.0" font-size="12.5" font-style="italic" text-anchor="middle" fill="#9198a1" transform="rotate(-90 51 751.0)">in the vessel</text>
+<rect x="816" y="112" width="228" height="72" rx="10" fill="#cdeac5" stroke="#559b4c" stroke-width="1.6"/>
+<text x="930.0" y="136.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Instruments</text>
+<text x="930.0" y="157.25" font-size="13" text-anchor="middle" fill="#1f2328">evals, rules, envelopes:</text>
+<text x="930.0" y="173.75" font-size="13" text-anchor="middle" fill="#1f2328">two people approve each</text>
+<rect x="980.5" y="103" width="47.0" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="1004" y="116" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">built</text>
+<rect x="816" y="212" width="228" height="72" rx="10" fill="#fbd9ae" stroke="#c98330" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="930.0" y="236.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Improve from research</text>
+<text x="930.0" y="257.25" font-size="13" text-anchor="middle" fill="#1f2328">papers → experiments in</text>
+<text x="930.0" y="273.75" font-size="13" text-anchor="middle" fill="#1f2328">forks → evals → PRs</text>
+<rect x="969.9" y="203" width="60.199999999999996" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="1000" y="216" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">stage 5</text>
+<rect x="816" y="312" width="228" height="72" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="930.0" y="336.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Concepts and habits</text>
+<text x="930.0" y="357.25" font-size="13" text-anchor="middle" fill="#1f2328">unresolved claims → schema;</text>
+<text x="930.0" y="373.75" font-size="13" text-anchor="middle" fill="#1f2328">its own runs → procedures</text>
+<rect x="969.9" y="303" width="60.199999999999996" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="1000" y="316" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">stage 4</text>
+<rect x="816" y="412" width="228" height="104" rx="10" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="930.0" y="444.5" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Expectation</text>
+<text x="930.0" y="465.0" font-size="13" text-anchor="middle" fill="#1f2328">predictions settled by</text>
+<text x="930.0" y="481.5" font-size="13" text-anchor="middle" fill="#1f2328">what is observed:</text>
+<text x="930.0" y="498.0" font-size="13" text-anchor="middle" fill="#1f2328">calibration per source</text>
+<rect x="969.9" y="403" width="60.199999999999996" height="18" rx="9" fill="#0d1117" stroke="#9198a1" stroke-width="1.2"/>
+<text x="1000" y="416" font-size="11.5" font-weight="700" text-anchor="middle" fill="#9198a1">stage 3</text>
+<path d="M816 148 H746" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M816 248 H746" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M744 464 H814" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M930.0 412 V386" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M930.0 312 V286" fill="none" stroke="#c9d1d9" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="800" y="572" width="260" height="298" rx="18" fill="#161b22" stroke="#3d444d" stroke-width="1.5"/>
+<text x="930.0" y="600" font-size="14.5" font-weight="700" text-anchor="middle" fill="#e6edf3">Stages (ADR 0037)</text>
+<text x="830" y="630" font-size="13.5" text-anchor="start" fill="#e6edf3">built: memory, senses, approval</text>
+<text x="830" y="656" font-size="13.5" text-anchor="start" fill="#e6edf3">Phase 3: the first actuators</text>
+<text x="830" y="682" font-size="13.5" text-anchor="start" fill="#e6edf3">1  recall</text>
+<text x="830" y="708" font-size="13.5" text-anchor="start" fill="#e6edf3">2  the loop</text>
+<text x="830" y="734" font-size="13.5" text-anchor="start" fill="#e6edf3">3  expectation</text>
+<text x="830" y="760" font-size="13.5" text-anchor="start" fill="#e6edf3">4  concepts and habits</text>
+<text x="830" y="786" font-size="13.5" text-anchor="start" fill="#e6edf3">5  improving from research</text>
+<text x="830" y="812" font-size="13.5" text-anchor="start" fill="#e6edf3">6  digital vessels</text>
+<text x="830" y="838" font-size="13.5" text-anchor="start" fill="#e6edf3">7  physical vessels</text>
+<rect x="81.5" y="893" width="20" height="14" rx="4" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.4"/>
+<text x="108.5" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">deterministic code</text>
+<rect x="239.89999999999998" y="893" width="20" height="14" rx="4" fill="#fbd9ae" stroke="#c98330" stroke-width="1.4"/>
+<text x="266.9" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">a model's judgement</text>
+<rect x="404.59999999999997" y="893" width="20" height="14" rx="4" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.4"/>
+<text x="431.59999999999997" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">a kernel check</text>
+<rect x="537.8" y="893" width="20" height="14" rx="4" fill="#f6d0d4" stroke="#bf6672" stroke-width="1.4"/>
+<text x="564.8" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">sealed personal data</text>
+<rect x="708.8" y="893" width="20" height="14" rx="4" fill="#cdeac5" stroke="#559b4c" stroke-width="1.4"/>
+<text x="735.8" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">a person</text>
+<rect x="804.1999999999999" y="893" width="20" height="14" rx="4" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.4"/>
+<text x="831.1999999999999" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">computed</text>
+<rect x="899.5999999999999" y="893" width="20" height="14" rx="4" fill="none" stroke="#9198a1" stroke-width="1.4" stroke-dasharray="4 3"/>
+<text x="926.5999999999999" y="905" font-size="12.5" text-anchor="start" fill="#9198a1">not built yet</text>
+</svg>

@@ -28,7 +28,9 @@ ADR 0026). Read the relevant ones before changing anything architectural.
   mining) and keep the kernel small.
 - **The north star** is a cognitive model that improves itself by reading new research
   (the research pack over the daily arXiv stream) and testing techniques against its own
-  evals. It comes after Phase 3; nothing here builds it yet.
+  evals. It comes after Phase 3; nothing here builds it yet. The trajectory toward it, for
+  a persistent entity whose identity is its log, embodied in digital and physical vessels,
+  is ADR 0037 (proposed): stages with gates, none started without the owner.
 
 ## Built so far (Phases 1 and 2, complete)
 

@@ -9,6 +9,17 @@ the log rebuilds it exactly.
 Every fact keeps who said it and where, when it was true in the world and when the
 kernel learned it, and whether credible sources agree (accepted) or disagree (contested).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/architecture-dark.svg">
+  <img alt="Figure 1. Encoders turn documents, transcripts, exports, repositories and running stacks into sources and claims. The MCP gateway passes each claim to kernel.write, which checks it and commits it to the append-only log in one transaction; the graph is the log's projection and belief is computed from it. Decoders read at one log offset and write findings that cite their sources. The loop closes only through a person: an agent proposes, a signed-in person decides, and an actuator acts on the approved change." src="docs/figures/architecture.svg">
+</picture>
+
+*Figure 1. Read the encoders up, the kernel down and the decoders up. The colours say what
+each step is: deterministic code (blue), a model's judgement (orange), a check the kernel
+enforces (yellow), sealed personal data (pink), a person (green), computed from the log
+(purple). Models judge only at the edge; nothing reaches the world without a person. The
+figure is drawn by [`docs/figures/figures.py`](docs/figures/figures.py).*
+
 **What it enables:** [`docs/use-cases.html`](docs/use-cases.html) lists 62 use cases in
 business processes, software and IT, compliance, research, AI agents, teams, data
 integration and specific sectors. Each is marked as working today, on the roadmap, a small
@@ -34,6 +45,13 @@ a document whose every finding cites its sources:
 The rest of the loop follows when a paying pilot needs it: one part of the work automated
 on a process runtime, what runs checked against the map, and the system proposing changes
 to what it deployed, which a person approves.
+
+**Later:** the north star is a cognitive model for a persistent entity whose identity is
+its log, embodied in vessels both digital (its own stack, runtimes, channels) and physical
+(robots, buildings). [ADR 0037](docs/decisions/0037-toward-a-cognitive-model-in-vessels.md)
+(proposed) lays out the stages: recall, a loop of its own, predictions it can be wrong
+about, concepts and habits it learns, improving itself from research, then vessels, each
+with a gate measured on evals and every action approved by people.
 
 ## Quick start
 
