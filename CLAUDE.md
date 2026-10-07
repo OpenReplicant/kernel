@@ -78,6 +78,11 @@ items:
    The discovery report (ADR 0034, built): `wmk-process report` gives the map, the
    disagreements, the measures and the ranking in one Markdown document, each sentence
    citing the claims it rests on, with their sources' words as footnotes. It writes nothing.
+   Intake (ADR 0036, built): `wmk-process intake` takes a client's engagement folder in one
+   pass (documents, transcripts with each interviewee created by the claim of their
+   consent and their turns sealed, exports discovered), lists the sources no claim cites
+   yet with `--work` giving their chunks for the mapping session, and checks conformance
+   once nothing is waiting. Northwind is such a folder (`packs/process/engagements/`).
    `bpm-reference` stays as the kernel's test pack.
 2. **Sysops and self** (ADR 0028, built for Docker in the software pack). Extends the
    software pack from what a repository declares to what runs: deployments, versions,
@@ -114,10 +119,11 @@ items:
 **Build order from here (ADR 0035, replacing ADR 0033's from its third step).** What a
 client pays for comes first: fixed-scope engagements that end in a document whose every
 finding cites its sources. Ranking and the discovery report are built.
-1. **Intake from an engagement folder**, kept outside this repository: documents,
-   transcripts and exports go in through parsers at the edge and the adapters. Until the
-   extractor meets its floors, documents and transcripts are mapped in a harness session
-   with the skills, and the consultant reviews each claim. Northwind becomes such a folder.
+1. **Intake from an engagement folder** (built, ADR 0036), kept outside this repository:
+   documents, transcripts and exports go in through converters at the edge and the
+   adapters. Until the extractor meets its floors, documents and transcripts are mapped in
+   a harness session with the skills, and the consultant reviews each claim. Adapters are
+   encoders, decoders or actuators, each with its contract (ADR 0036, `docs/packs.md`).
 2. **The controls test:** a client's written rules tested against every case of an export,
    with an exceptions register listing each case that broke each rule. `make demo`, as
    Northwind run as an engagement, arrives with it.
@@ -181,9 +187,9 @@ Keep these working; add `make demo` in Phase 3.
 - `make lint` — ruff check and format check
 - `make up-ui`, `make ui-smoke` — the explorer and its smoke check
 - `make seed`, `make map-self` — the fixtures, and this repository's self-model, into a stack
-- `make northwind` — Northwind's purchase requests as written, told and done, the log
-  checked against them, and the discovery report: where the views disagree and what to
-  automate first, each sentence with its sources
+- `make northwind` — Northwind's engagement folder through intake, the scripted mapping,
+  intake again (the log checked against the views), and the discovery report: where the
+  views disagree and what to automate first, each sentence with its sources
 - `make observe-self` — capture the running stack, observe it and check it for drift
 - `make forge-self` — capture this repository's pull requests, map them and audit its
   changes for approval (`FORGE_CAPTURE=` replays a recorded capture, as CI does)

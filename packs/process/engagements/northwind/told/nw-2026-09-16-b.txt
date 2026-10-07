@@ -1,0 +1,8 @@
+Interview nw-2026-09-16-b: purchase requests, 16 September 2026
+
+Interviewer: Could you tell me your role, and whether I may record our conversation?
+Lucia Ferreira: I'm the finance controller. I started on 1 August 2026. Yes, that's fine, you can record this.
+Interviewer: Which purchase requests reach you?
+Lucia Ferreira: Since I started in August, every request over 10,000 euros comes to me after the line manager's review, and I approve it before procurement creates the order. No exceptions.
+Interviewer: The procedure says finance checks the budget before the review. Is that still done?
+Lucia Ferreira: Nobody checks the budget as a separate step any more. Coupa shows the line manager the cost centre's remaining budget on the request, so the review covers it.

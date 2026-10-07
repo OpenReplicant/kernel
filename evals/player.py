@@ -32,6 +32,9 @@ class Fixture:
     # False for a fixture whose nodes another fixture also creates: a script cannot reuse
     # them the way an adapter's resolution does, so it is scored in its own database only.
     seed: bool = True
+    # True for a script that looks up each node before creating it, as a harness following
+    # the core skill does, so that it meets nodes an adapter or intake created first.
+    reuse: bool = False
 
     @classmethod
     def load(cls, path: Path) -> Fixture:
@@ -46,6 +49,7 @@ class Fixture:
             namespaces=meta.get("namespaces"),
             packs=list(meta.get("packs") or []),
             seed=bool(meta.get("seed", True)),
+            reuse=bool(meta.get("reuse", False)),
         )
 
 
@@ -72,6 +76,7 @@ class Player:
     refs: dict[str, str] = field(default_factory=dict)
     chunks: dict[str, list[str]] = field(default_factory=dict)
     spans: dict[str, list[tuple[int, int, str]]] = field(default_factory=dict)
+    source_ids: dict[str, str] = field(default_factory=dict)
     agent_id: str | None = None
     failures: list[StepFailure] = field(default_factory=list)
     skipped_sources: list[str] = field(default_factory=list)
@@ -131,6 +136,7 @@ class Player:
             return
         if result["skipped"]:
             self.skipped_sources.append(alias)
+        self.source_ids[alias] = result["source_id"]
         self.chunks[alias] = [c["id"] for c in result["chunks"]]
         self.spans[alias] = [(c["char_start"], c["char_end"], c["id"]) for c in result["chunks"]]
 
@@ -148,6 +154,11 @@ class Player:
             args["namespaces"] = self.fixture.namespaces
         _, slice_ = await self.call("get_schema_slice", args)
         payload.setdefault("read_at_offset", slice_["head_offset"])
+        if self.fixture.reuse:
+            reused = await self._reuse(payload)
+            if reused is None:
+                return
+            payload = reused
         error, result = await self.call("write", payload)
         expected = step.get("expect", "accepted")
         if error:
@@ -166,6 +177,39 @@ class Player:
             self.failures.append(StepFailure(index, "write", f"accepted, expected {expected}"))
         self.agent_id = result.get("agent_id") or self.agent_id
         self.refs.update({k.lstrip("$"): v for k, v in result["refs"].items()})
+
+    async def _reuse(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        """The write with each node it creates looked up first: a node with the same identity, or
+        without one the same kind and normalised name, is reused instead, as apply resolves
+        nodes. Runs are always new. None when every operation was such a create."""
+        creates = [
+            op for op in payload["ops"] if op.get("op") == "create" and op.get("type", "Entity") != "Event"
+        ]
+        if not creates:
+            return payload
+        queries = [{f: op[f] for f in ("name", "type", "kind", "identity") if f in op} for op in creates]
+        _, found = await self.call("lookup_entities", {"queries": queries, "limit": 5})
+        bound: dict[str, str] = {}
+        for op, result in zip(creates, found["results"], strict=True):
+            same = next(
+                (
+                    c["node_id"]
+                    for c in result["candidates"]
+                    if c["stage"] == "identity" or (not op.get("identity") and c["stage"] == "normalized")
+                ),
+                None,
+            )
+            if same:
+                bound[op["ref"]] = same
+        if not bound:
+            return payload
+        self.refs.update({ref.lstrip("$"): node for ref, node in bound.items()})
+        ops = [
+            {k: bound.get(v, v) if isinstance(v, str) else v for k, v in op.items()}
+            for op in payload["ops"]
+            if not (op.get("op") == "create" and op.get("ref") in bound)
+        ]
+        return {**payload, "ops": ops} if ops else None
 
     async def _query(self, index: int, step: dict[str, Any]) -> None:
         query = self.render(step["query"])

@@ -10,7 +10,8 @@ SCENARIO ?= northwind
 SELF ?= World Model Kernel (this instance)
 # The Compose project `make observe-self` captures (the stack's `name:`).
 PROJECT ?= wmk
-# The Northwind log `make northwind` maps onto the views of the northwind-views fixture (ADR 0032).
+# Northwind as an engagement folder (ADR 0036), and the configuration of its log (ADR 0032).
+ENGAGEMENT ?= packs/process/engagements/northwind/engagement.yaml
 NORTHWIND ?= packs/process/evals/fixtures/northwind-purchase-requests/northwind.yaml
 # The forge repository `make forge-self` reads; FORGE_CAPTURE replays a recorded capture instead.
 FORGE_REPO ?= OpenReplicant/kernel
@@ -31,7 +32,7 @@ help:
 	@echo "make test     unit, SQL and regression tests (starts db)"
 	@echo "make eval     run the eval fixtures through the eval profile"
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
-	@echo "make northwind  Northwind's purchase requests as written, told and done, checked, and its discovery report"
+	@echo "make northwind  Northwind's folder through intake, its scripted mapping, intake again, and the discovery report"
 	@echo "make map-self  map this repository and the kernel's self boundary into the running stack"
 	@echo "make observe-self  capture the running stack, observe it and check it for drift (after map-self)"
 	@echo "make forge-self  read this repository's pull requests from GitHub, map them and audit its changes for approval"
@@ -78,10 +79,12 @@ eval: db
 seed:
 	uv run python -m evals.seed --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 
+# Intake, then the northwind-views script standing in for the reviewed harness session that
+# maps the documents and transcripts, then intake again, which checks conformance.
 northwind:
+	uv run wmk-process intake $(ENGAGEMENT) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 	uv run python -m evals.seed northwind-views --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
-	uv run wmk-process discover $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
-	uv run wmk-process conform $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+	uv run wmk-process intake $(ENGAGEMENT) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 	uv run wmk-process report $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 
 map-self:
