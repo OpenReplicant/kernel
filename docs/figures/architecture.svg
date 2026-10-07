@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1090 990" width="1090" height="990" font-family="Helvetica Neue, Helvetica, Arial, Liberation Sans, sans-serif" role="img">
+<title>World Model Kernel: encoders, the kernel and decoders</title>
+<defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#3d444d"/></marker></defs>
+<rect width="1090" height="990" rx="14" fill="#ffffff"/>
+<text x="190.0" y="44" font-size="19" font-weight="700" letter-spacing="2.5" text-anchor="middle" fill="#1f2328">ENCODERS</text>
+<text x="190.0" y="66" font-size="13.5" text-anchor="middle" fill="#59636e">turn what is sensed into sourced claims</text>
+<rect x="40" y="88" width="300" height="680" rx="18" fill="#f2f3f5" stroke="#a3a9b1" stroke-width="1.5"/>
+<text x="540.0" y="44" font-size="19" font-weight="700" letter-spacing="2.5" text-anchor="middle" fill="#1f2328">KERNEL</text>
+<text x="540.0" y="66" font-size="13.5" text-anchor="middle" fill="#59636e">one write path, one log, computed belief</text>
+<rect x="390" y="88" width="300" height="680" rx="18" fill="#f2f3f5" stroke="#a3a9b1" stroke-width="1.5"/>
+<text x="890.0" y="44" font-size="19" font-weight="700" letter-spacing="2.5" text-anchor="middle" fill="#1f2328">DECODERS</text>
+<text x="890.0" y="66" font-size="13.5" text-anchor="middle" fill="#59636e">read at one offset, write nothing but cites</text>
+<rect x="740" y="88" width="300" height="680" rx="18" fill="#f2f3f5" stroke="#a3a9b1" stroke-width="1.5"/>
+<rect x="56" y="108" width="268" height="68" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="190.0" y="139.0" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Claim + graph operations</text>
+<text x="190.0" y="159.5" font-size="13" text-anchor="middle" fill="#1f2328">text · source · quote · basis · ops</text>
+<rect x="56" y="200" width="268" height="76" rx="10" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.6"/>
+<text x="190.0" y="226.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Extraction run</text>
+<text x="190.0" y="247.25" font-size="13" text-anchor="middle" fill="#1f2328">closing it retracts what older</text>
+<text x="190.0" y="263.75" font-size="13" text-anchor="middle" fill="#1f2328">runs found and it did not</text>
+<rect x="56" y="300" width="129.0" height="132" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="120.5" y="338.25" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Deterministic</text>
+<text x="120.5" y="358.75" font-size="13" text-anchor="middle" fill="#1f2328">reader: exports,</text>
+<text x="120.5" y="375.25" font-size="13" text-anchor="middle" fill="#1f2328">event logs, repos,</text>
+<text x="120.5" y="391.75" font-size="13" text-anchor="middle" fill="#1f2328">stacks, forges</text>
+<text x="120.5" y="408.25" font-size="13" text-anchor="middle" fill="#1f2328">→ observed claims</text>
+<rect x="195.0" y="300" width="129.0" height="132" rx="10" fill="#fbd9ae" stroke="#c98330" stroke-width="1.6"/>
+<text x="259.5" y="338.25" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Model + skills</text>
+<text x="259.5" y="358.75" font-size="13" text-anchor="middle" fill="#1f2328">a person reviews</text>
+<text x="259.5" y="375.25" font-size="13" text-anchor="middle" fill="#1f2328">each claim</text>
+<text x="259.5" y="391.75" font-size="13" text-anchor="middle" fill="#1f2328">→ reported claims</text>
+<text x="259.5" y="408.25" font-size="13" text-anchor="middle" fill="#1f2328">that quote</text>
+<rect x="56" y="456" width="268" height="76" rx="10" fill="#f6d0d4" stroke="#bf6672" stroke-width="1.6"/>
+<text x="190.0" y="482.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Store each source</text>
+<text x="190.0" y="503.25" font-size="13" text-anchor="middle" fill="#1f2328">chunks with spans, content hash;</text>
+<text x="190.0" y="519.75" font-size="13" text-anchor="middle" fill="#1f2328">sealed under its people's keys</text>
+<rect x="56" y="556" width="268" height="76" rx="10" fill="#cdeac5" stroke="#559b4c" stroke-width="1.6"/>
+<text x="190.0" y="582.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Consent</text>
+<text x="190.0" y="603.25" font-size="13" text-anchor="middle" fill="#1f2328">each person recorded is created</text>
+<text x="190.0" y="619.75" font-size="13" text-anchor="middle" fill="#1f2328">by the claim of their consent</text>
+<rect x="56" y="656" width="268" height="76" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="190.0" y="682.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Convert at the edge</text>
+<text x="190.0" y="703.25" font-size="13" text-anchor="middle" fill="#1f2328">PDF, Word → text: markitdown,</text>
+<text x="190.0" y="719.75" font-size="13" text-anchor="middle" fill="#1f2328">docling, GROBID</text>
+<path d="M190.0 656 V634" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M190.0 556 V534" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M190.0 456 V444 H120.5 V434" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M190.0 444 H259.5 V434" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M120.5 300 V288 H190.0 V278" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M259.5 300 V288 H190.0" fill="none" stroke="#3d444d" stroke-width="1.8"/>
+<path d="M190.0 200 V178" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="406" y="108" width="268" height="68" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="540.0" y="139.0" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">MCP gateway, any harness</text>
+<text x="540.0" y="159.5" font-size="13" text-anchor="middle" fill="#1f2328">write · write_batch · ingest_source · cite</text>
+<path d="M324 142 H404" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="406" y="198" width="268" height="290" rx="18" fill="#f2f3f5" stroke="#a3a9b1" stroke-width="1.5"/>
+<text x="540.0" y="220" font-size="13.5" font-weight="700" text-anchor="middle" fill="#59636e">kernel.write: one transaction, in order</text>
+<rect x="418" y="232" width="244" height="34" rx="10" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.6"/>
+<text x="540.0" y="253.75" font-size="14.5" font-weight="700" text-anchor="middle" fill="#1f2328">Lock, take the next offset</text>
+<rect x="418" y="273" width="244" height="34" rx="10" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.6"/>
+<text x="540.0" y="294.75" font-size="14.5" font-weight="700" text-anchor="middle" fill="#1f2328">Provenance: source, quote, run</text>
+<rect x="418" y="314" width="244" height="34" rx="10" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.6"/>
+<text x="540.0" y="335.75" font-size="14.5" font-weight="700" text-anchor="middle" fill="#1f2328">Ontology and governance rules</text>
+<rect x="418" y="355" width="244" height="34" rx="10" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.6"/>
+<text x="540.0" y="376.75" font-size="14.5" font-weight="700" text-anchor="middle" fill="#1f2328">Stale check: read_at_offset</text>
+<rect x="418" y="396" width="244" height="34" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="540.0" y="417.75" font-size="14.5" font-weight="700" text-anchor="middle" fill="#1f2328">Resolution cascade</text>
+<rect x="418" y="437" width="244" height="34" rx="10" fill="#f6d0d4" stroke="#bf6672" stroke-width="1.6"/>
+<text x="540.0" y="458.75" font-size="14.5" font-weight="700" text-anchor="middle" fill="#1f2328">Seal personal data</text>
+<path d="M540.0 176 V196" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M426 519 A114.0 9 0 0 1 654 519 V565 A114.0 9 0 0 1 426 565 Z" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<path d="M426 519 A114.0 9 0 0 0 654 519" fill="none" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="540.0" y="543.5" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Log</text>
+<text x="540.0" y="564.0" font-size="13" text-anchor="middle" fill="#1f2328">append-only · the source of truth</text>
+<path d="M426 601 A114.0 9 0 0 1 654 601 V647 A114.0 9 0 0 1 426 647 Z" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.6"/>
+<path d="M426 601 A114.0 9 0 0 0 654 601" fill="none" stroke="#6f66b3" stroke-width="1.6"/>
+<text x="540.0" y="625.5" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Graph</text>
+<text x="540.0" y="646.0" font-size="13" text-anchor="middle" fill="#1f2328">its projection; replay rebuilds it</text>
+<path d="M540.0 488 V508" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M540.0 574 V590" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="406" y="676" width="268" height="76" rx="10" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.6"/>
+<text x="540.0" y="702.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Belief</text>
+<text x="540.0" y="723.25" font-size="13" text-anchor="middle" fill="#1f2328">from independent origins: accepted,</text>
+<text x="540.0" y="739.75" font-size="13" text-anchor="middle" fill="#1f2328">contested, rejected or unknown</text>
+<path d="M540.0 656 V674" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="756" y="108" width="268" height="76" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="890.0" y="134.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Findings with receipts</text>
+<text x="890.0" y="155.25" font-size="13" text-anchor="middle" fill="#1f2328">discovery report · controls test ·</text>
+<text x="890.0" y="171.75" font-size="13" text-anchor="middle" fill="#1f2328">audit evidence · the explorer</text>
+<rect x="756" y="250" width="268" height="76" rx="10" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.6"/>
+<text x="890.0" y="276.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Cite</text>
+<text x="890.0" y="297.25" font-size="13" text-anchor="middle" fill="#1f2328">each finding → its claims →</text>
+<text x="890.0" y="313.75" font-size="13" text-anchor="middle" fill="#1f2328">their sources' words</text>
+<rect x="756" y="392" width="268" height="76" rx="10" fill="#f6d0d4" stroke="#bf6672" stroke-width="1.6"/>
+<text x="890.0" y="418.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Erased stays erased</text>
+<text x="890.0" y="439.25" font-size="13" text-anchor="middle" fill="#1f2328">attributed to collections,</text>
+<text x="890.0" y="455.75" font-size="13" text-anchor="middle" fill="#1f2328">never to names</text>
+<rect x="756" y="534" width="268" height="76" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="890.0" y="560.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Decode</text>
+<text x="890.0" y="581.25" font-size="13" text-anchor="middle" fill="#1f2328">compare · rank · drift ·</text>
+<text x="890.0" y="597.75" font-size="13" text-anchor="middle" fill="#1f2328">forge audit · report</text>
+<rect x="756" y="676" width="268" height="76" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6"/>
+<text x="890.0" y="702.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Read at one log offset</text>
+<text x="890.0" y="723.25" font-size="13" text-anchor="middle" fill="#1f2328">query_graph · query_log ·</text>
+<text x="890.0" y="739.75" font-size="13" text-anchor="middle" fill="#1f2328">lookup_entities</text>
+<path d="M890.0 250 V186" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M890.0 392 V328" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M890.0 534 V470" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M890.0 676 V612" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M674 714 H754" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="40" y="812" width="300" height="82" rx="10" fill="#ffffff" stroke="#8a8f98" stroke-width="1.6"/>
+<text x="190.0" y="841.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">The world</text>
+<text x="190.0" y="862.25" font-size="13" text-anchor="middle" fill="#1f2328">documents · transcripts · exports ·</text>
+<text x="190.0" y="878.75" font-size="13" text-anchor="middle" fill="#1f2328">repositories · running stacks · papers</text>
+<rect x="840" y="812" width="200" height="82" rx="10" fill="#fbd9ae" stroke="#c98330" stroke-width="1.6"/>
+<text x="940.0" y="841.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Proposal</text>
+<text x="940.0" y="862.25" font-size="13" text-anchor="middle" fill="#1f2328">a change an agent drafts</text>
+<text x="940.0" y="878.75" font-size="13" text-anchor="middle" fill="#1f2328">from what it read</text>
+<rect x="615" y="812" width="200" height="82" rx="10" fill="#cdeac5" stroke="#559b4c" stroke-width="1.6"/>
+<text x="715.0" y="841.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">A person decides</text>
+<text x="715.0" y="862.25" font-size="13" text-anchor="middle" fill="#1f2328">signed in, never the</text>
+<text x="715.0" y="878.75" font-size="13" text-anchor="middle" fill="#1f2328">proposer: kernel.decide</text>
+<rect x="390" y="812" width="200" height="82" rx="10" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.6" stroke-dasharray="6 4" fill-opacity="0.65"/>
+<text x="490.0" y="841.75" font-size="15.5" font-weight="700" text-anchor="middle" fill="#1f2328">Actuator</text>
+<text x="490.0" y="862.25" font-size="13" text-anchor="middle" fill="#1f2328">acts only on an approved</text>
+<text x="490.0" y="878.75" font-size="13" text-anchor="middle" fill="#1f2328">change (not built yet)</text>
+<path d="M1024 146 H1066 V853 H1042" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M840 853 H817" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M615 853 H592" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<path d="M390 853 H342" fill="none" stroke="#3d444d" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#head)"/>
+<path d="M190.0 812 V734" fill="none" stroke="#3d444d" stroke-width="1.8" marker-end="url(#head)"/>
+<rect x="81.5" y="938" width="20" height="14" rx="4" fill="#cfe6f5" stroke="#4f86b0" stroke-width="1.4"/>
+<text x="108.5" y="950" font-size="12.5" text-anchor="start" fill="#59636e">deterministic code</text>
+<rect x="239.89999999999998" y="938" width="20" height="14" rx="4" fill="#fbd9ae" stroke="#c98330" stroke-width="1.4"/>
+<text x="266.9" y="950" font-size="12.5" text-anchor="start" fill="#59636e">a model's judgement</text>
+<rect x="404.59999999999997" y="938" width="20" height="14" rx="4" fill="#f3efb5" stroke="#a89a2c" stroke-width="1.4"/>
+<text x="431.59999999999997" y="950" font-size="12.5" text-anchor="start" fill="#59636e">a kernel check</text>
+<rect x="537.8" y="938" width="20" height="14" rx="4" fill="#f6d0d4" stroke="#bf6672" stroke-width="1.4"/>
+<text x="564.8" y="950" font-size="12.5" text-anchor="start" fill="#59636e">sealed personal data</text>
+<rect x="708.8" y="938" width="20" height="14" rx="4" fill="#cdeac5" stroke="#559b4c" stroke-width="1.4"/>
+<text x="735.8" y="950" font-size="12.5" text-anchor="start" fill="#59636e">a person</text>
+<rect x="804.1999999999999" y="938" width="20" height="14" rx="4" fill="#dcd8f3" stroke="#6f66b3" stroke-width="1.4"/>
+<text x="831.1999999999999" y="950" font-size="12.5" text-anchor="start" fill="#59636e">computed</text>
+<rect x="899.5999999999999" y="938" width="20" height="14" rx="4" fill="none" stroke="#59636e" stroke-width="1.4" stroke-dasharray="4 3"/>
+<text x="926.5999999999999" y="950" font-size="12.5" text-anchor="start" fill="#59636e">not built yet</text>
+</svg>
