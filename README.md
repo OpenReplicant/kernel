@@ -19,13 +19,21 @@ shows its source.
 
 Design: [`docs/design-v1.md`](docs/design-v1.md). Decisions:
 [`docs/decisions/`](docs/decisions/); where it goes next is
-[ADR 0026](docs/decisions/0026-phase-3-the-closed-loop.md). Libraries to adopt for adapters:
-[`docs/adapters.md`](docs/adapters.md).
+[ADR 0026](docs/decisions/0026-phase-3-the-closed-loop.md), in the order of
+[ADR 0035](docs/decisions/0035-what-a-client-pays-for-comes-first.md). Libraries to adopt
+for adapters: [`docs/adapters.md`](docs/adapters.md).
 
-**Next (Phase 3):** one synthetic company taken around the whole loop. It is mapped from
-interviews, documents and event logs; one part of its work is automated on a process
-runtime; what runs is observed and checked against the map; and the system proposes
-changes to what it deployed, which a person approves.
+**Next (Phase 3):** what a client pays for comes first
+([ADR 0035](docs/decisions/0035-what-a-client-pays-for-comes-first.md)). Each deliverable is
+a document whose every finding cites its sources:
+- the discovery report, from a client's folder of documents, transcripts and exports;
+- a controls test: the client's written rules tested against every case in an export, with
+  each exception listed;
+- change-approval evidence for an audit period.
+
+The rest of the loop follows when a paying pilot needs it: one part of the work automated
+on a process runtime, what runs checked against the map, and the system proposing changes
+to what it deployed, which a person approves.
 
 ## Quick start
 

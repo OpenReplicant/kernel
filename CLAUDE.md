@@ -46,12 +46,14 @@ Keep all of it working; its invariants and tests still apply.
 - `ui/`, the read-only explorer. Evals: fixtures, resolution set, replay, live runs, and
   the independently annotated SciFact eval (`evals/annotated/RESULTS.md`).
 
-## Current phase: Phase 3, the closed loop (approved 2026-10-06)
+## Current phase: Phase 3, the closed loop (approved 2026-10-06, reordered 2026-10-07)
 
 One synthetic company (the `northwind` scenario) taken around the whole loop, as an open
 demo: map it, choose what to automate, automate it, govern what runs, and let the system
-propose changes to what it deployed, approved by a person. Each item starts with a short
-ADR, then code. In this order:
+propose changes to what it deployed, approved by a person. Since ADR 0035 (2026-10-07),
+what a client pays for comes first, and the rest of the loop is built when a paying pilot
+needs it: see the build order below. Each item starts with a short ADR, then code. The
+items:
 
 1. **A general process pack** (ADR 0027, built: `packs/process`). A runtime-neutral
    representation, not BPMN: processes made of steps (`activity` and `gateway` entities)
@@ -96,20 +98,37 @@ ADR, then code. In this order:
      `wmk-software forge`): it records pull requests, reviews and merges as evidence of
      decisions, never as decisions, and audits which changes, and which deployments of them,
      no person approved.
-4. **Workflow adapters, one per runtime.** The first is Operaton (chosen 2026-10-06: the
-   Apache-2.0 fork of Camunda 7, BPMN with a REST API and run history); later ones may be
-   n8n, RuleGo, any rules engine, runner or plain code. Each compiles the process representation into its runtime's
-   configuration, and reads deployments and runs back as observed claims and events, so
+4. **Workflow adapters, one per runtime.** The first is built when a paying pilot needs
+   it, for the runtime that pilot uses, or Operaton when the client has none (chosen
+   2026-10-06: the Apache-2.0 fork of Camunda 7, BPMN with a REST API and run history);
+   later ones may be n8n, RuleGo, any rules engine, runner or plain code. Each compiles
+   the process representation into its runtime's configuration, and reads deployments and runs back as observed claims and events, so
    conformance compares what ran with what was mapped. The representation never depends on
    one runtime.
 5. **The demo and its write-up.** `make demo` runs the loop on Northwind end to end, with
    the extractor (item below) and scripted fallbacks so CI can run it; a short video and a
-   write-up with honest numbers.
+   write-up with honest numbers. Until the workflow adapter exists, `make demo` is
+   Northwind run as an engagement: its folder goes in, and the report and the controls
+   test come out (ADR 0035). That form arrives with the controls test.
 
-**Build order from here (ADR 0033).** The discovery deliverables come before any runtime:
-ranking (built), then the discovery report (built, ADR 0034), then intake from a client's
-folder (documents, transcripts and exports through the parsers, the extractor and the
-adapters), then the Operaton workflow adapter (item 4), then `make demo` (item 5).
+**Build order from here (ADR 0035, replacing ADR 0033's from its third step).** What a
+client pays for comes first: fixed-scope engagements that end in a document whose every
+finding cites its sources. Ranking and the discovery report are built.
+1. **Intake from an engagement folder**, kept outside this repository: documents,
+   transcripts and exports go in through parsers at the edge and the adapters. Until the
+   extractor meets its floors, documents and transcripts are mapped in a harness session
+   with the skills, and the consultant reviews each claim. Northwind becomes such a folder.
+2. **The controls test:** a client's written rules tested against every case of an export,
+   with an exceptions register listing each case that broke each rule. `make demo`, as
+   Northwind run as an engagement, arrives with it.
+3. **Change-approval evidence:** the forge audit over an audit period, as a document.
+4. **Re-runs:** the same folder with a new export, and what changed since the last run.
+5. **Then, when a paying pilot needs them:** the first workflow adapter (item 4), then the
+   automation half of `make demo` and the write-up (item 5).
+
+Recall into context, the research eval improvements, bulk extraction, declared
+dependencies between packs and an agent that writes packs wait until an engagement needs
+them.
 
 Also in scope:
 
@@ -131,8 +150,8 @@ Also in scope:
 URL, pack SQL, automatic capture of agents' own sessions (observer runs that write from
 what they watch, beyond deterministic observation adapters), vital signs beyond the demo's
 health and drift checks, generative ops strategies beyond proposing a pull request,
-concept formation, habit formation, the cognitive model itself. If a task seems to need
-one of these, stop and ask.
+hosting a service that clients sign into, concept formation, habit formation, the
+cognitive model itself. If a task seems to need one of these, stop and ask.
 
 ## Open and private
 
