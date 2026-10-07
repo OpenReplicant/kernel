@@ -41,6 +41,13 @@ class Source:
     # the source under their keys, so erasing one of them makes it unreadable (ADR 0022).
     # `apply` creates them before ingesting; a plan with subjects has no script form.
     subjects: tuple[str, ...] = ()
+    # The node key of the person who wrote or said it, one of `subjects`: an interview turn's
+    # speaker. Belief counts the author as the source's origin.
+    author: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.author is not None and self.author not in self.subjects:
+            raise ValueError(f"{self.alias}: its author must be one of its subjects")
 
     def ingest_args(self) -> dict[str, Any]:
         args: dict[str, Any] = {
@@ -102,6 +109,9 @@ class Plan:
         self.sources: list[Source] = []
         self.nodes: dict[str, dict[str, Any]] = {}
         self.facts: list[Fact] = []
+        # The claim that creates a person named as a subject, by node key, such as the consent
+        # they gave to be recorded. Without one, `apply` says where the person is named.
+        self.introductions: dict[str, str] = {}
         self._asserted: set[tuple[Any, ...]] = set()
 
     def source(self, source: Source) -> Source:

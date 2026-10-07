@@ -31,9 +31,12 @@ class Agtype(str):
 
 class Kernel:
     def __init__(self, writer_dsn: str, reader_dsn: str, *, max_size: int = 5) -> None:
-        self.writer = AsyncConnectionPool(writer_dsn, min_size=1, max_size=max_size, open=False)
+        # Each connection is checked before it is lent: a database restart ends the ones a pool
+        # holds, and the next call gets a new connection instead of failing as unreachable.
+        check = AsyncConnectionPool.check_connection
+        self.writer = AsyncConnectionPool(writer_dsn, min_size=1, max_size=max_size, open=False, check=check)
         self.reader = AsyncConnectionPool(
-            reader_dsn, min_size=1, max_size=max_size, open=False, configure=_configure_reader
+            reader_dsn, min_size=1, max_size=max_size, open=False, configure=_configure_reader, check=check
         )
 
     async def open(self) -> None:

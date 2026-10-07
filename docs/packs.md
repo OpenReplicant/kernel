@@ -18,6 +18,7 @@ packs/<name>/
   adapter/            optional: an adapter that writes through the gateway, also a workspace member
   evals/fixtures/     scripted fixtures with expected graphs (make eval)
   evals/live/         live-harness scenarios (make live SCENARIO=<name>)
+  engagements/        optional: example engagement folders for intake (ADR 0036)
   tests/              pytest; conftest.py names the packs its databases get
 ```
 
@@ -122,7 +123,10 @@ interview turn's `author: "{{ref:maya}}"`. `make seed` plays the fixtures into a
 stack, except those marked `seed: false`: a script cannot reuse the nodes another fixture
 creates, so such a fixture is scored in its own database only, and its adapter maps the
 same input into the stack instead (`make northwind` maps the Northwind log onto the
-views' nodes). A live scenario in `evals/live/` runs a real model (`make live SCENARIO=<name>`);
+views' nodes). A script marked `reuse: true` looks up each node before creating it and
+reuses one with the same identity, or the same kind and normalised name, as a harness
+following the core skill does; northwind-views does, so it can map what `wmk-process
+intake` stored first. A live scenario in `evals/live/` runs a real model (`make live SCENARIO=<name>`);
 its document `file` paths are relative to the scenario.
 
 ## Servers
@@ -134,7 +138,23 @@ Libraries follow [docs/adapters.md](adapters.md) and [ADR 0012](decisions/0012-d
 
 ## Adapters
 
-An adapter maps structured data deterministically, without a model: it reads files or
+Adapters come in three directions, each with its own contract
+([ADR 0036](decisions/0036-intake-from-an-engagement-folder.md)). "Adapter" stays the name
+in code.
+
+- **Encoders** turn what they read into sources and claims (`discover`, `conform`, intake,
+  the captures). They write only through the gateway, cite what they read, write nothing
+  new for an unchanged input, and list people as subjects. A deterministic encoder writes
+  observed claims; a model encoder (the extractor, a harness with the skills) writes
+  reported claims that quote their source.
+- **Decoders** read the kernel at one log offset and write nothing (`compare`, `rank`,
+  `report`, `forge audit`, `drift`). Every finding cites the claims it rests on, erased
+  words stay erased, and claims are attributed to collections, never to names.
+- **Actuators** change a system outside the kernel, only on a change a person approved
+  (invariant 10), with no credential that bypasses it, and paired with an encoder that
+  reads back what they did. None is built yet.
+
+An encoder for structured data maps it deterministically, without a model: it reads files or
 APIs, builds a plan of sources and claims, and plays it through the gateway's tools as an
 MCP client, so every write goes through `kernel.write` and the adapter needs no database
 credentials. Give each file a `collection` that stays the same across its versions, so a
@@ -149,8 +169,11 @@ adapter depends on). A plan can also assert on, or deny, an edge that already ex
 verdicts. A source about people names them in `Source.subjects` (node keys of human
 agents): `apply` creates those agents first and ingests the source sealed under their keys,
 so erasing one of them makes it unreadable ([ADR 0022](decisions/0022-erasing-personal-data.md));
-the forge adapter does this for the people on each pull request. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
-(`wmk-process`, which reads event logs, checks the mapped process against them, compares the views, ranks the steps and writes the discovery report) are the
+the forge adapter does this for the people on each pull request. A source someone said or
+wrote names them as `Source.author` too, and `Plan.introductions` gives the claim that
+creates a person, such as their consent to be recorded: intake does both for interview
+turns. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
+(`wmk-process`, which takes in a client's folder, reads event logs, checks the mapped process against them, compares the views, ranks the steps and writes the discovery report) are the
 examples ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md),
 [ADR 0027](decisions/0027-process-pack-and-event-logs.md)).
 

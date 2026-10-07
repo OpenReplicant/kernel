@@ -40,7 +40,7 @@ to what it deployed, which a person approves.
 ```sh
 make up        # Postgres 18 (AGE, pgvector, pg_trgm) + the MCP gateway on :8000
 make seed      # optional: write the eval fixtures through the gateway
-make northwind # optional: Northwind's purchase requests as written, told and done, in a discovery report
+make northwind # optional: Northwind's folder through intake, mapped, checked, in a discovery report
 make replay    # rebuild the graph from the log and diff it against the live graph
 make up-ui     # optional: the explorer on http://localhost:8080
 make map-self  # optional: map this repository and the kernel's own boundary (software pack)
@@ -112,9 +112,21 @@ workflow runtime can compile. Its adapter reads CSV, XES and OCEL 2.0 logs:
 log. A step or branch the SOP states and the log denies becomes contested
 ([ADR 0027](docs/decisions/0027-process-pack-and-event-logs.md)).
 
-`make northwind` takes Northwind's purchase requests through all three views. Its SOP and
-two interviews are a scripted fixture standing in for the extractor, with each answer
-sealed under its speaker's key. The log maps onto the same nodes and checks them, and
+A client's folder goes in with one command
+([ADR 0036](docs/decisions/0036-intake-from-an-engagement-folder.md)):
+`uv run wmk-process intake engagement.yaml --url ... --work work.md`. It:
+- stores the documents;
+- creates each interviewee by the claim of their consent, and stores their turns from the
+  transcripts sealed under their key;
+- maps the exports;
+- lists what is left to map. The work file gives each waiting chunk's id and words, for the
+  harness session that maps them while the consultant reviews each claim.
+
+Run it again afterwards and it checks the log against the mapped process.
+
+`make northwind` takes Northwind's purchase requests through all three views. Intake reads
+its folder, then a scripted fixture stands in for the reviewed mapping session, then intake
+runs again and checks the log against what was mapped. Then
 `uv run wmk-process compare <config> --url ...` prints where the views disagree
 ([ADR 0032](docs/decisions/0032-northwind-as-told-and-as-written.md)):
 
@@ -222,7 +234,7 @@ Python 3.12 with [uv](https://docs.astral.sh/uv/); Docker for the database.
 | `make live` | A real harness on a fresh stack: headless Claude Code, the skills and the gateway map a document and a five-turn interview (`northwind`, about US$3), or with `SCENARIO=research` on `WMK_PROFILE=eval`, three papers scored against the research fixture (about US$2); each answers with citations, then replays. Needs the `claude` CLI and model access; not in CI |
 | `make annotated` | Extraction measured against annotators we are not: a real harness maps 30 SciFact abstracts blind, then judges a claim against each from the graph alone. Reports verdict accuracy, evidence capture, rationale precision and recall and calibration, with 95% intervals (about US$15 with Sonnet; `MODEL=` picks the model; results in [evals/annotated/RESULTS.md](evals/annotated/RESULTS.md)). Not in CI |
 | `make papers-smoke` | One live lookup per paper source; needs network access to arXiv, Crossref and OpenAlex |
-| `make northwind` | Northwind's purchase requests: the SOP and interviews (the `northwind-views` fixture, unless `make seed` played it), the log mapped onto the same nodes and checked against them, and the discovery report: where the three views disagree and what to automate first, each sentence with its sources |
+| `make northwind` | Northwind's purchase requests: intake over its engagement folder (the SOP, two interview transcripts, the log), the `northwind-views` fixture standing in for the reviewed mapping (unless `make seed` played it), intake again to check the log against the map, and the discovery report: where the three views disagree and what to automate first, each sentence with its sources |
 | `make map-self` | Map this repository into the running stack with the software pack's adapter, with the kernel's self boundary (`SELF=` names the system) |
 | `make observe-self` | Capture the running stack from Docker, observe it and check it for drift against what `map-self` declared (`PROJECT=` names the Compose project) |
 | `make forge-self` | Capture this repository's pull requests from GitHub, map them, and audit its changes and deployments for approval (after `map-self` and `observe-self`; `FORGE_REPO=` names another repository, `FORGE_CAPTURE=` replays a recorded capture without the network) |

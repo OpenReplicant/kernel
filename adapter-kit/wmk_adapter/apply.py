@@ -10,7 +10,8 @@
   claim is cancelled instead, so a partial pass retracts nothing.
 - A source about people names them as subjects: each one that does not exist yet is created
   first, by a claim of its own (sealed under that person's key), and the source is ingested
-  sealed under theirs. A source whose people cannot be created is not ingested.
+  sealed under theirs. A source whose people cannot be created is not ingested. A source an
+  interviewee said names them as its author too.
 """
 
 from __future__ import annotations
@@ -68,6 +69,7 @@ class Applier:
         self.ids: dict[str, str] = {}
         self.existing: set[str] = set()  # nodes that were there before this run
         self.spans: dict[str, list[tuple[int, int, str]]] = {}
+        self.source_ids: dict[str, str] = {}
         self.changed: set[str] = set()
         self.failed: set[str] = set()
         self.head = 0
@@ -93,10 +95,13 @@ class Applier:
             if subjects is None:
                 return
             args["subjects"] = subjects
+            if source.author is not None:
+                args["author"] = self.ids[source.author]
         error, result = await self.call("ingest_source", args)
         if error:
             self.fail(source.alias, f"ingest {source.alias}: {result.get('detail')}")
             return
+        self.source_ids[source.alias] = result["source_id"]
         self.spans[source.alias] = [(c["char_start"], c["char_end"], c["id"]) for c in result["chunks"]]
         if result["skipped"] and not self.force:
             self.report.unchanged += 1
@@ -111,7 +116,8 @@ class Applier:
             if key in self.ids:
                 continue
             spec = self.plan.nodes[key]
-            fact = Fact(f"{spec['name']} is named in {source.title}.", ops=[{"op": "create", "node": key}])
+            text = self.plan.introductions.get(key) or f"{spec['name']} is named in {source.title}."
+            fact = Fact(text, ops=[{"op": "create", "node": key}])
             created: dict[str, str] = {}
             payload = {
                 "claim": fact.claim(),

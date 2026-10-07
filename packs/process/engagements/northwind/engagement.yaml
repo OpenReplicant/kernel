@@ -1,0 +1,25 @@
+# Northwind's purchase requests as an engagement folder (ADR 0036): what `wmk-process intake`
+# reads. A client's folder has the same shape and stays in a private repository; this one
+# is synthetic. Its SOP and its export are the fixtures' own files, and its transcripts hold
+# the same turns as the northwind-views fixture's sources, which a test checks.
+name: Northwind purchase requests
+people:
+  maya: {name: Maya Chen, email: maya.chen@northwind.test}
+  lucia: {name: Lucia Ferreira, email: lucia.ferreira@northwind.test}
+written:
+  - file: ../../evals/fixtures/northwind-views/sources/sop-fin-007.md
+    collection: "sop:fin-007"
+    title: Purchase request procedure (SOP-FIN-007)
+    uri: "sop:fin-007"
+    origins: ["org:northwind-finance"]
+told:
+  - file: told/nw-2026-09-15-a.txt
+    collection: "interview:nw-2026-09-15-a"
+    consent: 2026-09-15
+    speakers: {Maya Chen: maya, Interviewer: null}
+  - file: told/nw-2026-09-16-b.txt
+    collection: "interview:nw-2026-09-16-b"
+    consent: 2026-09-16
+    speakers: {Lucia Ferreira: lucia, Interviewer: null}
+done:
+  - ../../evals/fixtures/northwind-purchase-requests/northwind.yaml

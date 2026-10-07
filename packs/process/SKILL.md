@@ -8,7 +8,7 @@ description: >
   core skill when mapping or comparing how a process runs, finding where practice departs
   from the documented process, or preparing a process for automation.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
   kernel: ">=0.5 <1.0"
   namespace: process
   requires: world-model-core
@@ -94,6 +94,26 @@ A step or flow one view asserts and another denies is **contested**: that is the
 discovery. A fact only one view states is not contested, but it is unconfirmed; the
 queries below find both.
 
+## A client's folder: intake, then the mapping
+
+`wmk-process intake engagement.yaml --work work.md` takes a client's engagement folder in
+one pass (ADR 0036; `packs/process/engagements/northwind/engagement.yaml` is an example).
+It stores the documents, creates each interviewee by the claim of their consent, stores
+each of their turns sealed under their key, and runs `discover` on the exports. It writes
+no claim about what a document or a turn says: that is yours, with the consultant
+reviewing each claim before it is written.
+
+- **Work from the work file.** It lists each source no claim cites yet, with its chunk ids
+  and words. The sources are stored already: cite those chunk ids as `claim.source` and
+  quote the chunks' words. Never ingest them again: a copy that differs by one space is a
+  second source, and the stored one stays waiting.
+- **The speaker exists.** A turn's speaker is its author, given as an agent id. Name that
+  agent in claims about what they do (`implements`, `part_of`); never create them again.
+- **Look up before you create.** `discover` has already written the process, its steps,
+  roles and system from the log: find them with `lookup_entities` and reuse them.
+- **Run intake again when you are done.** It checks conformance once nothing is waiting,
+  and lists anything you missed.
+
 ## Map an event log with the adapter
 
 `wmk-process` reads CSV, XES and OCEL 2.0 JSON logs, configured by a YAML file. The file
@@ -144,11 +164,12 @@ uv run wmk-process report northwind.yaml --url http://localhost:8000/mcp    # wr
   takes. Conclusions and the questions for the next interview are yours to write.
 
 Run `discover` after a new export, and `conform` after the told and written views are
-mapped and again after they change. Map the label map before conforming: a step whose
+mapped and again after they change; `intake` does both for a folder. Map the label map before conforming: a step whose
 name matches no log label is reported as never run. Run `compare`, `rank` and `report` after
 `conform`.
-`make northwind` does all of it for the Northwind scenario: its SOP and interviews are the
-`northwind-views` fixture, the tool calls you would make for them.
+`make northwind` does all of it for the Northwind scenario: intake over its folder, then the
+`northwind-views` fixture (the tool calls you would make for its SOP and interviews), then
+intake again and the report.
 
 ## Questions for the discovery
 

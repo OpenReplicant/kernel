@@ -9,25 +9,30 @@ description: >
   the budget check. `make northwind` maps the log (northwind-purchase-requests) onto the
   same nodes and compares the three views.
 namespaces: [process]
+# The script looks up each node before creating it, as a harness following the core skill
+# does, so it can map the folder `wmk-process intake` ingested first (ADR 0036).
+reuse: true
 packs: [process]
 # {{ref:...}} in a source works as in the script: a turn's author is an agent created earlier.
+# A turn's uri is its place in the session's transcript, which the engagement folder
+# packs/process/engagements/northwind holds (ADR 0036): the interviewer asks every other turn.
 sources:
   sop: {file: sources/sop-fin-007.md, media_type: text/markdown, title: Purchase request procedure (SOP-FIN-007),
         uri: "sop:fin-007", collection: "sop:fin-007", origins: ["org:northwind-finance"]}
-  maya-1: {file: sources/maya-1.txt, title: Maya Chen, turn 1, collection: "interview:nw-2026-09-15-a",
-           uri: "turn:1", author: "{{ref:maya}}"}
-  maya-2: {file: sources/maya-2.txt, title: Maya Chen, turn 2, collection: "interview:nw-2026-09-15-a",
+  maya-1: {file: sources/maya-1.txt, title: Maya Chen, turn 2, collection: "interview:nw-2026-09-15-a",
            uri: "turn:2", author: "{{ref:maya}}"}
-  maya-3: {file: sources/maya-3.txt, title: Maya Chen, turn 3, collection: "interview:nw-2026-09-15-a",
-           uri: "turn:3", author: "{{ref:maya}}"}
-  maya-4: {file: sources/maya-4.txt, title: Maya Chen, turn 4, collection: "interview:nw-2026-09-15-a",
+  maya-2: {file: sources/maya-2.txt, title: Maya Chen, turn 4, collection: "interview:nw-2026-09-15-a",
            uri: "turn:4", author: "{{ref:maya}}"}
-  lucia-1: {file: sources/lucia-1.txt, title: Lucia Ferreira, turn 1, collection: "interview:nw-2026-09-16-b",
-            uri: "turn:1", author: "{{ref:lucia}}"}
-  lucia-2: {file: sources/lucia-2.txt, title: Lucia Ferreira, turn 2, collection: "interview:nw-2026-09-16-b",
+  maya-3: {file: sources/maya-3.txt, title: Maya Chen, turn 6, collection: "interview:nw-2026-09-15-a",
+           uri: "turn:6", author: "{{ref:maya}}"}
+  maya-4: {file: sources/maya-4.txt, title: Maya Chen, turn 8, collection: "interview:nw-2026-09-15-a",
+           uri: "turn:8", author: "{{ref:maya}}"}
+  lucia-1: {file: sources/lucia-1.txt, title: Lucia Ferreira, turn 2, collection: "interview:nw-2026-09-16-b",
             uri: "turn:2", author: "{{ref:lucia}}"}
-  lucia-3: {file: sources/lucia-3.txt, title: Lucia Ferreira, turn 3, collection: "interview:nw-2026-09-16-b",
-            uri: "turn:3", author: "{{ref:lucia}}"}
+  lucia-2: {file: sources/lucia-2.txt, title: Lucia Ferreira, turn 4, collection: "interview:nw-2026-09-16-b",
+            uri: "turn:4", author: "{{ref:lucia}}"}
+  lucia-3: {file: sources/lucia-3.txt, title: Lucia Ferreira, turn 6, collection: "interview:nw-2026-09-16-b",
+            uri: "turn:6", author: "{{ref:lucia}}"}
 script: script.yaml
 expected: expected.yaml
 thresholds:

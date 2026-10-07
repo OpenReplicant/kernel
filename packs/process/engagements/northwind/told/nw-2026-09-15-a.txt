@@ -1,0 +1,10 @@
+Interview nw-2026-09-15-a: purchase requests, 15 September 2026
+
+Interviewer: Thank you for your time. What is your role, and may I record this conversation?
+Maya Chen: I lead procurement at Northwind Foods, so the purchase orders are my team's job. Yes, you can record what I say.
+Interviewer: How does a purchase request start, and what happens to it first?
+Maya Chen: The requester raises the request in Coupa and it goes to their line manager for review. The line manager can send it back to the requester to fix, and then it comes back to them for another review. Or they reject it outright.
+Interviewer: And after the review?
+Maya Chen: After the review, anything of 10,000 euros or less comes straight to us. We create the purchase order and send it to the supplier, usually the same day.
+Interviewer: What about larger requests?
+Maya Chen: Officially, anything over 10,000 euros needs the finance controller's sign-off before we create the order. In practice, when something urgent comes in, we create and send the order first and the controller approves it afterwards.

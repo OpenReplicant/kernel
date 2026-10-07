@@ -32,10 +32,10 @@ jobs:
         run: make test
       - name: Eval fixtures and the resolution set through the eval profile
         run: make eval
-      - name: Seed the running stack through its gateway
-        run: make seed
-      - name: Northwind's purchase requests as written, told and done, checked against the log, and its discovery report
+      - name: Northwind's engagement folder through intake, its scripted mapping, the log checked, and its discovery report
         run: make northwind
+      - name: Seed the running stack through its gateway (northwind-views is already mapped, so it is skipped)
+        run: make seed
       - name: Map this repository into the stack with the software pack's adapter
         run: make map-self
       - name: Observe the running stack and check it for drift against what was mapped

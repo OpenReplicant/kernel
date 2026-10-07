@@ -1,6 +1,7 @@
 """wmk-process: map an event log into the World Model Kernel, and check the mapped process
 against it.
 
+wmk-process intake engagement.yaml --url http://localhost:8000/mcp  # a client's folder (ADR 0036)
 wmk-process plan northwind.yaml                    # the claims discover would write, as a fixture script
 wmk-process discover northwind.yaml --url http://localhost:8000/mcp
 wmk-process conform northwind.yaml --url http://localhost:8000/mcp
@@ -22,7 +23,7 @@ from mcp import Client
 
 from wmk_adapter.apply import ApplyError, apply
 from wmk_adapter.script import script_text
-from wmk_process import compare, conform, discover, fixture, rank, report
+from wmk_process import compare, conform, discover, fixture, intake, rank, report
 from wmk_process.config import Config, ConfigError, load
 from wmk_process.logs import LogError
 
@@ -30,6 +31,12 @@ from wmk_process.logs import LogError
 def main() -> None:
     parser = argparse.ArgumentParser(description="Map an event log into the World Model Kernel.")
     sub = parser.add_subparsers(dest="command", required=True)
+    take = sub.add_parser("intake", help="ingest an engagement folder, map its exports, list the work left")
+    take.add_argument("engagement", type=Path, help="the engagement file")
+    take.add_argument("--url", default="http://localhost:8000/mcp", help="the gateway's MCP endpoint")
+    take.add_argument(
+        "--work", type=Path, help="write the sources waiting to be mapped, with their chunks, here"
+    )
     sub.add_parser("plan", help="print the claims discover would write").add_argument("config", type=Path)
     for name, text in (
         ("discover", "write the log's view of the process through the gateway"),
@@ -55,6 +62,8 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
+        if args.command == "intake":
+            sys.exit(anyio.run(_intake, args.url, intake.load(args.engagement), args.work))
         cfg = load(args.config)
         if args.command in ("compare", "rank", "report"):
             sys.exit(anyio.run(_read, args.command, args.url, cfg, args.json))
@@ -66,8 +75,22 @@ def main() -> None:
             print(f"{args.fixture}: {len(plan.facts)} claims; write expected.yaml by hand")
         else:
             sys.exit(anyio.run(_run, args.command, args.url, cfg, args.force))
-    except (ConfigError, LogError) as exc:
+    except (ConfigError, LogError, intake.EngagementError) as exc:
         sys.exit(str(exc))
+
+
+async def _intake(url: str, eng: intake.Engagement, work: Path | None) -> int:
+    try:
+        async with Client(url) as client:
+            result = await intake.run(client, eng)
+    except (ApplyError, conform.ModelError) as exc:
+        print(f"stopped: {exc}", file=sys.stderr)
+        return 1
+    print(result.text(), end="")
+    if work is not None:
+        work.write_text(result.work())
+        print(f"Wrote {len(result.waiting)} sources waiting to be mapped to {work}.")
+    return 1 if result.failures else 0
 
 
 async def _run(command: str, url: str, cfg: Config, force: bool) -> int:
