@@ -1,7 +1,7 @@
 # 0035. What a client pays for comes first
 
 Date: 2026-10-07 · Status: accepted (direction; amends the order of ADR 0026 and ADR 0033;
-each item below gets its own ADR before code)
+each item below gets its own ADR before code; recall moved forward by ADR 0038)
 
 ## Context
 

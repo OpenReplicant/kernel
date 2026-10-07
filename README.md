@@ -46,6 +46,11 @@ The rest of the loop follows when a paying pilot needs it: one part of the work 
 on a process runtime, what runs checked against the map, and the system proposing changes
 to what it deployed, which a person approves.
 
+**Recall into context** ([ADR 0038](docs/decisions/0038-recall-into-context.md), proposed):
+the facts a task needs, ranked in the database with their belief, disagreements and quotes,
+through a `recall` tool, MCP resources, and a context hook that puts them in front of an
+agent loop before each turn.
+
 **Later:** the north star is a cognitive model for a persistent entity whose identity is
 its log, embodied in vessels both digital (its own stack, runtimes, channels) and physical
 (robots, buildings). [ADR 0037](docs/decisions/0037-toward-a-cognitive-model-in-vessels.md)
