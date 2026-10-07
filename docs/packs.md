@@ -150,7 +150,7 @@ verdicts. A source about people names them in `Source.subjects` (node keys of hu
 agents): `apply` creates those agents first and ingests the source sealed under their keys,
 so erasing one of them makes it unreadable ([ADR 0022](decisions/0022-erasing-personal-data.md));
 the forge adapter does this for the people on each pull request. `packs/software/adapter/` (`wmk-software`) and `packs/process/adapter/`
-(`wmk-process`, which reads event logs, checks the mapped process against them, compares the views and ranks the steps) are the
+(`wmk-process`, which reads event logs, checks the mapped process against them, compares the views, ranks the steps and writes the discovery report) are the
 examples ([ADR 0017](decisions/0017-software-pack-and-the-self-boundary.md),
 [ADR 0027](decisions/0027-process-pack-and-event-logs.md)).
 

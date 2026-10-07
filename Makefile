@@ -31,7 +31,7 @@ help:
 	@echo "make test     unit, SQL and regression tests (starts db)"
 	@echo "make eval     run the eval fixtures through the eval profile"
 	@echo "make seed     write the eval fixtures into the running stack through its gateway"
-	@echo "make northwind  Northwind's purchase requests as written, told and done, checked, compared and ranked"
+	@echo "make northwind  Northwind's purchase requests as written, told and done, checked, and its discovery report"
 	@echo "make map-self  map this repository and the kernel's self boundary into the running stack"
 	@echo "make observe-self  capture the running stack, observe it and check it for drift (after map-self)"
 	@echo "make forge-self  read this repository's pull requests from GitHub, map them and audit its changes for approval"
@@ -82,8 +82,7 @@ northwind:
 	uv run python -m evals.seed northwind-views --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 	uv run wmk-process discover $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 	uv run wmk-process conform $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
-	uv run wmk-process compare $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
-	uv run wmk-process rank $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
+	uv run wmk-process report $(NORTHWIND) --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp
 
 map-self:
 	uv run wmk-software map . --url http://localhost:$${WMK_GATEWAY_PORT:-8000}/mcp --self "$(SELF)"

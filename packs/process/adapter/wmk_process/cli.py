@@ -6,6 +6,7 @@ wmk-process discover northwind.yaml --url http://localhost:8000/mcp
 wmk-process conform northwind.yaml --url http://localhost:8000/mcp
 wmk-process compare northwind.yaml --url http://localhost:8000/mcp   # where the views disagree
 wmk-process rank northwind.yaml --url http://localhost:8000/mcp      # what to automate first
+wmk-process report northwind.yaml --url http://localhost:8000/mcp    # all of it, with sources (Markdown)
 wmk-process snapshot northwind.yaml packs/process/evals/fixtures/<name>
 """
 
@@ -21,7 +22,7 @@ from mcp import Client
 
 from wmk_adapter.apply import ApplyError, apply
 from wmk_adapter.script import script_text
-from wmk_process import compare, conform, discover, fixture, rank
+from wmk_process import compare, conform, discover, fixture, rank, report
 from wmk_process.config import Config, ConfigError, load
 from wmk_process.logs import LogError
 
@@ -41,6 +42,7 @@ def main() -> None:
     for name, text in (
         ("compare", "where the configured views of the process agree and disagree"),
         ("rank", "the process's steps ranked by where automation would pay"),
+        ("report", "the discovery report: the map, the disagreements, the measures and the ranking, sourced"),
     ):
         p = sub.add_parser(name, help=text)
         p.add_argument("config", type=Path)
@@ -54,7 +56,7 @@ def main() -> None:
 
     try:
         cfg = load(args.config)
-        if args.command in ("compare", "rank"):
+        if args.command in ("compare", "rank", "report"):
             sys.exit(anyio.run(_read, args.command, args.url, cfg, args.json))
         log = cfg.read()
         if args.command == "plan":
@@ -89,11 +91,13 @@ async def _run(command: str, url: str, cfg: Config, force: bool) -> int:
 async def _read(command: str, url: str, cfg: Config, as_json: bool) -> int:
     try:
         async with Client(url) as client:
-            result: compare.Comparison | rank.Ranking
+            result: compare.Comparison | rank.Ranking | report.Report
             if command == "compare":
                 result = await compare.read(client, cfg)
-            else:
+            elif command == "rank":
                 result = await rank.read(client, cfg)
+            else:
+                result = await report.read(client, cfg)
     except conform.ModelError as exc:
         print(f"stopped: {exc}", file=sys.stderr)
         return 1

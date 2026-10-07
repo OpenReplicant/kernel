@@ -66,9 +66,9 @@
 
 # The decision on the amount: a gateway, one flow out per branch, each a routing rule.
 - write:
-    claim: {text: Requests over 10,000 euros go to the finance controller for approval before a purchase order is created.,
+    claim: {text: "Requests over 10,000 euros go to the finance controller for approval before a purchase order is created.",
             source: "{{chunk:sop:1}}",
-            quote: Requests over 10,000 euros go to the finance controller for approval before a purchase order is created,
+            quote: "Requests over 10,000 euros go to the finance controller for approval before a purchase order is created",
             basis: reported, modality: descriptive, run: "{{ref:run}}"}
     ops:
       - {op: create, ref: $amount, kind: gateway, namespace: process, name: "Over 10,000 euros?"}
@@ -231,7 +231,7 @@
          valid_from: "2026-08-01"}
 
 - write:
-    claim: {text: The finance controller approves requests over 10,000 euros before procurement creates the order.,
+    claim: {text: "The finance controller approves requests over 10,000 euros before procurement creates the order.",
             source: "{{chunk:lucia-2:0}}", quote: I approve it before procurement creates the order, basis: reported,
             modality: descriptive}
     ops:

@@ -10,6 +10,8 @@ from typing import Any
 
 import yaml
 
+from gateway.tools import Claim
+
 ROOT = Path(__file__).resolve().parent.parent
 # Fixtures live with what they test: the kernel's in evals/fixtures, each pack's in its own
 # evals/fixtures.
@@ -134,6 +136,12 @@ class Player:
 
     async def _write(self, index: int, step: dict[str, Any]) -> None:
         payload = self.render(step["write"])
+        # The gateway drops claim keys it does not know. In a script they are a typo, or a YAML
+        # flow scalar cut short at a comma, as in 10,000.
+        unknown = sorted(set(payload["claim"]) - set(Claim.model_fields))
+        if unknown:
+            self.failures.append(StepFailure(index, "write", f"unknown claim keys: {', '.join(unknown)}"))
+            return
         # Read first: the schema slice for the claim, whose head_offset the write cites.
         args: dict[str, Any] = {"passage": payload["claim"]["text"]}
         if self.fixture.namespaces:

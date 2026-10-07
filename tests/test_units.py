@@ -1,4 +1,5 @@
-"""Unit tests for the Cypher helpers, profiles and the replay diff (no database needed)."""
+"""Unit tests for the Cypher helpers, profiles, the replay diff and the fixture player (no database
+needed)."""
 
 from __future__ import annotations
 
@@ -116,3 +117,25 @@ def test_compare_scores_entities_and_edges_separately() -> None:
     assert (result.entities.precision, result.entities.recall) == (0.5, 0.5)
     assert (result.edges.precision, result.edges.recall) == (0.5, 1.0)
     assert result.attribute_accuracy == 0.0 and "belief_status" in result.attribute_errors[0]
+
+
+def test_the_player_refuses_claim_keys_the_gateway_would_drop() -> None:
+    import anyio
+    import yaml
+
+    from evals.player import Fixture, Player
+
+    # YAML ends an unquoted flow scalar at a comma: the rest of the sentence becomes a key.
+    steps = yaml.safe_load(
+        "- write:\n"
+        "    claim: {text: Requests over 10,000 euros need approval., basis: observed,\n"
+        "            modality: descriptive}\n"
+        "    ops: []\n"
+    )
+    assert steps[0]["write"]["claim"]["text"] == "Requests over 10"
+    player = Player(client=None, fixture=Fixture("cut", ROOT, {}, steps, {}, {}))
+    anyio.run(player.run)
+    assert [(f.tool, f.reason) for f in player.failures] == [
+        ("write", "unknown claim keys: 000 euros need approval.")
+    ]
+    assert player.calls == 0
