@@ -11,7 +11,7 @@ can pick up without the conversation that produced them. Update it at each miles
 | M1 foundation | passed | `pclib` contract; `compose.yml` written but not yet run under Podman |
 | M2 kernel core | passed | Thermostat domain with sensor-log and report evidence |
 | M3 vocabularies, validation, views, modules | passed | Four modules; exact `spec.yaml` round trip; kernel tests pass with no `modules/` present |
-| M4 model access | **not started; shape under review** | See below |
+| M4 model access | not started; shape settled (below) | `docs/V1_BUILD_PLAN.md` M4 |
 
 Test suite: 51 pass, 4 smoke tests skip unless a RuleGo container is up (`RULEGO_URL`).
 
@@ -32,29 +32,29 @@ Test suite: 51 pass, 4 smoke tests skip unless a RuleGo container is up (`RULEGO
 - MCP is transport at the edges (RuleGo can serve chains as MCP tools; `ai/mcpClient` calls
   any MCP tool as a step). The agent-design rule forbids only *model-invoked* internal slots.
 
-## Open: the shape of M4 (model access)
+## Settled (2026-10-10): knowing and doing, and model access
 
-The plan says every model call goes through `scripts/claude_call.py` with a per-run budget.
-Direction from the user (2026-10-10), to settle before building M4:
-
-1. **RuleGo's `ai/llm` node** (rulego-components-ai, OpenAI-compatible endpoints) for plain
-   model calls inside chains. Open question: budget enforcement and `llm.request`/`llm.response`
-   tracing happen in pclib today; an `ai/llm` node would bypass both unless wrapped (a pclib
-   step before/after it, or an aspect compiled into `rulego/server`).
-2. **A generic agent-harness runner** rather than only raw model calls: a step (or node) that
-   starts an agent harness session, e.g. Codex CLI or Claude Code, interactively or headless,
-   gives it a task and a workspace, and records the session transcript as a source. Several
-   harnesses can run as MCP servers, which would make the runner an `ai/mcpClient` call.
-   **To verify:** which harnesses expose an MCP server or a scriptable session mode, and their
-   options (from memory: `codex mcp-server`, Codex `exec`, `claude -p`, `claude mcp serve`).
-   Sessions run in the sandbox; their transcripts are `observed` evidence.
-3. **Run alongside a harness:** this whole system should work as a toolset for an agent harness
-   (kernel and platform operations exposed as tool-shaped scripts, later MCP via RuleGo), and
-   every pipeline should be replaceable by custom chains.
-
-Likely consequence: M4 becomes "model and harness access" with two step kinds (model call,
-harness session) sharing one budget and trace contract, and the `claude_call.py` rule in
-`CLAUDE.md` generalizes to "every model or harness call goes through a budgeted step".
+- **Knowing and doing.** The kernel (record + belief) knows; the runtime (RuleGo, pclib,
+  models, harnesses, sandbox) does, as a peer that the kernel never contains. They meet at
+  three joints: describe (systems compile to chains), read (steps read facts and beliefs),
+  record (every run is a source and its observations are evidenced). Applications use four
+  interfaces: teach, ingest, believe, act. `docs/ARCHITECTURE.md`.
+- **Belief.** `status` is today's single stored judgment; `beliefs(perspective, policy, at)`
+  as a computed view comes when a second source of trust needs weighing (backlog,
+  `docs/KERNEL.md` Belief).
+- **M4 = models known to the kernel + a budgeted `model_call` sub-chain + runs as sources.**
+  Models, endpoints, parameters and prices are assertions; a harness is an `ev:Harness`
+  with its own model settings. Budget and usage live in the sub-chain around RuleGo's
+  `ai/llm` (or a pclib SDK step if `ai/llm` falls short; verify first). Tracing that every
+  node needs belongs in an aspect in `rulego/server` (backlog); pclib steps trace themselves
+  until then. `scripts/claude_call.py` is dropped.
+- **M5 adds `harness_session`**: Codex, Claude Code, … headless or through their MCP servers,
+  in a container whose network reaches only the model endpoint; transcript stored as a
+  source. Verify first which harnesses offer headless or MCP modes and their model, endpoint
+  and spending options (from memory, unverified: `codex exec`, `codex mcp-server`,
+  `claude -p`, `claude mcp serve`).
+- **Alongside a harness** (backlog): serve the platform's chains to a harness over RuleGo's
+  MCP endpoint; any pipeline stays replaceable by a custom chain.
 
 ## Other known gaps
 

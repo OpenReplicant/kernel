@@ -2,11 +2,11 @@
 
 An evidence-based world model, and a factory that builds runnable systems on top of it.
 
-- **The kernel** stores what is believed about things, how they are structured and
+- **The kernel** knows. It stores what is believed about things, how they are structured and
   connected, and where every belief came from: a document, a direct observation, a report, a
   session transcript. Facts are never edited; every one traces back to the recording that
   supports it.
-- **Systems** described in the kernel compile to [RuleGo](https://github.com/rulego/rulego)
+- **The runtime** does. Systems described in the kernel compile to [RuleGo](https://github.com/rulego/rulego)
   chains of Python steps and run; what a run observes goes back into the kernel as evidence.
 - **Modules** teach it domains. The first application, the **paper compiler**, turns an
   agent-design paper into a decomposed, runnable system, checks that the paper's mechanism is
@@ -21,17 +21,19 @@ agent harness. Every piece is a chain or a step, so custom chains can replace an
 | Layer | What | Where |
 |---|---|---|
 | L0 kernel | Evidence store, upper ontology, vocabulary/constraint/view/module machinery | `kernel/`, `vocab/kernel.yaml`, `db/` |
-| L1 systems | Role instances, components, ports and couplings, boundary, behaviour tests | `modules/systems/`, `pclib/`, `rulego/` |
+| L1 systems | Role instances, components, ports and couplings, boundary, behaviour tests | `modules/systems/` |
 | L2 domains | Agent design (slot types and their rules), evaluation (models, benchmarks, results) | `modules/agent_design/`, `modules/evaluation/` |
 | L3 applications | Paper compiler: papers as evidence, the `spec.yaml` view, reports | `modules/paper_compiler/` |
 
-Details: `docs/ARCHITECTURE.md`.
+The runtime (`rulego/`, `pclib/`) sits beside the layers: it runs what they describe and
+records each run back into the kernel as a source. Details: `docs/ARCHITECTURE.md`.
 
 ## Status
 
 Version 1 follows `docs/V1_BUILD_PLAN.md`. Gates passed: **M0** (RuleGo spike), **M1** (script
 contract), **M2** (kernel core), **M3** (vocabularies, validation, views, modules). Next: **M4**,
-model access, whose shape is being revisited (`docs/NOTES.md`).
+model access (models known to the kernel, a budgeted `model_call` sub-chain, runs recorded as
+sources), then **M5**, the sandbox and agent-harness sessions.
 
 ## Running
 

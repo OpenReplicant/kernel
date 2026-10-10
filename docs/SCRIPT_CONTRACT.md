@@ -74,11 +74,13 @@ mechanism test mentions must be emitted explicitly.
 
 ## Model calls
 
-Only through `scripts/claude_call.py` / `pclib.claude()`. It:
+Only through the `model_call` sub-chain (M4), or `harness_session` for an agent harness (M5).
+A step that needs a model is split: it prepares the messages, the chain calls `model_call`,
+and a following step parses the reply. `model_call`:
+- reads the model, endpoint and parameters from the kernel (`ev:uses_model`, `ev:model_param`)
 - refuses the call if `run.run.spent_usd >= budget_usd`
-- emits `llm.request` (with the full prompt in payload) and `llm.response`
+- emits `llm.request` (with the calling slot and the full prompt in payload) and `llm.response`
 - records token usage and adds cost to `spent_usd`
-- reads model ids from the system context (`ev:uses_model` assertions), falling back to env vars
 
 ## Fallback if process start-up is too slow
 

@@ -61,8 +61,12 @@ Read these before writing code, in this order:
   - *Step scripts* (including ones the compiler generates) run on the host, so they are code
     under review: committed to the repo and shown to the user before they first run.
 - **Secrets from the environment.** `ANTHROPIC_API_KEY`, `DATABASE_URL`. Never commit them.
-- **Every model call goes through `scripts/claude_call.py`**, which enforces the per-run budget.
-  (Under review for M4: model calls and agent-harness sessions as budgeted steps; docs/NOTES.md.)
+- **Every model call goes through the `model_call` sub-chain, every agent-harness session
+  through `harness_session`.** They read models, endpoints and parameters from the kernel and
+  enforce the per-run budget (docs/V1_BUILD_PLAN.md M4, M5).
+- **Knowing and doing stay apart.** The kernel runs nothing; the runtime reaches it only
+  through the joints in docs/ARCHITECTURE.md (describe, read, record). Every run's recording
+  becomes a source.
 - **Tests are the deliverable.** A milestone is done when its gate passes, not when code exists.
 
 ## Stack (v1)
@@ -87,7 +91,7 @@ modules/agent_design/     L2: slot types, scopes, agent-design constraints, slot
 modules/evaluation/       L2: models, benchmarks, metrics, results
 modules/paper_compiler/   L3: papers, claims, the agent-spec view, reports
 pclib/                    step contract + RuleGo node (node.py), chain builder (chains.py), client (rulego.py)
-scripts/                  tool-shaped scripts: kernel_*.py, claude_call.py, env_container.py, ...
+scripts/                  tool-shaped scripts: kernel_*.py, env_container.py, ...
 scripts/schemas/          JSON Schemas for every script's input and output
 tools/                    validate_spec.py (exists)
 papers/reflexion/         exported views and run artifacts: spec.yaml, SPEC.md, chains, prompts, REPORT.md
