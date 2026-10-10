@@ -1,0 +1,7 @@
+name: paper_compiler
+version: "0.1"
+layer: 3
+description: "Papers as evidence, compiled into agent systems; the agent-spec view (spec.yaml)."
+depends: [agent_design, evaluation]
+vocab: [vocab.yaml]
+python: modules.paper_compiler

@@ -1,0 +1,41 @@
+{
+  "ruleChain": {
+    "id": "m0_main",
+    "name": "m0_main",
+    "root": true
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "loop",
+        "type": "while",
+        "name": "loop",
+        "configuration": {
+          "condition": "msg.data.stop != true",
+          "do": "chain:m0_iter",
+          "mode": 2
+        }
+      },
+      {
+        "id": "final",
+        "type": "exec",
+        "name": "final",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/exec/steps/final.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "loop",
+        "toId": "final",
+        "type": "Success"
+      }
+    ]
+  }
+}

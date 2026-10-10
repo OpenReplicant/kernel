@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_why input",
+  "type": "object", "additionalProperties": false,
+  "required": ["id"],
+  "properties": {
+    "id": { "$ref": "urn:pc:schemas:defs#/$defs/uuid" },
+    "depth": { "type": "integer", "minimum": 0, "default": 3 }
+  }
+}

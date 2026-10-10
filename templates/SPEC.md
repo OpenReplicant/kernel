@@ -117,16 +117,16 @@ Internal primitives (evaluators, reflectors, controllers) run as RuleGo nodes.
 Model substitution is the most common reason absolute scores diverge from the
 paper. Acceptance in §8 is set with that in mind.
 
-## 7. Behavior tests
+## 7. Mechanism tests
 
 Mechanism checks over execution traces. These must pass before any benchmark
 number is reported.
 
 | Test | Claim | Given | Within | Expect |
 |---|---|---|---|---|
-{{#behavior_tests}}
+{{#mechanism_tests}}
 | `{{id}}` | {{claim}} | {{given}} | {{within}} | {{#negate}}NOT {{/negate}}{{expect}} |
-{{/behavior_tests}}
+{{/mechanism_tests}}
 
 ## 8. Evaluation
 
@@ -178,7 +178,7 @@ When a reproduction misses, these are the first suspects.
 ├── bench/             benchmark env + run script
 ├── tests/
 │   ├── contract/      components honor slot interfaces
-│   ├── behavior/      trace assertions from §7
+│   ├── mechanism/     trace assertions from §7
 │   └── smoke/         one tiny end-to-end task
 └── REPORT.md          reproduction result vs §8
 ```

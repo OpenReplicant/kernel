@@ -1,0 +1,26 @@
+[project]
+name = "kernel"
+version = "0.1.0"
+description = "Evidence-based world-model kernel and its first application, the paper compiler"
+requires-python = ">=3.11"
+dependencies = [
+  "psycopg[binary]>=3.2",
+  "pyyaml>=6",
+  "jsonschema>=4.20",
+  "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["pclib*", "kernel*", "modules*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+pythonpath = ["."]

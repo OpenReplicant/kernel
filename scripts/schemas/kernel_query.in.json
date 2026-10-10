@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_query input",
+  "type": "object", "additionalProperties": false,
+  "properties": {
+    "subject": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "predicate": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "object": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "context": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "include_subcontexts": { "type": "boolean", "default": true },
+    "status": { "type": "array", "items": { "$ref": "urn:pc:schemas:defs#/$defs/status" }, "default": ["accepted"] },
+    "method": { "type": "array", "items": { "$ref": "urn:pc:schemas:defs#/$defs/method" } },
+    "valid_at": { "$ref": "urn:pc:schemas:defs#/$defs/time" },
+    "known_at": { "$ref": "urn:pc:schemas:defs#/$defs/time" }
+  }
+}

@@ -1,28 +1,59 @@
-# Kernel vocabulary: the predicates every domain shares. Loaded first.
+# Kernel vocabulary: the upper ontology every domain shares. Loaded first.
+# Two parts, kept deliberately small (docs/KERNEL.md, "Upper ontology"):
+#   - knowing: who or what a fact comes from, and how far to trust it
+#   - structure: what things are, what they are made of and depend on, how they connect
 vocabulary: kernel
-version: "0.1"
+version: "0.3"
 prefix: { k: "urn:pc:kernel:" }
 
+# Each kernel type is backed by a node kind. A node satisfies a type if its kind backs that
+# type, or (for things) if it has an accepted k:is_a to that type or one of its subtypes.
 types:
-  - { iri: k:Thing }
-  - { iri: k:Role }
-  - { iri: k:Port }
-  - { iri: k:Capability }
-  - { iri: k:Context }
-  - { iri: k:Agent }
+  - { iri: k:Thing,      kind: [thing, agent, source] }   # anything that exists or is described
+  - { iri: k:Agent,      kind: agent, is_a: k:Thing }     # asserts, observes or acts: person, model, program, instrument
+  - { iri: k:Source,     kind: source, is_a: k:Thing }    # a recording: document, code, transcript, sensor log, run trace
+  - { iri: k:Type,       kind: type }
+  - { iri: k:Role,       kind: role }
+  - { iri: k:Port,       kind: port }
+  - { iri: k:Capability, kind: capability }
+  - { iri: k:Context,    kind: context }
 
 predicates:
-  - { iri: k:is_a,        domain: k:Thing,  range: k:Thing }      # classification (types are things)
-  - { iri: k:part_of,     domain: k:Thing,  range: k:Thing }
-  - { iri: k:refines,     domain: k:Context, range: k:Context, max: 1 }
-  - { iri: k:plays,       domain: k:Thing,  range: k:Role }       # binding: thing fills role, in the assertion's context
-  - { iri: k:has_port,    domain: k:Role,   range: k:Port }
-  - { iri: k:couples,     domain: k:Port,   range: k:Port, args: [kind] }   # kind: call|event|stream|shared_state|flow|causal
+  # Knowing: attribution and trust. The method, confidence, times and evidence on every
+  # assertion are columns, not predicates; these say things about sources and agents.
+  - { iri: k:produced_by, domain: k:Source,  range: k:Agent, args: [as] }   # as: author|speaker|recorder|instrument|...
+  - { iri: k:produced_at, domain: k:Source,  range: literal, max: 1 }       # when the recording was made (not when we stored it)
+  - { iri: k:holds,       domain: k:Thing,   range: k:Context }             # the perspective context of an agent's or source's claims
+  - { iri: k:reliability, domain: k:Thing,   range: literal }               # 0..1, about a source or agent; itself evidenced, per context
+  # Structure
+  - { iri: k:is_a,        domain: k:Thing,   range: k:Type }      # classification (types are nodes)
+  - { iri: k:subtype_of,  domain: k:Type,    range: k:Type }
+  - { iri: k:part_of,     domain: k:Thing,   range: k:Thing }
+  - { iri: k:depends_on,  domain: k:Thing,   range: k:Thing, args: [kind] }  # needs it to exist or work
+  - { iri: k:plays,       domain: k:Thing,   range: k:Role }      # binding: thing fills role, in the assertion's context
+  - { iri: k:has_port,    domain: k:Role,    range: k:Port }
+  - { iri: k:couples,     domain: k:Port,    range: k:Port, args: [kind] }   # kind: one of coupling_kinds
   - { iri: k:has_capability,      domain: k:Thing, range: k:Capability }
   - { iri: k:requires_capability, domain: k:Role,  range: k:Capability }
-  - { iri: k:label,       domain: k:Thing,  range: literal, max: 1 }
-  - { iri: k:same_as,     domain: k:Thing,  range: k:Thing }      # always hedged by confidence; never merges rows
+  # Naming and identity
+  - { iri: k:label,       domain: k:Thing,   range: literal, max: 1 }
+  - { iri: k:description, domain: k:Thing,   range: literal, max: 1 }
+  - { iri: k:same_as,     domain: k:Thing,   range: k:Thing }     # always hedged by confidence; never merges rows
 
 coupling_kinds: [call, event, stream, shared_state, flow, causal]
-methods: [stated, repo, inferred, defaulted, observed, computed]
-context_kinds: [world, perspective, system, run, staging, vocabulary]
+
+# How a fact was obtained. stated and observed need evidence spans once accepted.
+methods:
+  stated:    "a source says it: a document, a speaker, a code file, a label"
+  observed:  "perceived or measured directly: an instrument, a run, a session"
+  inferred:  "an agent's reading or reasoning over other material"
+  computed:  "derived mechanically from other assertions (derived_from links)"
+  defaulted: "assumed by a named policy where nothing says otherwise"
+
+# Every assertion lives in a context.
+context_kinds:
+  world:       "open; the kernel's best current account"
+  perspective: "open; what one source or agent claims (see k:holds)"
+  system:      "closed; a described or designed system that can be validated"
+  session:     "an observation session: a run, a chat, a recording, an embodied episode"
+  vocabulary:  "the facts a vocabulary file loads"

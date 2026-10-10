@@ -1,0 +1,22 @@
+{
+  "ruleChain": {
+    "id": "pc_sub",
+    "name": "pc_sub",
+    "root": false
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "double",
+        "type": "x/python",
+        "name": "double",
+        "configuration": {
+          "script": "/repo/rulego/spike/pclib/chains/pc_sub.nodes/double.py",
+          "timeout": "305s",
+          "maxRunning": 2
+        }
+      }
+    ],
+    "connections": []
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "ruleChain": {
+    "id": "m0_probe",
+    "name": "m0_probe",
+    "root": true
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "probe",
+        "type": "exec",
+        "name": "probe",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/exec/steps/probe.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      }
+    ],
+    "connections": []
+  }
+}

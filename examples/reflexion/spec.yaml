@@ -1,6 +1,6 @@
 # Worked example, written from memory of the paper, NOT yet checked against it.
 # Section refs are coarse, the repo commit is a placeholder, and every field marked
-# `stated` must be verified against the PDF in M4 (downgrade it if not found).
+# `stated` or `repo` must be verified against the PDF or repo in M6 (downgrade it if not found).
 schema_version: "0.1"
 
 paper:
@@ -42,6 +42,7 @@ slots:
     subtype: output
     scope: task          # generated once per task, reused across trials
     implementation: { source: generated, kind: exec_node, ref: "eval/gen_tests" }
+    ports: ["tests:out"]
     model_role: actor
     prompts:
       - { id: test_gen, file: prompts/test_gen.md, source_ref: "repo: test generation prompt", provenance: repo }
@@ -55,6 +56,7 @@ slots:
     subtype: trajectory
     scope: episode
     implementation: { source: registry, kind: exec_node, ref: "eval/run_tests" }
+    ports: ["tests:in"]
     uses_assets: [code_sandbox]
     provenance: stated
     source_ref: "§3 evaluator"
@@ -101,7 +103,10 @@ slots:
 
 # Strictly sequential: the retry decision waits until the reflection is stored,
 # otherwise the next trial can start before its reflection exists.
+# The first trial starts once tests exist; inject_reflections finds empty memory then.
 wiring:
+  - { from: task.start, to: test_gen.run, provenance: inferred }
+  - { from: test_gen.tests, to: inject_reflections.run, provenance: inferred }
   - { from: test_gen.tests, to: episode_eval.tests, provenance: inferred }
   - { from: actor.output, to: episode_eval.run, provenance: stated }
   - { from: episode_eval.fail, to: reflector.run, provenance: stated }
@@ -110,6 +115,8 @@ wiring:
   - { from: retry.retry, to: inject_reflections.run, provenance: stated }
   - { from: reflections.read, to: inject_reflections.input, provenance: stated }
   - { from: inject_reflections.output, to: actor.start, provenance: stated }
+  - { from: episode_eval.pass, to: task.end, provenance: stated }
+  - { from: retry.stop, to: task.end, provenance: stated }
 
 assets:
   - id: kv
@@ -160,7 +167,7 @@ evaluation:
       Modern models saturate HumanEval, so the bar is a gain over the
       no-reflection retry baseline, not the paper's absolute number.
 
-behavior_tests:
+mechanism_tests:
   - id: fail_produces_reflection
     claim: "Failed episodes produce a verbal reflection."
     given: { event: slot.emit, slot: episode_eval, port: fail }

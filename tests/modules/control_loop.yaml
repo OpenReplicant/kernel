@@ -1,0 +1,9 @@
+# Role types for a feedback control loop: a non-agent domain for the systems module's tests.
+vocabulary: control-loop
+version: "1"
+imports: [systems]
+prefix: { cl: "urn:test:control-loop:" }
+roles:
+  - { iri: cl:Sensor,     key: sensor,     ports: [reading:out] }
+  - { iri: cl:Controller, key: controller, ports: [input:in, command:out] }
+  - { iri: cl:Actuator,   key: actuator,   ports: [power:in] }

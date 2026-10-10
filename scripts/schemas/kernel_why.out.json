@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_why output: provenance tree",
+  "type": "object",
+  "required": ["id", "method", "asserted_by", "evidence", "status_history", "links"],
+  "properties": {
+    "id": { "$ref": "urn:pc:schemas:defs#/$defs/uuid" },
+    "method": { "$ref": "urn:pc:schemas:defs#/$defs/method" },
+    "asserted_by": { "type": "string" },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["span", "locator", "source"],
+        "properties": {
+          "span": { "type": "string" }, "locator": { "type": "object" }, "excerpt": { "type": ["string", "null"] },
+          "source": { "type": "object", "required": ["sha256", "path", "media_type", "produced_by"] }
+        }
+      }
+    },
+    "status_history": { "type": "array" },
+    "links": { "type": "array" }
+  }
+}

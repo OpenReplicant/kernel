@@ -1,0 +1,47 @@
+# Systems vocabulary (L1): what it takes for a described system to run. Domain-free.
+# A system is a closed `system` context. Its parts are role instances (role nodes typed by
+# sys:instance_of a role type from some domain vocabulary); components k:plays them; their
+# ports (k:has_port, arg dir) are joined by k:couples. docs/ARCHITECTURE.md.
+vocabulary: systems
+version: "0.1"
+imports: [kernel]
+prefix: { sys: "urn:pc:systems:" }
+
+types:
+  - { iri: sys:Component,    is_a: k:Thing }    # an implementation that can fill roles
+  - { iri: sys:Asset,        is_a: k:Thing }    # infrastructure a role needs
+  - { iri: sys:Environment,  is_a: sys:Asset }
+  - { iri: sys:BehaviorTest, is_a: k:Thing }    # an assertion over a run's trace
+
+# Where work enters and leaves a system (spec.yaml's task.start / task.end).
+roles:
+  - { iri: sys:Boundary, key: boundary, ports: [start:out, end:in] }
+
+asset_kinds: [vector_store, kv_store, relational, graph, blob, code_store,
+              environment, mcp_server, model_endpoint, eval_harness, external_service]
+trace_events: [episode.start, episode.end, step.start, step.end, llm.request, llm.response,
+               tool.call, tool.result, slot.emit, memory.write, memory.read, env.snapshot,
+               env.restore, controller.decision]
+
+predicates:
+  # Role instances and their implementations
+  - { iri: sys:instance_of, domain: k:Role, range: k:Role, max: 1 }        # instance -> role type
+  - { iri: sys:param,       domain: k:Role, range: literal, args: [name] }
+  - { iri: sys:order,       domain: k:Role, range: literal, max: 1 }       # position in an ordered stack
+  - { iri: sys:uses_asset,  domain: k:Role, range: sys:Asset }
+  - { iri: sys:implements,  domain: sys:Component, range: k:Role }         # can fill this role type
+  - { iri: sys:entrypoint,  domain: sys:Component, range: literal, max: 1 }
+  # Bindings are k:plays (component -> role instance) with args: origin, kind, and optionally
+  # entrypoint, wrapper, asset. Ports are k:has_port with args dir (in|out) and extra (true when
+  # beyond the role type's minimum).
+  # Assets
+  - { iri: sys:asset_kind,   domain: sys:Asset, range: literal, max: 1, enum_from: asset_kinds }
+  - { iri: sys:asset_config, domain: sys:Asset, range: literal, max: 1 }   # requirements and settings, as a document
+  # Behaviour tests: body is {given, within, expect, negate}; outcomes are observed in a session
+  - { iri: sys:test_body,    domain: sys:BehaviorTest, range: literal, max: 1 }
+  - { iri: sys:tests_claim,  domain: sys:BehaviorTest, range: k:Thing }
+  - { iri: sys:test_passed,  domain: sys:BehaviorTest, range: literal, max: 1 }
+
+constraints:
+  - { kind: required, predicate: sys:instance_of, for: k:Role, in: system }
+  - { kind: python, name: couplings_reference_declared_ports }

@@ -1,0 +1,51 @@
+# Rootless Podman: `podman compose up -d` (or `podman-compose up -d`).
+# Postgres applies db/*.sql in name order on first start (empty volume only).
+# RuleGo-Server runs in a container with this repo mounted read-only (docs/RULEGO_NOTES.md).
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: kernel
+      POSTGRES_PASSWORD: kernel
+      POSTGRES_DB: kernel
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d:ro,Z
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "kernel"]
+      interval: 2s
+      retries: 30
+
+  # Chains run step scripts from /repo through stock exec nodes. Deploy chains with
+  # scripts/rulego_deploy.py; run them with POST /api/v1/rules/{id}/execute/{msgType}.
+  rulego:
+    build:
+      context: .
+      dockerfile: rulego/Containerfile
+    image: localhost/kernel-rulego:latest
+    environment:
+      DATABASE_URL: postgresql://kernel:kernel@postgres:5432/kernel
+      PC_DATA: /data
+      # ANTHROPIC_API_KEY: pass through from the host env at M4 (never commit it)
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - .:/repo:ro,Z
+      - ${PC_DATA:-./data}:/data:Z
+      - rulego:/var/lib/rulego
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Build-only: the image payloads run in (docs/V1_BUILD_PLAN.md, M5).
+  # `podman compose build sandbox`
+  sandbox:
+    build: ./sandbox
+    image: localhost/kernel-sandbox:latest
+    profiles: ["build"]
+
+volumes:
+  pgdata:
+  rulego:

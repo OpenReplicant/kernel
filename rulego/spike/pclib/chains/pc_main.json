@@ -1,0 +1,38 @@
+{
+  "ruleChain": {
+    "id": "pc_main",
+    "name": "pc_main",
+    "root": true
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "loop",
+        "type": "while",
+        "name": "loop",
+        "configuration": {
+          "condition": "msg.stop != true",
+          "do": "chain:pc_iter",
+          "mode": 2
+        }
+      },
+      {
+        "id": "final",
+        "type": "x/python",
+        "name": "final",
+        "configuration": {
+          "script": "/repo/rulego/spike/pclib/chains/pc_main.nodes/final.py",
+          "timeout": "305s",
+          "maxRunning": 2
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "loop",
+        "toId": "final",
+        "type": "Success"
+      }
+    ]
+  }
+}

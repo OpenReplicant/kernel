@@ -1,0 +1,76 @@
+{
+  "ruleChain": {
+    "id": "m0_recurse",
+    "name": "m0_recurse",
+    "root": true
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "inc",
+        "type": "exec",
+        "name": "inc",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/exec/steps/inc.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      },
+      {
+        "id": "again",
+        "type": "switch",
+        "name": "again",
+        "configuration": {
+          "cases": [
+            {
+              "case": "msg.data.count < msg.data.n",
+              "then": "Again"
+            }
+          ]
+        }
+      },
+      {
+        "id": "self",
+        "type": "flow",
+        "name": "self",
+        "configuration": {
+          "targetId": "m0_recurse",
+          "extend": true
+        }
+      },
+      {
+        "id": "final",
+        "type": "exec",
+        "name": "final",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/exec/steps/final.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "inc",
+        "toId": "again",
+        "type": "Success"
+      },
+      {
+        "fromId": "again",
+        "toId": "self",
+        "type": "Again"
+      },
+      {
+        "fromId": "again",
+        "toId": "final",
+        "type": "Default"
+      }
+    ]
+  }
+}

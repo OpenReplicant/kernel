@@ -1,0 +1,105 @@
+{
+  "ruleChain": {
+    "id": "pc_iter",
+    "name": "pc_iter",
+    "root": false
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "inc",
+        "type": "x/python",
+        "name": "inc",
+        "configuration": {
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/inc.py",
+          "timeout": "305s",
+          "maxRunning": 2
+        }
+      },
+      {
+        "id": "judge",
+        "type": "x/python",
+        "name": "judge",
+        "configuration": {
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/judge.py",
+          "timeout": "305s",
+          "maxRunning": 2
+        }
+      },
+      {
+        "id": "branch",
+        "type": "switch",
+        "name": "branch",
+        "configuration": {
+          "cases": [
+            {
+              "case": "msg.passed == true",
+              "then": "Even"
+            }
+          ]
+        }
+      },
+      {
+        "id": "even",
+        "type": "x/python",
+        "name": "even",
+        "configuration": {
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/even.py",
+          "timeout": "305s",
+          "maxRunning": 2
+        }
+      },
+      {
+        "id": "odd",
+        "type": "x/python",
+        "name": "odd",
+        "configuration": {
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/odd.py",
+          "timeout": "305s",
+          "maxRunning": 2
+        }
+      },
+      {
+        "id": "sub",
+        "type": "flow",
+        "name": "sub",
+        "configuration": {
+          "targetId": "pc_sub",
+          "extend": true
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "inc",
+        "toId": "judge",
+        "type": "Success"
+      },
+      {
+        "fromId": "judge",
+        "toId": "branch",
+        "type": "Success"
+      },
+      {
+        "fromId": "branch",
+        "toId": "even",
+        "type": "Even"
+      },
+      {
+        "fromId": "branch",
+        "toId": "odd",
+        "type": "Default"
+      },
+      {
+        "fromId": "even",
+        "toId": "sub",
+        "type": "Success"
+      },
+      {
+        "fromId": "odd",
+        "toId": "sub",
+        "type": "Success"
+      }
+    ]
+  }
+}

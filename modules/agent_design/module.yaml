@@ -1,0 +1,7 @@
+name: agent_design
+version: "0.1"
+layer: 2
+description: "Agent-design primitives (slots) as role types, with scopes and their rules."
+depends: [systems]
+vocab: [vocab.yaml]
+python: modules.agent_design

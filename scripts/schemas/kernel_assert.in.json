@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_assert input",
+  "type": "object", "additionalProperties": false,
+  "required": ["subject", "predicate", "context", "method", "confidence", "asserted_by"],
+  "oneOf": [ { "required": ["object"] }, { "required": ["value"] } ],
+  "properties": {
+    "subject": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "predicate": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "object": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "value": { "not": { "type": "null" } },
+    "context": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "method": { "$ref": "urn:pc:schemas:defs#/$defs/method" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "asserted_by": { "$ref": "urn:pc:schemas:defs#/$defs/ref" },
+    "status": { "enum": ["staged", "accepted"], "default": "accepted" },
+    "valid_from": { "$ref": "urn:pc:schemas:defs#/$defs/time" },
+    "valid_to": { "$ref": "urn:pc:schemas:defs#/$defs/time" },
+    "evidence": {
+      "type": "array",
+      "description": "Span ids, or spans to create in a stored source.",
+      "items": {
+        "oneOf": [
+          { "$ref": "urn:pc:schemas:defs#/$defs/uuid" },
+          { "type": "object", "additionalProperties": false, "required": ["sha256", "locator"],
+            "properties": { "sha256": { "type": "string" }, "locator": { "type": "object" }, "excerpt": { "type": "string" } } }
+        ]
+      }
+    },
+    "args": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "object", "additionalProperties": false, "required": ["node"], "properties": { "node": { "$ref": "urn:pc:schemas:defs#/$defs/ref" } } },
+          { "type": "object", "additionalProperties": false, "required": ["value"], "properties": { "value": {} } }
+        ]
+      }
+    }
+  }
+}

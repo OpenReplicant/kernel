@@ -1,0 +1,46 @@
+# Agent-design vocabulary (L2): slot types as role types, scopes, and their rules.
+# A slot in a system is a role instance `sys:instance_of` one of these. docs/CONCEPTS.md.
+vocabulary: agent-design
+version: "0.3"
+imports: [systems]
+prefix: { ad: "urn:pc:agent-design:" }
+
+types:
+  - { iri: ad:Prompt, is_a: k:Thing }
+
+scopes: [call, step, episode, task, lifetime]
+
+# Slot types. key: the name spec.yaml uses. cardinality: exclusive (one owner per system),
+# pipeline (ordered stack), multi (several named instances). internal: the agent under test
+# must never be able to skip or invoke it (so never a model-invoked tool). Ports listed are the
+# minimum; a slot instance may declare more (spec.yaml `ports`).
+roles:
+  - { iri: ad:ContextBuilder, key: context_builder, group: decision,    cardinality: pipeline,  ports: [run:in, input:in, output:out] }
+  - { iri: ad:Policy, key: policy, group: decision,    cardinality: exclusive, ports: [start:in, output:out] }
+  - { iri: ad:Planner, key: planner, group: decision,    cardinality: exclusive, ports: [run:in, plan:out] }
+  - { iri: ad:WorldModel, key: world_model, group: decision,    cardinality: multi,     ports: [run:in, prediction:out] }
+  - { iri: ad:ActionSpace, key: action_space, group: environment, cardinality: multi,     ports: [call:in, result:out] }
+  - { iri: ad:ObservationProcessor, key: observation_processor, group: environment, cardinality: pipeline,  ports: [input:in, output:out] }
+  - { iri: ad:Evaluator, key: evaluator, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, pass:out, fail:out, score:out] }
+  - { iri: ad:Reflector, key: reflector, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, insight:out] }
+  - { iri: ad:Refiner, key: refiner, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, output:out] }
+  - { iri: ad:Memory, key: memory, group: state,       cardinality: multi,     ports: [write:in, written:out, read:out] }
+  - { iri: ad:ContextManager, key: context_manager, internal: true, group: state,       cardinality: exclusive, ports: [input:in, output:out] }
+  - { iri: ad:Controller, key: controller, internal: true, group: control,     cardinality: multi,     ports: [decide:in, retry:out, stop:out] }
+  - { iri: ad:Search, key: search, internal: true, group: control,     cardinality: exclusive, ports: [run:in, best:out] }
+  - { iri: ad:Aggregator, key: aggregator, internal: true, group: control,     cardinality: multi,     ports: [run:in, output:out] }
+  - { iri: ad:Topology, key: topology, group: control,     cardinality: exclusive, ports: [run:in, output:out] }
+  - { iri: ad:Curriculum, key: curriculum, internal: true, group: control,     cardinality: exclusive, ports: [run:in, task:out] }
+
+predicates:
+  - { iri: ad:scope,       domain: k:Role,    range: literal, max: 1, enum_from: scopes }
+  - { iri: ad:subtype,     domain: k:Role,    range: literal, max: 1 }
+  - { iri: ad:mode,        domain: k:Role,    range: literal, max: 1, enum: [replace, wrap, add] }
+  - { iri: ad:model_role,  domain: k:Role,    range: literal, max: 1 }
+  - { iri: ad:uses_prompt, domain: k:Role,    range: ad:Prompt, args: [position] }
+  - { iri: ad:prompt_file, domain: ad:Prompt, range: literal, max: 1 }
+
+constraints:
+  - { kind: python, name: slots_have_scope }
+  - { kind: python, name: exclusive_slots }
+  - { kind: python, name: mcp_only_for_model_invoked }

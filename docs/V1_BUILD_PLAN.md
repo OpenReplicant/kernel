@@ -11,7 +11,8 @@ them, and its benchmark results sit in the kernel as `observed` assertions with 
 conditions and a provenance trail back to the paper.
 
 Work through the milestones in order. Each ends with a gate: run the listed checks and report
-their output before moving on.
+their output before moving on. M0 is independent of the kernel: it may run alongside M1–M3,
+and must pass before M7.
 
 | Part | Milestones |
 |---|---|
@@ -21,7 +22,7 @@ their output before moving on.
 
 ---
 
-## M0 — Spike: confirm the RuleGo assumptions
+## M0 — Spike: confirm the RuleGo assumptions (alongside M1–M3; gates M7) — done, see `docs/RULEGO_NOTES.md`
 
 The design assumes things about RuleGo that haven't been confirmed. Check them in the pinned
 version's docs and source, try each one with a toy chain, and write the findings to
@@ -55,8 +56,8 @@ version's docs and source, try each one with a toy chain, and write the findings
 - No usable self-invocation → a driver script runs iterations and calls the iteration chain
   per step over RuleGo's HTTP API. The slot steps stay identical.
 
-**If M0 goes badly** (several fallbacks needed, or RuleGo behaves unpredictably), stop and
-report. The kernel and the spec design don't depend on RuleGo.
+**If M0 goes badly** (several fallbacks needed, or RuleGo behaves unpredictably), report it
+and keep building the kernel; the kernel and the spec design don't depend on RuleGo.
 
 **Gate:** a toy chain runs two Python scripts in sequence, passes JSON between them, re-invokes
 itself three times with a counter, branches on a field, calls a sub-chain, and returns the
@@ -82,54 +83,69 @@ validation yet beyond the kernel vocabulary itself.
 
 - `put_source` stores files by hash under `$PC_DATA/sources/` and is idempotent.
 - `assert_` writes the assertion, its arguments and evidence in **one transaction**; the
-  database trigger already rejects `stated`/`repo` without evidence, and the library should
+  database trigger already rejects `stated`/`observed` without evidence, and the library should
   raise a clear error before reaching it.
-- Corrections use `supersede`; nothing updates an assertion except `status` and `retracted_at`.
+- Corrections use `supersede`; nothing updates an assertion except `status` (the database enforces it).
 - `query` supports `context` with sub-contexts, `status`, `valid_at` and `known_at`.
 - `why` returns the full provenance tree.
 - Each operation is also a tool-shaped script: `scripts/kernel_put_source.py`,
   `kernel_assert.py`, `kernel_query.py`, `kernel_why.py` (JSON Schema for input and output
   in `scripts/schemas/`).
 
-**Layering rule, enforced by a test:** nothing under `kernel/` imports from `apps/`.
+**Layering rule, enforced by a test:** nothing under `kernel/` imports a module.
 
-**Gate (pytest, `tests/kernel/`), using a toy domain unrelated to agents** (for example a
-thermostat loop: sensor, controller, heater, coupled through ports):
-- store a source and spans; assert facts with each method; `stated` without spans is rejected
+**Gate (pytest, `tests/kernel/`), using a toy domain unrelated to agents and evidence that
+isn't a paper** (for example a thermostat loop: sensor, controller, heater, coupled through
+ports; a sensor log as an `observed` source and a technician's report as a `stated` one):
+- store a source and spans; assert facts with each method; `stated` or `observed` without
+  spans is rejected; editing or deleting an assertion is rejected
+- `why` on an observed reading reaches the log's span and the instrument that produced it
 - supersede a fact; `query(known_at=<before>)` returns the old value, a current query the new one
 - two contradicting assertions coexist in separate perspective contexts and `query` filters by context
 - `why` on an assertion returns its spans, source path, agent and method
 - bindings and couplings round-trip: `bindings(ctx)` and `couplings(ctx)` return what was asserted
 
-## M3 — Vocabularies, validation, views
+## M3 — Vocabularies, validation, views, modules
 
-- `load_vocabulary` for `vocab/kernel.yaml`, `vocab/agent_design.yaml`, `vocab/infra.yaml`:
-  types, roles with ports and cardinality, predicates with domain, range, `max`, `args`, enums.
-  Stores each file in `kb.vocabulary` by hash.
-- `assert_` now checks predicates exist and subject/object types match domain and range.
-- `validate(context)`: the declarative constraints (`required`, `max`, enums,
-  `cardinality_by_role`) in the kernel; `register_constraint` for Python checks.
-- `promote(staging, target)` refuses unless `validate(target-with-staging)` passes.
-- `register_view` / `export` / `import_` in the kernel.
-- **First application code**, in `apps/paper_compiler/`:
-  - registers the Python constraints named in `agent_design.yaml`
-    (`mcp_only_for_model_invoked`, `couplings_reference_declared_ports`)
-  - registers the `agent-spec` view: `import_` turns a `spec.yaml` into a closed `system`
-    context plus a `perspective` context for the paper's claims; `export` does the reverse.
-    Provenance maps to `method`; `source_ref` strings become spans once M6 stores the PDF
-    (until then, `stated` fields import as `staged` assertions awaiting evidence).
+Layers and modules as in `docs/ARCHITECTURE.md`.
+
+**Kernel (L0):**
+- `load_vocabulary(path)`: types (with `is_a`), roles (ports, attributes), predicates (domain,
+  range, `max`, `args`, `enum`/`enum_from`) and declarative constraints; recorded in
+  `kb.vocabulary` by hash.
+- `assert_` checks the predicate is declared, subject and object satisfy domain and range,
+  literal enums, and required args.
+- `validate(context)`: `max` per predicate, `required` constraints, and registered Python
+  constraints, over accepted and staged assertions. `register_constraint` for Python checks.
+- `promote(context)` accepts staged assertions only if `validate` passes.
+- `register_view` / `export` / `import_`.
+- `load_module(name)`: dependencies first, then vocabularies, then `register(kernel)`.
+
+**Modules:** split today's vocabularies into `modules/systems` (L1), `modules/agent_design`
+and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.yaml`,
+`vocab.yaml` and `register()`:
+- `systems` registers `couplings_reference_declared_ports` (a coupling joins an out port to an
+  in port that its role instance has, from the role type's minimum or declared extras).
+- `agent_design` registers `exclusive_slots` and `mcp_only_for_model_invoked`.
+- `paper_compiler` registers the `agent-spec` view: `import_` turns a `spec.yaml` into a closed
+  `system` context plus a `perspective` context for the paper's claims; `export` does the
+  reverse. Provenance maps to `method` (`repo` → `stated`, label kept as an argument); `stated`
+  and `repo` fields import as `staged` until M6 stores the PDF and repo as sources.
 
 **Gate:**
-- `tests/kernel/` still passes with `apps/` not importable (run it with `apps/` removed from the path)
+- `tests/kernel/` passes with no module loaded and nothing under `modules/` importable; a
+  layering test checks each module imports only what it declares
+- a non-agent system (the thermostat loop) validates with only `systems` loaded, and a broken
+  coupling in it is caught
 - importing `examples/reflexion/spec.yaml` then exporting it yields a document equal to the
   original (field by field, ignoring key order) that passes `tools/validate_spec.py`
-- `validate` catches the same errors as `tools/validate_spec.py` on a deliberately broken spec
+- `validate` catches the same errors as `tools/validate_spec.py` on deliberately broken specs
   (internal slot bound as an MCP tool; wiring to an undeclared slot; two policies)
 
-## M4 — Model calls with a budget
+## M4 — Model calls with a budget (shape under review: `docs/NOTES.md`)
 
 - `scripts/claude_call.py` + `pclib.claude()` using the Anthropic Messages API.
-- Model ids come from the system context (`in:uses_model`), with env fallbacks
+- Model ids come from the system context (`ev:uses_model`), with env fallbacks
   `PC_ACTOR_MODEL`, `PC_REFLECTOR_MODEL`. Default to a small, cheap model for the actor and
   reflector (e.g. `claude-haiku-5-5`) so HumanEval leaves headroom; that choice is a
   `defaulted` assertion.
@@ -150,6 +166,11 @@ clear error; trace events and `spent_usd` are correct.
 **Gate:** a passing solution passes, a failing one fails, an infinite loop times out, and code
 attempting network access fails.
 
+**Calibration (a few dollars, before M6):** run the default actor model once per problem, no
+retries, on 20 HumanEval problems. If it already passes nearly all of them, Reflexion can't
+show a gain; choose a harder benchmark or a weaker model now and record the choice, rather
+than discovering it in M8.
+
 ## M6 — The paper as evidence, and the Reflexion slots
 
 **Ingest the paper.** Store the Reflexion PDF and the pinned repo snapshot as sources. For
@@ -160,8 +181,8 @@ supports a `stated` field, supersede it with an `inferred` assertion instead, an
 such change in `papers/reflexion/SPEC_CHANGES.md`. Pin the repo commit and confirm its license
 before copying anything.
 
-**Implement the slots** as scripts in `registry/`, and register each one in the kernel as an
-`ad:Component` with `ad:implements`, `ad:implementation_kind` and `ad:entrypoint` assertions
+**Implement the slots** as steps in `modules/agent_design/steps/`, and register each one in the kernel as a
+`sys:Component` (`k:is_a`) with `sys:implements` and `sys:entrypoint` assertions
 (no separate registry table). Slot resolution is a kernel query.
 
 | Component id | Implements | Does |
@@ -192,12 +213,13 @@ go through `pclib.claude()`, never through the paper repo's own clients.
   context's couplings, plus a **baseline toggle** (reflector and memory off, retry only).
   Run strictly in sequence: the retry decision waits until the reflection is stored.
 - `tests/mechanism/`: a generic evaluator for mechanism tests read from the kernel
-  (`ad:test_body`), evaluated over `run.trace`. Semantics: `expect` events must occur
+  (`sys:test_body`), evaluated over `run.trace`. Semantics: `expect` events must occur
   **after** the `given` event and inside the `within` window; with `negate`, none may.
 - **Fault seeding:** a variant that writes reflections but never injects them.
-- Each run creates a `run` context in the kernel whose `conditions` record models, benchmark
-  version, budget and toggles. Mechanism-test outcomes become `observed` assertions
-  (`ad:mechanism_test_passed`) in that context.
+- Each run creates a `session` context in the kernel whose `conditions` record models,
+  benchmark version, budget and toggles. At the end of the run its trace is exported to
+  `runs/<id>/trace.jsonl` and stored as a source. Mechanism-test outcomes become `observed`
+  assertions (`sys:test_passed`) in that context, with spans into that file.
 
 **Gate:** on 5 HumanEval problems, Reflexion passes all mechanism tests; the fault-seeded
 variant fails `reflection_reaches_next_trial`; the baseline produces no reflector events; all
@@ -211,8 +233,9 @@ three outcomes are queryable in the kernel.
 - **Ask the user for a dollar budget before the first full run.** First run 3 problems per arm
   and extrapolate the full cost from actual spend.
 - Run baseline and Reflexion with the same models, `max_trials` and budget.
-- Write results as `observed` assertions (`ad:metric`) in each run's context. The paper's own
-  reported numbers are `stated` assertions in the paper's perspective context, with spans.
+- Write results as `observed` assertions (`ev:metric`) in each run's session context, with
+  spans into the run's scoring output. The paper's own reported numbers are `stated`
+  assertions in the paper's perspective context, with spans.
 - `papers/reflexion/REPORT.md` is generated **from kernel queries**: pass@1 per arm, trials,
   cost, mechanism-test outcomes, the paper's reported numbers beside ours with their
   differing conditions, and the system's `inferred`/`defaulted` assertions as candidate
@@ -231,13 +254,13 @@ spend is under budget.
 A Claude Code skill at `.claude/skills/compile-paper/SKILL.md` that, given an arXiv id or PDF:
 
 1. Stores the PDF (and pinned repo, if any) as sources.
-2. Writes the paper's design as assertions into a **staging** context, each with spans for
-   `stated`/`repo` facts, using the agent-design vocabulary. Claims and mechanism tests go in
-   the paper's perspective context.
+2. Writes the paper's design as **staged** assertions in a new system context, each with
+   spans for `stated`/`repo` facts, using the agent-design vocabulary. Claims and mechanism
+   tests go in the paper's perspective context.
 3. Resolves each slot by querying the kernel for components that implement it; only
    unmatched slots get new scripts (shown to the user before they first run).
 4. Stops for human review: lists every `inferred` and `defaulted` assertion with its reasoning.
-5. On approval, `promote`s staging into a closed system context (which runs `validate`).
+5. On approval, `promote`s the system context (which runs `validate`).
 6. Exports `spec.yaml` and `SPEC.md`, generates chains from couplings and mechanism tests from
    the kernel, runs contract and mechanism tests.
 

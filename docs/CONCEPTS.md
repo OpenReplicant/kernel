@@ -44,9 +44,13 @@ Every value in a spec records where it came from:
 · `defaulted` (platform default). When a reproduction misses, `inferred` and `defaulted`
 fields are the first suspects.
 
+In the kernel, `repo` is the `stated` method with its span in the pinned repo source (the
+label is kept as an assertion argument); results of runs are `observed`, with spans in the
+run's trace file.
+
 ## Mechanism tests
 
-Assertions over the execution trace that prove the mechanism is present, independent of
+Assertions over the execution trace (spec key `mechanism_tests`) that prove the mechanism is present, independent of
 score. Example (Reflexion): after an episode fails, a reflection is written, and that
 reflection text appears in the actor's prompt in the next episode. Scores drift with
 models; mechanism tests don't. A compiled paper must pass its mechanism tests **before**
@@ -63,7 +67,12 @@ Scripts write semantic events to `run.trace`. Use exactly these names (they matc
 ## Agents are chains
 
 An agent loop is a chain of slot steps (context builder → policy → action → observation →
-evaluator → controller) that re-invokes itself until the controller says stop. Each slot is a
+evaluator → controller) that runs again until the controller says stop: in RuleGo, a `while`
+node re-runs the acyclic **iteration chain**, feeding each iteration's output into the next
+(docs/RULEGO_NOTES.md). Recursive designs can call their own chain through a `flow` node. In
+`spec.yaml`, wiring connects output ports to input ports; `task.start` and `task.end` mark
+where a task enters and leaves. A slot instance may declare ports beyond its type's minimum
+(`ports: ["tests:out"]`). Each slot is a
 separate step so a paper's distinctive parts can be isolated, swapped and combined with
 other papers'.
 
@@ -86,8 +95,23 @@ step can't be composed with anything.
 
 ## Registry
 
-Reusable slot implementations, looked up before writing new code. Each is a script in
-`registry/` and an `ad:Component` thing in the kernel with `ad:implements` assertions, so
+Reusable slot implementations, looked up before writing new code. Each is a step in
+`modules/agent_design/steps/` and a `sys:Component` thing in the kernel with `sys:implements` assertions, so
 finding a component for a slot is a kernel query, not a file lookup. Resolution order for
 every slot: registry → paper's own code (licensed, pinned commit, behind an adapter) →
 newly generated. A component that passes its contract tests is promoted into the registry.
+
+## How the paper compiler maps onto the kernel
+
+| Compiler concept | Kernel representation |
+|---|---|
+| Paper PDF, repo files | Sources (with `k:produced_by` the authors); quoted passages are spans |
+| A paper's claims about its own design and results | Assertions in a perspective context the paper `k:holds` |
+| A compiled spec | A closed `system` context: slot instances (role nodes, `sys:instance_of` a slot type), bindings (`k:plays`, arg `origin`), ports and couplings, `sys:param` |
+| `spec.yaml` | The `agent-spec` view of that context (export/import) |
+| Provenance `stated`/`repo`/`inferred`/`defaulted` | The assertion's `method` (`repo` → `stated` with a repo span), label kept as an argument |
+| Spec validation | `validate(context)` with the agent-design vocabulary's constraints |
+| Registry component | A thing `k:is_a sys:Component` with `sys:implements`; slot resolution is a kernel query |
+| Human review of a compiled spec | Staged assertions in the system context, inspected with `query(status=('staged',), method='inferred')`, then `promote` |
+| A run | A `session` context whose `conditions` record model, benchmark version, budget and toggles; its trace file is a source |
+| A benchmark result or mechanism-test outcome | An `observed` assertion in the run's session context, with spans in the run's recordings |

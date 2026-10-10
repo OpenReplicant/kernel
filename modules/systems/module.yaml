@@ -1,0 +1,7 @@
+name: systems
+version: "0.1"
+layer: 1
+description: "How a described system runs: components, role instances, ports, boundary, behaviour tests."
+depends: []
+vocab: [vocab.yaml]
+python: modules.systems
