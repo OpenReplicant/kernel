@@ -1,0 +1,7 @@
+name: evaluation
+version: "0.1"
+layer: 2
+description: "Models, benchmarks, metrics and results, with the conditions they were obtained under."
+depends: [systems]
+vocab: [vocab.yaml]
+python: modules.evaluation

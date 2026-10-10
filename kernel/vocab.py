@@ -50,6 +50,7 @@ class Schema:
     predicates: dict[str, dict] = field(default_factory=dict)       # iri -> props (+ vocab)
     lists: dict[str, dict] = field(default_factory=dict)            # vocab -> {list name: values}
     constraints: list[tuple[str, dict]] = field(default_factory=list)
+    active: set[str] = field(default_factory=set)                   # loaded by this kernel instance
 
     def add(self, body: dict, prefixes: Prefixes):
         name = body["vocabulary"]
@@ -155,5 +156,7 @@ def load(kernel, path) -> dict:
             kernel.ensure_node("role", x(r["iri"]), props={k: v for k, v in r.items() if k != "iri"})
         for p in body.get("predicates", []):
             kernel.ensure_node("predicate", x(p["iri"]), props={k: v for k, v in p.items() if k != "iri"})
-    kernel.schema.add(body, kernel.prefixes)
+    if body["vocabulary"] not in kernel.schema.vocabularies:
+        kernel.schema.add(body, kernel.prefixes)
+    kernel.schema.active.add(body["vocabulary"])
     return body

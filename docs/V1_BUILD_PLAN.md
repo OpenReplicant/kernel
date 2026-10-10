@@ -145,7 +145,7 @@ and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.
 ## M4 — Model calls with a budget
 
 - `scripts/claude_call.py` + `pclib.claude()` using the Anthropic Messages API.
-- Model ids come from the system context (`in:uses_model`), with env fallbacks
+- Model ids come from the system context (`ev:uses_model`), with env fallbacks
   `PC_ACTOR_MODEL`, `PC_REFLECTOR_MODEL`. Default to a small, cheap model for the actor and
   reflector (e.g. `claude-haiku-5-5`) so HumanEval leaves headroom; that choice is a
   `defaulted` assertion.
@@ -182,7 +182,7 @@ such change in `papers/reflexion/SPEC_CHANGES.md`. Pin the repo commit and confi
 before copying anything.
 
 **Implement the slots** as steps in `modules/agent_design/steps/`, and register each one in the kernel as a
-`sys:Component` with `ad:implements`, `ad:implementation_kind` and `ad:entrypoint` assertions
+`sys:Component` (`k:is_a`) with `sys:implements` and `sys:entrypoint` assertions
 (no separate registry table). Slot resolution is a kernel query.
 
 | Component id | Implements | Does |
@@ -213,13 +213,13 @@ go through `pclib.claude()`, never through the paper repo's own clients.
   context's couplings, plus a **baseline toggle** (reflector and memory off, retry only).
   Run strictly in sequence: the retry decision waits until the reflection is stored.
 - `tests/mechanism/`: a generic evaluator for mechanism tests read from the kernel
-  (`ad:test_body`), evaluated over `run.trace`. Semantics: `expect` events must occur
+  (`sys:test_body`), evaluated over `run.trace`. Semantics: `expect` events must occur
   **after** the `given` event and inside the `within` window; with `negate`, none may.
 - **Fault seeding:** a variant that writes reflections but never injects them.
 - Each run creates a `session` context in the kernel whose `conditions` record models,
   benchmark version, budget and toggles. At the end of the run its trace is exported to
   `runs/<id>/trace.jsonl` and stored as a source. Mechanism-test outcomes become `observed`
-  assertions (`ad:mechanism_test_passed`) in that context, with spans into that file.
+  assertions (`sys:test_passed`) in that context, with spans into that file.
 
 **Gate:** on 5 HumanEval problems, Reflexion passes all mechanism tests; the fault-seeded
 variant fails `reflection_reaches_next_trial`; the baseline produces no reflector events; all
@@ -233,7 +233,7 @@ three outcomes are queryable in the kernel.
 - **Ask the user for a dollar budget before the first full run.** First run 3 problems per arm
   and extrapolate the full cost from actual spend.
 - Run baseline and Reflexion with the same models, `max_trials` and budget.
-- Write results as `observed` assertions (`ad:metric`) in each run's session context, with
+- Write results as `observed` assertions (`ev:metric`) in each run's session context, with
   spans into the run's scoring output. The paper's own reported numbers are `stated`
   assertions in the paper's perspective context, with spans.
 - `papers/reflexion/REPORT.md` is generated **from kernel queries**: pass@1 per arm, trials,

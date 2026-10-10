@@ -9,7 +9,7 @@ same from a user's spec or session. Each use is a module stack on the same layer
 | Layer | What it is | Knows about domains? | Lives in |
 |---|---|---|---|
 | **L0 kernel** | The evidence-based world model: sources, spans, assertions with provenance and two times, the upper ontology (knowing + structure), and the machinery to load vocabularies, register constraints and views, and load modules | no | `kernel/`, `vocab/kernel.yaml`, `db/` |
-| **L1 systems** | How a described system runs: components implementing roles, parameters, a boundary (entry and exit ports), behaviour tests over traces, sessions whose recordings become `observed` evidence. Compiles a closed system context to RuleGo chains | no | `modules/systems/`, `pclib/`, `rulego/` |
+| **L1 systems** | How a described system runs: components implementing roles, parameters, a boundary (entry and exit ports), behaviour tests over traces, sessions whose recordings become `observed` evidence. Compiles a closed system context to RuleGo chains (M7) | no | `modules/systems/`, `pclib/`, `rulego/` |
 | **L2 domain modules** | Vocabularies, constraints and components for one domain | yes | `modules/agent_design/`, `modules/evaluation/` |
 | **L3 applications** | Pipelines that use domains for a purpose: ingest sources, compile, run, report | yes | `modules/paper_compiler/` |
 

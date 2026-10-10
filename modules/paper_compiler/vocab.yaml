@@ -1,0 +1,26 @@
+# Paper-compiler vocabulary (L3): papers, their claims, and what a compiled spec records
+# about its own fidelity. Claims live in the paper's perspective context (k:holds).
+vocabulary: paper-compiler
+version: "0.1"
+imports: [agent-design, evaluation]
+prefix: { pc: "urn:pc:paper-compiler:" }
+
+types:
+  - { iri: pc:Paper, is_a: k:Thing }
+  - { iri: pc:Claim, is_a: k:Thing }
+
+predicates:
+  - { iri: pc:title,            domain: pc:Paper, range: literal, max: 1 }
+  - { iri: pc:author,           domain: pc:Paper, range: literal, args: [position] }
+  - { iri: pc:year,             domain: pc:Paper, range: literal, max: 1 }
+  - { iri: pc:venue,            domain: pc:Paper, range: literal, max: 1 }
+  - { iri: pc:arxiv,            domain: pc:Paper, range: literal, max: 1 }
+  - { iri: pc:source_ref,       domain: pc:Paper, range: literal, args: [position] }   # {kind, ref, commit, license} until stored as a source
+  - { iri: pc:summary,          domain: pc:Paper, range: literal, max: 1 }
+  - { iri: pc:claims,           domain: pc:Paper, range: pc:Claim, args: [position] }
+  - { iri: pc:text,             domain: pc:Claim, range: literal, max: 1 }
+  - { iri: pc:describes_system, domain: pc:Paper, range: k:Context }
+  - { iri: pc:paper_model,      domain: k:Context, range: literal, args: [model_role] }
+  - { iri: pc:fidelity,         domain: k:Context, range: literal, max: 1, enum: [full, partial, approximate] }
+  - { iri: pc:fidelity_gap,     domain: k:Context, range: literal, args: [position] }  # {where, reason, expected_impact}
+  - { iri: pc:compat,           domain: k:Context, range: literal, max: 1 }            # {wraps, conflicts, requires, notes}

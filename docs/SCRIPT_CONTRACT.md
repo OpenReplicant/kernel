@@ -78,7 +78,7 @@ Only through `scripts/claude_call.py` / `pclib.claude()`. It:
 - refuses the call if `run.run.spent_usd >= budget_usd`
 - emits `llm.request` (with the full prompt in payload) and `llm.response`
 - records token usage and adds cost to `spent_usd`
-- reads model ids from the system context (`in:uses_model` assertions), falling back to env vars
+- reads model ids from the system context (`ev:uses_model` assertions), falling back to env vars
 
 ## Fallback if process start-up is too slow
 

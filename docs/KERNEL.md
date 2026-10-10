@@ -204,23 +204,27 @@ Vocabularies live in `vocab/*.yaml`, are loaded with `load_vocabulary`, and are 
 
 ```yaml
 vocabulary: agent-design
-version: "0.2"                 # reloading a version with different content is an error
-imports: [kernel]
+version: "0.3"                 # reloading a version with different content is an error
+imports: [systems]             # vocabularies this one builds on (loaded first)
 prefix: { ad: "urn:pc:agent-design:" }
 types:
-  - { iri: ad:Component, is_a: k:Thing }
+  - { iri: ad:Prompt, is_a: k:Thing }
+scopes: [call, step, episode, task, lifetime]     # a named list, for enum_from
 roles:
-  - { iri: ad:Evaluator, key: evaluator, cardinality: multi, ports: [run:in, pass:out, fail:out] }
+  - { iri: ad:Evaluator, key: evaluator, cardinality: multi, internal: true,
+      ports: [run:in, pass:out, fail:out, score:out] }
 predicates:
   - { iri: ad:scope, domain: k:Role, range: literal, max: 1, enum_from: scopes }
-  - { iri: ad:param, domain: k:Role, range: literal, args: [name] }
+  - { iri: ad:uses_prompt, domain: k:Role, range: ad:Prompt, args: [position] }
 constraints:
-  - { kind: required, predicate: ad:scope, for: k:Role, in: system }
-  - { kind: python, name: couplings_reference_declared_ports }
+  - { kind: required, predicate: sys:instance_of, for: k:Role, in: system }
+  - { kind: python, name: exclusive_slots }      # registered by the module's register()
 ```
 
 Domain vocabularies may add their own lists (`scopes`, `asset_kinds`) and fields on roles;
 the kernel stores them and makes them available to registered constraints and views.
+`validate` applies the constraints of the vocabularies this kernel instance has loaded, and
+reports a context that uses a vocabulary it hasn't loaded.
 
 ## What stays outside the kernel
 

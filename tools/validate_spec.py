@@ -14,14 +14,14 @@ from jsonschema import Draft202012Validator
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_SCHEMA = HERE.parent / "schema" / "spec.schema.json"
-DEFAULT_VOCAB = HERE.parent / "vocab" / "agent_design.yaml"
+DEFAULT_VOCAB = HERE.parent / "modules" / "agent_design" / "vocab.yaml"
 TASK = "task"   # reserved wiring endpoint: task.start (entry), task.end (exit)
 
 
 def load_slot_types(vocab_path):
     """Slot types from the agent-design vocabulary: key -> {internal, ports{name: dir}}."""
     vocab = yaml.safe_load(Path(vocab_path).read_text())
-    return {r["key"]: {"internal": r.get("internal", False),
+    return {r["key"]: {"internal": r.get("internal", False), "cardinality": r.get("cardinality"),
                        "ports": dict(p.split(":") for p in r["ports"])}
             for r in vocab["roles"]}
 
@@ -41,6 +41,10 @@ def cross_checks(spec, slot_types):
 
     for dup in {i for i in slot_ids if slot_ids.count(i) > 1}:
         errors.append(f"duplicate slot id: {dup}")
+    for key, t in slot_types.items():
+        n = sum(1 for s in spec["slots"] if s["slot"] == key)
+        if t["cardinality"] == "exclusive" and n > 1:
+            errors.append(f"slot type {key} is exclusive but has {n} instances")
 
     for s in spec["slots"]:
         impl = s["implementation"]

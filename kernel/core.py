@@ -450,7 +450,8 @@ class Kernel:
 
     def validate(self, context) -> list[str]:
         """Check a context (with sub-contexts), over accepted and staged assertions, against
-        every loaded vocabulary's constraints and each predicate's `max`."""
+        each predicate's `max` and the constraints of every vocabulary this kernel instance
+        has loaded. A context using a vocabulary that isn't loaded is an error, not a pass."""
         ctx = self.node_id(context, "context")
         ctx_kind = self.context_props(ctx).get("ctx_kind")
         rows = self.query(context=ctx, status=("accepted", "staged"))
@@ -462,7 +463,14 @@ class Kernel:
             mx = self.schema.predicates.get(pred, {}).get("max")
             if mx is not None and n > mx:
                 errors.append(f"{subj} has {n} {pred} (max {mx})")
+        used = {self.schema.predicates[a.predicate]["vocab"] for a in rows if a.predicate in self.schema.predicates}
+        used |= {self.schema.roles[a.object]["vocab"] for a in rows if a.object in self.schema.roles}
+        for name in sorted(used - self.schema.active):
+            errors.append(f"context uses vocabulary {name!r}, which this kernel hasn't loaded "
+                          "(load its module to validate)")
         for vocab_name, c in self.schema.constraints:
+            if vocab_name not in self.schema.active:
+                continue
             if c.get("in") and c["in"] != ctx_kind:
                 continue
             if c["kind"] == "required":

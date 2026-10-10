@@ -1,0 +1,21 @@
+# Evaluation vocabulary (L2): what a system was evaluated with and what came out.
+# Results are `observed` in a session context (with spans in the run's recordings) or
+# `stated` in a source's perspective (a paper's reported numbers).
+vocabulary: evaluation
+version: "0.1"
+imports: [systems]
+prefix: { ev: "urn:pc:evaluation:" }
+
+types:
+  - { iri: ev:Model,     is_a: k:Thing }
+  - { iri: ev:Benchmark, is_a: k:Thing }
+
+predicates:
+  - { iri: ev:uses_model,      domain: k:Context,   range: ev:Model, args: [model_role] }
+  - { iri: ev:model_param,     domain: k:Context,   range: literal,  args: [model_role, name] }
+  - { iri: ev:evaluated_on,    domain: k:Context,   range: ev:Benchmark }
+  - { iri: ev:setting,         domain: k:Context,   range: literal,  args: [name] }   # harness, split, subset, metrics, baselines
+  - { iri: ev:acceptance,      domain: k:Context,   range: literal,  max: 1 }         # {mode, value, note}
+  - { iri: ev:version_hash,    domain: ev:Benchmark, range: literal, max: 1 }
+  - { iri: ev:metric,          domain: k:Context,   range: literal,  args: [name] }   # observed result of a run
+  - { iri: ev:reported_result, domain: k:Thing,     range: literal,  args: [metric, condition] }
