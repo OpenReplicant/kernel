@@ -134,9 +134,9 @@ finding cites its sources. Ranking and the discovery report are built.
 5. **Then, when a paying pilot needs them:** the first workflow adapter (item 4), then the
    automation half of `make demo` and the write-up (item 5).
 
-Recall into context, the research eval improvements, bulk extraction, declared
-dependencies between packs and an agent that writes packs wait until an engagement needs
-them.
+The research eval improvements, bulk extraction, declared dependencies between packs and
+an agent that writes packs wait until an engagement needs them. Recall into context was
+moved forward by the owner (2026-10-07): ADR 0038, proposed, no code until reviewed.
 
 Also in scope:
 
@@ -149,10 +149,12 @@ Also in scope:
 - **Research eval improvements:** a dev/test split, the raw-abstract control, structured
   findings (population, measure, direction) and `directness` on relations, a second
   reader, a cross-paper eval.
-- **Recall into context** (the read side of context engineering): a proposed ADR first, no
-  code until reviewed. The facts relevant to a task, with belief, contested sides, windows,
-  quotes and the read offset, delivered through MCP resources, harness hooks or the
-  extractor's loop; retrieval traces record what an agent was shown.
+- **Recall into context** (the read side of context engineering; ADR 0038, proposed: no
+  code until reviewed). The facts relevant to a task, ranked in the database
+  (`kernel.recall`), with belief, contested sides, windows, quotes and the read offset,
+  delivered through a `recall` tool, MCP resources, `POST /recall` and a context hook for
+  agent loops (`hooks/wmk-recall`); traces of what an agent was shown are cites of kind
+  `shown`.
 
 **Out of scope for now** (do not build, do not stub): a pack registry or fetching packs by
 URL, pack SQL, automatic capture of agents' own sessions (observer runs that write from
