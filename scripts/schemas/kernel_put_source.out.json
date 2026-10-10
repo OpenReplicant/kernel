@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_put_source output",
+  "type": "object", "additionalProperties": false,
+  "required": ["sha256", "node"],
+  "properties": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "node": { "$ref": "urn:pc:schemas:defs#/$defs/uuid" }
+  }
+}

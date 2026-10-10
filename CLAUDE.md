@@ -25,7 +25,8 @@ Read these before writing code, in this order:
 ## Working rules
 
 - **The kernel is domain-free.** Nothing under `kernel/` may import from `apps/`, mention
-  papers, agents or slots, or hard-code a vocabulary other than `vocab/kernel.yaml`. Domain
+  papers, slots or agent designs, or hard-code a vocabulary other than `vocab/kernel.yaml`
+  (its upper ontology: agents, sources, roles, ports, …). Domain
   knowledge enters only through vocabulary files, registered constraints and registered views.
   A test enforces the import rule.
 - **Applications use interfaces, not tables.** Code under `apps/`, `registry/` and the compiler

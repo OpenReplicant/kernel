@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_put_source input",
+  "type": "object", "additionalProperties": false,
+  "required": ["file", "media_type"],
+  "properties": {
+    "file": { "type": "string", "description": "Path of the file to store (copied under $PC_DATA/sources by hash)." },
+    "media_type": { "type": "string" },
+    "uri": { "type": "string" },
+    "license": { "type": "string" }
+  }
+}

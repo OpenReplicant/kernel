@@ -142,11 +142,16 @@ Each role *instance* in a system context (one per slot, say) gets its own port n
 
 ## Interfaces
 
-Python package `kernel`, with every operation also available as a tool-shaped script
-(`scripts/kernel_*.py`, JSON in and out) for RuleGo chains and, later, MCP.
+Python package `kernel` (`Kernel.connect()`), with the main operations also available as
+tool-shaped scripts (`scripts/kernel_*.py`, JSON in and out, schemas in `scripts/schemas/`)
+for RuleGo chains and, later, MCP.
+
+Node references are a UUID, an IRI, or a CURIE whose prefix a loaded vocabulary declares
+(`k:plays`). In `args`, a `uuid.UUID` is a node and anything else a literal; in the scripts'
+JSON, `{"node": ref}` or `{"value": …}`.
 
 **Sources and spans**
-- `put_source(file, uri, media_type, license=None, produced_by=None) -> sha256` (idempotent; stores by hash)
+- `put_source(file, media_type, uri=None, license=None) -> sha256` (idempotent; stores by hash). Who produced it is an ordinary `k:produced_by` assertion about the source's node.
 - `add_span(sha256, locator, excerpt=None) -> span_id` (idempotent per source and locator)
 
 **Nodes and contexts**
@@ -156,6 +161,7 @@ Python package `kernel`, with every operation also available as a tool-shaped sc
 **Assertions**
 - `assert_(subject, predicate, object=None, value=None, *, context, method, confidence,
   evidence=(), args=None, valid_from=None, valid_to=None, status='accepted', asserted_by) -> assertion_id`
+- `add_evidence(assertion_id, spans, by)` (e.g. once a staged fact's source is stored)
 - `retract(assertion_id, reason, by)`
 - `supersede(old_id, new assertion…) -> new_id`
 - `link(from_id, to_id, kind)` for contradicts / corroborates / derived_from

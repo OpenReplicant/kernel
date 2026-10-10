@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pc:schemas:defs",
+  "$defs": {
+    "ref": { "type": "string", "minLength": 1, "description": "Node UUID, IRI, or CURIE with a loaded prefix (k:plays)." },
+    "time": { "type": "string", "format": "date-time" },
+    "method": { "enum": ["stated", "observed", "inferred", "computed", "defaulted"] },
+    "status": { "enum": ["staged", "accepted", "disputed", "superseded", "retracted"] },
+    "uuid": { "type": "string", "pattern": "^[0-9a-f-]{36}$" },
+    "assertion": {
+      "type": "object",
+      "required": ["id", "subject", "predicate", "context", "method", "confidence", "status", "asserted_by", "recorded_at", "args"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "subject": { "type": "string" }, "predicate": { "type": "string" },
+        "object": { "type": ["string", "null"] }, "value": {},
+        "context": { "type": "string" }, "method": { "$ref": "#/$defs/method" },
+        "confidence": { "type": "number" }, "status": { "$ref": "#/$defs/status" },
+        "valid_from": { "type": ["string", "null"] }, "valid_to": { "type": ["string", "null"] },
+        "recorded_at": { "type": "string" }, "asserted_by": { "type": "string" },
+        "args": { "type": "object" }
+      }
+    }
+  }
+}

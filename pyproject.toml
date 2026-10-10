@@ -22,3 +22,5 @@ include = ["pclib*", "kernel*", "apps*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+pythonpath = ["."]

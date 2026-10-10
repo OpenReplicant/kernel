@@ -18,3 +18,15 @@ Start with:
 - `docs/KERNEL.md` — the kernel's constructs and interfaces
 - `docs/V1_BUILD_PLAN.md` — milestones M0–M9 and their acceptance gates
 - `CLAUDE.md` — working rules for Claude Code sessions building it
+
+## Running
+
+```sh
+python -m venv .venv && .venv/bin/pip install -e ".[test]"
+podman compose up -d postgres            # or any Postgres 16; see .env.example
+export DATABASE_URL=postgresql://kernel:kernel@127.0.0.1:5432/kernel
+.venv/bin/pytest                         # each session creates and drops its own database
+```
+
+Status: M1 (script contract) and M2 (kernel core) gates pass. Next: M3 (vocabularies,
+validation, views); M0 (RuleGo spike) can run alongside.

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kernel_query output",
+  "type": "object", "additionalProperties": false,
+  "required": ["assertions"],
+  "properties": { "assertions": { "type": "array", "items": { "$ref": "urn:pc:schemas:defs#/$defs/assertion" } } }
+}
