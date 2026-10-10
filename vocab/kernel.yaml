@@ -1,0 +1,28 @@
+# Kernel vocabulary: the predicates every domain shares. Loaded first.
+vocabulary: kernel
+version: "0.1"
+prefix: { k: "urn:pc:kernel:" }
+
+types:
+  - { iri: k:Thing }
+  - { iri: k:Role }
+  - { iri: k:Port }
+  - { iri: k:Capability }
+  - { iri: k:Context }
+  - { iri: k:Agent }
+
+predicates:
+  - { iri: k:is_a,        domain: k:Thing,  range: k:Thing }      # classification (types are things)
+  - { iri: k:part_of,     domain: k:Thing,  range: k:Thing }
+  - { iri: k:refines,     domain: k:Context, range: k:Context, max: 1 }
+  - { iri: k:plays,       domain: k:Thing,  range: k:Role }       # binding: thing fills role, in the assertion's context
+  - { iri: k:has_port,    domain: k:Role,   range: k:Port }
+  - { iri: k:couples,     domain: k:Port,   range: k:Port, args: [kind] }   # kind: call|event|stream|shared_state|flow|causal
+  - { iri: k:has_capability,      domain: k:Thing, range: k:Capability }
+  - { iri: k:requires_capability, domain: k:Role,  range: k:Capability }
+  - { iri: k:label,       domain: k:Thing,  range: literal, max: 1 }
+  - { iri: k:same_as,     domain: k:Thing,  range: k:Thing }      # always hedged by confidence; never merges rows
+
+coupling_kinds: [call, event, stream, shared_state, flow, causal]
+methods: [stated, repo, inferred, defaulted, observed, computed]
+context_kinds: [world, perspective, system, run, staging, vocabulary]

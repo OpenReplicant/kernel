@@ -1,0 +1,9 @@
+# Data root (sources, repos, runs, caches) — see docs/FILESYSTEM.md
+data/
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# Local secrets
+.env

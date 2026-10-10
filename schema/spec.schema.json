@@ -1,0 +1,433 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-compiler.local/schema/spec.schema.json",
+  "title": "Paper Spec",
+  "description": "Machine-readable blueprint of one agent-design paper: the primitives it touches, the assets it needs, how they are wired, and how to check the reproduction. Every value a paper might not state carries provenance.",
+  "type": "object",
+  "required": ["schema_version", "paper", "mechanism", "slots", "assets", "wiring", "models", "evaluation", "behavior_tests", "fidelity"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "0.1" },
+
+    "paper": {
+      "type": "object",
+      "required": ["id", "title", "authors", "year", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ident", "description": "Stable toggle id, e.g. 'reflexion'." },
+        "title": { "type": "string" },
+        "authors": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "year": { "type": "integer", "minimum": 1990 },
+        "venue": { "type": "string" },
+        "arxiv": { "type": "string", "pattern": "^[0-9]{4}\\.[0-9]{4,5}(v[0-9]+)?$" },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Everything the extractor read. Repo entries must be pinned to a commit.",
+          "items": {
+            "type": "object",
+            "required": ["kind", "ref"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "enum": ["pdf", "appendix", "repo", "blog", "talk", "errata"] },
+              "ref": { "type": "string" },
+              "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+              "license": { "type": "string", "description": "SPDX id for repos, e.g. MIT." }
+            },
+            "allOf": [
+              { "if": { "properties": { "kind": { "const": "repo" } } }, "then": { "required": ["commit", "license"] } }
+            ]
+          }
+        }
+      }
+    },
+
+    "mechanism": {
+      "type": "object",
+      "required": ["summary", "claims"],
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string", "description": "One paragraph, in the compiler's own words, of what the technique changes about an agent." },
+        "claims": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "What the paper says the mechanism causes. Behavior tests and evaluation should trace back to these."
+        }
+      }
+    },
+
+    "slots": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Primitive bindings. Cardinality (exclusive / pipeline / multi-instance) comes from the slot registry, not from here.",
+      "items": { "$ref": "#/$defs/slotBinding" }
+    },
+
+    "assets": {
+      "type": "array",
+      "description": "Infrastructure the slots need. Slots reference these by id.",
+      "items": { "$ref": "#/$defs/asset" }
+    },
+
+    "wiring": {
+      "type": "array",
+      "description": "Edges between slot events and slot inputs. Compiles to RuleGo connections.",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "additionalProperties": false,
+        "properties": {
+          "from": { "type": "string", "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$", "description": "slot_id.event, e.g. episode_eval.fail" },
+          "to": { "type": "string", "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$", "description": "slot_id.input, e.g. reflector.run" },
+          "condition": { "type": "string", "description": "Optional expression evaluated on the message metadata." },
+          "provenance": { "$ref": "#/$defs/provenance" },
+          "source_ref": { "type": "string" }
+        }
+      }
+    },
+
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["role", "paper_model", "use_model", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "$ref": "#/$defs/ident", "description": "e.g. actor, evaluator, reflector, embedder." },
+          "paper_model": { "type": "string" },
+          "use_model": { "type": "string", "description": "What this reproduction actually calls." },
+          "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/param" } },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+
+    "evaluation": {
+      "type": "object",
+      "required": ["benchmark", "metrics", "paper_results", "acceptance"],
+      "additionalProperties": false,
+      "properties": {
+        "benchmark": { "type": "string" },
+        "harness_asset": { "$ref": "#/$defs/ident", "description": "Asset id of kind eval_harness." },
+        "split": { "type": "string" },
+        "subset": { "type": "string", "description": "How a scaled-down run samples the benchmark, if used." },
+        "metrics": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "baselines": { "type": "array", "items": { "type": "string" }, "description": "Other toggle sets to run alongside, e.g. ['react']." },
+        "paper_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["metric", "value", "condition"],
+            "additionalProperties": false,
+            "properties": {
+              "metric": { "type": "string" },
+              "value": { "type": "number" },
+              "condition": { "type": "string", "description": "Model, trials, setting the number was reported under." },
+              "source_ref": { "type": "string" }
+            }
+          }
+        },
+        "acceptance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["relative_gain", "absolute_tolerance", "mechanism_only"], "description": "relative_gain: beat the baseline by a margin; mechanism_only: behavior tests are the bar." },
+            "value": { "type": "number" },
+            "note": { "type": "string" }
+          },
+          "required": ["mode"]
+        }
+      }
+    },
+
+    "behavior_tests": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Assertions over execution traces that prove the mechanism is present, independent of score.",
+      "items": {
+        "type": "object",
+        "required": ["id", "claim", "given", "expect"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/ident" },
+          "claim": { "type": "string", "description": "Which mechanism.claims entry this checks." },
+          "given": { "$ref": "#/$defs/traceEvent" },
+          "within": { "enum": ["same_step", "next_step", "same_episode", "next_episode", "same_task", "any_later"] },
+          "expect": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/traceEvent" }
+          },
+          "negate": { "type": "boolean", "default": false }
+        }
+      }
+    },
+
+    "fidelity": {
+      "type": "object",
+      "required": ["overall", "gaps"],
+      "additionalProperties": false,
+      "properties": {
+        "overall": { "enum": ["full", "partial", "approximate"] },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["where", "reason", "expected_impact"],
+            "additionalProperties": false,
+            "properties": {
+              "where": { "type": "string", "description": "JSON path into this spec." },
+              "reason": { "type": "string" },
+              "expected_impact": { "enum": ["none", "low", "medium", "high", "unknown"] }
+            }
+          }
+        }
+      }
+    },
+
+    "compat": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Composition notes beyond what slot cardinality already implies.",
+      "properties": {
+        "wraps": { "type": "array", "items": { "$ref": "#/$defs/ident" }, "description": "Toggles this one can wrap, e.g. tot wraps react." },
+        "conflicts": { "type": "array", "items": { "$ref": "#/$defs/ident" } },
+        "requires": { "type": "array", "items": { "$ref": "#/$defs/ident" } },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+
+  "$defs": {
+    "ident": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+
+    "provenance": {
+      "enum": ["stated", "repo", "inferred", "defaulted"],
+      "description": "stated: in the paper or appendix. repo: only in published code. inferred: compiler's reading of ambiguous text. defaulted: platform default, paper silent."
+    },
+
+    "param": {
+      "type": "object",
+      "required": ["value", "provenance"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {},
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "source_ref": { "type": "string" },
+        "sweep": { "type": "array", "description": "Optional values for ablation grids." }
+      }
+    },
+
+    "slotType": {
+      "enum": [
+        "context_builder", "policy", "planner", "world_model",
+        "action_space", "observation_processor",
+        "evaluator", "reflector", "refiner",
+        "memory", "context_manager",
+        "controller", "search", "aggregator", "topology", "curriculum"
+      ]
+    },
+
+    "scope": { "enum": ["call", "step", "episode", "task", "lifetime"] },
+
+    "implementation": {
+      "type": "object",
+      "required": ["source", "kind", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "enum": ["registry", "paper_code", "generated"],
+          "description": "Resolution order is registry, then paper_code, then generated."
+        },
+        "kind": {
+          "enum": ["rulego_node", "exec_node", "sub_chain", "mcp_tool", "aspect"],
+          "description": "mcp_tool only for things the model itself invokes. Internal primitives use rulego_node, exec_node, sub_chain or aspect."
+        },
+        "ref": { "type": "string", "description": "Registry id, repo path, or generated file path." },
+        "entrypoint": { "type": "string" },
+        "wrapper": { "type": "string", "description": "Adapter file when paper code needs to meet the slot interface." },
+        "asset": { "$ref": "#/$defs/ident", "description": "For mcp_tool: the mcp_server asset that serves it." }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "mcp_tool" } } }, "then": { "required": ["asset"] } }
+      ]
+    },
+
+    "slotBinding": {
+      "type": "object",
+      "required": ["id", "slot", "scope", "implementation", "provenance"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ident" },
+        "slot": { "$ref": "#/$defs/slotType" },
+        "subtype": { "type": "string", "description": "e.g. memory: episodic|semantic|procedural|working; evaluator target: proposal|state|output|trajectory." },
+        "scope": { "$ref": "#/$defs/scope" },
+        "mode": { "enum": ["replace", "wrap", "add"], "default": "add", "description": "replace/wrap matter for exclusive slots." },
+        "order": { "type": "integer", "description": "Position within pipeline slots; maps to RuleGo aspect Order." },
+        "implementation": { "$ref": "#/$defs/implementation" },
+        "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/param" } },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "file", "provenance"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/ident" },
+              "file": { "type": "string", "pattern": "^prompts/" },
+              "source_ref": { "type": "string" },
+              "provenance": { "$ref": "#/$defs/provenance" }
+            }
+          }
+        },
+        "uses_assets": { "type": "array", "items": { "$ref": "#/$defs/ident" } },
+        "model_role": { "$ref": "#/$defs/ident" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "source_ref": { "type": "string", "description": "Section, figure, algorithm or file:line it came from." }
+      }
+    },
+
+    "asset": {
+      "type": "object",
+      "required": ["id", "kind", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ident" },
+        "kind": {
+          "enum": [
+            "vector_store", "kv_store", "relational", "graph", "blob", "code_store",
+            "environment", "mcp_server", "model_endpoint", "eval_harness", "external_service"
+          ]
+        },
+        "requirements": { "type": "object", "description": "Kind-level needs, e.g. {dims: 1024} for a vector store. Concrete product is chosen by the resolver." },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "source_ref": { "type": "string" },
+        "mcp": { "$ref": "#/$defs/mcpSourcing" },
+        "environment": { "$ref": "#/$defs/environmentSpec" },
+        "external": { "$ref": "#/$defs/externalService" }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "mcp_server" } } }, "then": { "required": ["mcp"] } },
+        { "if": { "properties": { "kind": { "const": "environment" } } }, "then": { "required": ["environment"] } },
+        { "if": { "properties": { "kind": { "const": "external_service" } } }, "then": { "required": ["external"] } }
+      ]
+    },
+
+    "mcpSourcing": {
+      "type": "object",
+      "required": ["strategy", "tools"],
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "enum": ["registry", "paper_code", "rulego_generated"],
+          "description": "registry: an existing server already in the platform. paper_code: the paper's published code wrapped and exposed through RuleGo's MCP endpoint. rulego_generated: new rule chains/components exposed through RuleGo's MCP endpoint."
+        },
+        "ref": { "type": "string", "description": "Registry id, or repo path for paper_code." },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "license": { "type": "string" },
+        "transport": { "enum": ["in_process", "stdio", "http"], "default": "in_process" },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "backing"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/ident" },
+              "description": { "type": "string" },
+              "backing": { "type": "string", "description": "chains/<file>.json or components/<file> that implements it." },
+              "input_schema": { "type": "object" }
+            }
+          }
+        },
+        "promote_to_registry": { "type": "boolean", "default": true }
+      },
+      "allOf": [
+        { "if": { "properties": { "strategy": { "const": "paper_code" } } }, "then": { "required": ["ref", "commit", "license"] } }
+      ]
+    },
+
+    "environmentSpec": {
+      "type": "object",
+      "required": ["driver", "image", "lifecycle", "capabilities"],
+      "additionalProperties": false,
+      "properties": {
+        "driver": { "enum": ["podman", "docker", "kubernetes", "external"], "description": "Control-plane driver. external = something already running that we only attach to." },
+        "image": { "type": "string", "description": "Image ref or build context path under assets/." },
+        "lifecycle": {
+          "enum": ["per_run", "per_task", "per_episode", "per_branch"],
+          "description": "When a fresh instance is provisioned. per_branch implies snapshot/restore."
+        },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["exec", "files", "network", "snapshot", "restore", "gpu", "display", "reset"] }
+        },
+        "snapshot_method": { "enum": ["none", "volume_copy", "image_commit", "criu", "app_level"], "default": "none" },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": { "type": "number" },
+            "memory_mb": { "type": "integer" },
+            "gpu": { "type": "integer" },
+            "timeout_s": { "type": "integer" }
+          }
+        },
+        "network": { "enum": ["none", "allowlist", "open"], "default": "none" },
+        "allowlist": { "type": "array", "items": { "type": "string" } },
+        "health_check": { "type": "string" },
+        "reset_command": { "type": "string", "description": "Cheaper than reprovisioning when lifecycle is per_episode." }
+      },
+      "allOf": [
+        { "if": { "properties": { "lifecycle": { "const": "per_branch" } } }, "then": { "properties": { "capabilities": { "contains": { "const": "snapshot" } } } } }
+      ]
+    },
+
+    "externalService": {
+      "type": "object",
+      "required": ["purpose", "auth", "determinism"],
+      "additionalProperties": false,
+      "properties": {
+        "purpose": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "auth": {
+          "type": "object",
+          "required": ["method"],
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["none", "api_key", "oauth", "mtls"] },
+            "secret_ref": { "type": "string", "pattern": "^secret://", "description": "Never a literal credential." }
+          }
+        },
+        "rate_limit": { "type": "string" },
+        "cost_per_call_usd": { "type": "number" },
+        "determinism": {
+          "enum": ["live", "record_replay", "mock"],
+          "description": "record_replay captures responses on first run so later reproductions are stable and cheap."
+        }
+      }
+    },
+
+    "traceEvent": {
+      "type": "object",
+      "required": ["event"],
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "enum": [
+            "episode.start", "episode.end", "step.start", "step.end",
+            "llm.request", "llm.response", "tool.call", "tool.result",
+            "slot.emit", "memory.write", "memory.read", "env.snapshot", "env.restore",
+            "controller.decision"
+          ]
+        },
+        "slot": { "$ref": "#/$defs/ident" },
+        "port": { "type": "string", "description": "Slot event name for slot.emit, e.g. fail, insight." },
+        "where": { "type": "object", "description": "Field predicates on the event payload, e.g. {decision: retry}." },
+        "contains_output_of": { "$ref": "#/$defs/ident", "description": "Payload must include the most recent output of this slot." }
+      }
+    }
+  }
+}
