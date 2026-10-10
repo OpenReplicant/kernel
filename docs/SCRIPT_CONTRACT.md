@@ -5,7 +5,8 @@ All scripts use `pclib`, which implements this contract so each script is mostly
 
 ## Input
 
-One JSON object on **stdin**:
+One JSON object, the **envelope**: as the last command-line argument (how RuleGo's `exec`
+node passes it, `${data}`; the node has no stdin), or on **stdin** when there is none:
 
 ```json
 {
@@ -18,14 +19,23 @@ One JSON object on **stdin**:
 }
 ```
 
-`step_key` must be unique within a run. Build it from task, trial/episode and step name.
+`step_key` must be unique within a run. Inside chains it is omitted and `pclib` builds it as
+`task=<task_id>/ep=<episode>/<step>` from `--step <name>` (the slot id), so one script can
+fill several slots. Other options: `--timeout <seconds>` (RuleGo's exec node has no timeout).
+
+The envelope must stay under 120 KB (one argv element is capped at 128 KiB): store prompts,
+code and logs and pass references.
 
 ## Output
 
-One JSON object on **stdout**, which becomes the next message's data:
+The step function returns `{"data": ..., "meta": ...}` (and may return `"episode"`, e.g. a
+controller starting the next trial). `pclib` prints the **next envelope** on stdout, the
+input's `run_id`, `task_id` and `episode` with the new `data` and `meta`, which becomes the
+next step's input:
 
 ```json
-{ "data": { "...": "step-specific output" }, "meta": { "...": "optional" } }
+{ "run_id": "uuid", "task_id": "HumanEval/12", "episode": 2,
+  "data": { "...": "step-specific output" }, "meta": { "...": "optional" } }
 ```
 
 Logs and diagnostics go to **stderr** only. Nothing else may be printed to stdout; `pclib`
@@ -65,5 +75,5 @@ Only through `scripts/claude_call.py` / `pclib.claude()`. It:
 
 ## Fallback if process start-up is too slow
 
-Keep this exact JSON contract but serve scripts from one long-running containerized Python
-service that chains call over HTTP. Only do this if step timings show start-up rivaling the work.
+Measured in M0: ~25–30 ms per step. If that ever rivals the work, keep this exact JSON
+contract but serve scripts from one long-running Python service that chains call over HTTP.

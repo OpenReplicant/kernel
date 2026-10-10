@@ -22,7 +22,7 @@ and must pass before M7.
 
 ---
 
-## M0 — Spike: confirm the RuleGo assumptions (alongside M1–M3; gates M7)
+## M0 — Spike: confirm the RuleGo assumptions (alongside M1–M3; gates M7) — done, see `docs/RULEGO_NOTES.md`
 
 The design assumes things about RuleGo that haven't been confirmed. Check them in the pinned
 version's docs and source, try each one with a toy chain, and write the findings to

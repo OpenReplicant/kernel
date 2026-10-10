@@ -28,5 +28,8 @@ export DATABASE_URL=postgresql://kernel:kernel@127.0.0.1:5432/kernel
 .venv/bin/pytest                         # each session creates and drops its own database
 ```
 
-Status: M1 (script contract) and M2 (kernel core) gates pass. Next: M3 (vocabularies,
-validation, views); M0 (RuleGo spike) can run alongside.
+RuleGo (M0): `podman compose up -d rulego`, then
+`RULEGO_URL=http://127.0.0.1:9090 .venv/bin/pytest tests/smoke`.
+
+Status: M0 (RuleGo spike), M1 (script contract) and M2 (kernel core) gates pass.
+Next: M3 (vocabularies, validation, views).

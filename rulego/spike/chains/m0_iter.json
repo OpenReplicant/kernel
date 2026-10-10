@@ -1,0 +1,117 @@
+{
+  "ruleChain": {
+    "id": "m0_iter",
+    "name": "m0_iter",
+    "root": false
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "inc",
+        "type": "exec",
+        "name": "inc",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/steps/inc.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      },
+      {
+        "id": "judge",
+        "type": "exec",
+        "name": "judge",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/steps/judge.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      },
+      {
+        "id": "branch",
+        "type": "switch",
+        "name": "branch",
+        "configuration": {
+          "cases": [
+            {
+              "case": "msg.data.passed == true",
+              "then": "Even"
+            }
+          ]
+        }
+      },
+      {
+        "id": "even",
+        "type": "exec",
+        "name": "even",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/steps/even.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      },
+      {
+        "id": "odd",
+        "type": "exec",
+        "name": "odd",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/steps/odd.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      },
+      {
+        "id": "sub",
+        "type": "flow",
+        "name": "sub",
+        "configuration": {
+          "targetId": "m0_sub",
+          "extend": true
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "inc",
+        "toId": "judge",
+        "type": "Success"
+      },
+      {
+        "fromId": "judge",
+        "toId": "branch",
+        "type": "Success"
+      },
+      {
+        "fromId": "branch",
+        "toId": "even",
+        "type": "Even"
+      },
+      {
+        "fromId": "branch",
+        "toId": "odd",
+        "type": "Default"
+      },
+      {
+        "fromId": "even",
+        "toId": "sub",
+        "type": "Success"
+      },
+      {
+        "fromId": "odd",
+        "toId": "sub",
+        "type": "Success"
+      }
+    ]
+  }
+}

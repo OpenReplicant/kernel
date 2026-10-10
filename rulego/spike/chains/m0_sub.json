@@ -1,0 +1,25 @@
+{
+  "ruleChain": {
+    "id": "m0_sub",
+    "name": "m0_sub",
+    "root": false
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "double",
+        "type": "exec",
+        "name": "double",
+        "configuration": {
+          "cmd": "python3",
+          "args": [
+            "/repo/rulego/spike/steps/double.py",
+            "${data}"
+          ],
+          "replaceData": true
+        }
+      }
+    ],
+    "connections": []
+  }
+}

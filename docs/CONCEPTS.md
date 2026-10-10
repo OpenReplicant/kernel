@@ -67,7 +67,9 @@ Scripts write semantic events to `run.trace`. Use exactly these names (they matc
 ## Agents are chains
 
 An agent loop is a chain of slot steps (context builder → policy → action → observation →
-evaluator → controller) that re-invokes itself until the controller says stop. In
+evaluator → controller) that runs again until the controller says stop: in RuleGo, a `while`
+node re-runs the acyclic **iteration chain**, feeding each iteration's output into the next
+(docs/RULEGO_NOTES.md). Recursive designs can call their own chain through a `flow` node. In
 `spec.yaml`, wiring connects output ports to input ports; `task.start` and `task.end` mark
 where a task enters and leaves. A slot instance may declare ports beyond its type's minimum
 (`ports: ["tests:out"]`). Each slot is a

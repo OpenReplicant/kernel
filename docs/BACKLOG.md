@@ -7,7 +7,7 @@ Add new ideas here instead of building them.
 - [ ] OpenTelemetry through RuleGo's OpenTelemetry component, with GenAI spans from scripts and a Collector
 - [ ] Snapshot, restore and branching for search papers (Tree of Thoughts, LATS)
 - [ ] Record/replay gateway for external services and repeated model calls
-- [ ] Long-running containerized script service if per-step start-up shows in timings
+- [ ] Long-running containerized script service if per-step start-up shows in timings (M0: ~25–30 ms per step)
 - [ ] Ingestion beyond papers: segmenters, entity resolution, vocabulary proposals
 - [ ] Interactive evidence: chats and embodied sessions written as session contexts with transcript sources
 - [ ] Source reliability scoring from reproduction outcomes (`k:reliability`, evidenced)
@@ -19,7 +19,7 @@ Add new ideas here instead of building them.
 - [ ] Compile AgentSquare's 16 agents as a comparison set for the paper
 - [ ] Harder benchmark than HumanEval if the baseline saturates it
 - [ ] Platform MCP server: RuleGo's MCP endpoint exposing chains for registry search, spec validation, running chains, reading traces
-- [ ] Move tracing, checkpoints and budget checks into rule-engine aspects (Go) if M0 confirms core AOP
+- [ ] Move tracing, checkpoints and budget checks into rule-engine aspects: M0 confirmed core AOP covers every node, but aspects are Go registered at engine creation, so this needs a custom server build
 - [ ] Stronger sandbox isolation (gVisor or Kata runtime under Podman) before running untrusted paper repos at scale
 - [ ] Object storage behind the same `$PC_DATA` key scheme
 - [ ] Compile the compiler: describe the compile-paper pipeline itself as a spec, so it can be improved by the same process

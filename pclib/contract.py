@@ -11,16 +11,25 @@ A step script is a function from the input envelope to {"data": ..., "meta": ...
     if __name__ == "__main__":
         run_step(main)
 
-run_step reads one JSON object from stdin, returns the stored output if this
-(run_id, step_key) already finished, otherwise runs the function and commits its
-output, usage and trace events in one transaction, then prints the output as the
-only thing on stdout. A failed step leaves no rows, so a rerun never duplicates events.
+Invocation: `step.py [--step NAME] [--timeout SECONDS] [ENVELOPE]`. RuleGo's exec node has
+no stdin, so chains pass the envelope as the last argument (`${data}`); without it, the
+envelope is read from stdin.
+
+run_step returns the stored output if this (run_id, step_key) already finished, otherwise
+runs the function and commits its output, usage and trace events in one transaction. It
+prints the envelope for the next step (the input's run, task and episode with the new data
+and meta) as the only thing on stdout. A failed step leaves no rows, so a rerun never
+duplicates events.
 """
+import argparse
 import contextlib
 import json
+import os
+import signal
 import sys
 import traceback
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 from psycopg.types.json import Jsonb
@@ -31,6 +40,10 @@ EXIT_OK = 0
 EXIT_RETRYABLE = 75
 EXIT_FAILED = 1
 
+# The envelope travels as one argv element between chain steps; Linux caps a single
+# argument at 128 KiB (MAX_ARG_STRLEN). Larger content goes by reference (docs/RULEGO_NOTES.md).
+MAX_ENVELOPE_BYTES = int(os.environ.get("PC_MAX_ENVELOPE_BYTES", 120_000))
+
 # Must match traceEvent in schema/spec.schema.json (a contract test checks this).
 TRACE_EVENTS = frozenset({
     "episode.start", "episode.end", "step.start", "step.end",
@@ -39,9 +52,15 @@ TRACE_EVENTS = frozenset({
     "controller.decision",
 })
 
+ENVELOPE_KEYS = {"run_id", "step_key", "task_id", "episode", "data", "meta"}
+
 
 class Retryable(Exception):
     """Raise for transient failures (rate limit, network); the script exits 75."""
+
+
+class StepTimeout(Exception):
+    pass
 
 
 @dataclass
@@ -54,17 +73,27 @@ class StepInput:
     meta: dict = field(default_factory=dict)
 
     @classmethod
-    def parse(cls, raw: str) -> "StepInput":
+    def parse(cls, raw: str, step_name: str | None = None) -> "StepInput":
         obj = json.loads(raw)
         if not isinstance(obj, dict):
             raise ValueError("input must be a JSON object")
-        missing = [k for k in ("run_id", "step_key") if not obj.get(k)]
-        if missing:
-            raise ValueError(f"input is missing {', '.join(missing)}")
-        unknown = set(obj) - {"run_id", "step_key", "task_id", "episode", "data", "meta"}
+        unknown = set(obj) - ENVELOPE_KEYS
         if unknown:
             raise ValueError(f"unknown input keys: {', '.join(sorted(unknown))}")
+        if not obj.get("run_id"):
+            raise ValueError("input is missing run_id")
+        if not obj.get("step_key"):
+            if not step_name:
+                raise ValueError("input is missing step_key (or pass --step)")
+            obj["step_key"] = f"task={obj.get('task_id')}/ep={obj.get('episode')}/{step_name}"
         return cls(**obj)
+
+    def next_envelope(self, output: dict) -> dict:
+        """What the next step receives: same run and task, this step's data and meta."""
+        env = {"run_id": self.run_id, "task_id": self.task_id,
+               "episode": output.get("episode", self.episode),
+               "data": output["data"], "meta": output.get("meta", {})}
+        return {k: v for k, v in env.items() if v is not None}
 
 
 @dataclass
@@ -126,28 +155,56 @@ def _commit(conn, step: _Step, output: dict):
     return output
 
 
-def run_step(fn: Callable[[StepInput], dict], stdin=None, stdout=None) -> int:
-    """Run one step under the contract. Exits the process unless stdin/stdout are given."""
+def _render(inp: StepInput, output: dict) -> str:
+    # Sorted keys: a replayed step prints the same bytes.
+    text = json.dumps(inp.next_envelope(output), sort_keys=True)
+    if len(text.encode()) > MAX_ENVELOPE_BYTES:
+        raise ValueError(f"output envelope is {len(text.encode())} bytes, over {MAX_ENVELOPE_BYTES}; "
+                         "store large content (prompts, code, logs) and pass a reference")
+    return text
+
+
+def _check_result(result) -> dict:
+    if not isinstance(result, dict) or "data" not in result:
+        raise TypeError("step must return a dict with a 'data' key")
+    if set(result) - {"data", "meta", "episode"}:
+        raise TypeError("step output may only have 'data', 'meta' and 'episode' keys")
+    return result
+
+
+def _on_alarm(signum, frame):
+    raise StepTimeout("step exceeded its --timeout")
+
+
+def run_step(fn: Callable[[StepInput], dict], argv=None, stdin=None, stdout=None) -> int:
+    """Run one step under the contract. Exits the process unless stdout is given."""
     global _current
-    stdin = stdin or sys.stdin
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--step", help="step name, used to build step_key when the envelope has none")
+    ap.add_argument("--timeout", type=float, help="wall-clock limit for this step, seconds")
+    ap.add_argument("envelope", nargs="?", help="input envelope as JSON (default: stdin)")
+    args = ap.parse_args(sys.argv[1:] if argv is None else argv)
     real_stdout = stdout or sys.stdout
     code = EXIT_FAILED
     try:
-        inp = StepInput.parse(stdin.read())
+        raw = args.envelope if args.envelope is not None else (stdin or sys.stdin).read()
+        inp = StepInput.parse(raw, args.step or Path(sys.argv[0]).stem)
         with connect(autocommit=True) as conn:
             output = _stored_output(conn, inp)
             if output is None:
                 _current = _Step(inp)
-                # Anything the step prints goes to stderr; stdout carries only the result.
-                with contextlib.redirect_stdout(sys.stderr):
-                    result = fn(inp)
-                if not isinstance(result, dict) or "data" not in result:
-                    raise TypeError("step must return a dict with a 'data' key")
-                if set(result) - {"data", "meta"}:
-                    raise TypeError("step output may only have 'data' and 'meta' keys")
+                if args.timeout:
+                    signal.signal(signal.SIGALRM, _on_alarm)
+                    signal.setitimer(signal.ITIMER_REAL, args.timeout)
+                try:
+                    # Anything the step prints goes to stderr; stdout carries only the result.
+                    with contextlib.redirect_stdout(sys.stderr):
+                        result = _check_result(fn(inp))
+                finally:
+                    signal.setitimer(signal.ITIMER_REAL, 0)
+                _render(inp, result)          # size check before anything is stored
                 output = _commit(conn, _current, result)
-        real_stdout.write(json.dumps(output, sort_keys=True))   # same bytes on replay
-        real_stdout.write("\n")
+        real_stdout.write(_render(inp, output) + "\n")
         real_stdout.flush()
         code = EXIT_OK
     except Retryable:

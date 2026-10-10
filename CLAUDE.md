@@ -43,8 +43,12 @@ Read these before writing code, in this order:
 - **Verify, don't assume, RuleGo details** (M0). Record findings in `docs/RULEGO_NOTES.md`.
 - **Stock RuleGo only.** No custom Go components in v1. Chains wire Python scripts together.
 - **Agents are chains, not RuleGo's agent node.** Don't use the `ai/agent` component. An agent
-  loop is a chain of slot steps that re-invokes itself until its controller says stop. Keep
-  slots as separate steps so a paper's distinctive parts can be swapped and combined.
+  loop is a `while` node over an acyclic iteration chain of slot steps, repeated until its
+  controller says stop (recursion through `flow` where a design needs it). Keep slots as
+  separate `exec` steps so a paper's distinctive parts can be swapped and combined.
+- **RuleGo runs in a container** (`rulego/Containerfile`, compose service `rulego`) with the
+  repo read-only at `/repo`. Exec nodes have no stdin or timeout and cap an argument at
+  128 KiB; `pclib` handles all three (docs/RULEGO_NOTES.md).
 - **Two kinds of code, treated differently.**
   - *Payloads* (solutions the agent writes, benchmark code, anything a model produces at run
     time) execute only inside the Podman sandbox: no network, no mounted secrets,
@@ -59,14 +63,15 @@ Read these before writing code, in this order:
 
 - Python 3.11+, `psycopg` 3, `anthropic`, `pytest`, `pyyaml`, `jsonschema` (`pyproject.toml`)
 - PostgreSQL 16, plain (no extensions in v1). Schemas in `db/001_kernel.sql`, `db/002_runtime.sql`
-- RuleGo server, pinned version; where it runs (host or container) is decided in M0
+- RuleGo-Server v0.38.0, standard components, built into `rulego/Containerfile`
 - Podman, rootless, for sandboxes and Postgres (`podman compose` or `podman-compose`)
 - No MCP in v1; every script is tool-shaped (JSON Schema in and out) so it can be exposed later
 
 ## Layout to create
 
 ```
-compose.yml               postgres (+ rulego if M0 puts it in a container) + sandbox image build
+compose.yml               postgres + rulego + sandbox image build
+rulego/                   Containerfile, config.conf, spike/ (M0 toy chains and steps)
 db/                       001_kernel.sql, 002_runtime.sql (exist)
 vocab/                    kernel.yaml, agent_design.yaml, infra.yaml (exist)
 kernel/                   the kernel library — domain-free
