@@ -1,0 +1,23 @@
+# A toy domain for kernel tests: nothing to do with agents or papers.
+vocabulary: thermostat
+version: "1"
+imports: [kernel]
+prefix: { th: "urn:test:thermostat:" }
+
+types:
+  - { iri: th:Device, is_a: k:Thing }
+  - { iri: th:Heater, is_a: th:Device }
+
+statuses: [ok, overshooting, "heater works", "heater overshoots", "heater broken"]
+
+predicates:
+  - { iri: th:temperature, domain: k:Thing,  range: literal }
+  - { iri: th:setpoint,    domain: k:Thing,  range: literal }
+  - { iri: th:status,      domain: k:Thing,  range: literal }
+  - { iri: th:mode,        domain: th:Device, range: literal, max: 1, enum: [heat, "off"] }
+  - { iri: th:controls,    domain: th:Device, range: th:Heater, args: [loop] }
+  - { iri: th:watts,       domain: th:Heater, range: literal, max: 1 }
+
+constraints:
+  - { kind: required, predicate: th:mode, for: th:Device, in: system }
+  - { kind: python, name: heaters_have_watts }

@@ -3,7 +3,7 @@
 #   - knowing: who or what a fact comes from, and how far to trust it
 #   - structure: what things are, what they are made of and depend on, how they connect
 vocabulary: kernel
-version: "0.2"
+version: "0.3"
 prefix: { k: "urn:pc:kernel:" }
 
 # Each kernel type is backed by a node kind. A node satisfies a type if its kind backs that
@@ -23,7 +23,7 @@ predicates:
   # assertion are columns, not predicates; these say things about sources and agents.
   - { iri: k:produced_by, domain: k:Source,  range: k:Agent, args: [as] }   # as: author|speaker|recorder|instrument|...
   - { iri: k:produced_at, domain: k:Source,  range: literal, max: 1 }       # when the recording was made (not when we stored it)
-  - { iri: k:holds,       domain: k:Agent,   range: k:Context }             # the perspective context of an agent's or source's claims
+  - { iri: k:holds,       domain: k:Thing,   range: k:Context }             # the perspective context of an agent's or source's claims
   - { iri: k:reliability, domain: k:Thing,   range: literal }               # 0..1, about a source or agent; itself evidenced, per context
   # Structure
   - { iri: k:is_a,        domain: k:Thing,   range: k:Type }      # classification (types are nodes)

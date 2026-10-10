@@ -41,7 +41,7 @@ predicates cover what is said *about* sources and agents.
 | `k:Source` | A recording: document, code, transcript, sensor log, run trace. Every `kb.source` row is also a node |
 | `k:produced_by` (Source → Agent, arg `as`) | Who made the recording, and as what: author, speaker, recorder, instrument |
 | `k:produced_at` | When the recording was made (not when the kernel stored it) |
-| `k:holds` (Agent → Context) | The perspective context holding that agent's claims |
+| `k:holds` (Thing → Context) | The perspective context holding the claims of an agent or source |
 | `k:reliability` | How far claims from a source or agent hold up, 0..1. An assertion like any other, so it carries its own evidence (e.g. reproductions) and differs per context |
 
 Two different "who"s: `asserted_by` is the agent that **wrote the row** (the compiler, a
@@ -174,14 +174,24 @@ JSON, `{"node": ref}` or `{"value": …}`.
 
 **Vocabularies, constraints, validation**
 - `load_vocabulary(path)`: registers types, roles, ports, predicates (domain, range, `max`,
-  `args`, enums) and declarative constraints from a YAML file
+  `args`, enums) and declarative constraints from a YAML file. From then on `assert_` refuses
+  (`SchemaError`) an undeclared predicate, a subject or object outside the domain or range, a
+  literal outside its enum, or missing required args
+- `satisfies(node, type)`: the domain/range rule below
 - `register_constraint(vocab, name, fn)`: a Python check for rules too specific for YAML;
   applications register these, the kernel runs them
-- `validate(context) -> errors`: declarative and registered constraints, over accepted and
-  staged assertions
+- `validate(context) -> errors`: each predicate's `max`, `required` constraints and registered
+  Python constraints, over accepted and staged assertions in the context and its sub-contexts.
+  A declared Python constraint that nothing registered is itself an error
 
 **Promotion**
 - `promote(context, by)`: accepts the context's staged assertions if `validate` passes
+  (otherwise `ValidationFailed` with the errors)
+
+**Modules** (docs/ARCHITECTURE.md)
+- `load_module(name)`: finds `<name>/module.yaml` under `$PC_MODULES` (default `./modules`),
+  loads its `depends` first, then its `vocab` files, then calls `register(kernel)` on its
+  `python` package. Constraints and views are registered per process.
 
 **Views**
 - `register_view(name, export_fn, import_fn)`: an application-defined document format backed

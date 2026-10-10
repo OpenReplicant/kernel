@@ -30,14 +30,14 @@ def test_put_assert_query_why_through_scripts(db_url, tool, tmp_path):
     ns = f"urn:test:{uuid.uuid4().hex[:8]}:"
     k.ensure_node("agent", ns + "me")
     k.ensure_node("thing", ns + "room")
-    k.ensure_node("predicate", ns + "temperature")
+    k.load_vocabulary(Path(__file__).parent / "thermostat.yaml")
     ctx = k.create_context("session", "morning readings", iri=ns + "ctx")
     log = tmp_path / "log.txt"
     log.write_text(f"21.5C {ns}\n")
 
     src = tool("kernel_put_source", {"file": str(log), "media_type": "text/plain"})
     a = tool("kernel_assert", {
-        "subject": ns + "room", "predicate": ns + "temperature", "value": 21.5, "context": ns + "ctx",
+        "subject": ns + "room", "predicate": "th:temperature", "value": 21.5, "context": ns + "ctx",
         "method": "observed", "confidence": 0.9, "asserted_by": ns + "me",
         "evidence": [{"sha256": src["sha256"], "locator": {"line_start": 1, "line_end": 1}, "excerpt": "21.5C"}],
         "args": {"unit": {"value": "C"}}})
@@ -49,7 +49,7 @@ def test_put_assert_query_why_through_scripts(db_url, tool, tmp_path):
 
     # No evidence for an observed fact: the script fails, nothing is written.
     bad = tool("kernel_assert", {
-        "subject": ns + "room", "predicate": ns + "temperature", "value": 30, "context": ns + "ctx",
+        "subject": ns + "room", "predicate": "th:temperature", "value": 30, "context": ns + "ctx",
         "method": "observed", "confidence": 0.9, "asserted_by": ns + "me"}, ok=False)
     assert "EvidenceRequired" in bad.stderr and bad.stdout == ""
     # Input that breaks the schema is refused before touching the kernel.

@@ -5,6 +5,7 @@ Node references may be given as a UUID, an IRI, or a CURIE whose prefix is loade
 (`k:plays`). Argument values that are `uuid.UUID` are nodes; anything else is a literal.
 """
 import hashlib
+import importlib
 import os
 import shutil
 import stat
@@ -12,7 +13,9 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
+
+import yaml
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -22,6 +25,7 @@ from . import vocab
 METHODS = ("stated", "observed", "inferred", "computed", "defaulted")
 NEEDS_EVIDENCE = ("stated", "observed")
 CONTEXT_KINDS = ("world", "perspective", "system", "session", "vocabulary")
+MODULES_DIR = Path(__file__).resolve().parent.parent / "modules"
 LINK_KINDS = ("supersedes", "contradicts", "corroborates", "derived_from")
 NODE_KINDS = ("thing", "type", "role", "port", "capability", "predicate", "context", "agent",
               "source", "constraint")
@@ -33,6 +37,16 @@ class KernelError(Exception):
 
 class EvidenceRequired(KernelError):
     pass
+
+
+class SchemaError(KernelError):
+    """An assertion doesn't fit the loaded vocabularies."""
+
+
+class ValidationFailed(KernelError):
+    def __init__(self, errors: list[str]):
+        super().__init__(f"{len(errors)} validation error(s): " + "; ".join(errors[:5]))
+        self.errors = errors
 
 
 @dataclass
@@ -75,7 +89,11 @@ class Kernel:
         self.conn = conn
         self.data_root = Path(data_root or os.environ.get("PC_DATA", "data")).resolve()
         self.prefixes = vocab.Prefixes()
-        vocab.load_prefixes(conn, self.prefixes)
+        self.schema = vocab.Schema()
+        vocab.load_recorded(conn, self.prefixes, self.schema)
+        self.constraints: dict[tuple[str, str], Callable] = {}
+        self.views: dict[str, tuple[Callable, Callable]] = {}
+        self.modules: dict[str, dict] = {}
 
     @classmethod
     def connect(cls, url: str | None = None, data_root=None) -> "Kernel":
@@ -85,7 +103,14 @@ class Kernel:
 
     def bootstrap(self):
         """Load the kernel vocabulary (idempotent)."""
-        return vocab.bootstrap(self)
+        return vocab.load(self, vocab.KERNEL_VOCAB)
+
+    def load_vocabulary(self, path) -> dict:
+        """Register a vocabulary file's types, roles, predicates, lists and constraints."""
+        try:
+            return vocab.load(self, path)
+        except (ValueError, KeyError) as e:
+            raise SchemaError(str(e)) from None
 
     # -- references --------------------------------------------------------------------
 
@@ -106,6 +131,47 @@ class Kernel:
         if kind and row[1] != kind:
             raise KernelError(f"node {ref!r} is a {row[1]}, expected {kind}")
         return row[0]
+
+    def _node(self, ref) -> tuple[uuid.UUID, str, str]:
+        """(id, kind, iri) of a node reference."""
+        nid = self.node_id(ref)
+        return self.conn.execute("select id, kind, iri from kb.node where id = %s", (nid,)).fetchone()
+
+    def satisfies(self, ref, type_iri: str) -> bool:
+        """Does a node satisfy a type? Its kind backs the type, or it has a k:is_a (accepted
+        or staged, any context) to the type or one of its subtypes."""
+        nid, kind, _ = self._node(ref)
+        type_iri = self.iri(type_iri)
+        if kind in self.schema.kinds_backing(type_iri):
+            return True
+        for (t,) in self.conn.execute(
+                """select o.iri from kb.assertion a join kb.node o on o.id = a.object
+                   where a.subject = %s and a.predicate = (select id from kb.node where iri = %s)
+                     and a.status in ('accepted', 'staged')""", (nid, self.iri("k:is_a"))):
+            if type_iri in self.schema.ancestors(t):
+                return True
+        return False
+
+    def _check_schema(self, predicate_iri, subject, object, value, args):
+        p = self.schema.predicates.get(predicate_iri)
+        if p is None:
+            raise SchemaError(f"predicate {predicate_iri} is not declared by a loaded vocabulary")
+        if p["domain"] and not self.satisfies(subject, p["domain"]):
+            raise SchemaError(f"{predicate_iri}: subject {subject} is not a {p['domain']}")
+        if p["range"] == vocab.LITERAL:
+            if value is None:
+                raise SchemaError(f"{predicate_iri} takes a literal value, not an object")
+            allowed = self.schema.enum_values(p)
+            if allowed is not None and value not in allowed:
+                raise SchemaError(f"{predicate_iri}: {value!r} is not one of {allowed}")
+        else:
+            if object is None:
+                raise SchemaError(f"{predicate_iri} takes an object node, not a literal")
+            if not self.satisfies(object, p["range"]):
+                raise SchemaError(f"{predicate_iri}: object {object} is not a {p['range']}")
+        missing = [a for a in p.get("args", []) if a not in (args or {})]
+        if missing:
+            raise SchemaError(f"{predicate_iri} requires args {missing}")
 
     def _actor(self, agent):
         """Inside a transaction: name the acting agent for kb.status_change."""
@@ -200,6 +266,10 @@ class Kernel:
         evidence = list(evidence)
         if method in NEEDS_EVIDENCE and status == "accepted" and not evidence:
             raise EvidenceRequired(f"a {method} assertion needs evidence spans (or status='staged')")
+        _, pkind, piri = self._node(predicate)
+        if pkind != "predicate":
+            raise KernelError(f"node {predicate!r} is a {pkind}, expected predicate")
+        self._check_schema(piri, subject, object, value, args)
         aid = uuid.uuid4()
         agent = self.node_id(asserted_by, "agent")
         with self.conn.transaction():
@@ -370,3 +440,94 @@ class Kernel:
         return [{"from": a.subject, "from_role": owner.get(a.subject), "to": a.object,
                  "to_role": owner.get(a.object), "kind": a.args.get("kind"), "args": a.args}
                 for a in self.query(predicate="k:couples", context=context)]
+
+    # -- validation and promotion ------------------------------------------------------
+
+    def register_constraint(self, vocabulary: str, name: str, fn: Callable):
+        """A Python check for a `{kind: python, name}` constraint in `vocabulary`.
+        fn(kernel, context_id, assertions) -> list of error strings."""
+        self.constraints[(vocabulary, name)] = fn
+
+    def validate(self, context) -> list[str]:
+        """Check a context (with sub-contexts), over accepted and staged assertions, against
+        every loaded vocabulary's constraints and each predicate's `max`."""
+        ctx = self.node_id(context, "context")
+        ctx_kind = self.context_props(ctx).get("ctx_kind")
+        rows = self.query(context=ctx, status=("accepted", "staged"))
+        errors = []
+        counts: dict[tuple[str, str], int] = {}
+        for a in rows:
+            counts[(a.subject, a.predicate)] = counts.get((a.subject, a.predicate), 0) + 1
+        for (subj, pred), n in counts.items():
+            mx = self.schema.predicates.get(pred, {}).get("max")
+            if mx is not None and n > mx:
+                errors.append(f"{subj} has {n} {pred} (max {mx})")
+        for vocab_name, c in self.schema.constraints:
+            if c.get("in") and c["in"] != ctx_kind:
+                continue
+            if c["kind"] == "required":
+                pred, typ = self.iri(c["predicate"]), self.iri(c["for"])
+                have = {a.subject for a in rows if a.predicate == pred}
+                for subj in sorted({a.subject for a in rows} - have):
+                    if self.satisfies(subj, typ):
+                        errors.append(f"{subj} ({typ}) has no {pred}")
+            elif c["kind"] == "python":
+                fn = self.constraints.get((vocab_name, c["name"]))
+                if fn is None:
+                    errors.append(f"constraint {vocab_name}:{c['name']} is declared but not registered")
+                else:
+                    errors.extend(fn(self, ctx, rows))
+            else:
+                errors.append(f"unknown constraint kind {c['kind']!r} in {vocab_name}")
+        return errors
+
+    def promote(self, context, by) -> int:
+        """Accept the context's staged assertions if the context validates. Returns how many."""
+        errors = self.validate(context)
+        if errors:
+            raise ValidationFailed(errors)
+        staged = [a.id for a in self.query(context=context, status=("staged",))]
+        with self.conn.transaction():
+            for aid in staged:
+                self._set_status(aid, "accepted", by, "promoted")
+        return len(staged)
+
+    # -- views -------------------------------------------------------------------------
+
+    def register_view(self, name: str, export_fn: Callable, import_fn: Callable):
+        """A document format backed by contexts: export_fn(kernel, context, **kw) -> document,
+        import_fn(kernel, document, **kw) -> context id."""
+        self.views[name] = (export_fn, import_fn)
+
+    def export(self, view: str, context, **kw):
+        return self._view(view)[0](self, context, **kw)
+
+    def import_(self, view: str, document, **kw):
+        return self._view(view)[1](self, document, **kw)
+
+    def _view(self, name):
+        if name not in self.views:
+            raise KernelError(f"no view {name!r} registered (load the module that provides it)")
+        return self.views[name]
+
+    # -- modules -----------------------------------------------------------------------
+
+    def load_module(self, name: str, search: Iterable | None = None) -> dict:
+        """Load a module: its dependencies, then its vocabularies, then its register(kernel).
+        Modules are directories with a module.yaml, found under $PC_MODULES (default:
+        ./modules next to the kernel package)."""
+        if name in self.modules:
+            return self.modules[name]
+        roots = [Path(p) for p in (search or os.environ.get("PC_MODULES", str(MODULES_DIR)).split(os.pathsep))]
+        where = next((r / name for r in roots if (r / name / "module.yaml").exists()), None)
+        if where is None:
+            raise KernelError(f"module {name!r} not found under {[str(r) for r in roots]}")
+        manifest = yaml.safe_load((where / "module.yaml").read_text())
+        for dep in manifest.get("depends", []):
+            self.load_module(dep, roots)
+        for v in manifest.get("vocab", []):
+            self.load_vocabulary(where / v)
+        if manifest.get("python"):
+            importlib.import_module(manifest["python"]).register(self)
+        self.modules[name] = {**manifest, "path": str(where)}
+        return self.modules[name]

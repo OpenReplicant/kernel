@@ -4,6 +4,8 @@ a sensor log recorded by an instrument (observed) and a technician's report (sta
 import uuid
 from datetime import datetime, timezone
 
+from pathlib import Path
+
 import psycopg
 import pytest
 
@@ -22,7 +24,8 @@ def w(k, tmp_path):
     """The toy world: a unique namespace per test, its predicates, agents and sources."""
     ns = f"urn:test:{uuid.uuid4().hex[:8]}:"
     n = lambda name: ns + name                                          # noqa: E731
-    pred = {p: k.ensure_node("predicate", n(p)) for p in ("temperature", "setpoint", "status")}
+    k.load_vocabulary(Path(__file__).parent / "thermostat.yaml")
+    pred = {p: k.node_id(f"th:{p}") for p in ("temperature", "setpoint", "status")}
     me = k.ensure_node("agent", n("ingest-script"), "ingest script v0")
     sensor = k.ensure_node("agent", n("sensor-7"), "thermometer #7")
     tech = k.ensure_node("agent", n("technician"), "Dana, technician")
