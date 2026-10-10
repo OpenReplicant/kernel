@@ -1,0 +1,205 @@
+# Worked example, written from memory of the paper, NOT yet checked against it.
+# Section refs are coarse, the repo commit is a placeholder, and every field marked
+# `stated` must be verified against the PDF in M4 (downgrade it if not found).
+schema_version: "0.1"
+
+paper:
+  id: reflexion
+  title: "Reflexion: Language Agents with Verbal Reinforcement Learning"
+  authors: [Noah Shinn, Federico Cassano, Edward Berman, Ashwin Gopinath, Karthik Narasimhan, Shunyu Yao]
+  year: 2023
+  venue: NeurIPS 2023
+  arxiv: "2303.11366"
+  sources:
+    - { kind: pdf, ref: "arXiv:2303.11366" }
+    - { kind: repo, ref: "github.com/noahshinn/reflexion", commit: "0000000", license: MIT }  # TODO pin real commit + verify license
+
+mechanism:
+  summary: >
+    After a failed attempt, the agent writes a short natural-language reflection
+    on why it failed. Reflections accumulate in a bounded episodic memory and are
+    placed in the context of the next attempt at the same task, so later trials
+    can avoid earlier mistakes without any weight updates.
+  claims:
+    - "Failed episodes produce a verbal reflection."
+    - "Reflections from earlier trials appear in the context of later trials."
+    - "Success rate rises across trials relative to retrying without reflection."
+
+slots:
+  - id: actor
+    slot: policy
+    scope: step
+    mode: add
+    implementation: { source: registry, kind: exec_node, ref: "policy/codegen" }
+    model_role: actor
+    prompts:
+      - { id: actor_codegen, file: prompts/actor_codegen.md, source_ref: "repo: programming prompts", provenance: repo }
+    provenance: stated
+    source_ref: "§3"
+
+  - id: test_gen
+    slot: evaluator
+    subtype: output
+    scope: task          # generated once per task, reused across trials
+    implementation: { source: generated, kind: exec_node, ref: "eval/gen_tests" }
+    model_role: actor
+    prompts:
+      - { id: test_gen, file: prompts/test_gen.md, source_ref: "repo: test generation prompt", provenance: repo }
+    params:
+      n_tests: { value: 6, provenance: inferred, source_ref: "paper describes self-generated tests; count not confirmed" }
+    provenance: inferred   # once-per-task scope inferred; confirm in repo
+    source_ref: "§4 (programming)"
+
+  - id: episode_eval
+    slot: evaluator
+    subtype: trajectory
+    scope: episode
+    implementation: { source: registry, kind: exec_node, ref: "eval/run_tests" }
+    uses_assets: [code_sandbox]
+    provenance: stated
+    source_ref: "§3 evaluator"
+
+  - id: reflector
+    slot: reflector
+    scope: task
+    implementation: { source: registry, kind: exec_node, ref: "reflect/verbal" }
+    model_role: reflector
+    prompts:
+      - { id: self_reflect, file: prompts/self_reflection.md, source_ref: "repo: reflection prompt", provenance: repo }
+    provenance: stated
+    source_ref: "§3 self-reflection"
+
+  - id: reflections
+    slot: memory
+    subtype: episodic
+    scope: task
+    implementation: { source: registry, kind: exec_node, ref: "memory/sliding_window" }
+    uses_assets: [kv]
+    params:
+      max_items: { value: 3, provenance: stated, source_ref: "§3 memory bound", sweep: [1, 3, 5] }
+    provenance: stated
+    source_ref: "§3 memory"
+
+  - id: inject_reflections
+    slot: context_builder
+    scope: episode
+    order: 20
+    implementation: { source: registry, kind: exec_node, ref: "context/prepend_memory" }
+    params:
+      header: { value: "Reflections from previous trials:", provenance: inferred }
+    provenance: stated
+    source_ref: "§3"
+
+  - id: retry
+    slot: controller
+    scope: task
+    implementation: { source: registry, kind: exec_node, ref: "control/retry" }
+    params:
+      max_trials: { value: 5, provenance: defaulted, sweep: [1, 3, 5, 10] }
+    provenance: stated
+    source_ref: "§3 trial loop"
+
+# Strictly sequential: the retry decision waits until the reflection is stored,
+# otherwise the next trial can start before its reflection exists.
+wiring:
+  - { from: test_gen.tests, to: episode_eval.tests, provenance: inferred }
+  - { from: actor.output, to: episode_eval.run, provenance: stated }
+  - { from: episode_eval.fail, to: reflector.run, provenance: stated }
+  - { from: reflector.insight, to: reflections.write, provenance: stated }
+  - { from: reflections.written, to: retry.decide, provenance: inferred }
+  - { from: retry.retry, to: inject_reflections.run, provenance: stated }
+  - { from: reflections.read, to: inject_reflections.input, provenance: stated }
+  - { from: inject_reflections.output, to: actor.start, provenance: stated }
+
+assets:
+  - id: kv
+    kind: kv_store          # v1 resolves this to the run.memory table
+    provenance: defaulted
+  - id: code_sandbox
+    kind: environment
+    provenance: stated
+    environment:
+      driver: podman
+      image: assets/sandbox/Dockerfile
+      lifecycle: per_episode
+      capabilities: [exec, files, reset]
+      snapshot_method: none
+      network: none
+      resources: { cpu: 1, memory_mb: 1024, timeout_s: 60 }
+      reset_command: "rm -rf /work/* "
+  - id: humaneval
+    kind: eval_harness
+    requirements: { dataset: openai_humaneval }
+    provenance: stated
+
+models:
+  - role: actor
+    paper_model: gpt-4
+    use_model: claude-haiku-5-5   # small model leaves headroom on HumanEval
+    params:
+      temperature: { value: 0.0, provenance: inferred }
+    provenance: defaulted
+  - role: reflector
+    paper_model: gpt-4
+    use_model: claude-haiku-5-5
+    provenance: defaulted
+
+evaluation:
+  benchmark: HumanEval
+  harness_asset: humaneval
+  split: test
+  metrics: [pass@1]
+  baselines: [react_retry_no_reflection]
+  paper_results:
+    - { metric: pass@1, value: 91.0, condition: "GPT-4, Reflexion", source_ref: "abstract / main results" }
+    - { metric: pass@1, value: 80.0, condition: "GPT-4, prior SOTA baseline", source_ref: "abstract" }
+  acceptance:
+    mode: relative_gain
+    value: 0.03
+    note: >
+      Modern models saturate HumanEval, so the bar is a gain over the
+      no-reflection retry baseline, not the paper's absolute number.
+
+behavior_tests:
+  - id: fail_produces_reflection
+    claim: "Failed episodes produce a verbal reflection."
+    given: { event: slot.emit, slot: episode_eval, port: fail }
+    within: same_task
+    expect:
+      - { event: slot.emit, slot: reflector, port: insight }
+      - { event: memory.write, slot: reflections }
+  - id: reflection_reaches_next_trial
+    claim: "Reflections from earlier trials appear in the context of later trials."
+    given: { event: memory.write, slot: reflections }
+    within: next_episode
+    expect:
+      - { event: llm.request, slot: actor, contains_output_of: reflector }
+  - id: no_reflection_on_success
+    claim: "Failed episodes produce a verbal reflection."
+    given: { event: slot.emit, slot: episode_eval, port: pass }
+    within: same_task      # only events AFTER the given one count
+    negate: true
+    expect:
+      - { event: slot.emit, slot: reflector, port: insight }
+
+fidelity:
+  overall: partial
+  gaps:
+    - where: models
+      reason: "GPT-4 replaced with a small current Claude model to leave headroom on HumanEval; prompts kept verbatim."
+      expected_impact: medium
+    - where: slots[test_gen].params.n_tests
+      reason: "Number of self-generated tests inferred, not confirmed."
+      expected_impact: low
+    - where: slots[retry].params.max_trials
+      reason: "Trial cap defaulted pending repo check."
+      expected_impact: low
+
+compat:
+  wraps: []
+  conflicts: []
+  requires: []
+  notes: >
+    Composes with any policy toggle (e.g. react) since it only adds an
+    episode evaluator, a reflector, memory and a retry controller. With a
+    search toggle (tot), reflections should attach per task, not per branch.
