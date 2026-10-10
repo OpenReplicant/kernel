@@ -3,9 +3,13 @@
 ## The long-term loop
 
 1. **A general world-modeling kernel** holds knowledge as assertions with provenance, so any
-   claim can be traced to the evidence behind it.
-2. **Empirical papers are ingested as evidence.** Each paper is a source; its claims and
-   results become assertions conditioned on how they were obtained.
+   claim can be traced to the evidence behind it. Evidence comes in many forms: documents,
+   direct observation (instruments, runs, an agent's own perception), reports from people,
+   chat and session transcripts, bulk-ingested media. The kernel treats them alike: a
+   recording, spans within it, and assertions that cite them.
+2. **Empirical papers are ingested as evidence** (the first kind v1 handles). Each paper is a
+   source; its claims and results become assertions in its perspective, pending how well
+   they reproduce.
 3. **The first application compiles each paper into a design spec**: its mechanism mapped
    onto shared architectural primitives (slots), with implementation details, assets and
    wiring, in a format that composes with other papers' specs.

@@ -5,7 +5,7 @@ Three places hold everything, each with one job:
 | Store | Holds | Rule |
 |---|---|---|
 | **Git (this repo)** | Code, chains, registry, compiled paper folders, prompts, docs | Anything a person reviews or that defines behavior |
-| **Data root (`$PC_DATA`)** | Source documents, pinned paper repos, run artifacts, benchmark data, caches | Bulk and generated files; never edited by hand |
+| **Data root (`$PC_DATA`)** | Sources (documents, transcripts, logs, run traces), pinned paper repos, run artifacts, benchmark data, caches | Bulk and generated files; never edited by hand |
 | **Postgres** | The kernel (`kb.*`: sources, spans, nodes, assertions) and runtime tables (`run.*`) | Rows point to files by path **and** content hash; files never point to rows |
 
 Postgres never stores large blobs. A file can always be found from its row, and its hash proves
@@ -24,6 +24,7 @@ $PC_DATA/                         default ./data, git-ignored
 ├── runs/                         everything a run produces
 │   └── <run_id>/
 │       ├── run.json              toggles, models, budget (mirror of run.run)
+│       ├── trace.jsonl           run.trace exported at the end; stored as a source
 │       └── tasks/<task_id>/ep-<n>/
 │           ├── work/             sandbox mount: the only dir a container sees
 │           ├── solution.py

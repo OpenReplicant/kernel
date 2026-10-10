@@ -2,7 +2,7 @@
 """Validate a paper spec.yaml: JSON Schema first, then cross-reference rules
 the schema can't express. Exit code 1 on any error.
 
-Usage: validate_spec.py path/to/spec.yaml [--schema path/to/spec.schema.json]
+Usage: validate_spec.py path/to/spec.yaml [--schema ...] [--vocab vocab/agent_design.yaml]
 """
 import argparse
 import json
@@ -14,15 +14,28 @@ from jsonschema import Draft202012Validator
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_SCHEMA = HERE.parent / "schema" / "spec.schema.json"
-
-# Primitives the model must not be able to skip or invoke at will.
-INTERNAL_SLOTS = {"evaluator", "reflector", "refiner", "controller",
-                  "search", "aggregator", "curriculum", "context_manager"}
+DEFAULT_VOCAB = HERE.parent / "vocab" / "agent_design.yaml"
+TASK = "task"   # reserved wiring endpoint: task.start (entry), task.end (exit)
 
 
-def cross_checks(spec):
+def load_slot_types(vocab_path):
+    """Slot types from the agent-design vocabulary: key -> {internal, ports{name: dir}}."""
+    vocab = yaml.safe_load(Path(vocab_path).read_text())
+    return {r["key"]: {"internal": r.get("internal", False),
+                       "ports": dict(p.split(":") for p in r["ports"])}
+            for r in vocab["roles"]}
+
+
+def slot_ports(slot, slot_types):
+    ports = dict(slot_types[slot["slot"]]["ports"])
+    ports.update(p.split(":") for p in slot.get("ports", []))
+    return ports
+
+
+def cross_checks(spec, slot_types):
     errors, warnings = [], []
     slot_ids = [s["id"] for s in spec["slots"]]
+    slots = {s["id"]: s for s in spec["slots"]}
     asset_by_id = {a["id"]: a for a in spec.get("assets", [])}
     model_roles = {m["role"] for m in spec["models"]}
 
@@ -40,7 +53,7 @@ def cross_checks(spec):
             a = asset_by_id.get(impl.get("asset"))
             if not a or a["kind"] != "mcp_server":
                 errors.append(f"slot {s['id']}: mcp_tool must reference an mcp_server asset")
-            if s["slot"] in INTERNAL_SLOTS:
+            if slot_types[s["slot"]]["internal"]:
                 errors.append(f"slot {s['id']}: internal primitive '{s['slot']}' bound as mcp_tool "
                               "(the model could skip or trigger it at will)")
         if impl["source"] == "paper_code" and not any(
@@ -48,18 +61,31 @@ def cross_checks(spec):
             errors.append(f"slot {s['id']}: source paper_code but no repo in paper.sources")
 
     for w in spec["wiring"]:
-        for end in ("from", "to"):
-            sid = w[end].split(".")[0]
-            if sid not in slot_ids:
-                errors.append(f"wiring {w['from']} -> {w['to']}: unknown slot '{sid}'")
+        for end, want, task_port in (("from", "out", "start"), ("to", "in", "end")):
+            sid, port = w[end].split(".")
+            edge = f"wiring {w['from']} -> {w['to']}"
+            if sid == TASK:
+                if port != task_port:
+                    errors.append(f"{edge}: '{TASK}' is only valid as {TASK}.start (from) or {TASK}.end (to)")
+            elif sid not in slots:
+                errors.append(f"{edge}: unknown slot '{sid}'")
+            else:
+                d = slot_ports(slots[sid], slot_types).get(port)
+                if d is None:
+                    errors.append(f"{edge}: slot '{sid}' has no port '{port}' (declare it in the slot's ports)")
+                elif d != want:
+                    errors.append(f"{edge}: port '{sid}.{port}' is an {d} port, used as '{end}'")
+    ends = {w[e] for w in spec["wiring"] for e in ("from", "to")}
+    if f"{TASK}.start" not in ends or f"{TASK}.end" not in ends:
+        errors.append(f"wiring needs an entry ({TASK}.start) and at least one exit ({TASK}.end)")
 
-    for t in spec["behavior_tests"]:
+    for t in spec["mechanism_tests"]:
         for ev in [t["given"], *t["expect"]]:
             for key in ("slot", "contains_output_of"):
                 if ev.get(key) and ev[key] not in slot_ids:
-                    errors.append(f"behavior test {t['id']}: unknown slot '{ev[key]}'")
+                    errors.append(f"mechanism test {t['id']}: unknown slot '{ev[key]}'")
         if t["claim"] not in spec["mechanism"]["claims"]:
-            warnings.append(f"behavior test {t['id']}: claim text not found in mechanism.claims")
+            warnings.append(f"mechanism test {t['id']}: claim text not found in mechanism.claims")
 
     harness = spec["evaluation"].get("harness_asset")
     if harness and asset_by_id.get(harness, {}).get("kind") != "eval_harness":
@@ -89,6 +115,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("spec")
     ap.add_argument("--schema", default=str(DEFAULT_SCHEMA))
+    ap.add_argument("--vocab", default=str(DEFAULT_VOCAB))
     args = ap.parse_args()
 
     schema = json.loads(Path(args.schema).read_text())
@@ -100,7 +127,7 @@ def main():
     if schema_errors:
         sys.exit(1)
 
-    errors, warnings, counts = cross_checks(spec)
+    errors, warnings, counts = cross_checks(spec, load_slot_types(args.vocab))
     for e in errors:
         print(f"ERROR   {e}")
     for w in warnings:

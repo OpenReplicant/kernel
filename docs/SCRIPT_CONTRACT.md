@@ -47,7 +47,7 @@ finished steps return instantly.
 
 `pclib.trace(event, slot=None, port=None, payload=None)` writes a row to `run.trace` with the
 run, task and episode from the input. Mechanism tests read only this table, so any event a
-behavior test mentions must be emitted explicitly.
+mechanism test mentions must be emitted explicitly.
 
 ## Model calls
 

@@ -4,7 +4,7 @@
   "title": "Paper Spec",
   "description": "Machine-readable blueprint of one agent-design paper: the primitives it touches, the assets it needs, how they are wired, and how to check the reproduction. Every value a paper might not state carries provenance.",
   "type": "object",
-  "required": ["schema_version", "paper", "mechanism", "slots", "assets", "wiring", "models", "evaluation", "behavior_tests", "fidelity"],
+  "required": ["schema_version", "paper", "mechanism", "slots", "assets", "wiring", "models", "evaluation", "mechanism_tests", "fidelity"],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": "0.1" },
@@ -51,7 +51,7 @@
         "claims": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "What the paper says the mechanism causes. Behavior tests and evaluation should trace back to these."
+          "description": "What the paper says the mechanism causes. Mechanism tests and evaluation should trace back to these."
         }
       }
     },
@@ -71,7 +71,7 @@
 
     "wiring": {
       "type": "array",
-      "description": "Edges between slot events and slot inputs. Compiles to RuleGo connections.",
+      "description": "Edges from slot output ports to slot input ports. Compiles to RuleGo connections. The reserved endpoints task.start (from) and task.end (to) mark where a task enters and leaves the system.",
       "items": {
         "type": "object",
         "required": ["from", "to"],
@@ -132,7 +132,7 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "mode": { "enum": ["relative_gain", "absolute_tolerance", "mechanism_only"], "description": "relative_gain: beat the baseline by a margin; mechanism_only: behavior tests are the bar." },
+            "mode": { "enum": ["relative_gain", "absolute_tolerance", "mechanism_only"], "description": "relative_gain: beat the baseline by a margin; mechanism_only: mechanism tests are the bar." },
             "value": { "type": "number" },
             "note": { "type": "string" }
           },
@@ -141,7 +141,7 @@
       }
     },
 
-    "behavior_tests": {
+    "mechanism_tests": {
       "type": "array",
       "minItems": 1,
       "description": "Assertions over execution traces that prove the mechanism is present, independent of score.",
@@ -266,6 +266,12 @@
         "mode": { "enum": ["replace", "wrap", "add"], "default": "add", "description": "replace/wrap matter for exclusive slots." },
         "order": { "type": "integer", "description": "Position within pipeline slots; maps to RuleGo aspect Order." },
         "implementation": { "$ref": "#/$defs/implementation" },
+        "ports": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9_]+:(in|out)$" },
+          "description": "Ports beyond the slot type's minimum (vocab/agent_design.yaml), as name:in or name:out."
+        },
         "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/param" } },
         "prompts": {
           "type": "array",

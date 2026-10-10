@@ -1,59 +1,144 @@
 # The kernel
 
-The kernel is a general world-modeling store: things, the roles they play, how they are
-coupled, and assertions about all of it, each with provenance and time. It knows nothing
-about papers or agents. Applications teach it a domain by registering **vocabularies**,
-**constraints** and **views**, and talk to it only through the interfaces below.
+The kernel builds and maintains an **evidence-based world model**: what is believed about
+things, how they are structured and connected, and, for every belief, where it came from and
+how far to trust it. It is meant for many uses. Papers are one kind of evidence; so are
+direct observation (instruments, runs, an agent's own perception), reports from people,
+transcripts of chats and sessions, and bulk-ingested media.
 
-The paper compiler is the first application. Nothing in `kernel/` may import from `apps/`.
+It knows nothing about any particular domain. Applications teach it a domain by registering
+**vocabularies**, **constraints** and **views**, and talk to it only through the interfaces
+below. The paper compiler is the first application. Nothing in `kernel/` may import from `apps/`.
 
-## Four founding rules
+## Founding rules
 
 1. **Assertions are the atom.** Every fact is a row with provenance, confidence, a context,
    and two times: when it was true in the world (valid time) and when the kernel learned it
-   (recorded time). Facts are never updated in place; they are superseded or retracted.
-2. **Types are data.** Types, roles and predicates are nodes loaded from vocabulary files.
+   (recorded time). Facts are never edited; they are superseded or retracted.
+2. **Evidence is recorded, not paraphrased.** Every source of evidence (a PDF, a code
+   snapshot, a chat transcript, a sensor log, a run trace) is an immutable file. A fact that
+   is `stated` or `observed` points at the spans of the recording that support it.
+3. **Types are data.** Types, roles and predicates are nodes loaded from vocabulary files.
    Adding a domain adds rows, never schema.
-3. **Roles are not types.** Postgres *is* a database; it *plays* the vector-store role in one
-   deployment. A slot is a role; a component that fills it is a thing bound to that role in a
-   context.
-4. **Contexts carry scope and closure.** Every assertion lives in a context: the open world,
-   a source's perspective ("according to the Reflexion paper"), a system spec, a run, or a
-   staging area. Open contexts treat missing facts as unknown; closed contexts treat them as
-   errors and can be validated.
+4. **Roles are not types.** Postgres *is* a database; it *plays* the vector-store role in one
+   deployment. A thing is bound to a role in a context.
+5. **Contexts carry scope and closure.** Every assertion lives in a context: the open world,
+   someone's perspective ("according to the Reflexion paper"), a described system, or an
+   observation session. Open contexts treat missing facts as unknown; closed contexts treat
+   them as errors and can be validated.
 
-## Constructs
+## Upper ontology
+
+`vocab/kernel.yaml` is the only vocabulary the kernel knows. It has two small parts.
+
+**Knowing: who or what a fact comes from, and how far to trust it.** Most of this lives in
+the assertion's own columns (`method`, `confidence`, `asserted_by`, times, evidence); the
+predicates cover what is said *about* sources and agents.
+
+| Construct | Meaning |
+|---|---|
+| `k:Agent` | Anything that asserts, observes or acts: a person, a model, a program, an instrument |
+| `k:Source` | A recording: document, code, transcript, sensor log, run trace. Every `kb.source` row is also a node |
+| `k:produced_by` (Source → Agent, arg `as`) | Who made the recording, and as what: author, speaker, recorder, instrument |
+| `k:produced_at` | When the recording was made (not when the kernel stored it) |
+| `k:holds` (Agent → Context) | The perspective context holding that agent's claims |
+| `k:reliability` | How far claims from a source or agent hold up, 0..1. An assertion like any other, so it carries its own evidence (e.g. reproductions) and differs per context |
+
+Two different "who"s: `asserted_by` is the agent that **wrote the row** (the compiler, a
+person, an ingestion script); the claim's **originator** is the source's producer, reached
+through the evidence spans, or the holder of the perspective context it sits in.
+
+**Structure: what things are, what they are made of, how they connect.**
+
+| Predicate | Meaning |
+|---|---|
+| `k:is_a`, `k:subtype_of` | Classification; types are nodes |
+| `k:part_of` | Composition |
+| `k:depends_on` (arg `kind`) | Needs the object to exist or work |
+| `k:plays` | Binding: a thing fills a role, in the assertion's context |
+| `k:has_port`, `k:couples` (arg `kind`) | Interfaces and connections: call, event, stream, shared_state, flow, causal |
+| `k:has_capability`, `k:requires_capability` | What a thing can do; what a role needs |
+| `k:label`, `k:description`, `k:same_as` | Naming and (always hedged) identity |
+
+### Methods: how a fact was obtained
+
+| Method | Meaning | Evidence |
+|---|---|---|
+| `stated` | A source says it: a document, a speaker, a code file | **Required**: spans in the source |
+| `observed` | Perceived or measured directly: an instrument, a run, a session | **Required**: spans in the recording (e.g. the run's trace file) |
+| `inferred` | An agent's reading of or reasoning over other material | Optional spans; `asserted_by` names the agent and version |
+| `computed` | Derived mechanically from other assertions | `derived_from` links to its inputs |
+| `defaulted` | Assumed by a named policy where nothing says otherwise | None; `asserted_by` names the policy |
+
+Applications may keep finer labels (the paper compiler distinguishes "the paper says" from
+"only the released code shows"); they map onto these methods and keep the original label as
+an assertion argument, since the source the span points into already tells them apart.
+
+### Context kinds
+
+| Kind | Closure | Use |
+|---|---|---|
+| `world` | open | The kernel's best current account |
+| `perspective` | open | What one source or agent claims |
+| `system` | closed | A described or designed system; validated before acceptance |
+| `session` | open | An observation session: a run, a chat, a recording, an embodied episode. `conditions` record what its observations depend on |
+| `vocabulary` | closed | Facts a vocabulary file loads |
+
+Contexts nest through `props.parent`; queries include sub-contexts by default.
+
+## Storage
 
 | Construct | Stored as | Notes |
 |---|---|---|
-| Source | `kb.source` | Immutable file, content-addressed under `$PC_DATA` |
-| Span | `kb.span` | Addressable piece of a source: page + char range, path + line range, JSON path |
-| Node | `kb.node` | Anything with identity. `kind` is one of `thing`, `type`, `role`, `port`, `capability`, `predicate`, `context`, `agent`, `constraint` |
+| Node | `kb.node` | `kind` is one of `thing`, `type`, `role`, `port`, `capability`, `predicate`, `context`, `agent`, `source`, `constraint` |
+| Source | `kb.source` | Immutable file, content-addressed under `$PC_DATA`; also a node |
+| Span | `kb.span` | Addressable piece of a source: page + char range, path + line range, JSON path, time range |
 | Assertion | `kb.assertion` | Subject, predicate, object node **or** literal value, context, method, confidence, times, status |
-| Argument | `kb.assertion_arg` | Extra named participants for n-ary facts |
+| Argument | `kb.assertion_arg` | Named extra participants (n-ary facts). A predicate's declared `args` are required; others may be added freely |
 | Evidence | `kb.evidence` | Links an assertion to the spans that support it |
-| Link | `kb.assertion_link` | `supersedes`, `contradicts`, `corroborates`, `derived_from` between assertions |
+| Link | `kb.assertion_link` | `supersedes`, `contradicts`, `corroborates`, `derived_from` |
+| Status history | `kb.status_change` | Every status an assertion has had, when, and by whom |
 | Vocabulary | `kb.vocabulary` | A loaded vocabulary file, by name, version and hash |
 
-**Bindings, couplings and ports are assertions** using kernel predicates:
-`k:plays` (thing → role, in a context), `k:has_port` (role → port),
-`k:couples` (port → port, with a `kind` argument: call, event, stream, shared_state, flow,
-causal), `k:is_a`, `k:part_of`, `k:refines`, `k:requires_capability`, `k:has_capability`.
+### Assertion lifecycle
 
-## Provenance: the `method` field
+```
+staged ──▶ accepted ──▶ disputed ──▶ accepted
+   │          │  │          │
+   ▼          ▼  ▼          ▼
+retracted  superseded / retracted   (final)
+```
 
-Every assertion records how it was obtained. This generalizes the spec's provenance field:
+- **Staged** assertions are written straight into their target context and wait for review
+  or evidence. `promote(context)` validates the context including its staged assertions,
+  then accepts them. Nothing is copied or moved.
+- **Supersede** writes the replacement, links it `supersedes` → old, and marks the old one
+  `superseded`, in one transaction.
+- `known_at=T` answers from `recorded_at` and `kb.status_change`: what was accepted at T.
 
-| Method | Meaning | Evidence required |
-|---|---|---|
-| `stated` | The source says it explicitly | At least one span in the source |
-| `repo` | Found only in released code | A span in the pinned repo |
-| `inferred` | An agent's reading of ambiguous material | Optional supporting spans; `asserted_by` names the agent and version |
-| `defaulted` | Platform default where the source is silent | None; `asserted_by` names the default policy |
-| `observed` | Measured in a run | The run id; supporting artifacts as spans |
-| `computed` | Derived from other assertions | `derived_from` links to its inputs |
+### Rules the database enforces
 
-The kernel refuses to accept a `stated` or `repo` assertion without evidence spans. A *staged* one may wait for its evidence (for example, a spec imported before its PDF is stored), but it can't be promoted until the spans exist. The database enforces this on insert and on promotion.
+So that no client, script or bug can quietly break the evidence trail:
+
+1. Only `status` changes on an assertion, and only along the lifecycle above. Nothing in
+   `kb.*` is deleted; sources, spans, arguments, evidence, links and status history are
+   append-only.
+2. `stated` and `observed` assertions cannot be accepted (or disputed) without evidence.
+3. An assertion's predicate is a `predicate` node, its context a `context` node, its
+   `asserted_by` an `agent` node; it has exactly one of object or value.
+4. Every status change is logged with the acting agent (`set local kb.actor = '<uuid>'`).
+
+The library checks everything vocabulary-dependent: predicate exists, domain and range,
+`max`, required args, enums, and constraints.
+
+**Domain and range.** Each kernel type is backed by a node kind (`k:Agent` → `agent`,
+`k:Role` → `role`, `k:Thing` → `thing`, `agent` or `source`, …). A node satisfies a type if
+its kind backs it, or if it has an accepted `k:is_a` to that type or one of its subtypes.
+
+**Ports belong to role instances.** A role type in a vocabulary lists its minimum ports.
+Each role *instance* in a system context (one per slot, say) gets its own port nodes,
+`<role iri>#<port name>`, with `k:has_port`; an instance may add ports beyond the minimum.
+`k:couples` connects instance ports.
 
 ## Interfaces
 
@@ -61,98 +146,76 @@ Python package `kernel`, with every operation also available as a tool-shaped sc
 (`scripts/kernel_*.py`, JSON in and out) for RuleGo chains and, later, MCP.
 
 **Sources and spans**
-- `put_source(file, uri, media_type, license=None) -> sha256` (idempotent; stores by hash)
-- `add_span(sha256, locator, excerpt=None) -> span_id`
+- `put_source(file, uri, media_type, license=None, produced_by=None) -> sha256` (idempotent; stores by hash)
+- `add_span(sha256, locator, excerpt=None) -> span_id` (idempotent per source and locator)
 
 **Nodes and contexts**
 - `ensure_node(kind, iri, label=None, props=None) -> node_id` (idempotent by IRI)
 - `create_context(kind, label, closure='open'|'closed', parent=None, conditions=None) -> context_id`
-  (`conditions` records what the context's facts depend on, e.g. model, benchmark version, budget)
 
 **Assertions**
 - `assert_(subject, predicate, object=None, value=None, *, context, method, confidence,
-  evidence=(), args=None, valid_from=None, valid_to=None, asserted_by) -> assertion_id`
-  Checks that the predicate exists in a loaded vocabulary and that subject and object match
-  its declared domain and range.
+  evidence=(), args=None, valid_from=None, valid_to=None, status='accepted', asserted_by) -> assertion_id`
 - `retract(assertion_id, reason, by)`
 - `supersede(old_id, new assertion…) -> new_id`
 - `link(from_id, to_id, kind)` for contradicts / corroborates / derived_from
 
 **Queries**
 - `query(subject=None, predicate=None, object=None, context=None, include_subcontexts=True,
-  status=('accepted',), valid_at=None, known_at=None) -> rows`
-  `known_at` answers "what did the kernel believe at time T"; `valid_at` answers "what was true at T".
-- `why(assertion_id) -> provenance tree` (method, agent, spans with source and locator, links)
+  status=('accepted',), method=None, valid_at=None, known_at=None) -> rows`
+- `why(assertion_id) -> provenance tree` (method, agent, spans with source, locator and producer, links)
 - `bindings(context) -> role → thing` and `couplings(context) -> port graph`
 
 **Vocabularies, constraints, validation**
-- `load_vocabulary(path)`: registers types, roles, ports, predicates (with domain, range,
-  cardinality) and declarative constraints from a YAML file
-- `register_constraint(vocab, name, fn)`: a Python check for rules too specific for YAML
-  (e.g. the MCP rule); applications register these, the kernel runs them
-- `validate(context) -> errors`: runs declarative and registered constraints. Required for
-  closed contexts before they can be promoted.
+- `load_vocabulary(path)`: registers types, roles, ports, predicates (domain, range, `max`,
+  `args`, enums) and declarative constraints from a YAML file
+- `register_constraint(vocab, name, fn)`: a Python check for rules too specific for YAML;
+  applications register these, the kernel runs them
+- `validate(context) -> errors`: declarative and registered constraints, over accepted and
+  staged assertions
 
 **Promotion**
-- `promote(staging_context, target_context, by)`: moves accepted assertions out of staging
-  only if `validate` passes; records who promoted them.
+- `promote(context, by)`: accepts the context's staged assertions if `validate` passes
 
 **Views**
 - `register_view(name, export_fn, import_fn)`: an application-defined document format backed
-  by a context. `export(name, context) -> document`, `import_(name, document, context_spec) -> context_id`.
-  The paper compiler registers the `agent-spec` view, whose documents are `spec.yaml` files.
+  by a context. `export(name, context) -> document`, `import_(name, document, ...) -> context_id`.
 
 ## Vocabulary files
 
-Vocabularies live in `vocab/*.yaml` in git and are loaded with `load_vocabulary`. Shape:
+Vocabularies live in `vocab/*.yaml`, are loaded with `load_vocabulary`, and are stored in
+`kb.vocabulary` by hash. Shape:
 
 ```yaml
 vocabulary: agent-design
-version: 0.1
+version: "0.2"                 # reloading a version with different content is an error
 imports: [kernel]
+prefix: { ad: "urn:pc:agent-design:" }
 types:
-  - { iri: ad:Paper }
-  - { iri: ad:Component }
-roles:                       # slot types
-  - iri: ad:Evaluator
-    cardinality: multi       # exclusive | pipeline | multi
-    ports: [{ name: run, dir: in }, { name: pass, dir: out }, { name: fail, dir: out }]
-scopes: [call, step, episode, task, lifetime]
+  - { iri: ad:Component, is_a: k:Thing }
+roles:
+  - { iri: ad:Evaluator, key: evaluator, cardinality: multi, ports: [run:in, pass:out, fail:out] }
 predicates:
-  - { iri: ad:scope, domain: k:Role, range: literal, max: 1 }
-  - { iri: ad:implementation, domain: k:Role, range: ad:Component, max: 1 }
+  - { iri: ad:scope, domain: k:Role, range: literal, max: 1, enum_from: scopes }
   - { iri: ad:param, domain: k:Role, range: literal, args: [name] }
 constraints:
-  - { kind: max_bindings, role_cardinality: exclusive, max: 1 }
-  - { kind: required, predicate: ad:scope, for: k:Role }
+  - { kind: required, predicate: ad:scope, for: k:Role, in: system }
+  - { kind: python, name: couplings_reference_declared_ports }
 ```
 
-v1 ships two: `vocab/agent_design.yaml` (slots, scopes, ports, mechanism tests) and
-`vocab/infra.yaml` (asset kinds, environments, models, benchmarks).
-
-## How the paper compiler uses it
-
-| Compiler concept | Kernel representation |
-|---|---|
-| Paper PDF, repo files | Sources; quoted passages are spans |
-| A paper's claims about its own design | Assertions in a perspective context "per <paper>" |
-| A compiled spec | A closed `system` context: roles, bindings, couplings, params |
-| `spec.yaml` | The `agent-spec` view of that context (export/import) |
-| Provenance `stated`/`repo`/`inferred`/`defaulted` | The assertion's `method`, with spans as evidence |
-| Spec validation | `validate(context)` with the agent-design vocabulary's constraints |
-| Registry component | A thing with `k:has_capability` assertions; slot resolution is a query matching role requirements |
-| Human review of a compiled spec | Assertions written to a staging context, inspected with `query(method='inferred')`, then `promote` |
-| A benchmark result | An `observed` assertion in a run context whose `conditions` record model, benchmark version, budget and toggles |
+Domain vocabularies may add their own lists (`scopes`, `asset_kinds`) and fields on roles;
+the kernel stores them and makes them available to registered constraints and views.
 
 ## What stays outside the kernel
 
 High-volume operational data is not assertions: `run.step` checkpoints and `run.trace`
-events stay in their own tables. Mechanism tests read traces; their **outcomes** and benchmark
-results become `observed` assertions, which is what later agents use as evidence.
+events stay in their own tables. When a run finishes, its trace is exported as a source file
+(`runs/<id>/trace.jsonl`); mechanism-test outcomes and benchmark results become `observed`
+assertions in the run's session context, with spans into that file.
 
 ## Deferred
 
 A graph projection (Apache AGE) for deep traversals and vector search (pgvector) are derived
 views over `kb.assertion`, so adding them later rebuilds from the log with no migration.
-Entity resolution across sources (`same_as` as hedged assertions) arrives with ingestion
-beyond papers.
+Entity resolution across sources (`same_as` as hedged assertions) and source reliability
+scoring arrive with ingestion beyond papers.

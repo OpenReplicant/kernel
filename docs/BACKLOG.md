@@ -9,6 +9,8 @@ Add new ideas here instead of building them.
 - [ ] Record/replay gateway for external services and repeated model calls
 - [ ] Long-running containerized script service if per-step start-up shows in timings
 - [ ] Ingestion beyond papers: segmenters, entity resolution, vocabulary proposals
+- [ ] Interactive evidence: chats and embodied sessions written as session contexts with transcript sources
+- [ ] Source reliability scoring from reproduction outcomes (`k:reliability`, evidenced)
 - [ ] Lab: toggle grids, cost reports, shared benchmarks
 - [ ] Review interface for spec and reproduction checkpoints
 - [ ] License checks on prompts and paper code before releasing compiled specs

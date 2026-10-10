@@ -2,9 +2,10 @@
 
 This repo builds **version 1** of two layers:
 
-1. **The kernel**: a general, domain-free world-modeling store. Things, roles, couplings and
-   assertions, each with provenance, context and two times. Applications talk to it only
-   through its interfaces.
+1. **The kernel**: a general, domain-free store for an evidence-based world model. Things,
+   roles, couplings and assertions, each with provenance, context and two times, and each
+   traceable to the recording that supports it (document, observation, transcript, trace).
+   Applications talk to it only through its interfaces.
 2. **Its first application, the paper compiler**: turns an agent-design paper into a
    decomposed system in the kernel, runs it, checks its mechanism is present, and records the
    results back into the kernel as evidence.
@@ -30,13 +31,14 @@ Read these before writing code, in this order:
 - **Applications use interfaces, not tables.** Code under `apps/`, `registry/` and the compiler
   skill calls the `kernel` package or `scripts/kernel_*.py`; it never writes SQL against `kb.*`.
 - **Assertions are never edited.** Corrections are `supersede`; removals are `retract`.
-- **Provenance is sacred.** `stated` and `repo` need evidence spans (the database enforces
-  it). Anything else is `inferred`, `defaulted`, `observed` or `computed`. Never upgrade a
-  guess to `stated`.
+- **Provenance is sacred.** `stated` and `observed` need evidence spans (the database
+  enforces it). Anything else is `inferred`, `computed` or `defaulted`. Never upgrade a guess
+  to `stated`. The spec's `repo` label is `stated` with a span in the pinned repo.
 - **Scope discipline.** Build only what the current milestone asks for. Other ideas go into
   `docs/BACKLOG.md`, not into code.
-- **Milestones in order.** Don't start one until the previous gate passes. Report the gate
-  result (commands run and their output) when you finish each.
+- **Milestones in order.** Don't start one until the previous gate passes (M0 may run
+  alongside M1–M3; it gates M7). Report the gate result (commands run and their output)
+  when you finish each.
 - **Verify, don't assume, RuleGo details** (M0). Record findings in `docs/RULEGO_NOTES.md`.
 - **Stock RuleGo only.** No custom Go components in v1. Chains wire Python scripts together.
 - **Agents are chains, not RuleGo's agent node.** Don't use the `ai/agent` component. An agent
@@ -54,7 +56,7 @@ Read these before writing code, in this order:
 
 ## Stack (v1)
 
-- Python 3.11+, `psycopg` 3, `anthropic`, `pytest`, `pyyaml`, `jsonschema`
+- Python 3.11+, `psycopg` 3, `anthropic`, `pytest`, `pyyaml`, `jsonschema` (`pyproject.toml`)
 - PostgreSQL 16, plain (no extensions in v1). Schemas in `db/001_kernel.sql`, `db/002_runtime.sql`
 - RuleGo server, pinned version; where it runs (host or container) is decided in M0
 - Podman, rootless, for sandboxes and Postgres (`podman compose` or `podman-compose`)
@@ -72,6 +74,7 @@ pclib/                    script-contract library (stdin/stdout, steps, traces, 
 scripts/                  tool-shaped scripts: kernel_*.py, claude_call.py, env_container.py, ...
 scripts/schemas/          JSON Schemas for every script's input and output
 registry/                 slot implementations, one script each (registered in the kernel)
+tools/                    validate_spec.py (exists)
 papers/reflexion/         exported views and run artifacts: spec.yaml, SPEC.md, chains, prompts, REPORT.md
 bench/                    HumanEval slice + runner
 tests/                    kernel/, contract/, mechanism/, smoke/
