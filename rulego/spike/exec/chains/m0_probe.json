@@ -13,7 +13,7 @@
         "configuration": {
           "cmd": "python3",
           "args": [
-            "/repo/rulego/spike/steps/probe.py",
+            "/repo/rulego/spike/exec/steps/probe.py",
             "${data}"
           ],
           "replaceData": true

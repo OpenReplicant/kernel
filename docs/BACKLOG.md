@@ -7,7 +7,7 @@ Add new ideas here instead of building them.
 - [ ] OpenTelemetry through RuleGo's OpenTelemetry component, with GenAI spans from scripts and a Collector
 - [ ] Snapshot, restore and branching for search papers (Tree of Thoughts, LATS)
 - [ ] Record/replay gateway for external services and repeated model calls
-- [ ] Long-running containerized script service if per-step start-up shows in timings (M0: ~25–30 ms per step)
+- [ ] Long-running script service if per-step overhead shows in timings (M0: ~75 ms per DB-backed step on x/python)
 - [ ] Ingestion beyond papers: segmenters, entity resolution, vocabulary proposals
 - [ ] Interactive evidence: chats and embodied sessions written as session contexts with transcript sources
 - [ ] Source reliability scoring from reproduction outcomes (`k:reliability`, evidenced)

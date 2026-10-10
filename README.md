@@ -29,7 +29,7 @@ export DATABASE_URL=postgresql://kernel:kernel@127.0.0.1:5432/kernel
 ```
 
 RuleGo (M0): `podman compose up -d rulego`, then
-`RULEGO_URL=http://127.0.0.1:9090 .venv/bin/pytest tests/smoke`.
+`RULEGO_URL=http://127.0.0.1:9090 RULEGO_DATABASE_URL=$DATABASE_URL .venv/bin/pytest tests/smoke` (see `rulego/README.md`).
 
 Status: M0 (RuleGo spike), M1 (script contract) and M2 (kernel core) gates pass.
 Next: M3 (vocabularies, validation, views).

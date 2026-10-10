@@ -1,24 +1,26 @@
 # RuleGo notes (M0)
 
-Verified on **RuleGo v0.38.0** (rulego repo tag, commit `13787639c406`), server built from
-`server/cmd/server` with standard components only. Sources read: the rulego repo at that tag
-(`components/action/exec_node.go`, `components/common/while_node.go`, `server/config`), and
-the `rulego-doc` repo's English docs. Every behaviour below was tried against a running
-container; the toy chains are in `rulego/spike/`, the checks in `tests/smoke/test_rulego_spike.py`.
+Verified on **RuleGo v0.38.0** (rulego repo tag, commit `13787639c406`) plus the `x/python`
+node from rulego-components (commit `fbbef88`), built as our own server module
+(`rulego/server`, see `rulego/README.md`). Sources read: the rulego repo at that tag
+(`components/action/exec_node.go`, `components/common/while_node.go`, `server/`),
+rulego-components (`action/python`, `pkg/python_engine`), and the `rulego-doc` English docs.
+Every behaviour below was tried against a running container; the chains are in
+`rulego/spike/`, the checks in `tests/smoke/test_rulego_spike.py`.
 
 ## Decisions
 
 | Question | Decision |
 |---|---|
-| Artifact | Build our own image, `rulego/Containerfile`: the server binary on a Python base, so `exec` nodes can run this repo's scripts. No official image exists; upstream's Dockerfile is Alpine without Python |
+| Artifact | Build our own image, `rulego/Containerfile`: our server module (upstream + `x/python`) on a Python base. No official image exists; upstream's Dockerfile is Alpine without Python |
 | Where it runs | In a container (compose service `rulego`), repo mounted read-only at `/repo`, data root at `/data` |
-| How steps run | Stock `exec` node: `python3 /repo/<script>.py --step <slot id> [--timeout S] ${data}` |
+| How steps run | **`x/python` node** running a generated stub (`Process = pclib.node.bind(script, slot, timeout)`); chains built with `pclib.chains`. The stock `exec` node works too (section 2) but is a worse fit |
 | Agent loops | A `while` node whose `do` is `chain:<iteration chain>`; each iteration is an acyclic chain of slot steps |
 | Sub-systems | `flow` node (`targetId`, `extend: true`) |
 | Branching | `switch` node on message fields (`msg.data.passed == true`) |
 | Deploying chains | REST, hot: `scripts/rulego_deploy.py <file or dir>` |
 | Calling a chain | `POST /api/v1/rules/{id}/execute/{msgType}`, synchronous, JSON body = the envelope |
-| Custom Go | None needed |
+| Custom Go | None: one upstream component compiled in (`rulego/server/components.go`) |
 
 ## 1. Distribution
 
@@ -34,7 +36,26 @@ container; the toy chains are in `rulego/spike/`, the checks in `tests/smoke/tes
   final message data. A chain failure returns **HTTP 400** with the error text as body.
   `.../notify/{msgType}` is the asynchronous form (returns at once, no result).
 
-## 2. The `exec` node
+## 2. The `x/python` node (chosen)
+
+From rulego-components (`action/python`), compiled in through `rulego/server/components.go`.
+Config: `script` (a `.py` path, or an inline function body), `timeout` (e.g. `"305s"`),
+`maxRunning`, `pythonPath`.
+
+| Behaviour | Finding | Consequence |
+|---|---|---|
+| Call | `Process(msg, metadata, msgType, dataType[, vars, globals])`; returns `{"msg", "metadata", "msgType"}` | `pclib.node.bind` returns that function |
+| Transport | JSON over the worker's stdin/stdout; a 500 KB message passed | No argument-size limit on this path |
+| Workers | Pre-started; **a file script is imported at pre-start**, then each process serves one call and exits | Imports are warm (psycopg alone is 245 ms); no state leaks between steps |
+| Inline scripts | The body runs inside `Process`, so its imports happen per call | We use generated stub files, not inline bodies |
+| Pool size | `maxRunning` workers; idle pools shrink to `max(1, maxRunning/3)` | Default 2 per node; ~20 MB per warm worker |
+| Node `vars` | **Overridden by chain-level vars**, so a node can't name its slot through them | The stub names the script and slot |
+| Metadata | Flat string map, in and out; HTTP query parameters become metadata | `run_id`, `task_id`, `episode` and step meta travel there |
+| Errors | An exception fails the node; the caller gets HTTP 400 with the Python traceback | `pclib.rulego.ChainFailed` |
+| Timeout | Enforced (`script execution timed out after 3s`) | pclib's own timeout is set 5 s shorter, so it reports the cause |
+| Speed | 13 DB-backed, idempotent steps in ~1.05 s end to end (~75 ms each, connect and commit included) | Fine for v1 |
+
+## 2b. The stock `exec` node (evaluated, not used)
 
 Config: `cmd`, `args` (each supports `${data}`, `${msg.x}`, `${metadata.x}`), `log`,
 `replaceData`. Security: only commands in `cmd_white_list` run.
@@ -52,7 +73,7 @@ Config: `cmd`, `args` (each supports `${data}`, `${msg.x}`, `${metadata.x}`), `l
 | Working dir | Server's cwd, or metadata `workDir` | Scripts use absolute paths |
 | Timeout | **None** in the node (a 75 s step ran to completion) | `pclib --timeout S` per step; the HTTP caller's deadline bounds the chain |
 | Caller disconnects | Running child is killed within a second | A run driver that times out leaves no orphans |
-| Start-up cost | ~25–30 ms per Python step (13 steps in 0.38 s) | Fine for v1; the long-running service fallback is not needed |
+| Start-up cost | ~25–30 ms per Python step without a database (13 steps in 0.38 s) | |
 
 ## 3. Agent loops
 
@@ -66,15 +87,19 @@ Sub-chains (`flow`): with `extend: true` the sub-chain's output and relation con
 parent; with `false`, outputs of all its end branches are merged into an array.
 
 So an agent is: a root chain with a `while` over an **iteration chain** (context builder →
-policy → evaluator → … → controller), each slot a separate `exec` step. The controller's
+policy → evaluator → … → controller), each slot a separate pclib step. The controller's
 output sets the field the `while` condition reads. The iteration chain stays a DAG.
+
+Inside a `while`, metadata `_loopIndex` numbers the iterations; pclib adds it to step keys
+(`task=T1/ep=1/i=2/inc`) so a step repeated across iterations is stored once per iteration.
+It stays in metadata after the loop ends, so a step after the loop sees the last index.
 
 ## 4. Rule-engine AOP
 
 Aspects (Before/After/Around/Start/End/Completed, OnCreated, OnReload, OnDestroy) apply to
 every node in a chain, but are **Go types registered when the engine is created**; the server
-config can't add them. With stock RuleGo only, tracing, checkpoints and budget checks stay in
-`pclib`. (Backlog item stands.)
+config can't add them, but our server module (`rulego/server`) can register them. For now
+tracing, checkpoints and budget checks stay in `pclib`. (Backlog item stands.)
 
 ## 5. Conditional routing
 

@@ -36,3 +36,14 @@ def db_url():
 def conn(db_url):
     with psycopg.connect(db_url, autocommit=True) as c:
         yield c
+
+
+@pytest.fixture
+def run_id(conn):
+    """A run.run row; the kernel nodes it points to are minimal placeholders."""
+    ctx, system, rid = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    conn.execute("insert into kb.node (id, kind, iri) values (%s, 'context', %s), (%s, 'context', %s)",
+                 (ctx, f"urn:test:ctx:{ctx}", system, f"urn:test:sys:{system}"))
+    conn.execute("insert into run.run (id, context, system, budget_usd) values (%s, %s, %s, 1)",
+                 (rid, ctx, system))
+    return str(rid)

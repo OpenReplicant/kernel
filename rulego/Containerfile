@@ -1,17 +1,17 @@
-# RuleGo-Server with a Python runtime, so stock `exec` nodes can run this repo's step
-# scripts. Build from the repo root:
+# RuleGo-Server with a Python runtime, so chain nodes can run this repo's step scripts.
+# Build from the repo root:
 #   podman build -f rulego/Containerfile -t localhost/kernel-rulego .
 # Findings and options: docs/RULEGO_NOTES.md.
 ARG GO_IMAGE=docker.io/library/golang:1.25
 ARG PY_IMAGE=docker.io/library/python:3.12-slim
 
 FROM ${GO_IMAGE} AS build
-# Pinned: the server ships inside the rulego repo (server/) since the standalone
-# rulego-server repo stopped in April 2026. v0.38.0 = commit 13787639c406.
-ARG RULEGO_VERSION=v0.38.0
-RUN git clone --depth 1 --branch ${RULEGO_VERSION} https://github.com/rulego/rulego.git /src
-WORKDIR /src/server/cmd/server
-# Standard components only (exec, flow, while, switch, ...): no extension tags.
+# Our server module (rulego/server): upstream RuleGo-Server v0.38.0 plus the components
+# listed in components.go. Versions are pinned in rulego/server/go.mod and go.sum.
+WORKDIR /src
+COPY rulego/server/go.mod rulego/server/go.sum ./
+RUN go mod download
+COPY rulego/server/*.go ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags '-s -w' -o /out/rulego-server .
 
 FROM ${PY_IMAGE}

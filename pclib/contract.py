@@ -11,9 +11,11 @@ A step script is a function from the input envelope to {"data": ..., "meta": ...
     if __name__ == "__main__":
         run_step(main)
 
-Invocation: `step.py [--step NAME] [--timeout SECONDS] [ENVELOPE]`. RuleGo's exec node has
-no stdin, so chains pass the envelope as the last argument (`${data}`); without it, the
-envelope is read from stdin.
+Two entry points share one core (`execute`):
+- In RuleGo chains, an `x/python` node calls `pclib.node.call(script, step, msg, metadata)`;
+  the message data is the step's data and run/task/episode travel in metadata.
+- On the command line (and RuleGo's `exec` node): `step.py [--step NAME] [--timeout S]
+  [ENVELOPE]`, the envelope as the last argument or on stdin.
 
 run_step returns the stored output if this (run_id, step_key) already finished, otherwise
 runs the function and commits its output, usage and trace events in one transaction. It
@@ -40,8 +42,8 @@ EXIT_OK = 0
 EXIT_RETRYABLE = 75
 EXIT_FAILED = 1
 
-# The envelope travels as one argv element between chain steps; Linux caps a single
-# argument at 128 KiB (MAX_ARG_STRLEN). Larger content goes by reference (docs/RULEGO_NOTES.md).
+# On the command-line path the envelope may travel as one argv element (RuleGo's exec node),
+# which Linux caps at 128 KiB (MAX_ARG_STRLEN). The x/python node path has no such limit.
 MAX_ENVELOPE_BYTES = int(os.environ.get("PC_MAX_ENVELOPE_BYTES", 120_000))
 
 # Must match traceEvent in schema/spec.schema.json (a contract test checks this).
@@ -176,9 +178,36 @@ def _on_alarm(signum, frame):
     raise StepTimeout("step exceeded its --timeout")
 
 
-def run_step(fn: Callable[[StepInput], dict], argv=None, stdin=None, stdout=None) -> int:
-    """Run one step under the contract. Exits the process unless stdout is given."""
+def execute(fn: Callable[[StepInput], dict], inp: StepInput, timeout: float | None = None,
+            check: Callable[[StepInput, dict], None] | None = None) -> dict:
+    """The contract's core, shared by every entry point: return the stored output if this
+    step already finished; otherwise run it (stdout redirected to stderr, optional timeout),
+    then commit output, usage and trace events in one transaction."""
     global _current
+    with connect(autocommit=True) as conn:
+        output = _stored_output(conn, inp)
+        if output is not None:
+            return output
+        _current = _Step(inp)
+        try:
+            if timeout:
+                signal.signal(signal.SIGALRM, _on_alarm)
+                signal.setitimer(signal.ITIMER_REAL, timeout)
+            try:
+                with contextlib.redirect_stdout(sys.stderr):
+                    result = _check_result(fn(inp))
+            finally:
+                if timeout:
+                    signal.setitimer(signal.ITIMER_REAL, 0)
+            if check:
+                check(inp, result)            # e.g. size limits, before anything is stored
+            return _commit(conn, _current, result)
+        finally:
+            _current = None
+
+
+def run_step(fn: Callable[[StepInput], dict], argv=None, stdin=None, stdout=None) -> int:
+    """Command-line entry point (exec nodes, tests, manual runs). Exits unless stdout is given."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--step", help="step name, used to build step_key when the envelope has none")
     ap.add_argument("--timeout", type=float, help="wall-clock limit for this step, seconds")
@@ -189,21 +218,7 @@ def run_step(fn: Callable[[StepInput], dict], argv=None, stdin=None, stdout=None
     try:
         raw = args.envelope if args.envelope is not None else (stdin or sys.stdin).read()
         inp = StepInput.parse(raw, args.step or Path(sys.argv[0]).stem)
-        with connect(autocommit=True) as conn:
-            output = _stored_output(conn, inp)
-            if output is None:
-                _current = _Step(inp)
-                if args.timeout:
-                    signal.signal(signal.SIGALRM, _on_alarm)
-                    signal.setitimer(signal.ITIMER_REAL, args.timeout)
-                try:
-                    # Anything the step prints goes to stderr; stdout carries only the result.
-                    with contextlib.redirect_stdout(sys.stderr):
-                        result = _check_result(fn(inp))
-                finally:
-                    signal.setitimer(signal.ITIMER_REAL, 0)
-                _render(inp, result)          # size check before anything is stored
-                output = _commit(conn, _current, result)
+        output = execute(fn, inp, args.timeout, check=lambda i, r: _render(i, r))
         real_stdout.write(_render(inp, output) + "\n")
         real_stdout.flush()
         code = EXIT_OK
@@ -213,8 +228,6 @@ def run_step(fn: Callable[[StepInput], dict], argv=None, stdin=None, stdout=None
     except Exception:
         traceback.print_exc(file=sys.stderr)
         code = EXIT_FAILED
-    finally:
-        _current = None
     if stdout is None:
         sys.exit(code)
     return code

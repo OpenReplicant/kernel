@@ -13,7 +13,7 @@
         "configuration": {
           "cmd": "python3",
           "args": [
-            "/repo/rulego/spike/steps/inc.py",
+            "/repo/rulego/spike/exec/steps/inc.py",
             "${data}"
           ],
           "replaceData": true
@@ -48,7 +48,7 @@
         "configuration": {
           "cmd": "python3",
           "args": [
-            "/repo/rulego/spike/steps/final.py",
+            "/repo/rulego/spike/exec/steps/final.py",
             "${data}"
           ],
           "replaceData": true

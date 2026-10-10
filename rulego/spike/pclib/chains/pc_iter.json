@@ -1,35 +1,29 @@
 {
   "ruleChain": {
-    "id": "m0_iter",
-    "name": "m0_iter",
+    "id": "pc_iter",
+    "name": "pc_iter",
     "root": false
   },
   "metadata": {
     "nodes": [
       {
         "id": "inc",
-        "type": "exec",
+        "type": "x/python",
         "name": "inc",
         "configuration": {
-          "cmd": "python3",
-          "args": [
-            "/repo/rulego/spike/steps/inc.py",
-            "${data}"
-          ],
-          "replaceData": true
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/inc.py",
+          "timeout": "305s",
+          "maxRunning": 2
         }
       },
       {
         "id": "judge",
-        "type": "exec",
+        "type": "x/python",
         "name": "judge",
         "configuration": {
-          "cmd": "python3",
-          "args": [
-            "/repo/rulego/spike/steps/judge.py",
-            "${data}"
-          ],
-          "replaceData": true
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/judge.py",
+          "timeout": "305s",
+          "maxRunning": 2
         }
       },
       {
@@ -39,7 +33,7 @@
         "configuration": {
           "cases": [
             {
-              "case": "msg.data.passed == true",
+              "case": "msg.passed == true",
               "then": "Even"
             }
           ]
@@ -47,28 +41,22 @@
       },
       {
         "id": "even",
-        "type": "exec",
+        "type": "x/python",
         "name": "even",
         "configuration": {
-          "cmd": "python3",
-          "args": [
-            "/repo/rulego/spike/steps/even.py",
-            "${data}"
-          ],
-          "replaceData": true
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/even.py",
+          "timeout": "305s",
+          "maxRunning": 2
         }
       },
       {
         "id": "odd",
-        "type": "exec",
+        "type": "x/python",
         "name": "odd",
         "configuration": {
-          "cmd": "python3",
-          "args": [
-            "/repo/rulego/spike/steps/odd.py",
-            "${data}"
-          ],
-          "replaceData": true
+          "script": "/repo/rulego/spike/pclib/chains/pc_iter.nodes/odd.py",
+          "timeout": "305s",
+          "maxRunning": 2
         }
       },
       {
@@ -76,7 +64,7 @@
         "type": "flow",
         "name": "sub",
         "configuration": {
-          "targetId": "m0_sub",
+          "targetId": "pc_sub",
           "extend": true
         }
       }

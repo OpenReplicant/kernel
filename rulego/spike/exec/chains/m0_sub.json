@@ -13,7 +13,7 @@
         "configuration": {
           "cmd": "python3",
           "args": [
-            "/repo/rulego/spike/steps/double.py",
+            "/repo/rulego/spike/exec/steps/double.py",
             "${data}"
           ],
           "replaceData": true

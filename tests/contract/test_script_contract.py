@@ -3,7 +3,6 @@ import json
 import os
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
 import pytest
@@ -12,17 +11,6 @@ from pclib import EXIT_FAILED, EXIT_RETRYABLE, TRACE_EVENTS
 
 ROOT = Path(__file__).resolve().parents[2]
 STEP = Path(__file__).parent / "steps" / "counting_step.py"
-
-
-@pytest.fixture
-def run_id(conn):
-    """A run.run row; the kernel nodes it points to are minimal placeholders."""
-    ctx, system, rid = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-    conn.execute("insert into kb.node (id, kind, iri) values (%s, 'context', %s), (%s, 'context', %s)",
-                 (ctx, f"urn:test:ctx:{ctx}", system, f"urn:test:sys:{system}"))
-    conn.execute("insert into run.run (id, context, system, budget_usd) values (%s, %s, %s, 1)",
-                 (rid, ctx, system))
-    return str(rid)
 
 
 def invoke(db_url, payload, *args, stdin=True):
