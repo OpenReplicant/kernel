@@ -92,7 +92,7 @@ validation yet beyond the kernel vocabulary itself.
   `kernel_assert.py`, `kernel_query.py`, `kernel_why.py` (JSON Schema for input and output
   in `scripts/schemas/`).
 
-**Layering rule, enforced by a test:** nothing under `kernel/` imports from `apps/`.
+**Layering rule, enforced by a test:** nothing under `kernel/` imports a module.
 
 **Gate (pytest, `tests/kernel/`), using a toy domain unrelated to agents and evidence that
 isn't a paper** (for example a thermostat loop: sensor, controller, heater, coupled through
@@ -105,31 +105,41 @@ ports; a sensor log as an `observed` source and a technician's report as a `stat
 - `why` on an assertion returns its spans, source path, agent and method
 - bindings and couplings round-trip: `bindings(ctx)` and `couplings(ctx)` return what was asserted
 
-## M3 — Vocabularies, validation, views
+## M3 — Vocabularies, validation, views, modules
 
-- `load_vocabulary` for `vocab/kernel.yaml`, `vocab/agent_design.yaml`, `vocab/infra.yaml`:
-  types, roles with ports and cardinality, predicates with domain, range, `max`, `args`, enums.
-  Stores each file in `kb.vocabulary` by hash.
-- `assert_` now checks predicates exist and subject/object types match domain and range.
-- `validate(context)`: the declarative constraints (`required`, `max`, enums,
-  `cardinality_by_role`) in the kernel; `register_constraint` for Python checks.
-- `promote(context)` accepts the context's staged assertions, and refuses unless `validate`
-  passes over accepted and staged assertions together.
-- `register_view` / `export` / `import_` in the kernel.
-- **First application code**, in `apps/paper_compiler/`:
-  - registers the Python constraints named in `agent_design.yaml`
-    (`mcp_only_for_model_invoked`, `couplings_reference_declared_ports`)
-  - registers the `agent-spec` view: `import_` turns a `spec.yaml` into a closed `system`
-    context plus a `perspective` context for the paper's claims; `export` does the reverse.
-    Provenance maps to `method` (`repo` → `stated`, label kept as an argument); `source_ref`
-    strings become spans once M6 stores the PDF (until then, `stated` and `repo` fields
-    import as `staged` assertions awaiting evidence).
+Layers and modules as in `docs/ARCHITECTURE.md`.
+
+**Kernel (L0):**
+- `load_vocabulary(path)`: types (with `is_a`), roles (ports, attributes), predicates (domain,
+  range, `max`, `args`, `enum`/`enum_from`) and declarative constraints; recorded in
+  `kb.vocabulary` by hash.
+- `assert_` checks the predicate is declared, subject and object satisfy domain and range,
+  literal enums, and required args.
+- `validate(context)`: `max` per predicate, `required` constraints, and registered Python
+  constraints, over accepted and staged assertions. `register_constraint` for Python checks.
+- `promote(context)` accepts staged assertions only if `validate` passes.
+- `register_view` / `export` / `import_`.
+- `load_module(name)`: dependencies first, then vocabularies, then `register(kernel)`.
+
+**Modules:** split today's vocabularies into `modules/systems` (L1), `modules/agent_design`
+and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.yaml`,
+`vocab.yaml` and `register()`:
+- `systems` registers `couplings_reference_declared_ports` (a coupling joins an out port to an
+  in port that its role instance has, from the role type's minimum or declared extras).
+- `agent_design` registers `exclusive_slots` and `mcp_only_for_model_invoked`.
+- `paper_compiler` registers the `agent-spec` view: `import_` turns a `spec.yaml` into a closed
+  `system` context plus a `perspective` context for the paper's claims; `export` does the
+  reverse. Provenance maps to `method` (`repo` → `stated`, label kept as an argument); `stated`
+  and `repo` fields import as `staged` until M6 stores the PDF and repo as sources.
 
 **Gate:**
-- `tests/kernel/` still passes with `apps/` not importable (run it with `apps/` removed from the path)
+- `tests/kernel/` passes with no module loaded and nothing under `modules/` importable; a
+  layering test checks each module imports only what it declares
+- a non-agent system (the thermostat loop) validates with only `systems` loaded, and a broken
+  coupling in it is caught
 - importing `examples/reflexion/spec.yaml` then exporting it yields a document equal to the
   original (field by field, ignoring key order) that passes `tools/validate_spec.py`
-- `validate` catches the same errors as `tools/validate_spec.py` on a deliberately broken spec
+- `validate` catches the same errors as `tools/validate_spec.py` on deliberately broken specs
   (internal slot bound as an MCP tool; wiring to an undeclared slot; two policies)
 
 ## M4 — Model calls with a budget
@@ -171,8 +181,8 @@ supports a `stated` field, supersede it with an `inferred` assertion instead, an
 such change in `papers/reflexion/SPEC_CHANGES.md`. Pin the repo commit and confirm its license
 before copying anything.
 
-**Implement the slots** as scripts in `registry/`, and register each one in the kernel as an
-`ad:Component` with `ad:implements`, `ad:implementation_kind` and `ad:entrypoint` assertions
+**Implement the slots** as steps in `modules/agent_design/steps/`, and register each one in the kernel as a
+`sys:Component` with `ad:implements`, `ad:implementation_kind` and `ad:entrypoint` assertions
 (no separate registry table). Slot resolution is a kernel query.
 
 | Component id | Implements | Does |

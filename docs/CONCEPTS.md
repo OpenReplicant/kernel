@@ -95,8 +95,8 @@ step can't be composed with anything.
 
 ## Registry
 
-Reusable slot implementations, looked up before writing new code. Each is a script in
-`registry/` and an `ad:Component` thing in the kernel with `ad:implements` assertions, so
+Reusable slot implementations, looked up before writing new code. Each is a step in
+`modules/agent_design/steps/` and a `sys:Component` thing in the kernel with `sys:implements` assertions, so
 finding a component for a slot is a kernel query, not a file lookup. Resolution order for
 every slot: registry → paper's own code (licensed, pinned commit, behind an adapter) →
 newly generated. A component that passes its contract tests is promoted into the registry.
@@ -107,11 +107,11 @@ newly generated. A component that passes its contract tests is promoted into the
 |---|---|
 | Paper PDF, repo files | Sources (with `k:produced_by` the authors); quoted passages are spans |
 | A paper's claims about its own design and results | Assertions in a perspective context the paper `k:holds` |
-| A compiled spec | A closed `system` context: slot instances (roles), bindings (`k:plays`, arg `origin`), ports and couplings, params |
+| A compiled spec | A closed `system` context: slot instances (role nodes, `sys:instance_of` a slot type), bindings (`k:plays`, arg `origin`), ports and couplings, `sys:param` |
 | `spec.yaml` | The `agent-spec` view of that context (export/import) |
 | Provenance `stated`/`repo`/`inferred`/`defaulted` | The assertion's `method` (`repo` → `stated` with a repo span), label kept as an argument |
 | Spec validation | `validate(context)` with the agent-design vocabulary's constraints |
-| Registry component | A thing with `ad:implements` and `k:has_capability`; slot resolution is a kernel query |
+| Registry component | A thing `k:is_a sys:Component` with `sys:implements`; slot resolution is a kernel query |
 | Human review of a compiled spec | Staged assertions in the system context, inspected with `query(status=('staged',), method='inferred')`, then `promote` |
 | A run | A `session` context whose `conditions` record model, benchmark version, budget and toggles; its trace file is a source |
 | A benchmark result or mechanism-test outcome | An `observed` assertion in the run's session context, with spans in the run's recordings |

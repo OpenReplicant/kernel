@@ -4,7 +4,7 @@ Each step node runs a small generated stub file (pclib.chains.write() emits them
 chain JSON):
 
     from pclib.node import bind
-    Process = bind("/repo/registry/reflect_verbal.py", "reflector", timeout=300)
+    Process = bind("/repo/modules/agent_design/steps/reflect_verbal.py", "reflector", timeout=300)
 
 x/python imports the stub when it pre-starts a worker, so pclib, psycopg and the step module
 are loaded before a message arrives; Process then runs one step and the worker exits.

@@ -13,24 +13,26 @@ This repo builds **version 1** of two layers:
 Read these before writing code, in this order:
 
 1. `docs/VISION.md` — the long-term loop and where v1 sits in it
-2. `docs/KERNEL.md` — the kernel's constructs, schema and interfaces (the contract)
-3. `docs/CONCEPTS.md` — the agent-design vocabulary: primitives, scopes, mechanism tests
-4. `docs/V1_BUILD_PLAN.md` — milestones M0–M9, each with an acceptance gate
-5. `docs/SCRIPT_CONTRACT.md` — the one interface every step script follows
-6. `docs/FILESYSTEM.md` — what lives in git, in the data root, and in Postgres
-7. `vocab/*.yaml`, `examples/reflexion/spec.yaml`, `schema/spec.schema.json`
+2. `docs/ARCHITECTURE.md` — layers (kernel, systems, domains, applications) and modules
+3. `docs/KERNEL.md` — the kernel's constructs, schema and interfaces (the contract)
+4. `docs/CONCEPTS.md` — the agent-design vocabulary: primitives, scopes, mechanism tests
+5. `docs/V1_BUILD_PLAN.md` — milestones M0–M9, each with an acceptance gate
+6. `docs/SCRIPT_CONTRACT.md` — the one interface every step script follows
+7. `docs/FILESYSTEM.md` — what lives in git, in the data root, and in Postgres
+8. `vocab/kernel.yaml`, `modules/*/vocab.yaml`, `examples/reflexion/spec.yaml`, `schema/spec.schema.json`
 
 `docs/target/PLATFORM_PLAN.md` is an older, broader design. It is context, not scope.
 
 ## Working rules
 
-- **The kernel is domain-free.** Nothing under `kernel/` may import from `apps/`, mention
+- **The kernel is domain-free.** Nothing under `kernel/` may import a module, mention
   papers, slots or agent designs, or hard-code a vocabulary other than `vocab/kernel.yaml`
   (its upper ontology: agents, sources, roles, ports, …). Domain
-  knowledge enters only through vocabulary files, registered constraints and registered views.
-  A test enforces the import rule.
-- **Applications use interfaces, not tables.** Code under `apps/`, `registry/` and the compiler
-  skill calls the `kernel` package or `scripts/kernel_*.py`; it never writes SQL against `kb.*`.
+  knowledge enters only through modules: vocabulary files, registered constraints and views.
+- **Layers and modules** (docs/ARCHITECTURE.md). A module imports only `kernel`, `pclib` and
+  the modules it declares in `module.yaml`; tests enforce it.
+- **Modules use interfaces, not tables.** Code under `modules/` and the compiler skill calls
+  the `kernel` package or `scripts/kernel_*.py`; it never writes SQL against `kb.*`.
 - **Assertions are never edited.** Corrections are `supersede`; removals are `retract`.
 - **Provenance is sacred.** `stated` and `observed` need evidence spans (the database
   enforces it). Anything else is `inferred`, `computed` or `defaulted`. Never upgrade a guess
@@ -68,6 +70,7 @@ Read these before writing code, in this order:
 - RuleGo-Server v0.38.0 + `x/python`, built from `rulego/server` into `rulego/Containerfile`
 - Podman, rootless, for sandboxes and Postgres (`podman compose` or `podman-compose`)
 - No MCP in v1; every script is tool-shaped (JSON Schema in and out) so it can be exposed later
+  (RuleGo-Server can serve chains as MCP tools; docs/RULEGO_NOTES.md §7)
 
 ## Layout to create
 
@@ -75,13 +78,15 @@ Read these before writing code, in this order:
 compose.yml               postgres + rulego + sandbox image build
 rulego/                   the runtime build: Containerfile, config.conf, server/ (Go module), spike/
 db/                       001_kernel.sql, 002_runtime.sql (exist)
-vocab/                    kernel.yaml, agent_design.yaml, infra.yaml (exist)
-kernel/                   the kernel library — domain-free
-apps/paper_compiler/      first application: constraints, agent-spec view, report generation
+vocab/                    kernel.yaml: the upper ontology
+kernel/                   the kernel library — domain-free (L0)
+modules/systems/          L1: components, role instances, boundary, behaviour tests, chain compilation
+modules/agent_design/     L2: slot types, scopes, agent-design constraints, slot components (steps/)
+modules/evaluation/       L2: models, benchmarks, metrics, results
+modules/paper_compiler/   L3: papers, claims, the agent-spec view, reports
 pclib/                    step contract + RuleGo node (node.py), chain builder (chains.py), client (rulego.py)
 scripts/                  tool-shaped scripts: kernel_*.py, claude_call.py, env_container.py, ...
 scripts/schemas/          JSON Schemas for every script's input and output
-registry/                 slot implementations, one script each (registered in the kernel)
 tools/                    validate_spec.py (exists)
 papers/reflexion/         exported views and run artifacts: spec.yaml, SPEC.md, chains, prompts, REPORT.md
 bench/                    HumanEval slice + runner

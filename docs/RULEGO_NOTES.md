@@ -114,6 +114,18 @@ RuleGo runs in a container. Payload sandboxes (M5) are started by step scripts, 
 (`$XDG_RUNTIME_DIR/podman/podman.sock`) and the `podman-remote` client; added in M5. Never a
 rootful socket.
 
+## 7. MCP (documented, not yet exercised; not used in v1)
+
+- **Server:** RuleGo-Server's `[mcp]` module (`enable = true`, users need an apiKey) serves
+  management APIs as MCP tools at `/api/v1/mcp/{apiKey}`, and selected chains or components
+  per group at `/api/v1/mcp/{apiKey}/group/{groupName}`. Our config keeps it off.
+- **Client:** `ai/mcpClient` (rulego-components-ai, v0.36.0+) calls a remote MCP tool (HTTP or
+  stdio server) as a chain node: `server`, `toolName`, `args` template; the result replaces
+  `msg.Data`. Compiling it in means adding `rulego-components-ai/...` to `rulego/server/components.go`.
+
+This makes platform tools (search the registry, validate a spec, run a chain, query evidence)
+a matter of exposing chains, and lets a step's implementation be any MCP tool.
+
 ## Building here vs. on a workstation
 
 `podman build -f rulego/Containerfile -t localhost/kernel-rulego .` is the normal path. Base

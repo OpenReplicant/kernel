@@ -3,8 +3,8 @@
     from pclib import chains as c
 
     iteration = c.chain("reflexion_iter",
-        nodes=[c.step("actor", "registry/policy_codegen.py"),
-               c.step("eval", "registry/eval_run_tests.py", timeout=120),
+        nodes=[c.step("actor", "modules/agent_design/steps/policy_codegen.py"),
+               c.step("eval", "modules/agent_design/steps/eval_run_tests.py", timeout=120),
                c.switch("route", [("msg.passed == true", "Pass")])],
         edges=[("actor", "eval"), ("eval", "route"), ("route", "done", "Pass")])
     main = c.chain("reflexion", root=True,
