@@ -142,7 +142,7 @@ and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.
 - `validate` catches the same errors as `tools/validate_spec.py` on deliberately broken specs
   (internal slot bound as an MCP tool; wiring to an undeclared slot; two policies)
 
-## M4 — Model calls with a budget
+## M4 — Model calls with a budget (shape under review: `docs/NOTES.md`)
 
 - `scripts/claude_call.py` + `pclib.claude()` using the Anthropic Messages API.
 - Model ids come from the system context (`ev:uses_model`), with env fallbacks

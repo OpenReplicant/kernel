@@ -20,6 +20,7 @@ Read these before writing code, in this order:
 6. `docs/SCRIPT_CONTRACT.md` — the one interface every step script follows
 7. `docs/FILESYSTEM.md` — what lives in git, in the data root, and in Postgres
 8. `vocab/kernel.yaml`, `modules/*/vocab.yaml`, `examples/reflexion/spec.yaml`, `schema/spec.schema.json`
+9. `docs/NOTES.md` — current state, open decisions, and how to run things in a cloud session
 
 `docs/target/PLATFORM_PLAN.md` is an older, broader design. It is context, not scope.
 
@@ -61,6 +62,7 @@ Read these before writing code, in this order:
     under review: committed to the repo and shown to the user before they first run.
 - **Secrets from the environment.** `ANTHROPIC_API_KEY`, `DATABASE_URL`. Never commit them.
 - **Every model call goes through `scripts/claude_call.py`**, which enforces the per-run budget.
+  (Under review for M4: model calls and agent-harness sessions as budgeted steps; docs/NOTES.md.)
 - **Tests are the deliverable.** A milestone is done when its gate passes, not when code exists.
 
 ## Stack (v1)

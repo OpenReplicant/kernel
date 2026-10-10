@@ -19,6 +19,8 @@ Add new ideas here instead of building them.
 - [ ] Compile AgentSquare's 16 agents as a comparison set for the paper
 - [ ] Harder benchmark than HumanEval if the baseline saturates it
 - [ ] Platform MCP server: RuleGo's MCP endpoint exposing chains for registry search, spec validation, running chains, reading traces
+- [ ] Agent-harness runner step (Codex, Claude Code, ... via MCP or headless sessions); see docs/NOTES.md (may become part of M4)
+- [ ] Use alongside an agent harness: kernel and platform operations as the harness's toolset
 - [ ] Move tracing, checkpoints and budget checks into rule-engine aspects: M0 confirmed core AOP covers every node, but aspects are Go registered at engine creation, so this needs a custom server build
 - [ ] Stronger sandbox isolation (gVisor or Kata runtime under Podman) before running untrusted paper repos at scale
 - [ ] Object storage behind the same `$PC_DATA` key scheme
