@@ -1,0 +1,11 @@
+# Image that untrusted payloads (model-written solutions, benchmark tests) run in.
+# Runtime limits (no network, read-only root, CPU/memory/pids, timeout) are applied by
+# scripts/env_container.py at `podman run` time, not here (M5).
+FROM docker.io/library/python:3.12-slim
+
+RUN useradd --create-home --uid 10001 runner \
+ && mkdir /work && chown runner:runner /work
+
+USER runner
+WORKDIR /work
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1

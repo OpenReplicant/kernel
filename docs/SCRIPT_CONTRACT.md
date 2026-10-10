@@ -28,7 +28,9 @@ One JSON object on **stdout**, which becomes the next message's data:
 { "data": { "...": "step-specific output" }, "meta": { "...": "optional" } }
 ```
 
-Logs and diagnostics go to **stderr** only. Nothing else may be printed to stdout.
+Logs and diagnostics go to **stderr** only. Nothing else may be printed to stdout; `pclib`
+redirects stray `print`s to stderr while the step runs, and writes the output with sorted keys
+so a replayed step prints the same bytes.
 
 ## Exit codes
 
@@ -43,10 +45,14 @@ the stored output and exits 0 without redoing anything. On success it writes the
 (and model usage, if any) to `run.step`. A failed run is rerun from the start of its chain;
 finished steps return instantly.
 
+The step's output, its usage and its trace events commit in **one transaction**. A failed step
+leaves no rows at all, so rerunning it never duplicates trace events.
+
 ## Tracing
 
-`pclib.trace(event, slot=None, port=None, payload=None)` writes a row to `run.trace` with the
-run, task and episode from the input. Mechanism tests read only this table, so any event a
+`pclib.trace(event, slot=None, port=None, payload=None)` records a `run.trace` row with the
+run, task, episode and step key from the input (written when the step commits). Unknown event
+names are rejected. Mechanism tests read only this table, so any event a
 mechanism test mentions must be emitted explicitly.
 
 ## Model calls
