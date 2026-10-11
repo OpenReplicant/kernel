@@ -211,12 +211,17 @@ and runs with the same compiler.
   (`PC_CONTAINER_CMD`, default `podman`). Emits `tool.call` / `tool.result`.
 
 **Gate:** a passing solution passes, a failing one fails, an infinite loop times out, and code
-attempting network access fails.
+attempting network access fails. — passed (`tests/sandbox/`). The runner is
+`pclib/sandbox.py` (steps call it in-process; `scripts/env_container.py` is the tool-shaped
+wrapper). It mounts the work dir read-only and gives the payload a small `/tmp`.
 
 **Calibration (a few dollars, before M7):** run the default actor model once per problem, no
 retries, on 20 HumanEval problems. If it already passes nearly all of them, Reflexion can't
 show a gain; choose a harder benchmark or a weaker model now and record the choice, rather
-than discovering it in M9.
+than discovering it in M9. `python bench/calibrate.py --n 20 --budget 3` (model calls through
+`model_call`, completions checked in the sandbox; result in `$PC_DATA/runs/<run>/calibration.json`).
+Result (2026-10-11): Haiku 5.5 via `claude -p` passed 20/20, so HumanEval can't show a
+Reflexion gain with it; the choice of benchmark or model is open (docs/NOTES.md).
 
 ## M7 — The paper as evidence, and the Reflexion slots
 

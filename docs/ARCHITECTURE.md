@@ -116,6 +116,11 @@ typed ports, components bound to them by `k:plays`, couplings between ports.
 cycle of flow couplings becomes a `while` loop), and `pclib/component.py` runs each component
 through its ports. Swapping the component that fills a role is one superseded assertion.
 
+**Sandbox** (M6). Payloads (code a model wrote, benchmark tests) run only through
+`pclib/sandbox.py`: a fresh container per call with no network, a read-only root, no
+capabilities, resource limits, a non-root user and one read-only work directory. Each call is
+traced as `tool.call` / `tool.result`.
+
 **MCP at the edges, not in the middle.** RuleGo-Server can expose chosen chains as an MCP
 server (groups of tools per endpoint), and its `ai/mcpClient` node runs any remote MCP tool as
 a chain step. Both are transport. The agent-design rule is about who decides: an internal slot

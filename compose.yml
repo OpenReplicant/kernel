@@ -39,7 +39,7 @@ services:
       postgres:
         condition: service_healthy
 
-  # Build-only: the image payloads run in (docs/V1_BUILD_PLAN.md, M5).
+  # Build-only: the image payloads run in (pclib/sandbox.py; docs/V1_BUILD_PLAN.md M6).
   # `podman compose build sandbox`
   sandbox:
     build: ./sandbox

@@ -158,8 +158,11 @@ def test_run_trace_is_a_source_with_observed_spend(k, world):
     recorded = record_run(k, run, by=runtime)
     trace_file = k.data_root / "runs" / run / "trace.jsonl"
     assert len(trace_file.read_text().splitlines()) == 4
-    calls_id, spend_id = record_spend(k, run, recorded, by=runtime)
+    metrics = {k.get(i).args["name"]: k.get(i) for i in record_spend(k, run, recorded, by=runtime)}
+    calls_id, spend_id = metrics["llm_calls"].id, metrics["llm_spend_usd"].id
     assert k.get(calls_id).value == 2 and k.get(spend_id).value == pytest.approx(0.004)
+    assert metrics["llm_input_tokens"].value == 2000 and metrics["llm_output_tokens"].value == 1000
+    assert metrics["llm_served_models"].value == {f"small-a-{world.tag}": 2}
     why = k.why(spend_id)
     assert why["method"] == "observed" and why["context"] == f"urn:pc:run:{run}"
     lines = trace_file.read_text().splitlines()
@@ -168,6 +171,29 @@ def test_run_trace_is_a_source_with_observed_spend(k, world):
         assert ev["source"]["produced_by"] == [{"agent": "urn:pc:agent:runtime", "as": "recorder",
                                                 "method": "defaulted"}]
         assert json.loads(lines[ev["locator"]["line_start"] - 1])["event"] == "llm.response"
+
+
+def test_claude_code_endpoint(k, world, monkeypatch, conn):
+    """The claude_code API kind: `claude -p` with no tools or settings, in an empty directory;
+    unpriced, with tokens and the answering model recorded."""
+    monkeypatch.setenv("PC_CLAUDE_CMD", f"{sys.executable} {ROOT / 'tests/fake_claude.py'}")
+    (world.catalog.parent / "cc.yaml").write_text(
+        f"endpoints:\n  - {{id: cc-{world.tag}, api: claude_code}}\n"
+        f"models:\n  - {{id: cc-haiku-{world.tag}, endpoint: cc-{world.tag}, model_id: haiku}}\n")
+    load_catalog(k, world.catalog.parent / "cc.yaml", by=world.me)
+    system = k.create_context("system", "subscription caller")
+    use_model(k, system, "actor", f"cc-haiku-{world.tag}", by=world.me)
+    run = start_run(k, system, budget_usd=1, by=world.me)
+    out, _ = model_call(run, "cc", ask("write add()"))
+    seen = json.loads(out["text"])
+    assert seen["prompt"] == "write add()" and not seen["cwd"].startswith(str(ROOT))
+    argv = seen["argv"]
+    assert argv[argv.index("--model") + 1] == "haiku" and argv[argv.index("--tools") + 1] == ""
+    assert {"--strict-mcp-config", "--no-session-persistence"} <= set(argv)
+    assert out["model"] == "fake-served-model" and out["cost_usd"] == 0
+    assert out["usage"]["output_tokens"] == 7 and out["usage"]["cache_creation_input_tokens"] == 1200
+    with pytest.raises(Exception, match="usage limit"):
+        model_call(run, "cc2", ask("FAIL please"))
 
 
 @pytest.mark.skipif(not os.environ.get("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not set")

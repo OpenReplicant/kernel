@@ -51,15 +51,19 @@ def jsonable(obj):
     return obj
 
 
-def run_tool(name: str, fn):
+def run_tool(name: str, fn, kernel: bool = True):
+    """fn(kernel, inp), or fn(inp) for a tool that doesn't touch the kernel."""
     try:
         inp = json.loads(sys.stdin.read())
         _validator(f"{name}.in.json").validate(inp)
-        k = Kernel.connect()
-        try:
-            out = jsonable(fn(k, inp))
-        finally:
-            k.conn.close()
+        if not kernel:
+            out = jsonable(fn(inp))
+        else:
+            k = Kernel.connect()
+            try:
+                out = jsonable(fn(k, inp))
+            finally:
+                k.conn.close()
         _validator(f"{name}.out.json").validate(out)
     except Exception:
         traceback.print_exc(file=sys.stderr)
