@@ -90,9 +90,9 @@ recorded in `kb.vocabulary`.
 
 | Module | Layer | Prefix | Holds |
 |---|---|---|---|
-| `systems` | L1 | `sys:` | Component, implements, instance_of, param, order, boundary, assets and environments, behaviour tests and outcomes; constraints that couplings use declared ports in the right direction |
+| `systems` | L1 | `sys:` | Component, implements, instance_of, param, order, boundary, assets and environments, behaviour tests and outcomes; constraints that couplings use declared ports in the right direction; runs (`start_run`, and `record_run`, the Record joint) |
 | `agent_design` | L2 | `ad:` | Slot role types (groups, cardinality, ports, internal flag), scopes, subtype, mode, model role, prompts; constraints: exclusive slots, internal slots never model-invoked tools |
-| `evaluation` | L2 | `ev:` | Models (and from M4 their endpoints, parameters and prices), harnesses, benchmarks, metrics, settings, acceptance, reported and observed results |
+| `evaluation` | L2 | `ev:` | Models with their endpoints, parameters and prices (catalog, `model_call`), harnesses, benchmarks, metrics, settings, acceptance, reported and observed results |
 | `paper_compiler` | L3 | `pc:` | Papers, claims, bibliographic facts, fidelity, compatibility; the `agent-spec` view (`spec.yaml`), reports, the compile skill |
 
 Future modules slot in the same way: a `software` domain (requirements, interfaces, tests) for
@@ -107,9 +107,10 @@ session context whose trace file is the evidence for what was observed.
 **Model and harness access** (M4, M5). Two kinds of step reach a model, each a sub-chain with
 a fixed interface so its implementation can be swapped:
 
-- `model_call`: budget check → the call (RuleGo's `ai/llm` node, or a pclib step where
-  `ai/llm` falls short) → usage recorded. Model, endpoint and parameters are read from the
-  kernel, so a different model is a different assertion, not different code.
+- `model_call` (`modules/evaluation/chains/`): resolve (model, endpoint and parameters from
+  the kernel; budget check) → invoke (a pclib step; RuleGo's `ai/llm` node can't take its
+  model from the kernel or report usage, docs/RULEGO_NOTES.md §8) → account (cost added to the
+  run's spend). A different model is a different assertion, not different code.
 - `harness_session`: an agent harness (Codex, Claude Code, …) run headless or through its MCP
   server in a sandbox, with its own model, endpoint and parameters, given a task and a
   workspace. Its transcript is stored as a source.

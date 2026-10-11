@@ -31,9 +31,9 @@ records each run back into the kernel as a source. Details: `docs/ARCHITECTURE.m
 ## Status
 
 Version 1 follows `docs/V1_BUILD_PLAN.md`. Gates passed: **M0** (RuleGo spike), **M1** (script
-contract), **M2** (kernel core), **M3** (vocabularies, validation, views, modules). Next: **M4**,
-model access (models known to the kernel, a budgeted `model_call` sub-chain, runs recorded as
-sources), then **M5**, the sandbox and agent-harness sessions.
+contract), **M2** (kernel core), **M3** (vocabularies, validation, views, modules), **M4** (model
+access: models known to the kernel, a budgeted `model_call` sub-chain, runs recorded as
+sources). Next: **M5**, the sandbox and agent-harness sessions.
 
 ## Running
 

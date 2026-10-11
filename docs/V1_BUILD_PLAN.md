@@ -142,7 +142,7 @@ and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.
 - `validate` catches the same errors as `tools/validate_spec.py` on deliberately broken specs
   (internal slot bound as an MCP tool; wiring to an undeclared slot; two policies)
 
-## M4 — Model access: models in the kernel, a budgeted model call, runs as sources
+## M4 — Model access: models in the kernel, a budgeted model call, runs as sources — done
 
 **Verify first** (record in `docs/RULEGO_NOTES.md`): what RuleGo's `ai/llm` node
 (rulego-components-ai) takes and returns: endpoint, key, model and parameters, whether they
@@ -160,8 +160,8 @@ Anthropic models (directly or through an OpenAI-compatible endpoint).
   1. `resolve` (pclib step): reads the model, endpoint and parameters for the calling slot's
      model role from the kernel; refuses if `run.run.spent_usd >= budget_usd`; emits
      `llm.request` with the calling slot's id and the full prompt.
-  2. the call: `ai/llm` if the check above says it fits, otherwise a pclib step using the
-     provider's SDK. Either way the interface stays the same, so either can be swapped in.
+  2. `invoke`: a pclib step calling the endpoint (Anthropic SDK, or any OpenAI-compatible
+     endpoint). `ai/llm` didn't fit (docs/RULEGO_NOTES.md §8); the interface would let it stand in.
   3. `account` (pclib step): records usage, adds cost to `spent_usd`, emits `llm.response`.
   Slots that use a model become `prepare → model_call → parse`, and their prepare and parse
   steps are plain scripts testable without a model.

@@ -1,0 +1,53 @@
+{
+  "ruleChain": {
+    "id": "model_call",
+    "name": "model_call",
+    "root": false
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "resolve",
+        "type": "x/python",
+        "name": "resolve",
+        "configuration": {
+          "script": "/repo/modules/evaluation/chains/model_call.nodes/resolve.py",
+          "timeout": "65s",
+          "maxRunning": 2
+        }
+      },
+      {
+        "id": "invoke",
+        "type": "x/python",
+        "name": "invoke",
+        "configuration": {
+          "script": "/repo/modules/evaluation/chains/model_call.nodes/invoke.py",
+          "timeout": "905s",
+          "maxRunning": 2
+        }
+      },
+      {
+        "id": "account",
+        "type": "x/python",
+        "name": "account",
+        "configuration": {
+          "script": "/repo/modules/evaluation/chains/model_call.nodes/account.py",
+          "timeout": "65s",
+          "maxRunning": 2
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "resolve",
+        "toId": "invoke",
+        "type": "Success"
+      },
+      {
+        "fromId": "invoke",
+        "toId": "account",
+        "type": "Success"
+      }
+    ]
+  }
+}
