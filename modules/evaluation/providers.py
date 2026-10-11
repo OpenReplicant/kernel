@@ -4,9 +4,16 @@ call(cfg) takes what models.resolve() returned plus `system` and `messages`, and
 {"text", "stop_reason", "model", "usage"} with usage in Anthropic's field names
 (input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens).
 Transient failures (rate limits, 5xx, connection errors) raise pclib.Retryable.
+
+API kinds: `anthropic` (Messages API), `openai` (any OpenAI-compatible chat endpoint), and
+`claude_code`: a one-shot `claude -p` on the logged-in Claude Code session, so calls count
+against that subscription's usage instead of an API key. It runs with no tools, no settings,
+no MCP servers, our system prompt, in an empty directory, and reports the model that answered.
 """
 import json
 import os
+import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 
@@ -83,7 +90,43 @@ def _openai(cfg) -> dict:
                       "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}
 
 
-APIS = {"anthropic": _anthropic, "openai": _openai}
+def _claude_code(cfg) -> dict:
+    """`claude -p` with model_id as --model (an alias such as `haiku`, or a full id). One user
+    message only; parameters other than none are refused (the CLI takes no sampling settings).
+    `$PC_CLAUDE_CMD` overrides the command (tests use a fake)."""
+    msgs = cfg["messages"]
+    if len(msgs) != 1 or msgs[0]["role"] != "user" or not isinstance(msgs[0]["content"], str):
+        raise ValueError("the claude_code endpoint takes exactly one user message with text content")
+    if cfg["params"]:
+        raise ValueError(f"the claude_code endpoint takes no parameters, got {sorted(cfg['params'])}")
+    argv = [*os.environ.get("PC_CLAUDE_CMD", "claude").split(), "-p", "--model", cfg["model_id"],
+            "--tools", "", "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence",
+            "--system-prompt", cfg.get("system") or "You are a helpful assistant.", "--output-format", "json"]
+    with tempfile.TemporaryDirectory(prefix="pc-claude-") as empty:     # no project files or CLAUDE.md
+        try:
+            r = subprocess.run(argv, input=msgs[0]["content"], capture_output=True, text=True, cwd=empty,
+                               timeout=600)
+        except subprocess.TimeoutExpired as e:
+            raise Retryable("claude -p timed out") from e
+    try:
+        out = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"claude -p exited {r.returncode}: {(r.stderr or r.stdout)[-500:]}") from None
+    if out.get("is_error") or r.returncode != 0:
+        text = str(out.get("result") or r.stderr)[-500:]
+        if any(w in text.lower() for w in ("rate limit", "overloaded", "usage limit", "529", "429")):
+            raise Retryable(f"claude -p: {text}")
+        raise RuntimeError(f"claude -p failed: {text}")
+    by_model = out.get("modelUsage") or {}
+    served = max(by_model, key=lambda m: by_model[m].get("outputTokens", 0)) if by_model else cfg["model_id"]
+    u = out.get("usage") or {}
+    return {"text": out.get("result") or "", "stop_reason": out.get("stop_reason"), "model": served,
+            "usage": {"input_tokens": u.get("input_tokens", 0), "output_tokens": u.get("output_tokens", 0),
+                      "cache_read_input_tokens": u.get("cache_read_input_tokens", 0),
+                      "cache_creation_input_tokens": u.get("cache_creation_input_tokens", 0)}}
+
+
+APIS = {"anthropic": _anthropic, "openai": _openai, "claude_code": _claude_code}
 
 
 def call(cfg) -> dict:

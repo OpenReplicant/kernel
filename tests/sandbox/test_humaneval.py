@@ -72,5 +72,7 @@ def test_calibration_through_model_call(tmp_path, monkeypatch):
     assert len(calls) == 3 and "def add" in calls[0]["body"]["messages"][0]["content"]
     assert s["attempted"] == 3 and s["passed"] == 2 and s["pass_rate"] == pytest.approx(0.667)
     assert [r["passed"] for r in s["results"]] == [True, False, True]
+    assert s["served_models"] == {f"small-a-{tag}": 3} and s["tokens"]["output"] == 1500
+    assert s["results"][0]["usage"]["input_tokens"] == 1000
     saved = json.loads((tmp_path / "data/runs" / s["run_id"] / "calibration.json").read_text())
     assert saved["passed"] == 2

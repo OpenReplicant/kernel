@@ -4,10 +4,13 @@ HumanEval problems. If it already passes nearly all of them, Reflexion has no ro
 gain; pick a harder benchmark or a weaker model before M7 (docs/V1_BUILD_PLAN.md M6).
 
 Model calls go through the model_call sub-chain in RuleGo (budgeted, traced); completions run
-only in the sandbox. Needs DATABASE_URL, RULEGO_URL, the RuleGo container with the model's key
-in its environment, and the sandbox image.
+only in the sandbox. The default model, claude-code-haiku, is `claude -p` on the logged-in
+Claude Code session (subscription usage, unpriced), so RuleGo must run where `claude` is
+logged in (docs/NOTES.md). Tokens and the model that answered are recorded per problem and,
+as observed metrics, in the run's session context. Needs DATABASE_URL, RULEGO_URL and the
+sandbox image.
 
-    python bench/calibrate.py --n 20 --budget 3
+    python bench/calibrate.py --n 20
 """
 import argparse
 import json
@@ -19,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from bench import humaneval  # noqa: E402
 from kernel import Kernel  # noqa: E402
-from modules.evaluation.models import load_catalog, use_model  # noqa: E402
+from modules.evaluation.models import load_catalog, record_spend, use_model  # noqa: E402
 from modules.systems.runs import record_run, start_run  # noqa: E402
 from pclib import chains as c  # noqa: E402
 from pclib import data_root  # noqa: E402
@@ -54,12 +57,15 @@ def calibrate(k: Kernel, rg: RuleGo, model: str, n: int, budget_usd: float, cata
         work = data_root() / "runs" / run / "tasks" / tid / "ep-0" / "work"
         r = humaneval.check(p, humaneval.extract_code(reply["text"]), work)
         results.append({"task": p["task_id"], "passed": r["passed"], "timed_out": r["timed_out"],
-                        "cost_usd": reply.get("cost_usd")})
-    record_run(k, run, by=by)
+                        "served_model": reply["model"], "usage": reply["usage"], "cost_usd": reply.get("cost_usd")})
+    metrics = {k.get(a).args["name"]: k.get(a).value for a in record_spend(k, run, record_run(k, run, by=by), by=by)}
     passed = sum(r["passed"] for r in results)
     summary = {"run_id": run, "model": model, "attempted": len(results), "requested": n, "passed": passed,
                "pass_rate": round(passed / len(results), 3) if results else None,
-               "cost_usd": round(sum(r["cost_usd"] or 0 for r in results), 4), "results": results}
+               "served_models": metrics.get("llm_served_models", {}),
+               "tokens": {kind: metrics.get(f"llm_{kind}_tokens", 0)
+                          for kind in ("input", "output", "cache_read", "cache_write")},
+               "cost_usd": metrics.get("llm_spend_usd", 0), "results": results}
     out = data_root() / "runs" / run / "calibration.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(summary, indent=2))
@@ -68,9 +74,10 @@ def calibrate(k: Kernel, rg: RuleGo, model: str, n: int, budget_usd: float, cata
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--model", default="claude-haiku-5-5", help="catalog id of the actor model")
+    ap.add_argument("--model", default="claude-code-haiku", help="catalog id of the actor model")
     ap.add_argument("--n", type=int, default=20)
-    ap.add_argument("--budget", type=float, default=3.0, help="USD; model_call refuses calls past it")
+    ap.add_argument("--budget", type=float, default=3.0,
+                    help="USD; model_call refuses calls past it (unpriced models never reach it)")
     a = ap.parse_args()
     k = Kernel.connect()
     try:
@@ -79,7 +86,10 @@ def main():
         k.conn.close()
     print(json.dumps({key: v for key, v in s.items() if key != "results"}, indent=2))
     for r in s["results"]:
-        print(("PASS " if r["passed"] else "FAIL ") + r["task"])
+        u = r["usage"]
+        print(f"{'PASS' if r['passed'] else 'FAIL'} {r['task']:<14} {r['served_model']:<22} "
+              f"in {u['input_tokens']} out {u['output_tokens']} cache r/w "
+              f"{u['cache_read_input_tokens']}/{u['cache_creation_input_tokens']}")
 
 
 if __name__ == "__main__":

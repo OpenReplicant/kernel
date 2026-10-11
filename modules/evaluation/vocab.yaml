@@ -2,7 +2,7 @@
 # models it calls. Results are `observed` in a session context (with spans in the run's
 # recordings) or `stated` in a source's perspective (a paper's reported numbers).
 vocabulary: evaluation
-version: "0.2"
+version: "0.3"
 imports: [systems]
 prefix: { ev: "urn:pc:evaluation:" }
 
@@ -12,7 +12,7 @@ types:
   - { iri: ev:Harness,   is_a: k:Agent }     # an agent harness (Codex, Claude Code, ...); M5
   - { iri: ev:Benchmark, is_a: k:Thing }
 
-apis: [anthropic, openai]                    # openai: any OpenAI-compatible chat endpoint
+apis: [anthropic, openai, claude_code]       # openai: any OpenAI-compatible chat endpoint; claude_code: `claude -p`
 price_kinds: [input, output, cache_read, cache_write]
 
 predicates:

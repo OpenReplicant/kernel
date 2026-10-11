@@ -17,6 +17,11 @@ endpoints:
     base_url: https://api.anthropic.com
     key_env: ANTHROPIC_API_KEY
 
+  # The logged-in Claude Code session (`claude -p`): uses its subscription, no API key. Calls
+  # are unpriced (cost 0); their tokens are still counted and recorded.
+  - id: claude-code
+    api: claude_code
+
 models:
   - id: claude-haiku-5-5
     endpoint: anthropic
@@ -32,3 +37,7 @@ models:
     endpoint: anthropic
     prices: { input: 4.00, output: 20.00, cache_read: 0.20 }
     params: { max_tokens: 16000 }
+
+  - id: claude-code-haiku
+    endpoint: claude-code
+    model_id: haiku

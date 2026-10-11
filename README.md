@@ -35,7 +35,7 @@ contract), **M2** (kernel core), **M3** (vocabularies, validation, views, module
 access: models known to the kernel, a budgeted `model_call` sub-chain, runs recorded as
 sources), **M5** (component graphs compile to RuleGo chains and run; components swap by name),
 **M6** (payloads run in a fresh, locked-down container; a calibration driver for the actor model
-on HumanEval). Next: the calibration run (needs an API key), then **M7**.
+on HumanEval). The calibration found HumanEval saturated (20/20); choosing a harder benchmark or weaker model comes before **M7**.
 
 ## Running
 

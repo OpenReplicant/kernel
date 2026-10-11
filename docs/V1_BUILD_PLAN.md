@@ -220,6 +220,8 @@ retries, on 20 HumanEval problems. If it already passes nearly all of them, Refl
 show a gain; choose a harder benchmark or a weaker model now and record the choice, rather
 than discovering it in M9. `python bench/calibrate.py --n 20 --budget 3` (model calls through
 `model_call`, completions checked in the sandbox; result in `$PC_DATA/runs/<run>/calibration.json`).
+Result (2026-10-11): Haiku 5.5 via `claude -p` passed 20/20, so HumanEval can't show a
+Reflexion gain with it; the choice of benchmark or model is open (docs/NOTES.md).
 
 ## M7 — The paper as evidence, and the Reflexion slots
 

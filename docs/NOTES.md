@@ -13,8 +13,8 @@ can pick up without the conversation that produced them. Update it at each miles
 | M3 vocabularies, validation, views, modules | passed | Four modules; exact `spec.yaml` round trip; kernel tests pass with no `modules/` present |
 | M4 model access | passed | Catalog `modules/evaluation/models.yaml`; `model_call` sub-chain; `modules/systems/runs.py`; `ai/llm` not used (`docs/RULEGO_NOTES.md` §8) |
 | M5 compile and run a component graph | passed | Typed port contracts; `modules/systems/graph.py`, `pclib/compile.py`, `pclib/component.py`; stubs in `tests/components/` |
-| M6 sandbox | passed | `pclib/sandbox.py`, `scripts/env_container.py`, image `sandbox/Containerfile`; tested with Docker (`PC_CONTAINER_CMD=docker`), not yet Podman. Calibration (`bench/calibrate.py`) tested on the fake endpoint; the real run needs `ANTHROPIC_API_KEY` |
-| M7 paper + slots | next | Blocked on the calibration run |
+| M6 sandbox | passed | `pclib/sandbox.py`, `scripts/env_container.py`, image `sandbox/Containerfile`; tested with Docker (`PC_CONTAINER_CMD=docker`), not yet Podman. Calibration run (2026-10-11): `claude-code-haiku` (served by `claude-haiku-5-5`) passed **20/20** HumanEval problems, one try each: HumanEval is saturated for this model |
+| M7 paper + slots | next | Blocked on a calibration decision: harder benchmark or weaker model |
 
 Test suite: 92 pass with everything up. Without their prerequisites these skip: 14 sandbox
 tests (a container engine with `localhost/kernel-sandbox`), 9 smoke tests (`RULEGO_URL`,
@@ -85,6 +85,16 @@ This repo has been developed in a Claude Code cloud container. What that needed:
   Builds go through a TLS-intercepting proxy: build local base images that trust
   `/root/.ccr/ca-bundle.crt`, pass them as `GO_IMAGE`/`PY_IMAGE`, and build with
   `--network host --build-arg HTTPS_PROXY=$HTTPS_PROXY`.
+- **Model calls on the subscription:** the `claude-code` endpoint runs `claude -p` (no
+  tools, settings or MCP, our system prompt, an empty working directory), so steps that use
+  it must run where `claude` is logged in. Each call carries ~1.2-1.6k tokens of harness
+  overhead (reported as cache writes). openrouter.ai is blocked by this environment's network
+  policy.
+- **RuleGo on the host** (needed for `claude -p`): copy the binary out of the image
+  (`docker create --name x localhost/kernel-rulego; docker cp x:/usr/local/bin/rulego-server .`),
+  `ln -s $PWD /repo`, point `data_dir` in a copy of `rulego/config.conf` at a scratch dir, and
+  start it with `PATH=$PWD/.venv/bin:$PATH PYTHONPATH=/repo DATABASE_URL=...`. All smoke
+  tests pass against it.
 - **Sandbox tests:** build the image with
   `docker build -f sandbox/Containerfile --build-arg BASE=mirror.gcr.io/library/python:3.12-slim -t localhost/kernel-sandbox sandbox`
   and run with `PC_CONTAINER_CMD=docker`. HumanEval comes from raw.githubusercontent.com

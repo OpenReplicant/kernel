@@ -154,7 +154,8 @@ def cost_usd(prices: dict, usage: dict) -> float:
 
 
 def record_spend(kernel, run_id: str, recorded: dict, by) -> list:
-    """Observed facts about a run's model use (call count, spend) in its session context,
+    """Observed facts about a run's model use (calls, spend, tokens by kind, and which models
+    answered, as {model: calls}) in its session context,
     each with spans on the llm.response lines of its recorded trace (systems.runs.record_run)."""
     lines = [e for e in recorded["events"] if e["event"] == "llm.response"]
     spans = [kernel.add_span(recorded["sha256"], {"path": "trace.jsonl", "line_start": e["line"],
@@ -162,6 +163,14 @@ def record_spend(kernel, run_id: str, recorded: dict, by) -> list:
     if not spans:
         return []
     spent = round(sum(e["payload"].get("cost_usd", 0) for e in lines), 8)
+    tokens = {f"llm_{kind}_tokens": sum(e["payload"].get("usage", {}).get(field, 0) for e in lines)
+              for kind, field in (("input", "input_tokens"), ("output", "output_tokens"),
+                                  ("cache_read", "cache_read_input_tokens"),
+                                  ("cache_write", "cache_creation_input_tokens"))}
+    served = {}
+    for e in lines:
+        served[e["payload"].get("model")] = served.get(e["payload"].get("model"), 0) + 1
+    metrics = {"llm_calls": len(lines), "llm_spend_usd": spent, **tokens, "llm_served_models": served}
     kw = dict(context=recorded["context"], method="observed", confidence=1, asserted_by=by, evidence=spans)
-    return [kernel.assert_(recorded["context"], "ev:metric", value=len(lines), args={"name": "llm_calls"}, **kw),
-            kernel.assert_(recorded["context"], "ev:metric", value=spent, args={"name": "llm_spend_usd"}, **kw)]
+    return [kernel.assert_(recorded["context"], "ev:metric", value=v, args={"name": name}, **kw)
+            for name, v in metrics.items()]
