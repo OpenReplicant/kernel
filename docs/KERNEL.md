@@ -116,6 +116,20 @@ retracted  superseded / retracted   (final)
   `superseded`, in one transaction.
 - `known_at=T` answers from `recorded_at` and `kb.status_change`: what was accepted at T.
 
+### Belief
+
+The record says what was asserted, by whom, on what evidence. What is *believed* is a
+judgment over that record. `status` is the one judgment stored today: accepting, disputing
+or superseding an assertion is an act by an agent, logged in `kb.status_change`, and queries
+default to `accepted`. That is enough while one curator (a person, or the compiler under
+review) decides.
+
+Once several sources disagree and trust has to be weighed, belief becomes a computed view:
+`beliefs(perspective, policy, at) -> rows`, derived from the record, from source reliability
+(`k:reliability`), from who holds what (`k:holds`), and from method, evidence and links. The
+log stays neutral; status changes become one input among others. Nothing is migrated: it is
+a new interface over the same tables (backlog until a second source of trust needs it).
+
 ### Rules the database enforces
 
 So that no client, script or bug can quietly break the evidence trail:

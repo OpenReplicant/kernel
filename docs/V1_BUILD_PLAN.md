@@ -18,7 +18,7 @@ and must pass before M7.
 |---|---|
 | Runtime check | M0 |
 | Kernel | M1 foundation · M2 kernel core · M3 vocabularies, validation, views |
-| First application | M4 model calls · M5 sandbox · M6 paper as evidence + slots · M7 Reflexion by hand · M8 benchmark → evidence · M9 compiler |
+| First application | M4 model access · M5 sandbox and harness sessions · M6 paper as evidence + slots · M7 Reflexion by hand · M8 benchmark → evidence · M9 compiler |
 
 ---
 
@@ -142,29 +142,60 @@ and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.
 - `validate` catches the same errors as `tools/validate_spec.py` on deliberately broken specs
   (internal slot bound as an MCP tool; wiring to an undeclared slot; two policies)
 
-## M4 — Model calls with a budget (shape under review: `docs/NOTES.md`)
+## M4 — Model access: models in the kernel, a budgeted model call, runs as sources
 
-- `scripts/claude_call.py` + `pclib.claude()` using the Anthropic Messages API.
-- Model ids come from the system context (`ev:uses_model`), with env fallbacks
-  `PC_ACTOR_MODEL`, `PC_REFLECTOR_MODEL`. Default to a small, cheap model for the actor and
-  reflector (e.g. `claude-haiku-5-5`) so HumanEval leaves headroom; that choice is a
-  `defaulted` assertion.
-- Prompt caching for repeated prefixes. Every `llm.request` trace event carries the calling
-  slot's id and the full prompt.
+**Verify first** (record in `docs/RULEGO_NOTES.md`): what RuleGo's `ai/llm` node
+(rulego-components-ai) takes and returns: endpoint, key, model and parameters, whether they
+can come from message metadata, whether token usage comes back, and whether it reaches
+Anthropic models (directly or through an OpenAI-compatible endpoint).
+
+- **Models are known to the kernel.** `evaluation` gains what a call needs: a model's
+  endpoint, API kind, default parameters and prices, and an `ev:Harness` type (an agent with
+  its own model, endpoint and parameters, used in M5). A system context names its models with
+  `ev:uses_model` / `ev:model_param` as now. Defaults (a small, cheap model for the actor and
+  reflector, e.g. `claude-haiku-5-5`) are `defaulted` assertions, so swapping a model,
+  endpoint or parameter is an assertion, not a code change.
+- **`model_call` sub-chain**, built with `pclib.chains`, with one fixed interface (messages,
+  model role, parameter overrides in; text, usage out):
+  1. `resolve` (pclib step): reads the model, endpoint and parameters for the calling slot's
+     model role from the kernel; refuses if `run.run.spent_usd >= budget_usd`; emits
+     `llm.request` with the calling slot's id and the full prompt.
+  2. the call: `ai/llm` if the check above says it fits, otherwise a pclib step using the
+     provider's SDK. Either way the interface stays the same, so either can be swapped in.
+  3. `account` (pclib step): records usage, adds cost to `spent_usd`, emits `llm.response`.
+  Slots that use a model become `prepare → model_call → parse`, and their prepare and parse
+  steps are plain scripts testable without a model.
+- **Runs are sources.** `pclib` gains the Record joint: at the end of a run, its trace is
+  exported to `runs/<id>/trace.jsonl`, stored with `put_source`, attributed with
+  `k:produced_by`, and its session context is created. M5 (harness transcripts) and M7
+  (mechanism-test outcomes) record through it.
+- Prompt caching for repeated prefixes, where the call path supports it.
 
 **Gate:** a run with a tiny budget makes calls until the budget is hit, then refuses with a
-clear error; trace events and `spent_usd` are correct.
+clear error; trace events and `spent_usd` are correct; changing a model assertion changes the
+model the next call uses, with no code change; the run's trace is a source in the kernel and
+`why` on an observed assertion about the run returns a span in it.
 
-## M5 — Sandbox
+## M5 — Sandbox and harness sessions
 
 - `scripts/env_container.py`: run a Python file plus tests in a fresh rootless Podman container
   per episode, via the `podman` CLI. `--network=none`, mount only the episode's `work/` dir,
   CPU/memory/pids limits, read-only root filesystem, wall-clock timeout, non-root user inside.
   Returns stdout, stderr, exit code, timed_out. Engine command configurable
   (`PC_CONTAINER_CMD`, default `podman`). Emits `tool.call` / `tool.result`.
+- **`harness_session` sub-chain**: runs an agent harness (Codex CLI, Claude Code, …) headless,
+  or through its MCP server via `ai/mcpClient`, in the same kind of container with one
+  difference: network only to its model endpoint (through a proxy). Model, endpoint and
+  parameters come from the kernel (`ev:Harness`); the harness's own spending limit is set from
+  the run's remaining budget, and its reported usage is added after. Its transcript is stored
+  as a source (M4's Record joint). **Verify first** which harnesses offer a headless or MCP
+  mode, their options for model, endpoint, turn and spending limits, and how they report
+  usage; record the findings in `docs/RULEGO_NOTES.md`.
 
 **Gate:** a passing solution passes, a failing one fails, an infinite loop times out, and code
-attempting network access fails.
+attempting network access fails. A harness session (a stub harness in tests; a real one when
+its key is set) completes a small task in its workspace, cannot reach any host but its
+endpoint, and leaves its transcript as a source with the session's usage counted in the run.
 
 **Calibration (a few dollars, before M6):** run the default actor model once per problem, no
 retries, on 20 HumanEval problems. If it already passes nearly all of them, Reflexion can't
@@ -196,13 +227,13 @@ before copying anything.
 | `control/retry` | Controller | Retries up to `max_trials` on fail; emits `controller.decision` |
 
 Prompts go in `papers/reflexion/prompts/` with a header citing their source span. Model calls
-go through `pclib.claude()`, never through the paper repo's own clients.
+go through the `model_call` sub-chain, never through the paper repo's own clients.
 
 **Gate:**
 - `why` on any `stated` assertion in the Reflexion system context returns a span in the PDF
   with page and character range; every `repo` assertion returns a repo path and line range
 - `SPEC_CHANGES.md` lists each field's verification result
-- each slot script has a contract test with fixtures (mock `pclib.claude`)
+- each slot script has a contract test with fixtures (prepare and parse steps tested without a model)
 - a kernel query finds a component for every slot in the Reflexion system
 
 ## M7 — Reflexion by hand, plus mechanism tests
@@ -217,8 +248,8 @@ go through `pclib.claude()`, never through the paper repo's own clients.
   **after** the `given` event and inside the `within` window; with `negate`, none may.
 - **Fault seeding:** a variant that writes reflections but never injects them.
 - Each run creates a `session` context in the kernel whose `conditions` record models,
-  benchmark version, budget and toggles. At the end of the run its trace is exported to
-  `runs/<id>/trace.jsonl` and stored as a source. Mechanism-test outcomes become `observed`
+  benchmark version, budget and toggles. At the end of the run its trace is stored as a source
+  (M4's Record joint). Mechanism-test outcomes become `observed`
   assertions (`sys:test_passed`) in that context, with spans into that file.
 
 **Gate:** on 5 HumanEval problems, Reflexion passes all mechanism tests; the fault-seeded

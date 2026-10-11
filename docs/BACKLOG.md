@@ -10,6 +10,7 @@ Add new ideas here instead of building them.
 - [ ] Long-running script service if per-step overhead shows in timings (M0: ~75 ms per DB-backed step on x/python)
 - [ ] Ingestion beyond papers: segmenters, entity resolution, vocabulary proposals
 - [ ] Interactive evidence: chats and embodied sessions written as session contexts with transcript sources
+- [ ] `beliefs(perspective, policy, at)`: belief as a computed view over the record (docs/KERNEL.md, Belief), when a second source of trust has to be weighed
 - [ ] Source reliability scoring from reproduction outcomes (`k:reliability`, evidenced)
 - [ ] Lab: toggle grids, cost reports, shared benchmarks
 - [ ] Review interface for spec and reproduction checkpoints
@@ -19,9 +20,8 @@ Add new ideas here instead of building them.
 - [ ] Compile AgentSquare's 16 agents as a comparison set for the paper
 - [ ] Harder benchmark than HumanEval if the baseline saturates it
 - [ ] Platform MCP server: RuleGo's MCP endpoint exposing chains for registry search, spec validation, running chains, reading traces
-- [ ] Agent-harness runner step (Codex, Claude Code, ... via MCP or headless sessions); see docs/NOTES.md (may become part of M4)
 - [ ] Use alongside an agent harness: kernel and platform operations as the harness's toolset
-- [ ] Move tracing, checkpoints and budget checks into rule-engine aspects: M0 confirmed core AOP covers every node, but aspects are Go registered at engine creation, so this needs a custom server build
+- [ ] Move tracing and checkpoints into rule-engine aspects compiled into `rulego/server` (M0: core AOP covers every node), so non-Python nodes are traced too; budget stays in the `model_call` and `harness_session` sub-chains
 - [ ] Stronger sandbox isolation (gVisor or Kata runtime under Podman) before running untrusted paper repos at scale
 - [ ] Object storage behind the same `$PC_DATA` key scheme
 - [ ] Compile the compiler: describe the compile-paper pipeline itself as a spec, so it can be improved by the same process
