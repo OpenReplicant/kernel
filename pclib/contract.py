@@ -124,7 +124,8 @@ def trace(event: str, slot: str | None = None, port: str | None = None, payload:
 
 
 def add_usage(**counts: float):
-    """Accumulate model usage (tokens, cost) for this step's run.step row."""
+    """Accumulate model usage (tokens, cost) for this step's run.step row. A `cost_usd` count
+    is also added to the run's spent_usd when the step commits."""
     if _current is None:
         raise RuntimeError("add_usage() called outside run_step")
     for k, v in counts.items():
@@ -147,6 +148,9 @@ def _commit(conn, step: _Step, output: dict):
         ).fetchone()
         if not inserted:                      # a concurrent run of this step finished first
             return _stored_output(conn, inp)
+        if step.usage.get("cost_usd"):        # model spend counts once, with the step that made it
+            conn.execute("update run.run set spent_usd = spent_usd + %s where id = %s",
+                         (step.usage["cost_usd"], inp.run_id))
         with conn.cursor() as cur:
             cur.executemany(
                 "insert into run.trace (run_id, task_id, episode, step_key, event, slot, port, payload)"

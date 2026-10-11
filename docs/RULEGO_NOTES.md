@@ -126,6 +126,30 @@ rootful socket.
 This makes platform tools (search the registry, validate a spec, run a chain, query evidence)
 a matter of exposing chains, and lets a step's implementation be any MCP tool.
 
+## 8. The `ai/llm` node (checked for M4, not used)
+
+Read from rulego-components-ai `action/generate_text.go` (main branch, latest tag v0.37.0):
+
+- **Endpoint, key, model and parameters are fixed when the chain is deployed** (`url`, `key`,
+  `model`, `params` in the node configuration, read in `Init`). Only `systemPrompt`, message
+  `content` and image URLs are `${}` templates. A different model per run or per role, read from
+  the kernel, would mean a node per model or redeploying the chain.
+- **The message list is fixed in the configuration** (a list of role + content templates), so a
+  conversation of varying length can't be passed in from the message.
+- **Token usage is discarded**: the node keeps only the reply text (`resp.Choices`), never
+  `resp.Usage`, so a budget can't be charged from it.
+- OpenAI-compatible only (`go-openai`), with `temperature` and `topP` defaults that are always
+  sent.
+
+So `model_call`'s invoke step is a pclib step (`modules/evaluation/steps/model_invoke.py`)
+calling the Anthropic SDK, or any OpenAI-compatible endpoint over HTTP, with the model,
+endpoint and parameters resolved from the kernel per call. The sub-chain's interface
+(resolve → invoke → account) would let `ai/llm` stand in if those limits are lifted upstream.
+
+Verified in the container (`tests/smoke/test_model_call.py`): a caller chain reaches
+`model_call` through `flow`, metadata (`run_id`, `call`) flows into the sub-chain, a replayed
+call returns the stored reply, and a spent budget fails the chain with the refusal message.
+
 ## Building here vs. on a workstation
 
 `podman build -f rulego/Containerfile -t localhost/kernel-rulego .` is the normal path. Base

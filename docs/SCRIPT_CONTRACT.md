@@ -76,11 +76,14 @@ mechanism test mentions must be emitted explicitly.
 
 Only through the `model_call` sub-chain (M4), or `harness_session` for an agent harness (M5).
 A step that needs a model is split: it prepares the messages, the chain calls `model_call`,
-and a following step parses the reply. `model_call`:
+and a following step parses the reply. Before entering it, the caller sets `meta.call` (e.g.
+its slot id): the sub-chain's step keys become `.../call=<name>/<node>`, so two calls in one
+iteration don't share a key, and its last step clears it. `model_call`:
 - reads the model, endpoint and parameters from the kernel (`ev:uses_model`, `ev:model_param`)
 - refuses the call if `run.run.spent_usd >= budget_usd`
 - emits `llm.request` (with the calling slot and the full prompt in payload) and `llm.response`
-- records token usage and adds cost to `spent_usd`
+- records token usage; a step's `add_usage(cost_usd=…)` is added to `run.run.spent_usd` in the
+  same transaction as the step's output, so a replayed call is never charged twice
 
 ## Fallback if process start-up is too slow
 

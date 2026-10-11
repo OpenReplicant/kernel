@@ -11,9 +11,10 @@ can pick up without the conversation that produced them. Update it at each miles
 | M1 foundation | passed | `pclib` contract; `compose.yml` written but not yet run under Podman |
 | M2 kernel core | passed | Thermostat domain with sensor-log and report evidence |
 | M3 vocabularies, validation, views, modules | passed | Four modules; exact `spec.yaml` round trip; kernel tests pass with no `modules/` present |
-| M4 model access | not started; shape settled (below) | `docs/V1_BUILD_PLAN.md` M4 |
+| M4 model access | passed | Catalog `modules/evaluation/models.yaml`; `model_call` sub-chain; `modules/systems/runs.py`; `ai/llm` not used (`docs/RULEGO_NOTES.md` §8) |
 
-Test suite: 51 pass, 4 smoke tests skip unless a RuleGo container is up (`RULEGO_URL`).
+Test suite: 59 pass; skipped without their prerequisites: 5 smoke tests (`RULEGO_URL`, `RULEGO_DATABASE_URL`)
+and one live model call (`ANTHROPIC_API_KEY`).
 
 ## Decisions taken
 
@@ -78,6 +79,11 @@ This repo has been developed in a Claude Code cloud container. What that needed:
   Builds go through a TLS-intercepting proxy: build local base images that trust
   `/root/.ccr/ca-bundle.crt`, pass them as `GO_IMAGE`/`PY_IMAGE`, and build with
   `--network host --build-arg HTTPS_PROXY=$HTTPS_PROXY`.
+- **RuleGo smoke tests:** create a `rulego_smoke` database with `db/*.sql`, then
+  `docker run -d --network host -v $PWD:/repo:ro -v /var/lib/postgresql/kscratch:/pgsock
+  -e DATABASE_URL="postgresql://postgres@/rulego_smoke?host=/pgsock&port=5499" -e FAKE_KEY=smoke
+  localhost/kernel-rulego`, and run with `NO_PROXY=127.0.0.1,localhost`,
+  `RULEGO_URL=http://127.0.0.1:9090` and `RULEGO_DATABASE_URL` pointing at `rulego_smoke`.
 - **RuleGo container with the local database:** mount the socket directory,
   `-v /var/lib/postgresql/kscratch:/pgsock -e DATABASE_URL="postgresql://postgres@/<db>?host=/pgsock&port=5499"`.
 - **Sources:** rulego.cc is blocked; the docs are in github.com/rulego/rulego-doc, the server

@@ -10,7 +10,10 @@ x/python imports the stub when it pre-starts a worker, so pclib, psycopg and the
 are loaded before a message arrives; Process then runs one step and the worker exits.
 
 The message data is the step's `data`. RuleGo metadata (a flat string map) carries run_id,
-task_id and episode, plus the step's `meta`. The step script is any file that defines
+task_id and episode, plus the step's `meta`. A step's key is
+`task=<id>/ep=<n>/[i=<loop index>/][call=<name>/]<node id>`: `call` (set in meta by a caller
+before entering a shared sub-chain such as model_call, cleared by its last step) keeps two
+calls of the same sub-chain in one iteration apart. The step script is any file that defines
 `main(inp)` (the same function a command-line step passes to run_step).
 """
 import importlib.util
@@ -54,7 +57,9 @@ def call(script: str, step: str, msg, metadata: dict, timeout: float | None = No
         raise ValueError("metadata is missing run_id (pass it as a query parameter or set it upstream)")
     episode = int(metadata["episode"]) if metadata.get("episode") not in (None, "") else None
     loop = metadata.get("_loopIndex")
-    key = f"task={metadata.get('task_id')}/ep={episode}/" + (f"i={loop}/" if loop not in (None, "") else "") + step
+    call = metadata.get("call")         # set by a caller around a shared sub-chain (e.g. model_call)
+    key = (f"task={metadata.get('task_id')}/ep={episode}/" + (f"i={loop}/" if loop not in (None, "") else "")
+           + (f"call={call}/" if call else "") + step)
     inp = StepInput(run_id=metadata["run_id"], step_key=key, task_id=metadata.get("task_id"),
                     episode=episode, data=msg if isinstance(msg, dict) else {"value": msg},
                     meta={k: v for k, v in metadata.items() if k not in RESERVED and not k.startswith("_")})
