@@ -1,7 +1,7 @@
 # Agent-design vocabulary (L2): slot types as role types, scopes, and their rules.
 # A slot in a system is a role instance `sys:instance_of` one of these. docs/CONCEPTS.md.
 vocabulary: agent-design
-version: "0.3"
+version: "0.4"
 imports: [systems]
 prefix: { ad: "urn:pc:agent-design:" }
 
@@ -10,21 +10,29 @@ types:
 
 scopes: [call, step, episode, task, lifetime]
 
+# What flows through typed slot ports, so components written for different papers can be
+# swapped: a component honouring these fits any slot of the same type.
+port_types:
+  text:     { type: string }                                   # model output: code, an answer, a reflection
+  items:    { type: array }                                    # a list of remembered items, oldest first
+  context:  { type: object, required: [prompt], properties: { prompt: { type: string } } }
+  feedback: { type: object, required: [passed], properties: { passed: { type: boolean }, detail: {} } }
+
 # Slot types. key: the name spec.yaml uses. cardinality: exclusive (one owner per system),
 # pipeline (ordered stack), multi (several named instances). internal: the agent under test
 # must never be able to skip or invoke it (so never a model-invoked tool). Ports listed are the
-# minimum; a slot instance may declare more (spec.yaml `ports`).
+# minimum, as name:dir[:type] (untyped = any); a slot instance may declare more (spec.yaml `ports`).
 roles:
-  - { iri: ad:ContextBuilder, key: context_builder, group: decision,    cardinality: pipeline,  ports: [run:in, input:in, output:out] }
-  - { iri: ad:Policy, key: policy, group: decision,    cardinality: exclusive, ports: [start:in, output:out] }
-  - { iri: ad:Planner, key: planner, group: decision,    cardinality: exclusive, ports: [run:in, plan:out] }
+  - { iri: ad:ContextBuilder, key: context_builder, group: decision,    cardinality: pipeline,  ports: [run:in, input:in:items, output:out:context] }
+  - { iri: ad:Policy, key: policy, group: decision,    cardinality: exclusive, ports: [start:in:context, output:out:text] }
+  - { iri: ad:Planner, key: planner, group: decision,    cardinality: exclusive, ports: [run:in, plan:out:text] }
   - { iri: ad:WorldModel, key: world_model, group: decision,    cardinality: multi,     ports: [run:in, prediction:out] }
   - { iri: ad:ActionSpace, key: action_space, group: environment, cardinality: multi,     ports: [call:in, result:out] }
   - { iri: ad:ObservationProcessor, key: observation_processor, group: environment, cardinality: pipeline,  ports: [input:in, output:out] }
-  - { iri: ad:Evaluator, key: evaluator, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, pass:out, fail:out, score:out] }
-  - { iri: ad:Reflector, key: reflector, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, insight:out] }
-  - { iri: ad:Refiner, key: refiner, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, output:out] }
-  - { iri: ad:Memory, key: memory, group: state,       cardinality: multi,     ports: [write:in, written:out, read:out] }
+  - { iri: ad:Evaluator, key: evaluator, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, pass:out:feedback, fail:out:feedback, score:out] }
+  - { iri: ad:Reflector, key: reflector, internal: true, group: judgment,    cardinality: multi,     ports: [run:in:feedback, insight:out:text] }
+  - { iri: ad:Refiner, key: refiner, internal: true, group: judgment,    cardinality: multi,     ports: [run:in, output:out:text] }
+  - { iri: ad:Memory, key: memory, group: state,       cardinality: multi,     ports: [write:in, written:out, read:out:items] }
   - { iri: ad:ContextManager, key: context_manager, internal: true, group: state,       cardinality: exclusive, ports: [input:in, output:out] }
   - { iri: ad:Controller, key: controller, internal: true, group: control,     cardinality: multi,     ports: [decide:in, retry:out, stop:out] }
   - { iri: ad:Search, key: search, internal: true, group: control,     cardinality: exclusive, ports: [run:in, best:out] }

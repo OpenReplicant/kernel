@@ -79,6 +79,7 @@
         "properties": {
           "from": { "type": "string", "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$", "description": "slot_id.event, e.g. episode_eval.fail" },
           "to": { "type": "string", "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$", "description": "slot_id.input, e.g. reflector.run" },
+          "kind": { "enum": ["call", "event", "stream", "shared_state", "flow", "causal"], "description": "Coupling kind, default event. shared_state: the target reads the source's latest value; it neither triggers nor orders the target." },
           "condition": { "type": "string", "description": "Optional expression evaluated on the message metadata." },
           "provenance": { "$ref": "#/$defs/provenance" },
           "source_ref": { "type": "string" }
@@ -269,8 +270,8 @@
         "ports": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z0-9_]+:(in|out)$" },
-          "description": "Ports beyond the slot type's minimum (vocab/agent_design.yaml), as name:in or name:out."
+          "items": { "type": "string", "pattern": "^[a-z0-9_]+:(in|out)(:[a-z0-9_]+)?$" },
+          "description": "Ports beyond the slot type's minimum (modules/agent_design/vocab.yaml), as name:in or name:out, optionally :type (a port_types name; untyped = any)."
         },
         "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/param" } },
         "prompts": {

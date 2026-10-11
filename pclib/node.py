@@ -53,6 +53,11 @@ def bind(script: str, step: str, timeout: float | None = None):
 
 def call(script: str, step: str, msg, metadata: dict, timeout: float | None = None) -> dict:
     """Run one step for an x/python node and return {"msg": ..., "metadata": ...}."""
+    return call_fn(_load(script).main, step, msg, metadata, timeout)
+
+
+def call_fn(fn, step: str, msg, metadata: dict, timeout: float | None = None) -> dict:
+    """call() for a step function rather than a script (pclib.component wraps components)."""
     if not metadata.get("run_id"):
         raise ValueError("metadata is missing run_id (pass it as a query parameter or set it upstream)")
     episode = int(metadata["episode"]) if metadata.get("episode") not in (None, "") else None
@@ -63,7 +68,7 @@ def call(script: str, step: str, msg, metadata: dict, timeout: float | None = No
     inp = StepInput(run_id=metadata["run_id"], step_key=key, task_id=metadata.get("task_id"),
                     episode=episode, data=msg if isinstance(msg, dict) else {"value": msg},
                     meta={k: v for k, v in metadata.items() if k not in RESERVED and not k.startswith("_")})
-    output = execute(_load(script).main, inp, timeout)
+    output = execute(fn, inp, timeout)
     out_meta = dict(metadata)
     out_meta.update({k: _meta_value(v) for k, v in output.get("meta", {}).items()})
     if output.get("episode") is not None:

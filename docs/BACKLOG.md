@@ -21,6 +21,14 @@ Add new ideas here instead of building them.
 - [ ] Harder benchmark than HumanEval if the baseline saturates it
 - [ ] Platform MCP server: RuleGo's MCP endpoint exposing chains for registry search, spec validation, running chains, reading traces
 - [ ] Use alongside an agent harness: kernel and platform operations as the harness's toolset
+- [ ] The knowledge system as an agent's memory: MCP tools (search, why, assert, resolve_entity, propose_term) served from RuleGo, an agent skill, and harness hooks that capture sources and inject recalled beliefs automatically
+- [ ] Spike RuleGo-Server's MCP endpoint (documented, never exercised: RULEGO_NOTES §7) before anything depends on it
+- [ ] pclib `tool` entry point: JSON in/out with schema checks and no run, for stateless steps such as MCP tools
+- [ ] Agent-harness sessions as steps (Codex, Claude Code, ... headless or via their MCP servers) in a sandbox that reaches only the model endpoint; transcripts as sources
+- [ ] Other model providers through an OpenAI-compatible router (LiteLLM proxy, pinned, in its own container) rather than new adapters
+- [ ] Vocabulary-constrained extraction: write tools whose JSON Schema enumerates the loaded predicates; a `propose_term` lane for claims that fit none
+- [ ] Move `modules/evaluation`'s model_call steps and `modules/systems/runs.py` out of modules (components/apps) when next touched
+- [ ] Parallel branches in compiled graphs (fan-out and joins); nested loops
 - [ ] Move tracing and checkpoints into rule-engine aspects compiled into `rulego/server` (M0: core AOP covers every node), so non-Python nodes are traced too; budget stays in the `model_call` and `harness_session` sub-chains
 - [ ] Stronger sandbox isolation (gVisor or Kata runtime under Podman) before running untrusted paper repos at scale
 - [ ] Object storage behind the same `$PC_DATA` key scheme

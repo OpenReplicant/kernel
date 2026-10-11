@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from kernel import Kernel
+from modules.systems import parse_port
 
 LOOP_VOCAB = Path(__file__).parent / "control_loop.yaml"
 
@@ -29,7 +30,7 @@ def build(k, couplings):
         r = k.ensure_node("role", f"{ns}/{inst}")
         f(r, "sys:instance_of", k.node_id(typ))
         for spec in k.schema.roles[k.iri(typ)]["ports"]:
-            name, d = spec.split(":")
+            name, d, _ = parse_port(spec)
             ports[f"{inst}.{name}"] = k.ensure_node("port", f"{ns}/{inst}#{name}")
             f(r, "k:has_port", ports[f"{inst}.{name}"], dir=d)
         comp = k.ensure_node("thing", f"{ns}/impl/{inst}")

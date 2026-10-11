@@ -42,7 +42,7 @@ slots:
     subtype: output
     scope: task          # generated once per task, reused across trials
     implementation: { source: generated, kind: exec_node, ref: "eval/gen_tests" }
-    ports: ["tests:out"]
+    ports: ["tests:out:items"]
     model_role: actor
     prompts:
       - { id: test_gen, file: prompts/test_gen.md, source_ref: "repo: test generation prompt", provenance: repo }
@@ -56,7 +56,7 @@ slots:
     subtype: trajectory
     scope: episode
     implementation: { source: registry, kind: exec_node, ref: "eval/run_tests" }
-    ports: ["tests:in"]
+    ports: ["tests:in:items"]
     uses_assets: [code_sandbox]
     provenance: stated
     source_ref: "§3 evaluator"
@@ -104,16 +104,18 @@ slots:
 # Strictly sequential: the retry decision waits until the reflection is stored,
 # otherwise the next trial can start before its reflection exists.
 # The first trial starts once tests exist; inject_reflections finds empty memory then.
+# shared_state edges are reads of the latest value (tests made once per task, the memory's
+# contents); they don't trigger the reader. The other edges are the flow of control.
 wiring:
   - { from: task.start, to: test_gen.run, provenance: inferred }
   - { from: test_gen.tests, to: inject_reflections.run, provenance: inferred }
-  - { from: test_gen.tests, to: episode_eval.tests, provenance: inferred }
+  - { from: test_gen.tests, to: episode_eval.tests, kind: shared_state, provenance: inferred }
   - { from: actor.output, to: episode_eval.run, provenance: stated }
   - { from: episode_eval.fail, to: reflector.run, provenance: stated }
   - { from: reflector.insight, to: reflections.write, provenance: stated }
   - { from: reflections.written, to: retry.decide, provenance: inferred }
   - { from: retry.retry, to: inject_reflections.run, provenance: stated }
-  - { from: reflections.read, to: inject_reflections.input, provenance: stated }
+  - { from: reflections.read, to: inject_reflections.input, kind: shared_state, provenance: stated }
   - { from: inject_reflections.output, to: actor.start, provenance: stated }
   - { from: episode_eval.pass, to: task.end, provenance: stated }
   - { from: retry.stop, to: task.end, provenance: stated }

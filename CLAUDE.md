@@ -41,7 +41,7 @@ Read these before writing code, in this order:
 - **Scope discipline.** Build only what the current milestone asks for. Other ideas go into
   `docs/BACKLOG.md`, not into code.
 - **Milestones in order.** Don't start one until the previous gate passes (M0 may run
-  alongside M1–M3; it gates M7). Report the gate result (commands run and their output)
+  alongside M1–M3; it gates M5). Report the gate result (commands run and their output)
   when you finish each.
 - **Verify, don't assume, RuleGo details** (M0). Record findings in `docs/RULEGO_NOTES.md`.
 - **RuleGo build lives in `rulego/`.** Our server module compiles in upstream components
@@ -61,9 +61,14 @@ Read these before writing code, in this order:
   - *Step scripts* (including ones the compiler generates) run on the host, so they are code
     under review: committed to the repo and shown to the user before they first run.
 - **Secrets from the environment.** `ANTHROPIC_API_KEY`, `DATABASE_URL`. Never commit them.
-- **Every model call goes through the `model_call` sub-chain, every agent-harness session
-  through `harness_session`.** They read models, endpoints and parameters from the kernel and
-  enforce the per-run budget (docs/V1_BUILD_PLAN.md M4, M5).
+- **Every model call goes through the `model_call` sub-chain.** It reads models, endpoints and
+  parameters from the kernel and enforces the per-run budget (docs/V1_BUILD_PLAN.md M4).
+- **Systems run as compiled component graphs** (M5): a component is a step seen only through
+  its typed ports (`pclib/component.py`); `pclib/compile.py` builds the chains. Swap a
+  component by changing the `k:plays` assertion, not the chain.
+- **Where code goes.** Modules carry meaning (vocabularies, constraints, views) and import
+  only `kernel`; components (steps) and apps (chains) import `kernel`, `pclib` and modules.
+  Existing behaviour under `modules/` moves out as it is touched, not all at once.
 - **Knowing and doing stay apart.** The kernel runs nothing; the runtime reaches it only
   through the joints in docs/ARCHITECTURE.md (describe, read, record). Every run's recording
   becomes a source.
@@ -96,7 +101,7 @@ scripts/schemas/          JSON Schemas for every script's input and output
 tools/                    validate_spec.py (exists)
 papers/reflexion/         exported views and run artifacts: spec.yaml, SPEC.md, chains, prompts, REPORT.md
 bench/                    HumanEval slice + runner
-tests/                    kernel/, contract/, mechanism/, smoke/
+tests/                    kernel/, contract/, modules/, components/ (stubs), mechanism/, smoke/
 data/                     $PC_DATA default, git-ignored (see docs/FILESYSTEM.md)
-.claude/skills/compile-paper/SKILL.md   (M9)
+.claude/skills/compile-paper/SKILL.md   (M10)
 ```
