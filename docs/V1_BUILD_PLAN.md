@@ -12,17 +12,17 @@ conditions and a provenance trail back to the paper.
 
 Work through the milestones in order. Each ends with a gate: run the listed checks and report
 their output before moving on. M0 is independent of the kernel: it may run alongside M1–M3,
-and must pass before M7.
+and must pass before M8.
 
 | Part | Milestones |
 |---|---|
 | Runtime check | M0 |
 | Kernel | M1 foundation · M2 kernel core · M3 vocabularies, validation, views |
-| First application | M4 model access · M5 sandbox and harness sessions · M6 paper as evidence + slots · M7 Reflexion by hand · M8 benchmark → evidence · M9 compiler |
+| First application | M4 model access · M5 compile a component graph · M6 sandbox · M7 paper as evidence + slots · M8 Reflexion runs + mechanism tests · M9 benchmark → evidence · M10 compiler |
 
 ---
 
-## M0 — Spike: confirm the RuleGo assumptions (alongside M1–M3; gates M7) — done, see `docs/RULEGO_NOTES.md`
+## M0 — Spike: confirm the RuleGo assumptions (alongside M1–M3; gates M5) — done, see `docs/RULEGO_NOTES.md`
 
 The design assumes things about RuleGo that haven't been confirmed. Check them in the pinned
 version's docs and source, try each one with a toy chain, and write the findings to
@@ -130,7 +130,7 @@ and `modules/evaluation` (L2), `modules/paper_compiler` (L3), each with `module.
 - `paper_compiler` registers the `agent-spec` view: `import_` turns a `spec.yaml` into a closed
   `system` context plus a `perspective` context for the paper's claims; `export` does the
   reverse. Provenance maps to `method` (`repo` → `stated`, label kept as an argument); `stated`
-  and `repo` fields import as `staged` until M6 stores the PDF and repo as sources.
+  and `repo` fields import as `staged` until M7 stores the PDF and repo as sources.
 
 **Gate:**
 - `tests/kernel/` passes with no module loaded and nothing under `modules/` importable; a
@@ -151,7 +151,7 @@ Anthropic models (directly or through an OpenAI-compatible endpoint).
 
 - **Models are known to the kernel.** `evaluation` gains what a call needs: a model's
   endpoint, API kind, default parameters and prices, and an `ev:Harness` type (an agent with
-  its own model, endpoint and parameters, used in M5). A system context names its models with
+  its own model, endpoint and parameters; harness sessions are in the backlog). A system context names its models with
   `ev:uses_model` / `ev:model_param` as now. Defaults (a small, cheap model for the actor and
   reflector, e.g. `claude-haiku-5-5`) are `defaulted` assertions, so swapping a model,
   endpoint or parameter is an assertion, not a code change.
@@ -167,7 +167,7 @@ Anthropic models (directly or through an OpenAI-compatible endpoint).
   steps are plain scripts testable without a model.
 - **Runs are sources.** `pclib` gains the Record joint: at the end of a run, its trace is
   exported to `runs/<id>/trace.jsonl`, stored with `put_source`, attributed with
-  `k:produced_by`, and its session context is created. M5 (harness transcripts) and M7
+  `k:produced_by`, and its session context is created. M8
   (mechanism-test outcomes) record through it.
 - Prompt caching for repeated prefixes, where the call path supports it.
 
@@ -176,33 +176,49 @@ clear error; trace events and `spent_usd` are correct; changing a model assertio
 model the next call uses, with no code change; the run's trace is a source in the kernel and
 `why` on an observed assertion about the run returns a span in it.
 
-## M5 — Sandbox and harness sessions
+## M5 — Compile and run a component graph — done
+
+A system described in the kernel compiles to RuleGo chains and runs, before any real slot,
+model or sandbox exists, so the central idea (mix designs by naming components) is proven on
+its own.
+
+- **Typed port contracts.** Ports are `name:dir[:type]`; each vocabulary declares its
+  `port_types` as JSON Schemas (`agent_design`: text, items, context, feedback). A coupling
+  joins an out port to an in port of the same type or to an `any` port; `validate`
+  (`systems: couplings_have_compatible_types`) and `tools/validate_spec.py` refuse the rest,
+  and the component adapter checks every value a component emits.
+- **Coupling kinds that matter to the compiler:** `shared_state` couplings are reads of the
+  latest value; every other kind is flow (orders and triggers). `spec.yaml` wiring takes `kind`.
+- **`modules/systems/graph.py`** reads a system context as plain graph data;
+  **`pclib/compile.py`** turns it into chains; **`pclib/component.py`** runs a component
+  through its ports on the shared message. Semantics in `docs/RULEGO_NOTES.md` §9.
+- Stub components (`tests/components/`) for Reflexion's slots, two for the memory slot, and
+  for a thermostat loop.
+
+**Gate (passed):** Reflexion's graph (from `examples/reflexion/spec.yaml` through the view)
+compiles and runs in RuleGo on stubs: reflections accumulate until the evaluator passes on
+the third trial, no reflection follows the pass, and a rerun replays. Superseding the one
+`k:plays` that binds the memory slot changes what runs (five failed trials, then the
+controller stops). A coupling from `items` into `context` is refused. The thermostat compiles
+and runs with the same compiler.
+
+## M6 — Sandbox
 
 - `scripts/env_container.py`: run a Python file plus tests in a fresh rootless Podman container
   per episode, via the `podman` CLI. `--network=none`, mount only the episode's `work/` dir,
   CPU/memory/pids limits, read-only root filesystem, wall-clock timeout, non-root user inside.
   Returns stdout, stderr, exit code, timed_out. Engine command configurable
   (`PC_CONTAINER_CMD`, default `podman`). Emits `tool.call` / `tool.result`.
-- **`harness_session` sub-chain**: runs an agent harness (Codex CLI, Claude Code, …) headless,
-  or through its MCP server via `ai/mcpClient`, in the same kind of container with one
-  difference: network only to its model endpoint (through a proxy). Model, endpoint and
-  parameters come from the kernel (`ev:Harness`); the harness's own spending limit is set from
-  the run's remaining budget, and its reported usage is added after. Its transcript is stored
-  as a source (M4's Record joint). **Verify first** which harnesses offer a headless or MCP
-  mode, their options for model, endpoint, turn and spending limits, and how they report
-  usage; record the findings in `docs/RULEGO_NOTES.md`.
 
 **Gate:** a passing solution passes, a failing one fails, an infinite loop times out, and code
-attempting network access fails. A harness session (a stub harness in tests; a real one when
-its key is set) completes a small task in its workspace, cannot reach any host but its
-endpoint, and leaves its transcript as a source with the session's usage counted in the run.
+attempting network access fails.
 
-**Calibration (a few dollars, before M6):** run the default actor model once per problem, no
+**Calibration (a few dollars, before M7):** run the default actor model once per problem, no
 retries, on 20 HumanEval problems. If it already passes nearly all of them, Reflexion can't
 show a gain; choose a harder benchmark or a weaker model now and record the choice, rather
-than discovering it in M8.
+than discovering it in M9.
 
-## M6 — The paper as evidence, and the Reflexion slots
+## M7 — The paper as evidence, and the Reflexion slots
 
 **Ingest the paper.** Store the Reflexion PDF and the pinned repo snapshot as sources. For
 every `stated` field in `examples/reflexion/spec.yaml`, find the supporting passage and add it
@@ -236,12 +252,12 @@ go through the `model_call` sub-chain, never through the paper repo's own client
 - each slot script has a contract test with fixtures (prepare and parse steps tested without a model)
 - a kernel query finds a component for every slot in the Reflexion system
 
-## M7 — Reflexion by hand, plus mechanism tests
+## M8 — Reflexion runs, plus mechanism tests
 
 - Export the Reflexion system as `papers/reflexion/spec.yaml` and render `SPEC.md` from
   `templates/SPEC.md`. These files are views; the kernel context is the source of truth.
-- `papers/reflexion/chains/`: the agent loop as a self-invoking chain wired from the
-  context's couplings, plus a **baseline toggle** (reflector and memory off, retry only).
+- `papers/reflexion/chains/`: compiled from the system context with M5's compiler, plus a
+  **baseline toggle** (reflector and memory off, retry only) as a second system context.
   Run strictly in sequence: the retry decision waits until the reflection is stored.
 - `tests/mechanism/`: a generic evaluator for mechanism tests read from the kernel
   (`sys:test_body`), evaluated over `run.trace`. Semantics: `expect` events must occur
@@ -256,7 +272,7 @@ go through the `model_call` sub-chain, never through the paper repo's own client
 variant fails `reflection_reaches_next_trial`; the baseline produces no reflector events; all
 three outcomes are queryable in the kernel.
 
-## M8 — Benchmark results as evidence
+## M9 — Benchmark results as evidence
 
 - `bench/`: vendor HumanEval as a source (check its license), pick a fixed random slice of 40
   problems with a recorded seed. Score final solutions against HumanEval's **hidden** tests in
@@ -280,7 +296,7 @@ benchmark" to the backlog rather than switching mid-milestone.
 baseline on HumanEval, under which conditions, what was observed, and on what evidence";
 spend is under budget.
 
-## M9 — The compiler
+## M10 — The compiler
 
 A Claude Code skill at `.claude/skills/compile-paper/SKILL.md` that, given an arXiv id or PDF:
 

@@ -109,9 +109,9 @@ Expressions see `msg` (parsed JSON data), `metadata`, `id`, `ts`, `type`, `dataT
 
 ## 6. RuleGo and Podman
 
-RuleGo runs in a container. Payload sandboxes (M5) are started by step scripts, so the
+RuleGo runs in a container. Payload sandboxes (M6) are started by step scripts, so the
 `rulego` container needs the user's **rootless** Podman socket mounted
-(`$XDG_RUNTIME_DIR/podman/podman.sock`) and the `podman-remote` client; added in M5. Never a
+(`$XDG_RUNTIME_DIR/podman/podman.sock`) and the `podman-remote` client; added in M6. Never a
 rootful socket.
 
 ## 7. MCP (documented, not yet exercised; not used in v1)
@@ -149,6 +149,33 @@ endpoint and parameters resolved from the kernel per call. The sub-chain's inter
 Verified in the container (`tests/smoke/test_model_call.py`): a caller chain reaches
 `model_call` through `flow`, metadata (`run_id`, `call`) flows into the sub-chain, a replayed
 call returns the stored reply, and a spent budget fails the chain with the refusal message.
+
+## 9. Compiled component graphs (M5)
+
+`pclib/compile.py` turns a component graph (`modules/systems/graph.py`) into chains:
+
+- **One shared message.** Every node passes the same blackboard on:
+  `{ports: {"inst.port": value}, seq, state: {inst: ...}, ctl}`. A component sees only its
+  inputs, params and its own state (`pclib/component.py`); the adapter does the rest.
+- **Flow versus reads.** Couplings of kind `shared_state` are reads of the latest value
+  written; every other kind is flow: it orders and triggers. No fan-out (an out port has at
+  most one flow coupling) and one flow port fired per step, so one message travels at a time
+  and several couplings into one instance are alternative routes.
+- **Routing.** After a component with flow ports, a `switch` on `msg.ctl.port` routes to the
+  next node; a port with no connection in this chain ends the branch.
+- **Loops.** A cycle of flow couplings becomes a `while` over an iteration chain
+  (`<name>__loop_<entry>`), condition `msg.ctl.stop_<loop> != true`. The entry is the one
+  instance entered from outside the cycle; couplings back to it end an iteration; ports
+  leaving the cycle set the stop flag and `ctl.exit`, and a switch after the loop routes on
+  `ctl.exit`. The entry counts iterations, sets the episode to the iteration, and fails the run
+  past `max_iterations` (default 100). Nested cycles and two entries are compile errors.
+
+Verified in the container (`tests/smoke/test_compile_run.py`): a `while` condition reading a
+key the message doesn't have yet (`msg.ctl.stop_x` before any exit) evaluates as not-stopped;
+an unmatched `switch` with no `Default` connection ends the iteration, and `while` (mode 2)
+carries that message into the next iteration and returns it after the last; metadata
+(`run_id`, `_loopIndex`) reaches nodes inside the iteration chain, so step keys and replay
+work across iterations.
 
 ## Building here vs. on a workstation
 

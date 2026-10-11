@@ -18,17 +18,23 @@ DEFAULT_VOCAB = HERE.parent / "modules" / "agent_design" / "vocab.yaml"
 TASK = "task"   # reserved wiring endpoint: task.start (entry), task.end (exit)
 
 
+def parse_port(spec):
+    """'name:dir[:type]' -> (name, (dir, type)); untyped ports are `any`."""
+    parts = spec.split(":")
+    return parts[0], (parts[1], parts[2] if len(parts) > 2 else "any")
+
+
 def load_slot_types(vocab_path):
-    """Slot types from the agent-design vocabulary: key -> {internal, ports{name: dir}}."""
+    """Slot types from the agent-design vocabulary: key -> {internal, ports{name: (dir, type)}}."""
     vocab = yaml.safe_load(Path(vocab_path).read_text())
     return {r["key"]: {"internal": r.get("internal", False), "cardinality": r.get("cardinality"),
-                       "ports": dict(p.split(":") for p in r["ports"])}
+                       "ports": dict(map(parse_port, r["ports"]))}
             for r in vocab["roles"]}
 
 
 def slot_ports(slot, slot_types):
     ports = dict(slot_types[slot["slot"]]["ports"])
-    ports.update(p.split(":") for p in slot.get("ports", []))
+    ports.update(map(parse_port, slot.get("ports", [])))
     return ports
 
 
@@ -65,20 +71,25 @@ def cross_checks(spec, slot_types):
             errors.append(f"slot {s['id']}: source paper_code but no repo in paper.sources")
 
     for w in spec["wiring"]:
+        types = []
         for end, want, task_port in (("from", "out", "start"), ("to", "in", "end")):
             sid, port = w[end].split(".")
             edge = f"wiring {w['from']} -> {w['to']}"
             if sid == TASK:
                 if port != task_port:
                     errors.append(f"{edge}: '{TASK}' is only valid as {TASK}.start (from) or {TASK}.end (to)")
+                types.append("any")
             elif sid not in slots:
                 errors.append(f"{edge}: unknown slot '{sid}'")
             else:
-                d = slot_ports(slots[sid], slot_types).get(port)
+                d, t = slot_ports(slots[sid], slot_types).get(port, (None, None))
                 if d is None:
                     errors.append(f"{edge}: slot '{sid}' has no port '{port}' (declare it in the slot's ports)")
                 elif d != want:
                     errors.append(f"{edge}: port '{sid}.{port}' is an {d} port, used as '{end}'")
+                types.append(t)
+        if len(types) == 2 and None not in types and types[1] != "any" and types[0] != types[1]:
+            errors.append(f"wiring {w['from']} -> {w['to']}: carries '{types[0]}' into a port that takes '{types[1]}'")
     ends = {w[e] for w in spec["wiring"] for e in ("from", "to")}
     if f"{TASK}.start" not in ends or f"{TASK}.end" not in ends:
         errors.append(f"wiring needs an entry ({TASK}.start) and at least one exit ({TASK}.end)")

@@ -13,7 +13,7 @@ author's reading). The label itself is kept as a `provenance` argument, list ord
 `position`, so export rebuilds the document exactly.
 """
 from modules.agent_design import slot_type_by_key, slot_types
-from modules.systems import ports_of
+from modules.systems import parse_port, ports_of
 
 IMPORTER = "urn:pc:agent:agent-spec-view"
 SCHEMA_VERSION = "0.1"
@@ -106,11 +106,12 @@ def import_spec(k, spec: dict, by=None) -> str:
             if key in s:
                 w.fact(r, pred, v=s[key])
         declared = ports_of(k, stype)
-        extras = [x.split(":") for x in s.get("ports", [])]
-        for j, (name, d) in enumerate(list(declared.items()) + extras):
-            extra = j >= len(declared)
+        extras = [parse_port(x) for x in s.get("ports", [])]
+        for name, d in declared.items():
+            w.fact(r, "k:has_port", w.node("port", f"{role_iri(s['id'])}#{name}"), dir=d)
+        for j, (name, d, typ) in enumerate(extras):
             w.fact(r, "k:has_port", w.node("port", f"{role_iri(s['id'])}#{name}"), dir=d,
-                   extra=True if extra else None, position=j - len(declared) if extra else None)
+                   extra=True, position=j, type=typ if s["ports"][j].count(":") == 2 else None)
         impl = s["implementation"]
         comp = w.node("thing", f"urn:pc:component:{impl['ref']}", "sys:Component")
         w.fact(comp, "k:plays", r, origin=impl["source"], kind=impl["kind"],
@@ -131,7 +132,7 @@ def import_spec(k, spec: dict, by=None) -> str:
         for end in (edge["from"], edge["to"]):
             sid, port = end.split(".")
             ends.append(w.node("port", f"{role_iri(sid)}#{port}"))   # an unknown slot's port has no owner
-        w.fact(ends[0], "k:couples", ends[1], prov=edge.get("provenance"), kind="event",
+        w.fact(ends[0], "k:couples", ends[1], prov=edge.get("provenance"), kind=edge.get("kind", "event"),
                condition=edge.get("condition"), source_ref=edge.get("source_ref"), position=i)
 
     for i, m in enumerate(spec["models"]):
@@ -244,7 +245,8 @@ def export_spec(k, system) -> dict:
         s["implementation"] = impl
         extras = [x for x in _by(rr, k, "k:has_port") if x.args.get("extra")]
         if extras:
-            s["ports"] = [f"{_tail(x.object, '#')}:{x.args['dir']}" for x in extras]
+            s["ports"] = [f"{_tail(x.object, '#')}:{x.args['dir']}" + (f":{x.args['type']}" if "type" in x.args else "")
+                          for x in extras]
         params = _by(rr, k, "sys:param")
         if params:
             s["params"] = {x.args["name"]: _param(x) for x in params}
@@ -274,6 +276,8 @@ def export_spec(k, system) -> dict:
     wiring = []
     for x in _by(srows, k, "k:couples"):
         e = {"from": end(x.subject), "to": end(x.object)}
+        if x.args.get("kind", "event") != "event":
+            e["kind"] = x.args["kind"]
         for key in ("condition", "source_ref"):
             if key in x.args:
                 e[key] = x.args[key]

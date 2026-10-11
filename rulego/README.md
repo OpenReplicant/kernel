@@ -37,7 +37,7 @@ and `episode` travel in metadata. Build chains with `pclib.chains`, never by han
 | Another upstream component (e.g. OTel export: `rulego-components/external/otel`) | a blank import in `server/components.go`, then `go mod tidy` in `server/` |
 | An aspect on every node (tracing, budgets) | register it in `server/` (RuleGo aspects are Go, registered at engine creation); not needed yet, pclib does this |
 | Our own Go component | `server/` too, only with a reason a Python step can't serve |
-| Podman access for sandboxes (M5) | install `podman-remote` in `Containerfile`; mount the user's rootless socket in `compose.yml` |
+| Podman access for sandboxes (M6) | install `podman-remote` in `Containerfile`; mount the user's rootless socket in `compose.yml` |
 | Server settings | `config.conf` (every key also has a `RULEGO_*` env override) |
 
 Bump RuleGo by changing the versions in `server/go.mod` (`go get github.com/rulego/rulego/server@<commit>`),

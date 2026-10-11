@@ -74,7 +74,7 @@ mechanism test mentions must be emitted explicitly.
 
 ## Model calls
 
-Only through the `model_call` sub-chain (M4), or `harness_session` for an agent harness (M5).
+Only through the `model_call` sub-chain (M4).
 A step that needs a model is split: it prepares the messages, the chain calls `model_call`,
 and a following step parses the reply. Before entering it, the caller sets `meta.call` (e.g.
 its slot id): the sub-chain's step keys become `.../call=<name>/<node>`, so two calls in one

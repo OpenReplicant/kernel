@@ -18,13 +18,13 @@ The system has two halves that meet at three joints.
     (`docs/KERNEL.md`, Belief). Today that is the `status` lifecycle; a `beliefs()` interface
     comes when more than one source of trust has to be weighed.
 - **The runtime does.** RuleGo-Server (built from `rulego/`) runs chains of steps: pclib
-  Python steps, model calls, agent-harness sessions, MCP tools, the sandbox. It is a peer of
+  Python steps, model calls, MCP tools, the sandbox. It is a peer of
   the kernel, not part of it. The record has to stay trustworthy whatever the actors do, so
   nothing in the kernel runs anything.
 
 | Joint | Direction | What crosses |
 |---|---|---|
-| **Describe** | kernel → runtime | A system described in the kernel (roles, components, ports, couplings) compiles to chains (M7). Chains that build systems can be described the same way, so the platform can describe, and later improve, itself. |
+| **Describe** | kernel → runtime | A system described in the kernel (roles, components, ports, couplings) compiles to chains (M5, `pclib/compile.py`). Chains that build systems can be described the same way, so the platform can describe, and later improve, itself. |
 | **Read** | kernel → runtime | Steps read facts and beliefs through the kernel's interfaces, including which model, endpoint and parameters a step uses. |
 | **Record** | runtime → kernel | Every run is a source: its trace or transcript is the content, the run is a `session` context, and what it observed becomes `observed` assertions with spans into that recording. |
 
@@ -55,7 +55,7 @@ recorded as evidence (Act).
 | Layer | What it is | Knows about domains? | Lives in |
 |---|---|---|---|
 | **L0 kernel** | The record and belief: sources, spans, assertions with provenance and two times, the upper ontology (knowing + structure), vocabulary, constraint, view and module machinery | no | `kernel/`, `vocab/kernel.yaml`, `db/` |
-| **L1 systems** | The vocabulary for what runs: components implementing roles, parameters, a boundary (entry and exit ports), behaviour tests over traces, sessions. Compiles a closed system context to chains (M7) | no | `modules/systems/` |
+| **L1 systems** | The vocabulary for what runs: components implementing roles, parameters, a boundary (entry and exit ports), behaviour tests over traces, sessions. Read as a component graph (`graph.py`) that compiles to chains (M5) | no | `modules/systems/` |
 | **L2 domain modules** | Vocabularies, constraints and components for one domain | yes | `modules/agent_design/`, `modules/evaluation/` |
 | **L3 applications** | Pipelines that use domains for a purpose: ingest sources, compile, run, report | yes | `modules/paper_compiler/` |
 
@@ -104,19 +104,17 @@ RuleGo-Server (built from `rulego/`) runs chains of pclib steps (`x/python` node
 context compiles to an iteration chain plus a `while` loop and sub-chains; each run is a
 session context whose trace file is the evidence for what was observed.
 
-**Model and harness access** (M4, M5). Two kinds of step reach a model, each a sub-chain with
-a fixed interface so its implementation can be swapped:
+**Model access** (M4). `model_call` (`modules/evaluation/chains/`): resolve (model, endpoint
+and parameters from the kernel; budget check) → invoke (a pclib step; RuleGo's `ai/llm` node
+can't take its model from the kernel or report usage, docs/RULEGO_NOTES.md §8) → account
+(cost added to the run's spend). A different model is a different assertion, not different
+code. Agent-harness sessions as steps are in the backlog.
 
-- `model_call` (`modules/evaluation/chains/`): resolve (model, endpoint and parameters from
-  the kernel; budget check) → invoke (a pclib step; RuleGo's `ai/llm` node can't take its
-  model from the kernel or report usage, docs/RULEGO_NOTES.md §8) → account (cost added to the
-  run's spend). A different model is a different assertion, not different code.
-- `harness_session`: an agent harness (Codex, Claude Code, …) run headless or through its MCP
-  server in a sandbox, with its own model, endpoint and parameters, given a task and a
-  workspace. Its transcript is stored as a source.
-
-Budget lives in these sub-chains. Tracing that every node needs (OpenTelemetry) belongs in an
-aspect compiled into `rulego/server`; until then pclib steps trace themselves.
+**Component graphs** (M5). A closed system context is a component graph: role instances with
+typed ports, components bound to them by `k:plays`, couplings between ports.
+`modules/systems/graph.py` reads it as plain data, `pclib/compile.py` turns it into chains (a
+cycle of flow couplings becomes a `while` loop), and `pclib/component.py` runs each component
+through its ports. Swapping the component that fills a role is one superseded assertion.
 
 **MCP at the edges, not in the middle.** RuleGo-Server can expose chosen chains as an MCP
 server (groups of tools per endpoint), and its `ai/mcpClient` node runs any remote MCP tool as

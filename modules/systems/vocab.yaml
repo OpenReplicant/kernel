@@ -3,7 +3,7 @@
 # sys:instance_of a role type from some domain vocabulary); components k:plays them; their
 # ports (k:has_port, arg dir) are joined by k:couples. docs/ARCHITECTURE.md.
 vocabulary: systems
-version: "0.1"
+version: "0.2"
 imports: [kernel]
 prefix: { sys: "urn:pc:systems:" }
 
@@ -15,7 +15,13 @@ types:
 
 # Where work enters and leaves a system (spec.yaml's task.start / task.end).
 roles:
-  - { iri: sys:Boundary, key: boundary, ports: [start:out, end:in] }
+  - { iri: sys:Boundary, key: boundary, ports: [start:out:any, end:in:any] }
+
+# Ports are name:dir[:type]. A type names a JSON Schema in some loaded vocabulary's
+# port_types; an untyped port is `any`. A coupling joins an out port to an in port of the
+# same type, or to an `any` in port (modules/systems: couplings_have_compatible_types).
+port_types:
+  any: {}
 
 asset_kinds: [vector_store, kv_store, relational, graph, blob, code_store,
               environment, mcp_server, model_endpoint, eval_harness, external_service]
@@ -45,3 +51,4 @@ predicates:
 constraints:
   - { kind: required, predicate: sys:instance_of, for: k:Role, in: system }
   - { kind: python, name: couplings_reference_declared_ports }
+  - { kind: python, name: couplings_have_compatible_types }
