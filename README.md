@@ -33,8 +33,9 @@ records each run back into the kernel as a source. Details: `docs/ARCHITECTURE.m
 Version 1 follows `docs/V1_BUILD_PLAN.md`. Gates passed: **M0** (RuleGo spike), **M1** (script
 contract), **M2** (kernel core), **M3** (vocabularies, validation, views, modules), **M4** (model
 access: models known to the kernel, a budgeted `model_call` sub-chain, runs recorded as
-sources), **M5** (component graphs compile to RuleGo chains and run; components swap by name).
-Next: **M6**, the sandbox.
+sources), **M5** (component graphs compile to RuleGo chains and run; components swap by name),
+**M6** (payloads run in a fresh, locked-down container; a calibration driver for the actor model
+on HumanEval). Next: the calibration run (needs an API key), then **M7**.
 
 ## Running
 

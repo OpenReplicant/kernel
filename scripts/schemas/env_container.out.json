@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "env_container output",
+  "type": "object", "additionalProperties": false,
+  "required": ["stdout", "stderr", "exit_code", "timed_out", "duration_s"],
+  "properties": {
+    "stdout": { "type": "string" },
+    "stderr": { "type": "string" },
+    "exit_code": { "type": ["integer", "null"], "description": "null when the call timed out" },
+    "timed_out": { "type": "boolean" },
+    "duration_s": { "type": "number" }
+  }
+}

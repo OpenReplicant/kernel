@@ -101,7 +101,7 @@ scripts/schemas/          JSON Schemas for every script's input and output
 tools/                    validate_spec.py (exists)
 papers/reflexion/         exported views and run artifacts: spec.yaml, SPEC.md, chains, prompts, REPORT.md
 bench/                    HumanEval slice + runner
-tests/                    kernel/, contract/, modules/, components/ (stubs), mechanism/, smoke/
+tests/                    kernel/, contract/, modules/, components/ (stubs), sandbox/, mechanism/, smoke/
 data/                     $PC_DATA default, git-ignored (see docs/FILESYSTEM.md)
 .claude/skills/compile-paper/SKILL.md   (M10)
 ```

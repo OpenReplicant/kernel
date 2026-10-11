@@ -17,7 +17,7 @@ class _Handler(BaseHTTPRequestHandler):
                       "auth": self.headers.get("x-api-key") or self.headers.get("authorization")})
         if self.path.endswith("/v1/messages"):
             out = {"id": "msg_1", "type": "message", "role": "assistant", "model": body["model"],
-                   "content": [{"type": "text", "text": f"reply {len(calls)}"}],
+                   "content": [{"type": "text", "text": self.server.reply(body, len(calls))}],
                    "stop_reason": "end_turn", "stop_sequence": None,
                    "usage": {"input_tokens": USAGE["input"], "output_tokens": USAGE["output"]}}
         else:
@@ -37,10 +37,12 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 @contextlib.contextmanager
-def serve(host: str = "127.0.0.1"):
-    """Yields (base_url, calls)."""
+def serve(host: str = "127.0.0.1", reply=None):
+    """Yields (base_url, calls). `reply(body, n)` gives the Anthropic reply text for the n-th
+    call (default "reply <n>")."""
     server = ThreadingHTTPServer((host, 0), _Handler)
     server.calls = []
+    server.reply = reply or (lambda body, n: f"reply {n}")
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         yield f"http://{host}:{server.server_address[1]}", server.calls
