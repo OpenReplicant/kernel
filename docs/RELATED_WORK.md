@@ -285,3 +285,42 @@ predicate; the database refusing writes without provenance; a loop guard on proc
 Reading: Cognee's extension model is closest to this design's modules; Graphiti has the best
 typed ontology and temporal edges but no processor framework and no Postgres; Hindsight is a
 configurable product, so modules would live in a sidecar fed by its webhooks.
+
+## Belief-layer projects: MnemeBrain and Mneme
+
+Read from source on 2026-10-12.
+
+**MnemeBrain** ([mnemebrain.ai](https://mnemebrain.ai/),
+[mnemebrain-lite](https://github.com/mnemebrain/mnemebrain-lite), MIT; the full "Core" is a
+private repo). A belief is a free-text claim with evidence that SUPPORTS or ATTACKS it; truth
+state is Belnap's four values (TRUE, FALSE, BOTH = contradiction, NEITHER) from summed evidence
+weight × reliability × decay against fixed thresholds; confidence is log-odds; `retract`
+invalidates evidence and recomputes; `explain` returns the justification. Kuzu storage,
+FastAPI, MCP, about 2,000 lines. Limits: decay is computed against the wall clock
+(`datetime.now()`), so a belief can't be recomputed as of a past time; four hard-coded belief
+types carry the half-lives (fact 365 d, preference 90, inference 30, prediction 3), no ontology;
+the caller decides whether evidence attacks or supports; claims are text, not subject and
+predicate, so contradiction is only what the caller declares. Last commit March 2026.
+Its benchmark ([BMB](https://github.com/mnemebrain/mnemebrain-benchmark), 48 tasks, no model
+calls) tests its own API's concepts and skips tasks a system doesn't declare, so its own
+systems score 93–100% and Mem0 29%; the adapter interface and the deterministic scenarios can
+be reused, the leaderboard can't.
+
+**Mneme** ([BrettNye/Mneme](https://github.com/BrettNye/Mneme), TypeScript, SQLite, about
+24,000 lines and 2,000 tests, one author, June–August 2026, **no licence**: all rights
+reserved, so nothing can be copied). Closest to this design of anything found: an append-only
+claim ledger keyed by `(subject, key)`; supersession with lineage (`history`); bitemporal `asOf`;
+cardinality **declared** per key (`single` = latest wins, `multi` = values coexist); Beta
+confidence; derived beliefs carry their inputs and model versions and replay "exact or names
+the divergence"; maintenance only **proposes** (aliases, splits, cardinality) and never applies;
+extraction is a callback injected by the caller; 10 MCP tools. Its LongMemEval findings
+(knowledge-update slice, retrieval-layer only): supersession serves the updated value 0.9 vs
+0.1 for plain similarity on 20 questions; recency blending +5.6 points; and **the dominant
+failure is key identity** — the same fact under drifting key names, so supersession and
+contradiction never fire. Its `reconcile` (reuse an existing subject/key before minting one)
+and census tools are its answer.
+
+Lessons for this design: functional predicates must be declared, not guessed (both agree);
+recompute beliefs as of a time, never against the wall clock; the encoder's hardest job is
+landing a fact on an existing predicate and thing, so Resolve applies to predicates as well
+as things, and the ontology module is what makes that possible.
