@@ -324,3 +324,29 @@ Lessons for this design: functional predicates must be declared, not guessed (bo
 recompute beliefs as of a time, never against the wall clock; the encoder's hardest job is
 landing a fact on an existing predicate and thing, so Resolve applies to predicates as well
 as things, and the ontology module is what makes that possible.
+
+## Keeping up: searches and sources
+
+No single arXiv category fits; the work is spread over **cs.AI**, **cs.CL**, **cs.IR**
+(retrieval), **cs.DB** (bitemporal and provenance), **cs.SE** (code and architecture graphs) and
+**cs.MA** (multi-agent). Queries for the arXiv API (`export.arxiv.org/api/query`, with
+`sortBy=submittedDate`) or the advanced search page; each was run on 2026-10-12 and returned
+relevant papers at the top. Follow the last area by citation, not keywords.
+
+| Area | Query | Hits |
+|---|---|---|
+| Epistemic agent memory | `(abs:"agent memory" OR abs:"memory for LLM agents" OR abs:"long-term memory") AND (abs:"belief revision" OR abs:provenance OR abs:contradiction OR abs:supersed* OR abs:bitemporal)` | 81 |
+| Graph world models for agents | `(abs:"world model" OR abs:"world models" OR abs:"cognitive map" OR abs:"symbolic world model") AND (abs:graph OR abs:"knowledge graph") AND (abs:"LLM agent" OR abs:"LLM agents" OR abs:"language agents") AND (cat:cs.AI OR cat:cs.CL OR cat:cs.LG)` | 11 |
+| BPM and process mining with LLMs | `(abs:"process mining" OR abs:"business process" OR abs:BPMN) AND (abs:LLM OR abs:"large language model" OR abs:agentic) AND (cat:cs.AI OR cat:cs.SE OR cat:cs.DB)` | 151 |
+| Software architecture and code graphs | `(abs:"architecture recovery" OR abs:"software architecture" OR abs:"code graph" OR abs:"repository graph") AND (abs:LLM OR abs:agents OR abs:agentic) AND cat:cs.SE` | 87 |
+| Agents built from papers or by meta-agents | keyword queries are noisy; follow citations of ADAS (Hu, Lu, Clune; ICLR 2025), AFlow, and Paper2Agent (arXiv 2509.06917) | — |
+
+Starting points: surveys arXiv 2603.07670 (memory as write–manage–read), 2602.06052, 2602.05665
+(graph-based agent memory), 2602.19320 ("Anatomy of Agentic Memory": benchmark saturation,
+metric validity, cost), 2604.27895 (graph world models); reading lists
+TsinghuaC3I/Awesome-Memory-for-Agents, DEEP-PolyU/Awesome-GraphMemory,
+IAAR-Shanghai/Awesome-AI-Memory; the ICLR 2026 MemAgents workshop papers. Domain leads:
+AriGraph (IJCAI 2025, knowledge-graph world model with episodic memory); Dumas et al. 2026,
+"Agentic Business Process Management Systems" (arXiv 2601.18833); ArchAgent (2601.13007),
+AgenticAKM (2602.04445), Codebase-Memory (2603.27277); PACMI (provenance-aware cascading
+memory invalidation, the support-propagation gap above).
