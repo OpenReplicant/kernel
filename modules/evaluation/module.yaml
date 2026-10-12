@@ -1,7 +1,0 @@
-name: evaluation
-version: "0.3"
-layer: 2
-description: "Models (catalog, endpoints, prices) and the model_call sub-chain; benchmarks, metrics and results, with the conditions they were obtained under."
-depends: [systems]
-vocab: [vocab.yaml]
-python: modules.evaluation

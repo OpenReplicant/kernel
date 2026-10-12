@@ -1,37 +1,13 @@
 # Backlog
 
-Ideas kept for after version 1 proves the concept, roughly in the order they'd be needed.
-Add new ideas here instead of building them.
+Ideas parked until a milestone needs them.
 
-- [ ] Durable jobs: spike gflow-engine against a killed-worker test, else a `run.job` table polled by a RuleGo chain
-- [ ] OpenTelemetry through RuleGo's OpenTelemetry component, with GenAI spans from scripts and a Collector
-- [ ] Snapshot, restore and branching for search papers (Tree of Thoughts, LATS)
-- [ ] Record/replay gateway for external services and repeated model calls
-- [ ] Long-running script service if per-step overhead shows in timings (M0: ~75 ms per DB-backed step on x/python)
-- [ ] Ingestion beyond papers: segmenters, entity resolution, vocabulary proposals
-- [ ] Interactive evidence: chats and embodied sessions written as session contexts with transcript sources
-- [ ] `beliefs(perspective, policy, at)`: belief as a computed view over the record (docs/KERNEL.md, Belief), when a second source of trust has to be weighed
-- [ ] Source reliability scoring from reproduction outcomes (`k:reliability`, evidenced)
-- [ ] Lab: toggle grids, cost reports, shared benchmarks
-- [ ] Review interface for spec and reproduction checkpoints
-- [ ] License checks on prompts and paper code before releasing compiled specs
-- [ ] Go ports of hot scripts; Kubernetes driver
-- [ ] Check the taxonomy against the 13 coding-agent scaffolds in arXiv 2604.03515; add loop driver, model routing and compaction strategy as slot attributes where they don't already fit
-- [ ] Compile AgentSquare's 16 agents as a comparison set for the paper
-- [ ] Harder benchmark than HumanEval if the baseline saturates it
-- [ ] Platform MCP server: RuleGo's MCP endpoint exposing chains for registry search, spec validation, running chains, reading traces
-- [ ] Use alongside an agent harness: kernel and platform operations as the harness's toolset
-- [ ] The knowledge system as an agent's memory: MCP tools (search, why, assert, resolve_entity, propose_term) served from RuleGo, an agent skill, and harness hooks that capture sources and inject recalled beliefs automatically
-- [ ] Spike RuleGo-Server's MCP endpoint (documented, never exercised: RULEGO_NOTES §7) before anything depends on it
-- [ ] pclib `tool` entry point: JSON in/out with schema checks and no run, for stateless steps such as MCP tools
-- [ ] Agent-harness sessions as steps (Codex, Claude Code, ... headless or via their MCP servers) in a sandbox that reaches only the model endpoint; transcripts as sources
-- [ ] Other model providers through an OpenAI-compatible router (LiteLLM proxy, pinned, in its own container) rather than new adapters
-- [ ] Vocabulary-constrained extraction: write tools whose JSON Schema enumerates the loaded predicates; a `propose_term` lane for claims that fit none
-- [ ] Move `modules/evaluation`'s model_call steps and `modules/systems/runs.py` out of modules (components/apps) when next touched
-- [ ] Parallel branches in compiled graphs (fan-out and joins); nested loops
-- [ ] Move tracing and checkpoints into rule-engine aspects compiled into `rulego/server` (M0: core AOP covers every node), so non-Python nodes are traced too; budget stays in the `model_call` and `harness_session` sub-chains
-- [ ] Stronger sandbox isolation (gVisor or Kata runtime under Podman) before running untrusted paper repos at scale
-- [ ] Object storage behind the same `$PC_DATA` key scheme
-- [ ] Compile the compiler: describe the compile-paper pipeline itself as a spec, so it can be improved by the same process
-- [ ] AGE graph projection and pgvector search as derived views over `kb.assertion`
-- [ ] Evidence-driven composition: an agent that queries observed results to choose and combine components for a new task
+- Modules and chains described in the graph, so an entity can describe and rearrange itself
+  (the second iteration's component-graph compiler is a starting point).
+- Agent-design papers as modules: decompose a paper into a system, run it, check its
+  mechanism, record results as evidence (the second iteration's first application).
+- A harder coding benchmark than HumanEval for model comparisons (ClassEval and DS-1000 are
+  reachable from cloud sessions; LiveCodeBench needs huggingface.co).
+- An OpenAI-compatible router (e.g. LiteLLM, OpenRouter) for many providers behind one API.
+- Vocabulary-constrained extraction and entity disambiguation for perceivers.
+- Parallel branches and nested loops in compiled chains.
