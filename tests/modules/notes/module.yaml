@@ -1,0 +1,21 @@
+# Test module for the S1 gate: one thing label, claim predicates, a fact edge, and chains for
+# each kind of activation the core supports (on command, on change).
+module: notes
+version: "0.1.0"
+depends: []
+ontology:
+  things:
+    - {label: note, vectors: {embedding: 3}}
+  relations:
+    - {name: notes.status, as: claim}        # what state a note is in, as people say it
+    - {name: notes.ping, as: claim}          # the echo reasoner's claim (a deliberate loop)
+    - {name: links_to, as: edge, from: note, to: note}
+chains:
+  - chains/set_status.json
+  - chains/echo.json
+  - chains/similar.json
+  - chains/read.json
+activations:
+  # Every new ping claim wakes the echo reasoner, which writes another ping claim: a write
+  # loop that only the guard stops.
+  - {chain: notes_echo, when: change, label: claim, ops: [INSERT], where: {predicate: notes.ping}}

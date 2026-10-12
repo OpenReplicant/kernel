@@ -1,0 +1,12 @@
+{
+  "ruleChain": {"id": "notes_echo", "name": "notes: answer each ping with a ping (on change)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "shape", "type": "x/python", "name": "ping -> ping",
+       "configuration": {"script": "${module_dir}/steps/ping_back.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [{"fromId": "shape", "toId": "write", "type": "Success"}]
+  }
+}

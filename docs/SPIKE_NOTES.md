@@ -138,3 +138,42 @@ properties, causation, depth, txid) and `pg_notify('outbox', seq)`.
   compiled into the server.
 - Outbox rows for labels created later: triggers are per label table, so the module loader
   must add them when it installs an ontology (or use an event trigger).
+
+## Facts checked for S1 (2026-10-12)
+
+Tried against `kernel-agensgraph` (same image as above) while building the core:
+
+- **A `timestamptz` can't be a promoted column:** `CREATE VLABEL c (recorded_at timestamptz GENERATED)`
+  fails with "generation expression is not immutable" (text → timestamptz is only stable). The
+  kernel stores times as fixed-width ISO-8601 UTC strings, which order correctly as text and as
+  jsonb strings.
+- **Labels fold to lower case** (`CREATE VLABEL Thing` makes `thing`; `:Thing` and `:thing` match).
+- **Label inheritance works with Cypher:** `CREATE VLABEL note INHERITS (thing)`;
+  `MATCH (t:thing)` returns notes too, with `label(t)` = `note`. Typed columns and `INHERITS`
+  combine: `CREATE VLABEL note (embedding vector(3) GENERATED) INHERITS (thing)`.
+- `CREATE GRAPH|VLABEL|ELABEL IF NOT EXISTS` and `CREATE PROPERTY INDEX IF NOT EXISTS` work.
+- **BEFORE row triggers apply to Cypher writes**: they can rewrite `NEW.properties` (a forged
+  `recorded_at` is overwritten) and refuse `SET`, `REMOVE`, `DELETE` and `DETACH DELETE` by
+  raising.
+- **Cypher `SET` drops keys whose value is null** from the property map (AgensGraph strips null
+  keys on write unless `allow_null_properties`). A trigger comparing old and new maps must
+  compare with nulls stripped, and the kernel never stores nulls.
+- **Cypher silently creates a label it hasn't seen** (`CREATE (:typo)` runs an internal
+  `CREATE VLABEL "typo"` through SPI, `parse_graph.c: createLabelIfNotExist`); there is no
+  setting to turn this off. An **event trigger** on `ddl_command_end` sees it (as `CREATE SEQUENCE
+  <graph>.typo_id_seq` first) and can abort it; the write then fails and no table is left.
+  Unlabelled `CREATE ({...})` goes to the base table `ag_vertex`, where a BEFORE trigger can
+  refuse it.
+- **A whole property map can be one parameter:** `CREATE (n:note %s)` with a jsonb value, and
+  `SET n += %s`. Unlabelled `MATCH (n) WHERE id(n) = '3.4'::graphid` finds a vertex of any label.
+  A missing property reads as NULL (`n.x IS NULL`).
+- **plpgsql and NULL:** `IF NOT (p->>'method') = ANY(...)` is NULL for a missing key, and `IF
+  NULL` does not raise. The first trigger let a claim without `method` through; the tests caught
+  it. Checks use `coalesce`.
+- **RuleGo `x/python`:** chain-level `ruleChain.configuration.vars` reach `Process` as its fifth
+  argument (`vars`); HTTP query parameters arrive in `metadata` (with `id` = the chain id).
+- **RuleGo's `exec` node is on by default** with a whitelist of `cp, scp, mvn, npm, yarn, git,
+  make, cmake, docker, kubectl, helm, ansible, puppet, pytest, python, python3, pip, go, java,
+  dotnet, gcc, g++, ctest` (server `config.go` default). The kernel's config sets
+  `cmd_white_list = kernel-exec-disabled`; an exec node then fails with "cmd not allowed".
+- **YAML 1.1 reads a bare `on:` key as `true`** (PyYAML): the manifest uses `when:`.

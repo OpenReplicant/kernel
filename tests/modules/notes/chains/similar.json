@@ -1,0 +1,10 @@
+{
+  "ruleChain": {"id": "notes_similar", "name": "notes: nearest notes (on command)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "search", "type": "x/python", "name": "vector search",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/vector_search.py", "timeout": "30s"}}
+    ],
+    "connections": []
+  }
+}

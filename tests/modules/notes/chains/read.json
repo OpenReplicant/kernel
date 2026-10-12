@@ -1,0 +1,10 @@
+{
+  "ruleChain": {"id": "notes_read", "name": "notes: read-only Cypher (on command)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "read", "type": "x/python", "name": "graph read",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_read.py", "timeout": "30s"}}
+    ],
+    "connections": []
+  }
+}
