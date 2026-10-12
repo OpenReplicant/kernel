@@ -39,6 +39,13 @@ def read_manifest(path: Path) -> dict:
     m.setdefault("activations", [])
     m.setdefault("types", [])
     m.setdefault("vars", {})
+    m.setdefault("models", {})
+    for role, spec in m["models"].items():
+        _name(role, "model role")
+        if not isinstance(spec, dict) or not spec.get("model") or not isinstance(spec.get("budget"), dict):
+            raise ManifestError(f"{path}/module.yaml: models.{role} needs a model and a budget ({{usd, tokens}})")
+        if m["module"] != "models" and "models" not in m["depends"]:
+            raise ManifestError(f"{path}/module.yaml: a module with model roles depends on `models`")
     if not set(m["types"]) <= set(TYPES):
         raise ManifestError(f"{path}/module.yaml: types must be among {TYPES}")
     for t in m["ontology"]["things"]:
@@ -109,6 +116,7 @@ def install(path, conn=None, rulego: RuleGo | None = None, _seen=None) -> dict:
                 "name": m["module"], "version": m["version"], "hash": digest, "path": str(path), "types": m["types"],
                 "labels": labels, "relations": m["ontology"]["relations"], "chains": chain_ids,
                 "activations": m["activations"]}),)).fetchone()[0]
+        _default_model_roles(conn, m)
     for c in m["chains"]:
         rulego.deploy(render_chain(path / c, m, path))
     return {"module": m["module"], "version": m["version"], "id": record, "chains": chain_ids, "labels": labels}
@@ -128,6 +136,30 @@ def render_chain(file: Path, m: dict, module_dir: Path) -> dict:
     chain_vars.update({k: str(v) for k, v in m["vars"].items()})
     chain_vars.update(module=m["module"], version=m["version"])
     return chain
+
+
+def _default_model_roles(conn, m):
+    """The model each role uses, its budget and parameters, as `defaulted` claims citing the
+    manifest. A person's choice (a stated claim, models_set_role) is kept; a default from an
+    older version of the module is replaced."""
+    if not m["models"]:
+        return
+    agent = claims.find_agent(conn, f"module:{m['module']}", m["version"])
+    source = claims.ensure_source(conn, "manifest", m, f"module:{m['module']}@{m['version']}")
+    for role, spec in m["models"].items():
+        role_id = claims.ensure_thing(conn, "model_role", f"{m['module']}.{role}")
+        wanted = {"models.uses": ("object", claims.ensure_thing(conn, "model", spec["model"]), "model"),
+                  "models.budget": ("value", spec["budget"], "budget")}
+        if spec.get("params"):
+            wanted["models.params"] = ("value", spec["params"], "params")
+        for predicate, (kind, v, field) in wanted.items():
+            held = claims.held(conn, role_id, predicate)
+            if held and (any(h["method"] != "defaulted" for h in held) or all(h.get(kind) == v for h in held)):
+                continue
+            new = claims.assert_claim(conn, role_id, predicate, **{kind: v}, method="defaulted", confidence=1.0,
+                                      source=source, agent=agent, span=f"$.models.{role}.{field}")
+            for h in held:
+                claims.mark_superseded(conn, new, h["id"])
 
 
 def installed(conn) -> list[dict]:

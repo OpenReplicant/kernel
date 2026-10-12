@@ -49,12 +49,36 @@ One entity, one module of each type:
 **Gate:** an action changes because of recalled state, and it can be traced back through
 claims to the observations behind it.
 
+## S3 — Model access
+
+Chosen first of the "Later" items: every other one (extraction for bulk ingestion, background
+reasoners on a Claude Code session, code generation for the sandbox, papers) needs a model call.
+
+- A `models` ontology: models, endpoints and model roles are things; what is known about them
+  (model id, endpoint, API kind, prices, parameters, the env var holding a key) are claims.
+- A catalog file loaded by a chain as `stated` claims with spans into it; a changed entry
+  supersedes, an unchanged one writes nothing.
+- A module's manifest names the model it uses for each role (a `defaulted` claim at install);
+  choosing another model is a superseding claim, not a code change.
+- A shared `model_call` node: resolves role → model → endpoint from the graph, refuses a call
+  over the role's budget (USD or tokens, spend counted from the graph), calls the endpoint
+  (`openai`-compatible, `anthropic` Messages API, `claude_code` = `claude -p`), and records the
+  request, the reply, the answering model, tokens and cost as a `model_call` source. A failed
+  call is recorded too.
+- In the entity: a perceiver that turns a person's words into a setpoint through a model;
+  the setpoint is `inferred` (the model interpreted what was said) and cites the call.
+
+**Gate:** a person's sentence becomes an inferred setpoint through a model call resolved from
+the graph, and the comfort belief derived from it traces back through the call to the words;
+swapping the role's model changes the endpoint called; a role over budget is refused; tokens,
+cost and the answering model are in the graph. The entity's model in the tests is real: Haiku
+through `claude -p`; a local fake endpoint stands in only for API kinds that need a key or a
+server this environment lacks.
+
 ## Later (order decided when S2 passes)
 
 - Bulk ingestion: study, research, knowledge packs.
 - Claude Code integration: hooks, MCP server, skill.
-- Model access: models and endpoints as graph facts; local OpenAI-compatible endpoints and
-  `claude -p`; budgets and tokens recorded.
 - Sandbox for generated code (port from `second_iteration`).
 - Modules describing themselves in the graph.
 - Agent-design papers as modules (the second iteration's first application).

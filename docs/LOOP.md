@@ -23,6 +23,7 @@ climate_heater_switch ◀── decision (inferred) ◀── decide ◀── c
 | `climate_comfort` | reasoner | on change: a new temperature or setpoint claim | `cold` / `ok` / `warm` against setpoint ± band; written only when it changes, `derived_from` the temperature and setpoint |
 | `climate_recall` | recaller | on command | The held claims about a room as data and as text, with their ids |
 | `climate_control` | reasoner | on schedule (RuleGo schedule endpoint, every second) | For each room (`for` node): recall → decide → record the decision → hand it to the effector |
+| `climate_chat` | perceiver | on command (a person's words) | A model (S3, `docs/MODELS.md`) interprets the words into a setpoint, `inferred`, citing the model call |
 | `climate_heater` | effector | on command (from a decision) | Switches the heater; acts only on a held decision for that room and state, at most once per `min_interval`; records the request and the world's answer as an observed `heater_command` derived from the decision |
 
 **Policy:** cold → heater on; warm → off; ok → leave it. The heater's current state is the

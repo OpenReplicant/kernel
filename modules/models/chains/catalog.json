@@ -1,0 +1,13 @@
+{
+  "ruleChain": {"id": "models_catalog", "name": "models: load a model catalog as stated claims (on command)", "root": true,
+                "configuration": {"vars": {"catalog": "${module_dir}/catalog.yaml"}}},
+  "metadata": {
+    "nodes": [
+      {"id": "shape", "type": "x/python", "name": "catalog -> claims",
+       "configuration": {"script": "${module_dir}/steps/catalog.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [{"fromId": "shape", "toId": "write", "type": "Success"}]
+  }
+}

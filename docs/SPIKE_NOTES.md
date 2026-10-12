@@ -196,3 +196,24 @@ Tried against `kernel-agensgraph` (same image as above) while building the core:
   **`switch`** (`{"cases": [{"case": "msg.act == true", "then": "Act"}]}`, connection type
   `Act`) work as documented in `second_iteration`'s notes; an unmatched switch ends the branch.
 - `curl -d '<json>'` without a JSON content type is accepted by the execute API.
+
+## Facts checked for S3 (2026-10-12)
+
+- **`claude -p` works in this cloud container**, from the shell and from an `x/python` step in
+  RuleGo on the host (Claude Code 2.1.296): `claude -p --model haiku --tools "" --strict-mcp-config
+  --setting-sources "" --no-session-persistence --system-prompt … --output-format json`, prompt
+  on stdin, run in an empty directory, answered in 3–4 s as `claude-haiku-5-5`.
+- **Its top-level `usage` undercounts; `modelUsage` matches the cost.** One call: `usage` said
+  2 input / 4 output / 1245 cache-write tokens, `modelUsage["claude-haiku-5-5"]` said 1176
+  input / 18 output / 1245 cache-write, and `total_cost_usd` was 0.0003756 =
+  (1176 × 0.10 + 18 × 0.50 + 1245 × 0.20) / 10⁶, i.e. Haiku 5.5 at $0.10 / $0.50 per million
+  with the cache write (`ephemeral_1h_input_tokens`) at 2× input. Tokens are summed from
+  `modelUsage`; a missing cache-write price is charged at 2× input.
+- The child `claude -p` reported the parent session's `session_id` (it inherits the session's
+  environment); with `--no-session-persistence` nothing was observed to be written.
+- **Anthropic SDK 1.13.0** reaches a local Messages-compatible server through `base_url` with
+  the session's proxy variables set (`NO_PROXY` covers 127.0.0.1); so does `urllib` for the
+  OpenAI-compatible kind.
+- AgensGraph Cypher: `label(v)` returns a vertex's label name.
+- psycopg's `with connect() as conn:` rolls back on an exception, so a record that must survive
+  a failure (a refused or failed model call) is committed before the error is raised.

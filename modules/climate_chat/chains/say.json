@@ -1,0 +1,20 @@
+{
+  "ruleChain": {"id": "climate_chat_say", "name": "climate: a person's words -> a setpoint, through a model (on command)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "prompt", "type": "x/python", "name": "words -> prompt",
+       "configuration": {"script": "${module_dir}/steps/prompt.py", "timeout": "30s"}},
+      {"id": "model", "type": "x/python", "name": "model call",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/model_call.py", "timeout": "180s"}},
+      {"id": "interpret", "type": "x/python", "name": "reply -> claims",
+       "configuration": {"script": "${module_dir}/steps/interpret.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [
+      {"fromId": "prompt", "toId": "model", "type": "Success"},
+      {"fromId": "model", "toId": "interpret", "type": "Success"},
+      {"fromId": "interpret", "toId": "write", "type": "Success"}
+    ]
+  }
+}

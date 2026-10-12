@@ -1,0 +1,23 @@
+# Models and endpoints as graph facts (S3, docs/MODELS.md). The ontology, a perceiver that loads
+# a model catalog as stated claims, and a command to choose a role's model, budget or parameters.
+module: models
+version: "0.1.0"
+types: [ontology, perceiver]
+ontology:
+  things:
+    - {label: model}
+    - {label: endpoint}
+    - {label: model_role}                     # key: <module>.<role>
+  relations:
+    - {name: models.api, as: claim}           # endpoint: anthropic | openai | claude_code
+    - {name: models.base_url, as: claim}      # endpoint
+    - {name: models.key_env, as: claim}       # endpoint: the env var holding its key, never the key
+    - {name: models.model_id, as: claim}      # model: the id the endpoint takes
+    - {name: models.served_by, as: claim}     # model -> endpoint
+    - {name: models.prices, as: claim}        # model: USD per million tokens {input, output, cache_read, cache_write}
+    - {name: models.params, as: claim}        # model or role: request parameters, e.g. {max_tokens: 256}
+    - {name: models.uses, as: claim}          # role -> model
+    - {name: models.budget, as: claim}        # role: {usd, tokens}, counted from when the budget was recorded
+chains:
+  - chains/catalog.json
+  - chains/set_role.json

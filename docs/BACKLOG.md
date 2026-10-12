@@ -26,3 +26,9 @@ Ideas parked until a milestone needs them.
   decision stops being enough.
 - Require `derived_from` for `computed` and `inferred` claims (S2 sets it everywhere it
   matters, but nothing enforces it).
+- Retract a catalog's claims for fields or entries removed from the catalog (S3 only adds and
+  supersedes).
+- Reserve a role's budget before a call (S3 checks before and spends after, so concurrent calls
+  can overshoot by the calls in flight); retries for transient model failures.
+- A real local OpenAI-compatible model server for tests and background reasoners (S3 tests the
+  `openai` kind against a fake; huggingface.co, where model weights live, is blocked here).
