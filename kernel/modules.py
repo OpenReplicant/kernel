@@ -67,6 +67,7 @@ def manifest_hash(path: Path, m: dict) -> str:
 
 def find_module(name: str, near: Path) -> Path:
     paths = [Path(near).parent] + [Path(p) for p in os.environ.get("KERNEL_MODULES", "").split(os.pathsep) if p]
+    paths.append(db.ROOT / "modules")  # the repository's own modules, last
     for p in paths:
         if (p / name / "module.yaml").exists():
             return p / name

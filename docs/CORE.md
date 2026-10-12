@@ -141,6 +141,7 @@ use them after a step that shapes it:
 | `graph_read.py` | `{cypher, params}` | `{rows}`; params bind as jsonb (`%(name)s`); runs in a read-only transaction |
 | `graph_write.py` | `{source, things, claims, edges}` | `{written: {source, things, claims, edges}}` with ids; the agent is the chain's module and version |
 | `vector_search.py` | `{label, property, vector, k}` | `{rows: [{id, key, distance}]}` |
+| `sandbox_run.py` | `{sandbox_run: {command, files, image, limits…, inputs}}` | `{sandbox_result: {exit_code, stdout, stderr, timed_out, backend, isolated, …, source}}`; through the sandbox MCP server, recorded in the graph (`docs/SANDBOX.md`) |
 | `model_call.py` | `{model_call: {role, prompt \| messages, system, inputs}}` | `{model_reply: {text, model, usage, cost_usd, source}}`; resolved, budgeted and recorded in the graph (`docs/MODELS.md`) |
 
 `graph_write` passes the message's other fields through, and writes nothing (not even a source)

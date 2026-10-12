@@ -12,14 +12,13 @@ a server this environment doesn't have, and a fake `claude` (tests/fake_claude.p
 flags the CLI is run with.
 """
 import json
-import shutil
 import sys
 from pathlib import Path
 
 import pytest
 from psycopg.types.json import Jsonb
 
-from conftest import wait_for
+from conftest import needs_claude, wait_for
 from fake_model import serve
 from kernel import claims, models, modules
 from kernel.nodes import model_call
@@ -27,7 +26,6 @@ from kernel.rulego import ChainFailed
 
 ROOT = Path(__file__).resolve().parent.parent
 ROLE = "climate_chat.interpreter"
-needs_claude = pytest.mark.skipif(shutil.which("claude") is None, reason="needs `claude` logged in (Haiku)")
 SENTENCE = "It's freezing in the study, could you make it 22 degrees?"
 
 

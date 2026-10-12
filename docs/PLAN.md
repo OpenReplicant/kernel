@@ -75,10 +75,48 @@ cost and the answering model are in the graph. The entity's model in the tests i
 through `claude -p`; a local fake endpoint stands in only for API kinds that need a key or a
 server this environment lacks.
 
+## S4 — Sandbox and startup config
+
+Untrusted code (code a model wrote, external code, benchmark tests) runs in a container. The
+container runtime sits behind an MCP server, so swapping the runtime (Docker now; Podman,
+Kubernetes, Nomad later, any of which is safer than Docker as root) touches only the server.
+The MCP servers that exist for these runtimes don't enforce isolation and expose the whole
+runtime (`docs/SPIKE_NOTES.md`, S4), so the interface is our own narrow server:
+
+- An MCP server (`sandbox/`) with one tool, `sandbox_run(command, files, image, limits)` →
+  `{exit_code, stdout, stderr, timed_out, duration_s, backend, isolated}`. Fixed in the server,
+  not the caller: no network, read-only root, a small writable `/tmp`, the files read-only at
+  `/work`, a non-root user, no capabilities, no new privileges, CPU, memory and process limits
+  capped by config, a timeout that removes the container, images from an allowlist, nothing
+  from the environment. Backends: `docker`, and `local` (a host subprocess with a timeout and
+  an empty environment, no isolation) for when the sandbox is switched off.
+- A startup config file (`config/kernel.yaml`, or `$KERNEL_CONFIG`): the sandbox (on/off,
+  server, backend, images, limits) and the loop-guard limits. No secrets in it; environment
+  variables still name the database and the graph.
+- A shared `sandbox_run` chain node: an MCP client of the configured server; every run is
+  recorded as a `sandbox_run` source (request, result, backend, whether it was isolated, what
+  it was run for).
+
+**Gate:** code run through the node can't reach the network, write outside `/tmp`, see the
+host's environment, exceed its memory or process limits, or outlive its timeout (the container
+is gone); each run is in the graph; with the sandbox switched off in config the same call runs
+on the `local` backend and is recorded as not isolated. In the entity's terms: Haiku writes a
+function for a small task, the sandbox runs the task's tests on it, and the observed result
+traces back through the run to the model call that wrote the code.
+
+## S5 — Model routing and agent harnesses (proposed)
+
+- RuleGo's AI components (`rulego-components-ai`: `ai/llm`, `ai/agent`, `ai/mcpClient`) built
+  into the server; where they fit next to `model_call` (they don't report token usage or the
+  answering model as built, so recorded calls stay with `model_call`).
+- LiteLLM: as an `openai`-kind endpoint (its proxy) and/or an API kind of its own (its SDK),
+  so one catalog entry reaches any provider it routes to.
+- Agent harnesses (Claude Code, Codex, …) behind one interface: one-shot, no tools, as
+  `claude_code` is now; and agentic, with tools, inside the sandbox.
+
 ## Later (order decided when S2 passes)
 
 - Bulk ingestion: study, research, knowledge packs.
 - Claude Code integration: hooks, MCP server, skill.
-- Sandbox for generated code (port from `second_iteration`).
 - Modules describing themselves in the graph.
 - Agent-design papers as modules (the second iteration's first application).

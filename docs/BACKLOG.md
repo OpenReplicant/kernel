@@ -32,3 +32,12 @@ Ideas parked until a milestone needs them.
   can overshoot by the calls in flight); retries for transient model failures.
 - A real local OpenAI-compatible model server for tests and background reasoners (S3 tests the
   `openai` kind against a fake; huggingface.co, where model weights live, is blocked here).
+- Sandbox backends beyond Docker, with the same guarantees: rootless Podman, gVisor or Kata,
+  Kubernetes Jobs (securityContext, resources, activeDeadlineSeconds, a deny-all
+  NetworkPolicy), Nomad batch jobs (docker driver: network_mode none, readonly_rootfs,
+  cap_drop). Files sent without a shared filesystem.
+- The sandbox server as a long-lived streamable-HTTP service (no start-up per run), with auth.
+- A Claude Code skill (and MCP config) for the sandbox server, so a session runs untrusted code
+  through the same tool (with the Claude Code integration milestone).
+- A sandbox run's network as an allowlist (e.g. a package index through a proxy) instead of
+  none, for code that must install dependencies.

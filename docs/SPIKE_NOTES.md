@@ -217,3 +217,41 @@ Tried against `kernel-agensgraph` (same image as above) while building the core:
 - AgensGraph Cypher: `label(v)` returns a vertex's label name.
 - psycopg's `with connect() as conn:` rolls back on an exception, so a record that must survive
   a failure (a refused or failed model call) is committed before the error is raised.
+
+## Facts checked for S4 (2026-10-12)
+
+- **This environment's Docker** (restarted by hand after a container restart): runtime `runc`
+  1.5.1 only (no gVisor), seccomp's default profile, cgroup v1. These run flags all work:
+  `--network=none --read-only --tmpfs /tmp --cap-drop=ALL --security-opt=no-new-privileges
+  --cpus --memory --memory-swap --pids-limit --user=10001:10001 -v <dir>:/work:ro` on
+  `mirror.gcr.io/library/python:3.12-slim` (no network: errno 101; root and `/work` read-only;
+  `/tmp` writable; a 200 MB allocation under `--memory=64m` exits 137). A run takes 0.4–0.8 s.
+- **The MCP Python SDK (`mcp` 2.3.0)**: `MCPServer` with `@server.tool()`; `Client(StdioServerParameters(...))`
+  or `Client("<url>")`. Its stdio client starts the server with only `HOME`, `LC_CTYPE`,
+  `PATH`, `SHELL`, `TERM` from the caller's environment: a probe server run with
+  `DATABASE_URL` and a fake secret set in the client saw neither. A tool's exception reaches the
+  client as a generic "Error executing tool" unless it is a `ToolError`, whose text is passed on.
+- **Container MCP servers** (read in source by a research subagent, not run):
+  `ckreiling/mcp-server-docker` (v0.3.0) — `run_container` takes image, command, network,
+  env, ports, volumes, auto_remove; no read-only, limits, user, cap_drop or tmpfs; detached;
+  volumes accept any host path. `QuantGeekDev/docker-mcp` (stale since 2024-12) — no command,
+  detached. Docker's catalog `docker` server — raw CLI args with the socket mounted.
+  `manusa/podman-mcp-server` (v0.0.15) — `container_run(image, ports, env)`, no command,
+  publishes all ports. `containers/kubernetes-mcp-server` (v0.0.67) — `pods_run` with no
+  securityContext or resources; any manifest via `resources_create_or_update`.
+  `Flux159/mcp-server-kubernetes` — manifests and raw kubectl. No public HashiCorp Nomad MCP
+  server found; `kocierik/mcp-nomad` (v0.3.1) takes any job spec. None enforces isolation or
+  returns an exit code from a finished run; hence our own server (docs/SANDBOX.md).
+- **RuleGo's AI components** (read in source by a research subagent, not yet built or run):
+  `github.com/rulego/rulego-components-ai`, enabled in upstream's server by build tag
+  `with_ai` (a blank import of `rulego-components-ai/all`); the v0.38.0 server pins
+  `v0.37.1-0.20260816034014-d5312a602f16`. Nodes: `ai/llm` (OpenAI-compatible: `url`, `key`,
+  `model`, `systemPrompt`, `messages`, `params`; puts only the text in the message, dropping
+  token usage and the model name), `ai/agent` (eino ReAct; tokens in metadata, model as
+  configured), `ai/mcpClient` (`server`: an http(s) URL → streamable HTTP, anything else → a
+  stdio command; `toolName`, `args`). mcp-go v0.44.0's stdio transport passes the **whole**
+  environment of the RuleGo process to the server it starts. No container or docker node
+  exists in rulego, rulego-components or rulego-components-ai.
+- `claude -p` children leave directories named after their working directory under the
+  session's temp root (`/tmp/claude-0/-tmp-kernel-claude-*/<parent session id>/scratchpad`),
+  despite `--no-session-persistence`; they hold nothing else.

@@ -5,6 +5,8 @@ from pathlib import Path
 
 import psycopg
 
+from kernel import config
+
 ROOT = Path(__file__).resolve().parent.parent
 CORE_SQL = ROOT / "db" / "core.sql"
 
@@ -24,11 +26,16 @@ def connect(dsn: str | None = None) -> psycopg.Connection:
 
 
 def install_core(conn: psycopg.Connection) -> None:
-    """Install or refresh the core (db/core.sql). Idempotent."""
+    """Install or refresh the core (db/core.sql) and set the loop guard's limits from the
+    startup config (kernel.config). Idempotent."""
     sql = CORE_SQL.read_text().replace("__GRAPH__", graph_name())
+    limits = config.load()["limits"]
     with conn.transaction():
         allow_ddl(conn)
         conn.execute(sql)
+        for key, value in limits.items():  # the loop guard's limits, from the startup config
+            conn.execute("""INSERT INTO kernel.config VALUES (%s, %s::jsonb)
+                            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value""", (key, str(int(value))))
     conn.execute(f"SET graph_path = {graph_name()}")
     conn.commit()
 

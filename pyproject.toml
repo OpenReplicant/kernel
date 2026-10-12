@@ -3,13 +3,13 @@ name = "kernel"
 version = "0.1.0"
 description = "OpenReplicant kernel: knowledge in an AgensGraph property graph, behaviour in RuleGo chains"
 requires-python = ">=3.12"
-dependencies = ["psycopg[binary]>=3.2", "pyyaml>=6", "requests>=2.31", "anthropic>=1.13"]
+dependencies = ["psycopg[binary]>=3.2", "pyyaml>=6", "requests>=2.31", "anthropic>=1.13", "mcp>=2.3"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
 [tool.setuptools]
-packages = ["kernel", "kernel.nodes"]
+packages = ["kernel", "kernel.nodes", "sandbox"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

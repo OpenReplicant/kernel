@@ -14,6 +14,8 @@ ontologies, activated on change, on schedule or on command).
 | S1 — core conventions and modules | done | `docs/CORE.md`, `db/core.sql`, `kernel/` |
 | S2 — the loop: one entity, one module of each type | done | `docs/LOOP.md`, `modules/climate*`, `world/` |
 | S3 — model access: models as graph facts, budgeted and recorded calls | done | `docs/MODELS.md`, `modules/models`, `kernel/models.py` |
+| S4 — sandbox for untrusted code, behind an MCP server; startup config | done | `docs/SANDBOX.md`, `docs/CONFIG.md`, `sandbox/` |
+| S5 — model routing and agent harnesses | proposed | `docs/PLAN.md` |
 | Later (order to be decided) | — | `docs/PLAN.md`, `docs/BACKLOG.md` |
 
 What exists now:
@@ -38,6 +40,10 @@ What exists now:
   a shared node resolves a role's model from them, refuses calls over the role's budget, calls
   the endpoint (Anthropic API, any OpenAI-compatible server, or `claude -p` on a Claude Code
   subscription) and records the request, reply, answering model, tokens and cost as a source.
+- **Sandbox:** untrusted code runs in a fresh container per run (no network, read-only root,
+  non-root, no host environment, limits, a timeout that removes it) behind an MCP server with
+  one tool, so the container runtime is swappable; every run is recorded. It can be switched
+  off in `config/kernel.yaml` (code then runs on the host, recorded as not isolated).
 
 ## Layout
 
@@ -49,6 +55,8 @@ What exists now:
 | `modules/` | modules: `models` (model catalog and roles), the climate entity |
 | `world/` | simulated worlds entities run against (not part of any entity) |
 | `tests/` | the milestone gates; `tests/modules/notes` is the S1 test module |
+| `sandbox/` | the sandbox MCP server and its backends |
+| `config/kernel.yaml` | startup config: loop-guard limits, the sandbox |
 | `tools/dev.sh` | start or stop the database container and RuleGo for development |
 | `spike/` | S0 evidence, kept for reference |
 
@@ -58,11 +66,12 @@ What exists now:
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 KERNEL_GRAPH=test_kernel tools/dev.sh up     # needs dockerd; builds the database image once
 export DATABASE_URL=postgresql://agens@127.0.0.1:55432/postgres KERNEL_GRAPH=test_kernel
-.venv/bin/pytest                             # drops and recreates the test graph; 33 tests
+.venv/bin/pytest                             # drops and recreates the test graph; 41 tests
 ```
 
 `docs/LOOP.md` shows how to run the climate entity by hand. The model tests make a few small
-real calls to Haiku through `claude -p` (they skip when `claude` is not on `PATH`).
+real calls to Haiku through `claude -p` (they skip when `claude` is not on `PATH`); the sandbox
+tests need Docker with the sandbox image (`tools/dev.sh up` pulls it).
 
 ## Docs
 
@@ -71,6 +80,8 @@ real calls to Haiku through `claude -p` (they skip when `claude` is not on `PATH
 - `docs/CORE.md` — the core as built: claims, provenance, the outbox and loop guard, modules
 - `docs/LOOP.md` — the first entity: perceive, believe, recall, decide, act, perceive the effect
 - `docs/MODELS.md` — model access: models as claims, roles, budgets, the recorded call
+- `docs/SANDBOX.md` — the sandbox: the MCP interface, its guarantees, choosing a runtime
+- `docs/CONFIG.md` — the startup config file
 - `docs/SPIKE_NOTES.md` — facts about AgensGraph, pgvector and RuleGo, checked by experiment
 - `docs/BACKLOG.md` — ideas parked until a milestone needs them
 - `docs/LESSONS.md` — what the first two iterations taught, and what to carry over

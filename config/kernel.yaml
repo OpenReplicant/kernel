@@ -1,0 +1,22 @@
+# Startup configuration (docs/CONFIG.md). Read by kernel.config.load(); another file can be
+# given in $KERNEL_CONFIG. No secrets here: an endpoint names the environment variable that
+# holds its key, and DATABASE_URL and KERNEL_GRAPH come from the environment.
+
+# Loop guard (docs/CORE.md): written into kernel.config when the core is installed.
+limits:
+  max_depth: 8          # activation depth: a change caused by a change caused by ...
+  max_fanout: 1000      # outbox rows one transaction may write
+  max_attempts: 5       # deliveries of one outbox row before it is dead
+
+# Untrusted code (docs/SANDBOX.md). The runtime sits behind an MCP server with one tool,
+# sandbox_run; swapping the runtime is a change of backend (or of server) here.
+sandbox:
+  enabled: true         # false: the `local` backend runs code on the host, NOT isolated
+  backend: docker       # docker | local
+  # the MCP server the sandbox_run node talks to: a command (stdio) or a url (streamable HTTP)
+  server: {command: ["${python}", "-m", "sandbox.server"]}
+  engine: docker        # the CLI the docker backend runs (podman takes the same flags)
+  images:               # the only images code may run in (pull them first; runs never pull)
+    python: mirror.gcr.io/library/python:3.12-slim
+  defaults: {timeout_s: 10, cpus: 1.0, memory: 256m, pids: 64, max_output: 1048576}
+  max: {timeout_s: 300, cpus: 2.0, memory: 1g, pids: 256, max_output: 8388608}

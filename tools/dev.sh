@@ -1,7 +1,7 @@
 #!/bin/sh
 # Development services: the database container and RuleGo-Server on the host.
 #
-#   tools/dev.sh up     build what's missing, (re)start both, print the env to use
+#   tools/dev.sh up     build or pull what's missing, (re)start both, print the env to use
 #   tools/dev.sh down   stop both
 #
 # The database is a throwaway container (kernel-db, port $KERNEL_DB_PORT, trust auth, no
@@ -32,6 +32,12 @@ up)
   sleep 1
   for _ in $(seq 1 60); do psql -q -d "$DATABASE_URL" -c 'select 1' >/dev/null 2>&1 && break; sleep 0.5; done
   psql -q -d "$DATABASE_URL" -c 'select 1' >/dev/null
+
+  # the sandbox's images (config/kernel.yaml, sandbox.images): runs never pull
+  for image in $(PYTHONPATH=$REPO "$REPO/.venv/bin/python" -c \
+      "from kernel import config; print(' '.join(config.load()['sandbox']['images'].values()))"); do
+    docker image inspect "$image" >/dev/null 2>&1 || docker pull -q "$image" >/dev/null
+  done
 
   rulego_stop
   mkdir -p "$STATE/rulego" "$STATE/bin"
