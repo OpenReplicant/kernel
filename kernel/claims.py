@@ -82,9 +82,11 @@ def ensure_thing(conn, label: str, key: str, props: dict | None = None) -> str:
 
 def assert_claim(conn, subject: str, predicate: str, value=None, *, object: str | None = None,
                  method: str, confidence: float, source: str, agent: str, span=None,
-                 valid_from: str | None = None, valid_to: str | None = None) -> str:
+                 valid_from: str | None = None, valid_to: str | None = None,
+                 derived_from: list[str] | None = None) -> str:
     """Write a claim vertex about `subject` with a literal `value` or an `object` thing, linked
-    to its subject, object, source (with span) and agent. Returns its id."""
+    to its subject, object, source (with span) and agent, and `derived_from` the claims it was
+    computed or inferred from. Returns its id."""
     if (value is None) == (object is None):
         raise ValueError("a claim has exactly one of value or object")
     props = _clean({"predicate": predicate, "value": value, "method": method, "confidence": confidence,
@@ -100,6 +102,10 @@ def assert_claim(conn, subject: str, predicate: str, value=None, *, object: str 
     if object is not None:
         conn.execute("""MATCH (c:claim), (o) WHERE id(c) = %s::graphid AND id(o) = %s::graphid
                         CREATE (c)-[:object]->(o)""", (claim, object))
+    for d in derived_from or ():
+        if _one(conn, """MATCH (c:claim), (d:claim) WHERE id(c) = %s::graphid AND id(d) = %s::graphid
+                         CREATE (c)-[:derived_from]->(d) RETURN 1""", claim, d) is None:
+            raise LookupError(f"derived_from: claim {d} not found")
     return claim
 
 
@@ -167,6 +173,21 @@ def why(conn, claim: str) -> dict:
             "agent": agent, "supersedes": prev, "superseded_by": nxt}
 
 
+def trace(conn, claim: str, depth: int = 10) -> dict:
+    """The claim with its source and agent, and the claims it was derived from, recursively
+    (`depth` levels): how the entity came to hold it, down to the observations."""
+    w = why(conn, claim)
+    node = {"id": claim, "predicate": w["claim"]["predicate"], "value": w["claim"].get("value"),
+            "method": w["claim"]["method"], "confidence": w["claim"]["confidence"],
+            "recorded_at": w["claim"]["recorded_at"], "subject": w["subject"],
+            "source": w["source"], "span": w["span"], "agent": w["agent"].get("name"), "derived_from": []}
+    if depth > 0:
+        rows = conn.execute("""MATCH (c:claim)-[:derived_from]->(d:claim) WHERE id(c) = %s::graphid
+                               RETURN id(d)::text ORDER BY d.recorded_at""", (claim,)).fetchall()
+        node["derived_from"] = [trace(conn, d, depth - 1) for (d,) in rows]
+    return node
+
+
 # --- fact edges ------------------------------------------------------------------------------
 
 def relate(conn, label: str, frm: str, to: str, *, method: str, confidence: float, source: str,
@@ -200,5 +221,5 @@ def _check_label(label: str) -> None:
 
 
 __all__ = ["METHODS", "PROVENANCE", "now", "content_hash", "ensure_source", "ensure_agent", "find_agent",
-           "ensure_thing", "assert_claim", "supersede", "mark_superseded", "retract", "held", "why", "relate", "retire_edge",
+           "ensure_thing", "assert_claim", "supersede", "mark_superseded", "retract", "held", "why", "trace", "relate", "retire_edge",
            ]

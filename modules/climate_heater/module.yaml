@@ -1,0 +1,9 @@
+# Effector: switch a room's heater in the world. Acts only on a recorded decision, at most once
+# per min_interval seconds per room, and records the command and the world's answer.
+module: climate_heater
+version: "0.1.0"
+types: [effector]
+depends: [climate]
+vars: {simulator_url: "http://127.0.0.1:9191", min_interval: 1.0}
+chains:
+  - chains/switch.json

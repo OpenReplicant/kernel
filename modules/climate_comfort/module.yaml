@@ -1,0 +1,11 @@
+# Reasoner (on change): a room's comfort belief from its latest temperature and its setpoint.
+module: climate_comfort
+version: "0.1.0"
+types: [reasoner]
+depends: [climate]
+vars: {band: 0.5}          # within setpoint ± band the room is ok
+chains:
+  - chains/comfort.json
+activations:
+  - {chain: climate_comfort_update, when: change, label: claim, ops: [INSERT], where: {predicate: climate.temperature}}
+  - {chain: climate_comfort_update, when: change, label: claim, ops: [INSERT], where: {predicate: climate.setpoint}}

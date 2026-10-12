@@ -58,7 +58,7 @@ END $$;
 --   fact   fact edges: same rules as claims
 --   record source, agent, module vertices: immutable but for retiring once
 --   thing  things: stamped; identity (key) fixed, other properties may change
---   link   structural edges (about, object, cites, made_by, supersedes): immutable
+--   link   structural edges (about, object, cites, made_by, supersedes, derived_from): immutable
 -- Nothing is ever deleted.
 CREATE OR REPLACE FUNCTION kernel.guard_row() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
@@ -207,6 +207,7 @@ CREATE ELABEL IF NOT EXISTS object;
 CREATE ELABEL IF NOT EXISTS cites;
 CREATE ELABEL IF NOT EXISTS made_by;
 CREATE ELABEL IF NOT EXISTS supersedes;
+CREATE ELABEL IF NOT EXISTS derived_from;
 CREATE PROPERTY INDEX IF NOT EXISTS claim_predicate ON claim (predicate);
 CREATE PROPERTY INDEX IF NOT EXISTS thing_key ON thing (key);
 CREATE PROPERTY INDEX IF NOT EXISTS source_sha256 ON source (sha256);
@@ -218,7 +219,7 @@ SELECT kernel.manage('__GRAPH__.claim', 'claim');
 SELECT kernel.manage('__GRAPH__.source', 'record');
 SELECT kernel.manage('__GRAPH__.agent', 'record');
 SELECT kernel.manage('__GRAPH__.module', 'record');
-SELECT kernel.manage('__GRAPH__.' || l, 'link') FROM unnest(ARRAY['about', 'object', 'cites', 'made_by', 'supersedes']) l;
+SELECT kernel.manage('__GRAPH__.' || l, 'link') FROM unnest(ARRAY['about', 'object', 'cites', 'made_by', 'supersedes', 'derived_from']) l;
 
 DROP TRIGGER IF EXISTS k_unlabelled ON __GRAPH__.ag_vertex;
 CREATE TRIGGER k_unlabelled BEFORE INSERT ON __GRAPH__.ag_vertex FOR EACH ROW EXECUTE FUNCTION kernel.refuse_unlabelled();

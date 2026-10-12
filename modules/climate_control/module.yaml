@@ -1,0 +1,9 @@
+# Reasoner (on schedule): every second, for each room, recall its state, decide whether the
+# heater should change, record the decision, and hand it to the effector.
+module: climate_control
+version: "0.1.0"
+types: [reasoner]
+depends: [climate, climate_recall, climate_heater]
+chains:
+  - chains/room.json
+  - chains/tick.json

@@ -177,3 +177,22 @@ Tried against `kernel-agensgraph` (same image as above) while building the core:
   dotnet, gcc, g++, ctest` (server `config.go` default). The kernel's config sets
   `cmd_white_list = kernel-exec-disabled`; an exec node then fails with "cmd not allowed".
 - **YAML 1.1 reads a bare `on:` key as `true`** (PyYAML): the manifest uses `when:`.
+
+## Facts checked for S2 (2026-10-12)
+
+- **Schedule endpoint in a deployed chain works** on our server (v0.38.0): `metadata.endpoints`
+  with `{"type": "endpoint/schedule", "routers": [{"from": {"path": "*/1 * * * * *"}, "to":
+  {"path": "<chain>:<node>"}}]}` fires every second (cron with seconds); messages carry metadata
+  `_triggerSource = endpoint/schedule` and empty data. Deleting the chain
+  (`DELETE /api/v1/rules/<id>`) stops it. A hot-deployed chain keeps ticking until deleted, also
+  across test sessions.
+- **Schedule ticks overlap:** the cron fires on time whether or not the previous run finished.
+  With several Python nodes per tick, runs bunched up and four ticks recorded the same decision
+  within 90 ms. The control chain now writes decisions with a compare-and-set (`if_current`).
+- **`for` node** (`components/common/for_node.go`): `{"range": "msg.rooms", "do":
+  "chain:<id>", "mode": 0}` runs the sub-chain once per item, with the item as the message
+  data. Modes: 0 ignore results, 1 merge into an array, 2 replace the message, 3 async.
+- **`flow` node across modules' chains** (`{"targetId": "<chain>", "extend": true}`) and
+  **`switch`** (`{"cases": [{"case": "msg.act == true", "then": "Act"}]}`, connection type
+  `Act`) work as documented in `second_iteration`'s notes; an unmatched switch ends the branch.
+- `curl -d '<json>'` without a JSON content type is accepted by the execute API.

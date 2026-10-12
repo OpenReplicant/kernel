@@ -1,0 +1,12 @@
+{
+  "ruleChain": {"id": "climate_sense_reading", "name": "climate: a room reading -> observations (on each reading)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "shape", "type": "x/python", "name": "reading -> claims",
+       "configuration": {"script": "${module_dir}/steps/reading.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [{"fromId": "shape", "toId": "write", "type": "Success"}]
+  }
+}

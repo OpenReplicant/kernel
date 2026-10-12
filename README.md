@@ -6,12 +6,14 @@ property graph with provenance and time; everything it does runs as RuleGo chain
 capabilities arrive as modules of a few types (perceivers, reasoners, recallers, effectors,
 ontologies, activated on change, on schedule or on command).
 
-This branch starts over from a written design. S0 (spike) and S1 (core conventions and
-modules) are done: `docs/SPIKE_NOTES.md`, `docs/CORE.md`.
+This branch starts over from a written design. S0 (spike), S1 (core conventions and modules)
+and S2 (the loop: a room-climate entity) are done: `docs/SPIKE_NOTES.md`, `docs/CORE.md`,
+`docs/LOOP.md`.
 
 - `docs/DESIGN.md` — what the system is: store, runtime, module types, conventions
 - `docs/PLAN.md` — milestones, starting with a spike that tests the risky assumptions
 - `docs/CORE.md` — the core as built: claims, provenance, the outbox and loop guard, modules
+- `docs/LOOP.md` — the first entity: perceive, believe, recall, decide, act, perceive the effect
 - `docs/SPIKE_NOTES.md` — facts about AgensGraph, pgvector and RuleGo, checked by experiment
 - `docs/LESSONS.md` — what the first two iterations taught, and what to carry over
 - `CLAUDE.md` — working rules for Claude Code sessions in this repo

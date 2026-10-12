@@ -16,6 +16,7 @@ from kernel import claims, db
 from kernel.rulego import RuleGo
 
 OPS = ("INSERT", "UPDATE", "DELETE")
+TYPES = ("perceiver", "reasoner", "recaller", "effector", "ontology")
 CORE_LABELS = {"thing", "claim", "source", "agent", "module"}
 
 
@@ -36,6 +37,10 @@ def read_manifest(path: Path) -> dict:
     m["ontology"].setdefault("relations", [])
     m.setdefault("chains", [])
     m.setdefault("activations", [])
+    m.setdefault("types", [])
+    m.setdefault("vars", {})
+    if not set(m["types"]) <= set(TYPES):
+        raise ManifestError(f"{path}/module.yaml: types must be among {TYPES}")
     for t in m["ontology"]["things"]:
         _name(t.get("label"), "thing label")
     for r in m["ontology"]["relations"]:
@@ -101,7 +106,7 @@ def install(path, conn=None, rulego: RuleGo | None = None, _seen=None) -> dict:
                     conn.execute("MATCH (a:agent) WHERE id(a) = %s::graphid SET a.status = 'superseded'", (old_agent,))
             claims.ensure_agent(conn, f"module:{m['module']}", kind="module", version=m["version"])
             record = conn.execute("CREATE (m:module %s) RETURN id(m)::text", (Jsonb({
-                "name": m["module"], "version": m["version"], "hash": digest, "path": str(path),
+                "name": m["module"], "version": m["version"], "hash": digest, "path": str(path), "types": m["types"],
                 "labels": labels, "relations": m["ontology"]["relations"], "chains": chain_ids,
                 "activations": m["activations"]}),)).fetchone()[0]
     for c in m["chains"]:
@@ -110,15 +115,18 @@ def install(path, conn=None, rulego: RuleGo | None = None, _seen=None) -> dict:
 
 
 def render_chain(file: Path, m: dict, module_dir: Path) -> dict:
-    """The chain JSON as deployed: ${module_dir} and ${kernel_dir} substituted, and the chain
-    vars `module` and `version` set (the shared write node takes its agent from them)."""
+    """The chain JSON as deployed: ${module_dir} and ${kernel_dir} substituted, the manifest's
+    `vars` added to the chain vars, and the vars `module` and `version` set (the shared write
+    node takes its agent from them)."""
     text = file.read_text().replace("${module_dir}", str(module_dir))
     text = text.replace("${kernel_dir}", str(db.ROOT))
     chain = json.loads(text)
     rc = chain["ruleChain"]
     if not rc["id"].startswith(m["module"] + "_"):
         raise ManifestError(f"chain id {rc['id']} must start with '{m['module']}_'")
-    rc.setdefault("configuration", {}).setdefault("vars", {}).update(module=m["module"], version=m["version"])
+    chain_vars = rc.setdefault("configuration", {}).setdefault("vars", {})
+    chain_vars.update({k: str(v) for k, v in m["vars"].items()})
+    chain_vars.update(module=m["module"], version=m["version"])
     return chain
 
 

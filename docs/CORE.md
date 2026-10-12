@@ -27,6 +27,7 @@ The conventions of `docs/DESIGN.md` as code. Facts it relies on are in `docs/SPI
 | `cites` | edge | claim → source, with `span` |
 | `made_by` | edge | claim → agent |
 | `supersedes` | edge | new claim → the claim it replaces |
+| `derived_from` | edge | claim → the claims it was computed or inferred from |
 
 Only the module loader creates labels: Cypher would silently create a label it hasn't seen,
 so an event trigger refuses label DDL in the graph unless the transaction set
@@ -66,13 +67,16 @@ Cypher writes go through):
 **Supersede** (`kernel.claims.supersede`) writes the new claim, an edge `supersedes` → old,
 and retires the old one, in one transaction. `retract` retires without a replacement.
 
+**Trace.** `trace(claim)` follows `derived_from` recursively and returns each claim with its
+method, agent, source and span: how the entity came to hold it, down to the observations.
+
 **As of.** `as_of(subject, predicate, known_at=T, valid_at=V)` returns the claims that were
 held at T (`recorded_at <= T` and not retired by T) and true at V. Default: now.
 
 ## The outbox and the loop guard
 
 Every kernel-managed table except the structural edges (`about`, `object`, `cites`,
-`made_by`, `supersedes`) has an `AFTER` row trigger writing `kernel.outbox` (label, op, element id, old and new properties,
+`made_by`, `supersedes`, `derived_from`) has an `AFTER` row trigger writing `kernel.outbox` (label, op, element id, old and new properties,
 causation, depth, txid) and `NOTIFY outbox`.
 
 A writer runs inside an activation: the shared write node (or `kernel.db.activation`) sets
@@ -103,7 +107,9 @@ A module is a directory with `module.yaml`:
 ```yaml
 module: notes
 version: "0.1.0"
+types: [ontology, reasoner]      # what it contributes: perceiver, reasoner, recaller, effector, ontology
 depends: []                      # other modules, installed first
+vars: {band: 0.5}                # added to every chain's vars (steps read them)
 ontology:
   things:                        # vertex labels, inherit from thing
     - {label: note, key: name, vectors: {embedding: 3}}   # vector(3) column + HNSW index
@@ -133,6 +139,13 @@ use them after a step that shapes it:
 | `graph_read.py` | `{cypher, params}` | `{rows}`; params bind as jsonb (`%(name)s`); runs in a read-only transaction |
 | `graph_write.py` | `{source, things, claims, edges}` | `{written: {source, things, claims, edges}}` with ids; the agent is the chain's module and version |
 | `vector_search.py` | `{label, property, vector, k}` | `{rows: [{id, key, distance}]}` |
+
+`graph_write` passes the message's other fields through, and writes nothing (not even a source)
+for a message with nothing to write, so it can sit in the middle of a chain. A claim may carry
+`derived_from: [claim ids]`, and `if_current: [claim ids]`: a compare-and-set, written only if
+the held claims with that subject and predicate are exactly those (else listed in
+`written.skipped`). Writes that replace or compare are serialized per subject and predicate
+(a transaction-scoped advisory lock).
 
 Claims in `graph_write` may say `replaces: current`: supersede the held claims with the same
 subject and predicate. Without a `source`, a write caused by a change cites that change

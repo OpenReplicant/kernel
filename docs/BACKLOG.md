@@ -20,3 +20,9 @@ Ideas parked until a milestone needs them.
   instead of trusting writers to set causation and depth honestly.
 - Per-element ordering and a dead-letter view for the outbox; outbox pruning or archiving.
 - Activation filters beyond equality (`where`), and activations on inherited labels (`thing`).
+- Effector write-ahead: record the command as pending before acting and complete it with the
+  world's answer, so an action can't happen without a record (S2 records after acting).
+- A per-room (per-subject) lock across a whole control sequence, if compare-and-set on the
+  decision stops being enough.
+- Require `derived_from` for `computed` and `inferred` claims (S2 sets it everywhere it
+  matters, but nothing enforces it).
