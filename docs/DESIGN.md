@@ -59,6 +59,10 @@ causation and depth on every write, with a loop guard. Plus what retrieval needs
 by the database or the server: a full-text index over claim and source text, embeddings
 (pgvector, HNSW) for things, claims and source chunks, and per-claim use counts.
 
+Embeddings come from a local model on CPU, chosen in the spike by measurement (quality on
+our own retrieval set, and time per text on this CPU). Each embedding records the model and
+dimension that made it, so swapping the model is a re-embedding run, not a migration.
+
 ### 4. Process (internal upkeep)
 
 Processors keep the memory in order. They run **inside the server**, activated on change
@@ -79,6 +83,16 @@ is traceable and reversible:
 Deterministic processors come first and run in-process. Processors that need a model are
 **agents** in the plain sense: code that calls a model with recalled context and writes what it
 concludes, under a budget, each call recorded as a source.
+
+**Which model, and who pays.** Housekeeping calls go to a configured endpoint, chosen per job
+(extraction, consolidation, reflection), independent of whatever model the client session
+uses. The default is `claude -p --model haiku` on the user's logged-in Claude Code
+subscription (proven in iteration three: no tools, no settings, an empty directory, tokens
+and the answering model reported); an API key or a local OpenAI-compatible server are
+alternatives. MCP sampling (the server borrowing the client's model) is not the route:
+Claude Code doesn't support it (anthropics/claude-code#1785, open), the MCP spec of
+2026-07-28 deprecates it (SEP-2577), and even where supported the server can only hint at a
+model (`modelPreferences`), the client picks.
 
 ### 5. Retrieve
 
@@ -146,13 +160,15 @@ processors on or off, schedules, the loop guard's limits.
 
 ## Open questions (answer by experiment in the spike)
 
-1. **Embeddings here:** huggingface.co is blocked in cloud sessions; which embedding model can
-   the server run or reach (a pip-installable model with weights from elsewhere, an API with a
-   key)? Full-text search (Postgres `tsvector`) works without one and is the fallback.
+1. **The embedding model:** which local CPU model is best on our data for its cost
+   (candidates: bge-small-en-v1.5, nomic-embed-text-v1.5, EmbeddingGemma-300M,
+   Qwen3-Embedding-0.6B), and which runtime (ONNX Runtime through fastembed, or
+   sentence-transformers).
 2. **MCP from Python over AgensGraph:** sessions, concurrency (a connection pool), streamable
    HTTP and stdio, change notifications to clients.
-3. **Model calls for housekeeping:** `claude -p` (proven in iteration three), an API key, or
-   MCP sampling (the client's model; does Claude Code support it?).
+3. **`claude -p` from the server:** it must run where Claude Code is logged in. In compose,
+   that means the server on the host, the CLI's credentials mounted into the container, or a
+   small host-side runner the server calls. Which works, and what it costs per call.
 4. **The trust policy:** the first one simple and explicit, then measured.
 5. **Which harness hooks** give the most for recall (prompt submit) and capture (session end,
    tool results), and their cost in latency.

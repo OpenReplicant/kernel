@@ -14,17 +14,21 @@ Throwaway code under `spike/`, findings in `docs/SPIKE_NOTES.md`.
 1. `docker compose up`: AgensGraph + pgvector (port the image build from `third_iteration`,
    `db/agensgraph/`) and a Python MCP server (MCP SDK) with one tool reading the graph, over
    streamable HTTP and stdio. Claude Code (`claude -p --mcp-config`) calls it.
-2. Embeddings: find a model this environment can run or reach (open question 1); embed a few
-   texts; nearest-neighbour through HNSW in a Cypher query. Record speed and dimensions.
+2. Embeddings on CPU: run the candidates (docs/DESIGN.md, open question 1) on a small
+   labelled retrieval set (a few hundred passages and questions), and record recall@10, time
+   per text on this CPU, dimensions, memory and licence; pick one as the default. Store and
+   query its vectors through HNSW in a Cypher query.
 3. Full-text: a `tsvector` index on claim and source text; ranked search from Cypher or SQL.
 4. Change feed: the outbox trigger (port) wakes an in-process listener in the server; a
    processor writes back with causation and depth.
-5. Model for housekeeping: `claude -p` from the server; MCP sampling from Claude Code (does it
-   work?).
+5. Model for housekeeping: `claude -p --model haiku` called by the server as composed (host
+   process, mounted credentials, or a host-side runner; open question 3), with tokens and the
+   answering model recorded.
 
 **Gate:** Claude Code calls a tool on the composed server that runs a hybrid (full-text +
 vector + graph) query and returns the expected item; a write wakes a processor that writes
-back; the embedding and model options are recorded with evidence.
+back; the embedding model is chosen on measured numbers; the server makes a recorded Haiku
+call through `claude -p`.
 
 ## M1 — Memory core
 

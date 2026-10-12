@@ -48,9 +48,11 @@ below are on `third_iteration` unless they say otherwise.
   again after every container restart. Docker Hub rate-limits: use `mirror.gcr.io/library/...`
   for official images; `skaiworldwide/agensgraph` pulled directly. Builds go through a
   TLS-intercepting proxy (`/root/.ccr/ca-bundle.crt`).
-- **Network policy:** huggingface.co and openrouter.ai are blocked (so are distro package
-  mirrors); pypi.org, the Go module proxy, `git clone` of public repos and
-  raw.githubusercontent.com work.
+- **Network policy** is the environment's setting. Under the restricted policy of iterations
+  two and three, huggingface.co, openrouter.ai and distro package mirrors were blocked, and
+  pypi.org, the Go module proxy, `git clone` of public repos and raw.githubusercontent.com
+  worked. The fourth iteration's environment has full internet access (not yet checked by
+  experiment).
 - **`claude -p`** works from the shell and from subprocesses and answers as Haiku in 3–4 s.
   **Claude Code passes its whole environment** (tokens included) to the stdio MCP servers it
   starts; start ours through `env -i` when Claude Code launches it.
