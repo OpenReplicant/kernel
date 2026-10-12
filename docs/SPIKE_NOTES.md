@@ -196,3 +196,102 @@ Tried against `kernel-agensgraph` (same image as above) while building the core:
   **`switch`** (`{"cases": [{"case": "msg.act == true", "then": "Act"}]}`, connection type
   `Act`) work as documented in `second_iteration`'s notes; an unmatched switch ends the branch.
 - `curl -d '<json>'` without a JSON content type is accepted by the execute API.
+
+## Facts checked for S3 (2026-10-12)
+
+- **`claude -p` works in this cloud container**, from the shell and from an `x/python` step in
+  RuleGo on the host (Claude Code 2.1.296): `claude -p --model haiku --tools "" --strict-mcp-config
+  --setting-sources "" --no-session-persistence --system-prompt … --output-format json`, prompt
+  on stdin, run in an empty directory, answered in 3–4 s as `claude-haiku-5-5`.
+- **Its top-level `usage` undercounts; `modelUsage` matches the cost.** One call: `usage` said
+  2 input / 4 output / 1245 cache-write tokens, `modelUsage["claude-haiku-5-5"]` said 1176
+  input / 18 output / 1245 cache-write, and `total_cost_usd` was 0.0003756 =
+  (1176 × 0.10 + 18 × 0.50 + 1245 × 0.20) / 10⁶, i.e. Haiku 5.5 at $0.10 / $0.50 per million
+  with the cache write (`ephemeral_1h_input_tokens`) at 2× input. Tokens are summed from
+  `modelUsage`; a missing cache-write price is charged at 2× input.
+- The child `claude -p` reported the parent session's `session_id` (it inherits the session's
+  environment); with `--no-session-persistence` nothing was observed to be written.
+- **Anthropic SDK 1.13.0** reaches a local Messages-compatible server through `base_url` with
+  the session's proxy variables set (`NO_PROXY` covers 127.0.0.1); so does `urllib` for the
+  OpenAI-compatible kind.
+- AgensGraph Cypher: `label(v)` returns a vertex's label name.
+- psycopg's `with connect() as conn:` rolls back on an exception, so a record that must survive
+  a failure (a refused or failed model call) is committed before the error is raised.
+
+## Facts checked for S4 (2026-10-12)
+
+- **This environment's Docker** (restarted by hand after a container restart): runtime `runc`
+  1.5.1 only (no gVisor), seccomp's default profile, cgroup v1. These run flags all work:
+  `--network=none --read-only --tmpfs /tmp --cap-drop=ALL --security-opt=no-new-privileges
+  --cpus --memory --memory-swap --pids-limit --user=10001:10001 -v <dir>:/work:ro` on
+  `mirror.gcr.io/library/python:3.12-slim` (no network: errno 101; root and `/work` read-only;
+  `/tmp` writable; a 200 MB allocation under `--memory=64m` exits 137). A run takes 0.4–0.8 s.
+- **The MCP Python SDK (`mcp` 2.3.0)**: `MCPServer` with `@server.tool()`; `Client(StdioServerParameters(...))`
+  or `Client("<url>")`. Its stdio client starts the server with only `HOME`, `LC_CTYPE`,
+  `PATH`, `SHELL`, `TERM` from the caller's environment: a probe server run with
+  `DATABASE_URL` and a fake secret set in the client saw neither. A tool's exception reaches the
+  client as a generic "Error executing tool" unless it is a `ToolError`, whose text is passed on.
+- **Container MCP servers** (read in source by a research subagent, not run):
+  `ckreiling/mcp-server-docker` (v0.3.0) — `run_container` takes image, command, network,
+  env, ports, volumes, auto_remove; no read-only, limits, user, cap_drop or tmpfs; detached;
+  volumes accept any host path. `QuantGeekDev/docker-mcp` (stale since 2024-12) — no command,
+  detached. Docker's catalog `docker` server — raw CLI args with the socket mounted.
+  `manusa/podman-mcp-server` (v0.0.15) — `container_run(image, ports, env)`, no command,
+  publishes all ports. `containers/kubernetes-mcp-server` (v0.0.67) — `pods_run` with no
+  securityContext or resources; any manifest via `resources_create_or_update`.
+  `Flux159/mcp-server-kubernetes` — manifests and raw kubectl. No public HashiCorp Nomad MCP
+  server found; `kocierik/mcp-nomad` (v0.3.1) takes any job spec. None enforces isolation or
+  returns an exit code from a finished run; hence our own server (docs/SANDBOX.md).
+- **RuleGo's AI components** (read in source by a research subagent, not yet built or run):
+  `github.com/rulego/rulego-components-ai`, enabled in upstream's server by build tag
+  `with_ai` (a blank import of `rulego-components-ai/all`); the v0.38.0 server pins
+  `v0.37.1-0.20260816034014-d5312a602f16`. Nodes: `ai/llm` (OpenAI-compatible: `url`, `key`,
+  `model`, `systemPrompt`, `messages`, `params`; puts only the text in the message, dropping
+  token usage and the model name), `ai/agent` (eino ReAct; tokens in metadata, model as
+  configured), `ai/mcpClient` (`server`: an http(s) URL → streamable HTTP, anything else → a
+  stdio command; `toolName`, `args`). mcp-go v0.44.0's stdio transport passes the **whole**
+  environment of the RuleGo process to the server it starts. No container or docker node
+  exists in rulego, rulego-components or rulego-components-ai.
+- `claude -p` children leave directories named after their working directory under the
+  session's temp root (`/tmp/claude-0/-tmp-kernel-claude-*/<parent session id>/scratchpad`),
+  despite `--no-session-persistence`; they hold nothing else.
+
+## Facts checked for S5 (2026-10-12)
+
+- **`claude -p` as an agent with only our MCP server** (Claude Code 2.1.296, Haiku): with
+  `--tools "" --strict-mcp-config --mcp-config '<json>' --allowedTools mcp__sandbox`, the init
+  event lists exactly `["mcp__sandbox__sandbox_run"]`; Haiku called it, read the result and
+  answered (2–3 turns, 7–12K tokens, 7–11 s). Without `--allowedTools` a tool needs a
+  permission nobody can give in `-p` mode. `--output-format stream-json --verbose` gives the
+  init event (tools, MCP server status), every assistant message (text, `tool_use`), every
+  tool result (as a `user` message) and the result event (`subtype`, `num_turns`,
+  `modelUsage`, `total_cost_usd`). `--max-turns` is accepted though `--help` doesn't list it.
+  Asked to read `/etc/hostname`, Haiku used the sandbox and got the container's hostname. A
+  real run hit the read-only `/work`, said so, and wrote to `/tmp` instead.
+- **Claude Code starts stdio MCP servers with its whole environment**: a probe server listed
+  158 variables, among them `GH_TOKEN`, `GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`, `HTTPS_PROXY`
+  and a planted `SANDBOX_TEST_SECRET`. The `env` field of an MCP config adds variables, it
+  doesn't replace them. Wrapping the command in `env -i PATH=… HOME=… PYTHONPATH=…` leaves the
+  server with those (plus `LC_CTYPE`, which Python sets itself): checked by the S5 gate.
+- **RuleGo's AI components build** with Go 1.25 (auto toolchain) from
+  `rulego-components-ai@v0.37.1-0.20260816034014-d5312a602f16`: importing `…/all` fails on
+  missing modules for its browser, skill and image tools; importing only `…/action` (`ai/llm`,
+  `ai/createImage`) and `…/mcp` (`ai/mcpClient`) builds (binary 55 MB against 42 MB) and the
+  server lists `ai/llm`, `ai/mcpClient`, `ai/createImage`.
+- **`ai/llm`, run**: against the local fake's `/v1/chat/completions`, it sends `model`,
+  `messages` (system prompt first), `max_tokens`, `temperature`, and also `top_p: 0.75` and
+  `response_format: {type: text}` unasked; `${msg.text}` is substituted only when the message is
+  JSON (an execute request without `Content-Type: application/json` gets the literal
+  `${msg.text}`); the node's output is the reply text alone, as the source said.
+- **`ai/mcpClient`, run**: with `server: http://127.0.0.1:8000/mcp` (our sandbox server over
+  streamable HTTP) and `toolName: sandbox_run`, every call failed with `MCP tool not found:
+  sandbox_run`, and the server logged no connection: the node connects in `Start()`, which
+  neither `Init` nor `OnMsg` calls (in this version only an agent that uses it as a tool
+  provider does).
+- **LiteLLM 1.105.0 SDK**: `completion(model="openai/small-o", api_base=<fake>/v1)` posts to
+  `/v1/chat/completions`; `model="anthropic/small-a", api_base=<fake>` posts to `/v1/messages`
+  (system as a block list, content as blocks). Both return the server's model name and usage
+  (`prompt_tokens`, `completion_tokens`), `finish_reason` `stop`, and no cost for models it
+  doesn't know (`response_cost` None). Its exceptions derive from the `openai` package's
+  `OpenAIError` (not from `litellm.exceptions.OpenAIError`, a different class). It fetches its
+  price map from the network at import unless `LITELLM_LOCAL_MODEL_COST_MAP=True`.

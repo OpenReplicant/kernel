@@ -1,0 +1,23 @@
+# Test module (S4, S5): a model writes a function for a small task (in one call, or as an agent
+# testing its own code in the sandbox), the sandbox runs the task's tests on it, and whether
+# they passed is observed. The code is untrusted: it only ever runs in
+# the sandbox.
+module: coder
+version: "0.1.0"
+types: [ontology, effector, perceiver]
+depends: [models]
+ontology:
+  things:
+    - {label: task}
+  relations:
+    - {name: coder.passed, as: claim}     # true/false: the task's tests on the model's code, observed in the sandbox
+models:
+  writer:
+    model: claude-code-haiku
+    budget: {tokens: 100000}
+  agent:
+    model: claude-code-haiku
+    budget: {tokens: 300000}
+chains:
+  - chains/solve.json
+  - chains/agent.json

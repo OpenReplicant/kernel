@@ -1,0 +1,14 @@
+# Perceiver (on command): a person's words about a room's temperature become a setpoint, through
+# a model. The setpoint is inferred (the model interpreted what was said) and cites the call,
+# which keeps the words it was given.
+module: climate_chat
+version: "0.1.0"
+types: [perceiver]
+depends: [climate, models]
+vars: {confidence: 0.8}      # of an interpreted setpoint
+models:
+  interpreter:
+    model: claude-code-haiku
+    budget: {tokens: 200000}
+chains:
+  - chains/say.json

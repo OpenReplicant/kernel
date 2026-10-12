@@ -1,0 +1,42 @@
+# Model catalog: the endpoints and models this entity knows. The models_catalog chain records
+# each field as a `stated` claim citing this catalog with a span (e.g. $.models[0].prices);
+# a changed field supersedes on the next load, an unchanged one writes nothing.
+#
+# Prices: USD per million tokens, Anthropic first-party API rates (Claude API skill's model
+# table, cached 2026-10-06). Haiku 5.5's are for prompts up to 100K tokens. A missing cache_read
+# price is charged at the input price and a missing cache_write price at 2x input, so an
+# unknown price never under-counts a budget.
+#
+# Other endpoints (a local OpenAI-compatible server, another provider) are added the same way:
+# `api: openai`, its base_url, and the env var holding its key (key_env), if it needs one.
+
+endpoints:
+  - id: anthropic
+    api: anthropic
+    base_url: https://api.anthropic.com
+    key_env: ANTHROPIC_API_KEY
+
+  # The logged-in Claude Code session (`claude -p`): its subscription, no API key. Unpriced
+  # (cost 0); tokens, the answering model and the CLI's own list-price figure are recorded.
+  - id: claude-code
+    api: claude_code
+
+models:
+  - id: claude-haiku-5-5
+    endpoint: anthropic
+    prices: {input: 0.10, output: 0.50}
+    params: {max_tokens: 1024}
+
+  - id: claude-sonnet-5-5
+    endpoint: anthropic
+    prices: {input: 2.00, output: 10.00, cache_read: 0.20}
+    params: {max_tokens: 1024}
+
+  - id: claude-opus-5-5
+    endpoint: anthropic
+    prices: {input: 4.00, output: 20.00, cache_read: 0.20}
+    params: {max_tokens: 1024}
+
+  - id: claude-code-haiku
+    endpoint: claude-code
+    model_id: haiku

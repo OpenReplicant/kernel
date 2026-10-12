@@ -5,6 +5,7 @@ graph name (the tests drop and recreate that graph and the kernel schema):
     DATABASE_URL=postgresql://agens@127.0.0.1:55432/postgres KERNEL_GRAPH=test_kernel pytest
 """
 import os
+import shutil
 import threading
 import time
 from pathlib import Path
@@ -18,6 +19,9 @@ from kernel.rulego import RuleGo
 
 TESTS = Path(__file__).resolve().parent
 NOTES = TESTS / "modules" / "notes"
+
+# tests that call the entity's real model, Haiku through `claude -p`
+needs_claude = pytest.mark.skipif(shutil.which("claude") is None, reason="needs `claude` logged in (Haiku)")
 
 
 def pytest_configure(config):

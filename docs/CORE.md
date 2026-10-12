@@ -116,15 +116,17 @@ ontology:
   relations:
     - {name: notes.status, as: claim}                     # a predicate of claim vertices
     - {name: links_to, as: edge, from: note, to: note}    # an edge label with provenance
+models:                         # model roles (needs depends: [models]; docs/MODELS.md)
+  summarizer: {model: claude-code-haiku, budget: {tokens: 100000}}
 chains: [chains/set_status.json]   # RuleGo chain files
 activations:                     # what wakes a chain
   - {chain: notes_echo, when: change, label: claim, ops: [INSERT], where: {predicate: notes.ping}}
 ```
 
 `kernel.modules.install(path)`: installs dependencies, creates the labels (with indexes,
-provenance triggers, outbox triggers), records an `agent` and a `module` vertex, and deploys
-the chains to RuleGo with `${module_dir}` and `${kernel_dir}` substituted and the chain vars
-`module` and `version` set. Reinstalling the same version with a different manifest is an
+provenance triggers, outbox triggers), records an `agent` and a `module` vertex and the
+module's model roles (as `defaulted` claims), and deploys the chains to RuleGo with
+`${module_dir}` and `${kernel_dir}` substituted and the chain vars `module` and `version` set. Reinstalling the same version with a different manifest is an
 error; a new version retires the old module vertex and its agent. Chain ids must start with
 `<module>_`. `when: change` is the only activation the bridge handles; a schedule is a chain's
 own endpoint, and on command is the chain's REST API.
@@ -139,6 +141,9 @@ use them after a step that shapes it:
 | `graph_read.py` | `{cypher, params}` | `{rows}`; params bind as jsonb (`%(name)s`); runs in a read-only transaction |
 | `graph_write.py` | `{source, things, claims, edges}` | `{written: {source, things, claims, edges}}` with ids; the agent is the chain's module and version |
 | `vector_search.py` | `{label, property, vector, k}` | `{rows: [{id, key, distance}]}` |
+| `sandbox_run.py` | `{sandbox_run: {command, files, image, limits…, inputs}}` | `{sandbox_result: {exit_code, stdout, stderr, timed_out, backend, isolated, …, source}}`; through the sandbox MCP server, recorded in the graph (`docs/SANDBOX.md`) |
+| `agent_run.py` | `{agent_run: {role, task, system, inputs, max_turns}}` | `{agent_result: {text, model, usage, cost_usd, turns, tool_calls, source}}`; an agent whose only tool is the sandbox, resolved, budgeted and recorded with its transcript (`docs/HARNESSES.md`) |
+| `model_call.py` | `{model_call: {role, prompt \| messages, system, inputs}}` | `{model_reply: {text, model, usage, cost_usd, source}}`; resolved, budgeted and recorded in the graph (`docs/MODELS.md`) |
 
 `graph_write` passes the message's other fields through, and writes nothing (not even a source)
 for a message with nothing to write, so it can sit in the middle of a chain. A claim may carry
