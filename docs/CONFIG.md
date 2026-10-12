@@ -7,6 +7,7 @@ is the running Python interpreter and `${root}` the repository.
 | Section | What | Read by |
 |---|---|---|
 | `limits` | the loop guard: `max_depth`, `max_fanout`, `max_attempts` (docs/CORE.md) | `kernel.db.install_core`, which writes them into `kernel.config` |
+| `agents` | `max_turns`, `timeout_s` for one agent run (docs/HARNESSES.md) | the `agent_run` node |
 | `sandbox` | on/off, backend, MCP server, engine, image allowlist, default and maximum limits (docs/SANDBOX.md) | the `sandbox_run` node, and the sandbox server it starts (given the file with `--config`) |
 
 What stays out of it:

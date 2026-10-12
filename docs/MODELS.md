@@ -50,11 +50,12 @@ models:
 1. **Resolve** (`kernel.models.resolve`): the role's held `models.uses` → the model's id,
    endpoint, prices and parameters → the endpoint's API kind, URL and key variable. Exactly one
    held claim of each, or the call is refused. The ids of every claim used are kept.
-2. **Budget:** spend is counted from the graph: the role's `ok` calls recorded since its held
-   budget claim. At or over any limit (`usd`, `tokens`), the call is refused. A new budget claim
+2. **Budget:** spend is counted from the graph: the role's `ok` calls and agent runs
+   (docs/HARNESSES.md) recorded since its held budget claim. At or over any limit (`usd`, `tokens`), the call is refused. A new budget claim
    starts the count afresh.
 3. **Call** (`kernel.providers`): `anthropic` (Messages API through the Anthropic SDK), `openai`
-   (any OpenAI-compatible chat endpoint, e.g. a local server), `claude_code` (`claude -p` on the
+   (any OpenAI-compatible chat endpoint, e.g. a local server or a LiteLLM proxy), `litellm`
+   (LiteLLM's SDK, `model_id` = `provider/model`; docs/HARNESSES.md), `claude_code` (`claude -p` on the
    logged-in Claude Code session: no tools, no settings, no MCP servers, our system prompt, an
    empty working directory).
 4. **Record:** a `model_call` source, kept unchanged:

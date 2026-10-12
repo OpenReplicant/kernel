@@ -39,5 +39,13 @@ Ideas parked until a milestone needs them.
 - The sandbox server as a long-lived streamable-HTTP service (no start-up per run), with auth.
 - A Claude Code skill (and MCP config) for the sandbox server, so a session runs untrusted code
   through the same tool (with the Claude Code integration milestone).
+- More agent harnesses behind `kernel/harnesses.py`: Codex CLI (not installed here), and a
+  tool loop of our own over any catalog model (LiteLLM normalises tool calls across providers),
+  each with the sandbox as its only tool and a transcript in the same shape.
+- An agent's own sandbox runs as `sandbox_run` sources (S5 keeps them in the agent run's
+  transcript), e.g. by the sandbox server reporting runs to the kernel.
+- A budget enforced during an agent run (S5 checks before it; `--max-budget-usd` counts list
+  price, not the role's budget), and a LiteLLM proxy run in tests (S5 tests its SDK; the proxy
+  is the tested `openai` kind).
 - A sandbox run's network as an allowlist (e.g. a package index through a proxy) instead of
   none, for code that must install dependencies.

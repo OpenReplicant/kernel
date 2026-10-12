@@ -104,15 +104,36 @@ on the `local` backend and is recorded as not isolated. In the entity's terms: H
 function for a small task, the sandbox runs the task's tests on it, and the observed result
 traces back through the run to the model call that wrote the code.
 
-## S5 — Model routing and agent harnesses (proposed)
+## S5 — Model routing and agent harnesses
 
-- RuleGo's AI components (`rulego-components-ai`: `ai/llm`, `ai/agent`, `ai/mcpClient`) built
-  into the server; where they fit next to `model_call` (they don't report token usage or the
-  answering model as built, so recorded calls stay with `model_call`).
-- LiteLLM: as an `openai`-kind endpoint (its proxy) and/or an API kind of its own (its SDK),
-  so one catalog entry reaches any provider it routes to.
-- Agent harnesses (Claude Code, Codex, …) behind one interface: one-shot, no tools, as
-  `claude_code` is now; and agentic, with tools, inside the sandbox.
+- **LiteLLM** as an API kind (`litellm`, its SDK, an optional dependency): a model's `model_id`
+  is LiteLLM's `provider/model`, so one catalog entry reaches any provider it routes to. Its
+  proxy needs nothing new: it is an `openai`-kind endpoint. Tokens and the answering model come
+  from LiteLLM's reply; cost from the catalog's prices, as for every kind.
+- **Agent harnesses** behind one interface (`kernel/harnesses.py`: `run(cfg, task, tools) →
+  {text, model, usage, transcript, turns}`), selected by the endpoint's API kind like
+  providers. First harness: `claude_code`, agentic: `claude -p` whose only tools are the MCP
+  servers it is given (no built-in tools, settings or other MCP servers), in an empty
+  directory, with a turn limit. The only tool given is the sandbox server, started with an
+  empty environment (Claude Code passes its whole environment to the MCP servers it starts:
+  `docs/SPIKE_NOTES.md`, S5). So an agent's code runs only in the sandbox.
+- A shared **`agent_run` node**: role → model → endpoint from the graph as for `model_call`,
+  the same budget (spend counts both kinds of record), and an `agent_run` source holding the
+  request, the transcript (each message, tool call and tool result), the answering model,
+  tokens and cost. Failed and refused runs are recorded.
+- **RuleGo's AI components** as a build flag (`KERNEL_RULEGO_AI=1 tools/dev.sh up`): only
+  `ai/llm` and `ai/mcpClient` (`ai/agent`'s tools run on the host, outside the sandbox). Not
+  used by the kernel's modules: `ai/llm` returns only the reply text (no tokens, no answering
+  model), so recorded calls stay with `model_call`.
+
+**Gate:** a `litellm` endpoint reaches an OpenAI-style and an Anthropic-style server (the local
+fake) and the call is recorded with tokens, cost and the answering model; an agent's only tool
+is the sandbox, and the sandbox server it starts sees none of the caller's environment; in the
+entity's terms, Haiku as an agent writes code for a task, tests it in the sandbox by itself,
+and the kernel's own sandbox run of the task's tests on the final code is observed, the claim
+tracing back through that run to the agent run, whose transcript holds the agent's sandbox
+calls; a role over budget is refused for agent runs too. With the AI build running, an `ai/llm`
+chain reaches the fake endpoint.
 
 ## Later (order decided when S2 passes)
 

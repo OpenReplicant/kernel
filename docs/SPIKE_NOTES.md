@@ -255,3 +255,43 @@ Tried against `kernel-agensgraph` (same image as above) while building the core:
 - `claude -p` children leave directories named after their working directory under the
   session's temp root (`/tmp/claude-0/-tmp-kernel-claude-*/<parent session id>/scratchpad`),
   despite `--no-session-persistence`; they hold nothing else.
+
+## Facts checked for S5 (2026-10-12)
+
+- **`claude -p` as an agent with only our MCP server** (Claude Code 2.1.296, Haiku): with
+  `--tools "" --strict-mcp-config --mcp-config '<json>' --allowedTools mcp__sandbox`, the init
+  event lists exactly `["mcp__sandbox__sandbox_run"]`; Haiku called it, read the result and
+  answered (2–3 turns, 7–12K tokens, 7–11 s). Without `--allowedTools` a tool needs a
+  permission nobody can give in `-p` mode. `--output-format stream-json --verbose` gives the
+  init event (tools, MCP server status), every assistant message (text, `tool_use`), every
+  tool result (as a `user` message) and the result event (`subtype`, `num_turns`,
+  `modelUsage`, `total_cost_usd`). `--max-turns` is accepted though `--help` doesn't list it.
+  Asked to read `/etc/hostname`, Haiku used the sandbox and got the container's hostname. A
+  real run hit the read-only `/work`, said so, and wrote to `/tmp` instead.
+- **Claude Code starts stdio MCP servers with its whole environment**: a probe server listed
+  158 variables, among them `GH_TOKEN`, `GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`, `HTTPS_PROXY`
+  and a planted `SANDBOX_TEST_SECRET`. The `env` field of an MCP config adds variables, it
+  doesn't replace them. Wrapping the command in `env -i PATH=… HOME=… PYTHONPATH=…` leaves the
+  server with those (plus `LC_CTYPE`, which Python sets itself): checked by the S5 gate.
+- **RuleGo's AI components build** with Go 1.25 (auto toolchain) from
+  `rulego-components-ai@v0.37.1-0.20260816034014-d5312a602f16`: importing `…/all` fails on
+  missing modules for its browser, skill and image tools; importing only `…/action` (`ai/llm`,
+  `ai/createImage`) and `…/mcp` (`ai/mcpClient`) builds (binary 55 MB against 42 MB) and the
+  server lists `ai/llm`, `ai/mcpClient`, `ai/createImage`.
+- **`ai/llm`, run**: against the local fake's `/v1/chat/completions`, it sends `model`,
+  `messages` (system prompt first), `max_tokens`, `temperature`, and also `top_p: 0.75` and
+  `response_format: {type: text}` unasked; `${msg.text}` is substituted only when the message is
+  JSON (an execute request without `Content-Type: application/json` gets the literal
+  `${msg.text}`); the node's output is the reply text alone, as the source said.
+- **`ai/mcpClient`, run**: with `server: http://127.0.0.1:8000/mcp` (our sandbox server over
+  streamable HTTP) and `toolName: sandbox_run`, every call failed with `MCP tool not found:
+  sandbox_run`, and the server logged no connection: the node connects in `Start()`, which
+  neither `Init` nor `OnMsg` calls (in this version only an agent that uses it as a tool
+  provider does).
+- **LiteLLM 1.105.0 SDK**: `completion(model="openai/small-o", api_base=<fake>/v1)` posts to
+  `/v1/chat/completions`; `model="anthropic/small-a", api_base=<fake>` posts to `/v1/messages`
+  (system as a block list, content as blocks). Both return the server's model name and usage
+  (`prompt_tokens`, `completion_tokens`), `finish_reason` `stop`, and no cost for models it
+  doesn't know (`response_cost` None). Its exceptions derive from the `openai` package's
+  `OpenAIError` (not from `litellm.exceptions.OpenAIError`, a different class). It fetches its
+  price map from the network at import unless `LITELLM_LOCAL_MODEL_COST_MAP=True`.

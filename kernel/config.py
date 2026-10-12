@@ -24,6 +24,7 @@ DEFAULTS = {
         "defaults": {"timeout_s": 10, "cpus": 1.0, "memory": "256m", "pids": 64, "max_output": 1 << 20},
         "max": {"timeout_s": 300, "cpus": 2.0, "memory": "1g", "pids": 256, "max_output": 8 << 20},
     },
+    "agents": {"max_turns": 10, "timeout_s": 600},
 }
 
 

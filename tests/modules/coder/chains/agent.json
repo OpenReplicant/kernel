@@ -1,0 +1,92 @@
+{
+  "ruleChain": {
+    "id": "coder_agent",
+    "name": "coder: an agent writes and tests code, the sandbox tests it again (on command)",
+    "root": true
+  },
+  "metadata": {
+    "nodes": [
+      {
+        "id": "prompt",
+        "type": "x/python",
+        "name": "task -> agent run",
+        "configuration": {
+          "script": "${module_dir}/steps/agent_task.py",
+          "timeout": "30s"
+        }
+      },
+      {
+        "id": "model",
+        "type": "x/python",
+        "name": "agent run",
+        "configuration": {
+          "script": "${kernel_dir}/kernel/nodes/agent_run.py",
+          "timeout": "600s"
+        }
+      },
+      {
+        "id": "prepare",
+        "type": "x/python",
+        "name": "answer -> sandbox run",
+        "configuration": {
+          "script": "${module_dir}/steps/prepare.py",
+          "timeout": "30s"
+        }
+      },
+      {
+        "id": "sandbox",
+        "type": "x/python",
+        "name": "sandbox run",
+        "configuration": {
+          "script": "${kernel_dir}/kernel/nodes/sandbox_run.py",
+          "timeout": "120s"
+        }
+      },
+      {
+        "id": "observe",
+        "type": "x/python",
+        "name": "result -> claim",
+        "configuration": {
+          "script": "${module_dir}/steps/observe.py",
+          "timeout": "30s"
+        }
+      },
+      {
+        "id": "write",
+        "type": "x/python",
+        "name": "graph write",
+        "configuration": {
+          "script": "${kernel_dir}/kernel/nodes/graph_write.py",
+          "timeout": "30s"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromId": "prompt",
+        "toId": "model",
+        "type": "Success"
+      },
+      {
+        "fromId": "model",
+        "toId": "prepare",
+        "type": "Success"
+      },
+      {
+        "fromId": "prepare",
+        "toId": "sandbox",
+        "type": "Success"
+      },
+      {
+        "fromId": "sandbox",
+        "toId": "observe",
+        "type": "Success"
+      },
+      {
+        "fromId": "observe",
+        "toId": "write",
+        "type": "Success"
+      }
+    ]
+  }
+}

@@ -100,12 +100,13 @@ def tokens(usage: dict) -> int:
 
 
 def spent(conn, role: str, since: str) -> dict:
-    """What a role's recorded calls have cost since `since` (the held budget's recorded_at)."""
+    """What a role's recorded calls and agent runs have cost since `since` (the held budget's
+    recorded_at)."""
     row = conn.execute(
         f"""SELECT count(*), coalesce(sum((properties->'content'->>'cost_usd')::numeric), 0),
                    coalesce(sum((properties->'content'->>'tokens')::bigint), 0)
             FROM {db.graph_name()}.source
-            WHERE properties->>'kind' = 'model_call' AND properties->'content'->>'role' = %s
+            WHERE properties->>'kind' IN ('model_call', 'agent_run') AND properties->'content'->>'role' = %s
               AND properties->'content'->>'status' = 'ok' AND properties->>'recorded_at' >= %s""",
         (role, since)).fetchone()
     return {"calls": row[0], "usd": float(row[1]), "tokens": int(row[2])}
@@ -124,10 +125,10 @@ def check_budget(conn, cfg: dict) -> dict:
     return s
 
 
-def record(conn, content: dict, causation: str | None, depth: int) -> str:
-    """A model call (or a refused or failed one) as a `model_call` source, kept unchanged.
-    Committed on its own, so the record stays when the caller then fails."""
+def record(conn, content: dict, causation: str | None, depth: int, kind: str = "model_call") -> str:
+    """A model call or agent run (or a refused or failed one) as a source of that kind, kept
+    unchanged. Committed on its own, so the record stays when the caller then fails."""
     conn.rollback()  # whatever the resolve or budget check left open
     with db.activation(conn, causation, depth):
-        return claims.ensure_source(conn, "model_call", json.loads(json.dumps(content)),
-                                    f"model:{content.get('model', 'unresolved')}")
+        return claims.ensure_source(conn, kind, json.loads(json.dumps(content)),
+                                    f"{'agent' if kind == 'agent_run' else 'model'}:{content.get('model', 'unresolved')}")

@@ -15,7 +15,7 @@ ontologies, activated on change, on schedule or on command).
 | S2 — the loop: one entity, one module of each type | done | `docs/LOOP.md`, `modules/climate*`, `world/` |
 | S3 — model access: models as graph facts, budgeted and recorded calls | done | `docs/MODELS.md`, `modules/models`, `kernel/models.py` |
 | S4 — sandbox for untrusted code, behind an MCP server; startup config | done | `docs/SANDBOX.md`, `docs/CONFIG.md`, `sandbox/` |
-| S5 — model routing and agent harnesses | proposed | `docs/PLAN.md` |
+| S5 — LiteLLM, agent harnesses (an agent's only tool is the sandbox), RuleGo AI build flag | done | `docs/HARNESSES.md` |
 | Later (order to be decided) | — | `docs/PLAN.md`, `docs/BACKLOG.md` |
 
 What exists now:
@@ -63,15 +63,17 @@ What exists now:
 ## Running
 
 ```sh
-python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev,litellm]'
 KERNEL_GRAPH=test_kernel tools/dev.sh up     # needs dockerd; builds the database image once
+                                             # (KERNEL_RULEGO_AI=1: RuleGo with its AI components)
 export DATABASE_URL=postgresql://agens@127.0.0.1:55432/postgres KERNEL_GRAPH=test_kernel
-.venv/bin/pytest                             # drops and recreates the test graph; 41 tests
+.venv/bin/pytest                             # drops and recreates the test graph; 48 tests
 ```
 
 `docs/LOOP.md` shows how to run the climate entity by hand. The model tests make a few small
 real calls to Haiku through `claude -p` (they skip when `claude` is not on `PATH`); the sandbox
-tests need Docker with the sandbox image (`tools/dev.sh up` pulls it).
+and agent tests need Docker with the sandbox image (`tools/dev.sh up` pulls it); the LiteLLM
+test needs the `litellm` extra, and the `ai/llm` test the AI build.
 
 ## Docs
 
@@ -81,6 +83,7 @@ tests need Docker with the sandbox image (`tools/dev.sh up` pulls it).
 - `docs/LOOP.md` — the first entity: perceive, believe, recall, decide, act, perceive the effect
 - `docs/MODELS.md` — model access: models as claims, roles, budgets, the recorded call
 - `docs/SANDBOX.md` — the sandbox: the MCP interface, its guarantees, choosing a runtime
+- `docs/HARNESSES.md` — LiteLLM, agent harnesses and the `agent_run` node, RuleGo's AI components
 - `docs/CONFIG.md` — the startup config file
 - `docs/SPIKE_NOTES.md` — facts about AgensGraph, pgvector and RuleGo, checked by experiment
 - `docs/BACKLOG.md` — ideas parked until a milestone needs them

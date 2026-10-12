@@ -9,6 +9,9 @@ output_tokens, cache_read_input_tokens, cache_creation_input_tokens), and for `c
 API kinds:
 - `anthropic`: the Messages API through the Anthropic SDK.
 - `openai`: any OpenAI-compatible chat-completions endpoint (local servers, other providers).
+- `litellm`: LiteLLM's SDK (an optional dependency), `model_id` being LiteLLM's
+  `provider/model` (e.g. `openai/gpt-x`, `anthropic/claude-haiku-5-5`), `base_url` its
+  `api_base`; it routes to any provider it supports. (LiteLLM's proxy is an `openai` endpoint.)
 - `claude_code`: a one-shot `claude -p` on the logged-in Claude Code session, so calls count
   against that subscription instead of an API key. No tools, no settings, no MCP servers, our
   system prompt, an empty working directory; it reports the model that answered.
@@ -93,6 +96,50 @@ def _openai(cfg) -> dict:
                       "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}
 
 
+def _litellm(cfg) -> dict:
+    # LiteLLM fetches its model price map from the network at import unless told not to; the
+    # catalog's prices are what count here
+    os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+    try:
+        import litellm
+        import openai
+    except ImportError as e:
+        raise CallFailed("the litellm endpoint kind needs the litellm package (pip install 'kernel[litellm]')") from e
+    messages = ([{"role": "system", "content": cfg["system"]}] if cfg.get("system") else []) + cfg["messages"]
+    try:
+        r = litellm.completion(model=cfg["model_id"], messages=messages, api_base=cfg.get("base_url"),
+                               api_key=_key(cfg) or "unused", timeout=TIMEOUT, num_retries=0, **cfg["params"])
+    except openai.OpenAIError as e:  # LiteLLM's errors derive from the openai package's
+        raise CallFailed(f"{type(e).__name__} from {cfg['endpoint']}: {str(e)[:300]}") from e
+    choice, u = r.choices[0], r.usage
+    details = getattr(u, "prompt_tokens_details", None)
+    cached = getattr(details, "cached_tokens", None) or 0
+    return {"text": choice.message.content or "", "stop_reason": choice.finish_reason, "model": r.model,
+            "usage": {"input_tokens": (u.prompt_tokens or 0) - cached, "output_tokens": u.completion_tokens or 0,
+                      "cache_read_input_tokens": cached,
+                      "cache_creation_input_tokens": getattr(u, "cache_creation_input_tokens", None) or 0}}
+
+
+def cli_usage(out: dict, fallback_model: str) -> tuple[str, dict]:
+    """The answering model and usage from a `claude -p` result. `modelUsage` totals every request
+    the CLI made (its top-level `usage` can count far fewer input tokens; docs/SPIKE_NOTES.md,
+    S3), so tokens are summed from it; the answering model is the one with the most output."""
+    by_model = out.get("modelUsage") or {}
+    if not by_model:
+        u = out.get("usage") or {}
+        return fallback_model, {f: u.get(f, 0) for f in ("input_tokens", "output_tokens", "cache_read_input_tokens",
+                                                         "cache_creation_input_tokens")}
+    total = lambda f: sum(int(m.get(f, 0) or 0) for m in by_model.values())  # noqa: E731
+    return (max(by_model, key=lambda m: by_model[m].get("outputTokens", 0)),
+            {"input_tokens": total("inputTokens"), "output_tokens": total("outputTokens"),
+             "cache_read_input_tokens": total("cacheReadInputTokens"),
+             "cache_creation_input_tokens": total("cacheCreationInputTokens")})
+
+
+def claude_cmd() -> list[str]:
+    return os.environ.get("KERNEL_CLAUDE_CMD", "claude").split()
+
+
 def _claude_code(cfg) -> dict:
     """`claude -p` with model_id as --model (an alias such as `haiku`, or a full id). One user
     message with text; the CLI takes no sampling parameters, so any parameter is refused."""
@@ -101,7 +148,7 @@ def _claude_code(cfg) -> dict:
         raise CallFailed("the claude_code endpoint takes exactly one user message with text content")
     if cfg["params"]:
         raise CallFailed(f"the claude_code endpoint takes no parameters, got {sorted(cfg['params'])}")
-    argv = [*os.environ.get("KERNEL_CLAUDE_CMD", "claude").split(), "-p", "--model", cfg["model_id"],
+    argv = [*claude_cmd(), "-p", "--model", cfg["model_id"],
             "--tools", "", "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence",
             "--system-prompt", cfg.get("system") or "You are a helpful assistant.", "--output-format", "json"]
     with tempfile.TemporaryDirectory(prefix="kernel-claude-") as empty:  # no project files or CLAUDE.md
@@ -118,24 +165,12 @@ def _claude_code(cfg) -> dict:
         raise CallFailed(f"claude -p exited {r.returncode}: {(r.stderr or r.stdout)[-300:]}") from None
     if out.get("is_error") or r.returncode != 0:
         raise CallFailed(f"claude -p failed: {str(out.get('result') or r.stderr)[-300:]}")
-    # `modelUsage` totals every request the CLI made (its top-level `usage` can count far fewer
-    # input tokens; docs/SPIKE_NOTES.md, S3), so tokens are summed from it
-    by_model = out.get("modelUsage") or {}
-    served = max(by_model, key=lambda m: by_model[m].get("outputTokens", 0)) if by_model else cfg["model_id"]
-    if by_model:
-        total = lambda f: sum(int(m.get(f, 0) or 0) for m in by_model.values())  # noqa: E731
-        usage = {"input_tokens": total("inputTokens"), "output_tokens": total("outputTokens"),
-                 "cache_read_input_tokens": total("cacheReadInputTokens"),
-                 "cache_creation_input_tokens": total("cacheCreationInputTokens")}
-    else:
-        u = out.get("usage") or {}
-        usage = {f: u.get(f, 0) for f in ("input_tokens", "output_tokens", "cache_read_input_tokens",
-                                          "cache_creation_input_tokens")}
+    served, usage = cli_usage(out, cfg["model_id"])
     return {"text": out.get("result") or "", "stop_reason": out.get("stop_reason"), "model": served,
             "usage": usage, "reported_cost_usd": out.get("total_cost_usd")}
 
 
-APIS = {"anthropic": _anthropic, "openai": _openai, "claude_code": _claude_code}
+APIS = {"anthropic": _anthropic, "openai": _openai, "litellm": _litellm, "claude_code": _claude_code}
 
 
 def call(cfg) -> dict:
