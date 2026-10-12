@@ -11,3 +11,6 @@ Ideas parked until a milestone needs them.
 - An OpenAI-compatible router (e.g. LiteLLM, OpenRouter) for many providers behind one API.
 - Vocabulary-constrained extraction and entity disambiguation for perceivers.
 - Parallel branches and nested loops in compiled chains.
+- Outbox bridge as a Go endpoint compiled into the RuleGo server, instead of a Python process
+  (S0 used `spike/bridge.py`).
+- AgensGraph v2.18.6 (rc1 on Docker Hub at S0) once released.
