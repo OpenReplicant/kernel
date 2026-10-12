@@ -22,4 +22,5 @@ Fourth iteration, started afresh. Nothing is built yet; `docs/PLAN.md` starts wi
 - `docs/PLAN.md` — milestones and their gates
 - `docs/LESSONS.md` — what went wrong and what worked before, cloud-session know-how
 - `docs/BACKLOG.md` — ideas parked until a milestone needs them
+- `docs/RELATED_WORK.md` — similar systems and papers, and proposed changes to the plan
 - `CLAUDE.md` — working rules for Claude Code in this repo
