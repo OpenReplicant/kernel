@@ -261,3 +261,27 @@ Ordered by milestone. Each is a proposal; none is applied to `docs/PLAN.md` yet.
 - Claude Code memory: [auto memory overview](https://www.engineerscodex.com/claude-code-auto-memory), [Mem0 plugin](https://mem0.ai/blog/claude-code-memory), [ReMe integration](https://reme.agentscope.io/en/integrations/claude-code)
 - Postgres graph memory: [Cognee "just Postgres"](https://www.cognee.ai/blog/deep-dives/just-postgres), [cognee-agensgraph](https://pypi.org/project/cognee-agensgraph/), [AgensGraph repo](https://github.com/skaiworldwide-oss/agensgraph)
 - Classics (not fetched): Doyle 1979 (JTMS), de Kleer 1986 (ATMS), Alchourrón–Gärdenfors–Makinson 1985 (AGM), Dong et al. 2015 (Knowledge-Based Trust), Wikidata data model, W3C PROV-O
+
+## Adaptability: could domain modules sit on an existing system?
+
+Read from the source on 2026-10-12 (shallow clones of each default branch; a few hours of
+reading, not a build). The question: where would this design's module types (ontology,
+encoder, processor, decoder, integration, knowledge pack) plug in?
+
+| Module type | Hindsight | Cognee | Graphiti |
+|---|---|---|---|
+| Ontology | `entity_labels`: a controlled `key:value` vocabulary; facts are free text (`memory_units.text`, `fact_type`), no predicates | Pydantic `DataPoint` subclasses: fields become typed edges, `identity_fields` give stable ids; an RDF/OWL ontology resolver (`modules/ontology`) | Pydantic `entity_types`, `edge_types`, `edge_type_map` (allowed types per entity pair), `strict_edge_types` per `add_episode` call |
+| Encoder | `retain_extraction_mode=custom` + `retain_custom_instructions` (a prompt), `retain_mission` | Tasks in `run_custom_pipeline`; any Python | `custom_extraction_instructions`; extraction prompts overridable, response schemas fixed |
+| Processor | No plug-in point; consolidation into observations is built in. `retain.completed` / `consolidation.completed` webhooks (queued in the write's transaction) feed an outside sidecar | Tasks and pipelines; `memify` / `improve` for post-processing | None; code around the library |
+| Decoder / recall | Built-in recall (4 channels, RRF, cross-encoder) and reflect; `MCPExtension` and `HttpExtension` add tools and endpoints | Search types and retrievers, extendable | `SearchConfig` recipes (BM25, cosine, BFS; RRF, MMR, node distance, cross-encoder) |
+| Provenance and time | `document_id`, `occurred_start/end`, `mentioned_at`; quotes behind observations; no supersession | A PROV-O ledger (`modules/provenance`): source document, location, quote, agent, activity, `valid_from/until`, confidence, credibility, hash chain, `used_entities`, `invalidate()`; new (its own docstring says "PR1") | `episodes` on each edge (no span), `valid_at`/`invalid_at`/`expired_at`; contradiction decided by an LLM |
+| Storage | Postgres + pgvector; extensions can ship Alembic migrations | Pluggable graph adapter (~52 async methods); Postgres graph is a "demo"; `cognee-agensgraph` is a separate package | Neo4j, FalkorDB, Neptune (Kuzu deprecated); a driver interface |
+| Licence | MIT | Apache 2.0 | Apache 2.0 |
+
+Not in any of them: beliefs computed under a declared trust policy and replayable; predicates
+declared functional (or not), so contradiction can be decided without a model; staleness per
+predicate; the database refusing writes without provenance; a loop guard on processors.
+
+Reading: Cognee's extension model is closest to this design's modules; Graphiti has the best
+typed ontology and temporal edges but no processor framework and no Postgres; Hindsight is a
+configurable product, so modules would live in a sidecar fed by its webhooks.
