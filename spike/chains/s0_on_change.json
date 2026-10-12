@@ -1,0 +1,14 @@
+{
+  "ruleChain": {"id": "s0_on_change", "name": "s0_on_change", "root": true},
+  "metadata": {
+    "nodes": [
+      {
+        "id": "classify",
+        "type": "x/python",
+        "name": "classify",
+        "configuration": {"script": "__SPIKE__/steps/classify.py", "timeout": "30s", "maxRunning": 2}
+      }
+    ],
+    "connections": []
+  }
+}

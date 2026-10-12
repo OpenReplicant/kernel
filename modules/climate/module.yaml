@@ -1,0 +1,14 @@
+# Ontology for a room-climate entity (S2): rooms, and what is claimed about them.
+module: climate
+version: "0.1.0"
+types: [ontology]
+ontology:
+  things:
+    - {label: room}
+  relations:
+    - {name: climate.temperature, as: claim}     # celsius, observed by a thermometer
+    - {name: climate.heater, as: claim}          # true/false: the heater as the room reports it, observed
+    - {name: climate.setpoint, as: claim}        # celsius, stated by a person
+    - {name: climate.comfort, as: claim}         # cold | ok | warm: a belief, inferred
+    - {name: climate.decision, as: claim}        # {heater: true/false}: what the entity decided to do, inferred
+    - {name: climate.heater_command, as: claim}  # true/false: a command the entity sent and its answer, observed

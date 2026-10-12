@@ -1,0 +1,10 @@
+{
+  "ruleChain": {"id": "climate_recall_room", "name": "climate: recall a room's state (on command)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "recall", "type": "x/python", "name": "held claims -> context",
+       "configuration": {"script": "${module_dir}/steps/recall.py", "timeout": "30s"}}
+    ],
+    "connections": []
+  }
+}

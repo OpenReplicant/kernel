@@ -1,0 +1,16 @@
+{
+  "ruleChain": {"id": "climate_control_tick", "name": "climate: control tick (every second)", "root": true},
+  "metadata": {
+    "endpoints": [
+      {"id": "every_second", "type": "endpoint/schedule", "name": "every second", "configuration": {},
+       "routers": [{"id": "tick", "from": {"path": "*/1 * * * * *"}, "to": {"path": "climate_control_tick:rooms"}}]}
+    ],
+    "nodes": [
+      {"id": "rooms", "type": "x/python", "name": "list rooms",
+       "configuration": {"script": "${module_dir}/steps/rooms.py", "timeout": "30s"}},
+      {"id": "each", "type": "for", "name": "for each room",
+       "configuration": {"range": "msg.rooms", "do": "chain:climate_control_room", "mode": 0}}
+    ],
+    "connections": [{"fromId": "rooms", "toId": "each", "type": "Success"}]
+  }
+}

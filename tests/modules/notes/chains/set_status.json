@@ -1,0 +1,12 @@
+{
+  "ruleChain": {"id": "notes_set_status", "name": "notes: set a note's status (on command)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "shape", "type": "x/python", "name": "status command -> claims",
+       "configuration": {"script": "${module_dir}/steps/status_to_claims.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [{"fromId": "shape", "toId": "write", "type": "Success"}]
+  }
+}

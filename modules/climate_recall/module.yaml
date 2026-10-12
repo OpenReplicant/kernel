@@ -1,0 +1,8 @@
+# Recaller: what the entity holds about a room now, as data and as text, with the claim ids
+# so whatever acts on it can say what it was derived from.
+module: climate_recall
+version: "0.1.0"
+types: [recaller]
+depends: [climate]
+chains:
+  - chains/room.json

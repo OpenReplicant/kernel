@@ -1,0 +1,12 @@
+{
+  "ruleChain": {"id": "climate_heater_switch", "name": "climate: switch a heater (on command, from a decision)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "act", "type": "x/python", "name": "POST /heater",
+       "configuration": {"script": "${module_dir}/steps/switch.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [{"fromId": "act", "toId": "write", "type": "Success"}]
+  }
+}

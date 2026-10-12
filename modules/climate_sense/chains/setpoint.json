@@ -1,0 +1,12 @@
+{
+  "ruleChain": {"id": "climate_sense_setpoint", "name": "climate: a person sets a room's setpoint (on command)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "shape", "type": "x/python", "name": "setpoint -> claim",
+       "configuration": {"script": "${module_dir}/steps/setpoint.py", "timeout": "30s"}},
+      {"id": "write", "type": "x/python", "name": "graph write",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}}
+    ],
+    "connections": [{"fromId": "shape", "toId": "write", "type": "Success"}]
+  }
+}

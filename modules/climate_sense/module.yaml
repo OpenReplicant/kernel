@@ -1,0 +1,9 @@
+# Perceiver: readings from the room stream and setpoints from people become observed and
+# stated claims. Each raw reading or command is kept unchanged as the claim's source.
+module: climate_sense
+version: "0.1.0"
+types: [perceiver]
+depends: [climate]
+chains:
+  - chains/reading.json
+  - chains/setpoint.json

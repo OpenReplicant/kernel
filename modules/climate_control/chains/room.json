@@ -1,0 +1,29 @@
+{
+  "ruleChain": {"id": "climate_control_room", "name": "climate: control one room (recall -> decide -> act)", "root": true},
+  "metadata": {
+    "nodes": [
+      {"id": "recall", "type": "flow", "name": "recall the room",
+       "configuration": {"targetId": "climate_recall_room", "extend": true}},
+      {"id": "decide", "type": "x/python", "name": "decide",
+       "configuration": {"script": "${module_dir}/steps/decide.py", "timeout": "30s"}},
+      {"id": "acting", "type": "switch", "name": "acting?",
+       "configuration": {"cases": [{"case": "msg.act == true", "then": "Act"}]}},
+      {"id": "record", "type": "x/python", "name": "record the decision",
+       "configuration": {"script": "${kernel_dir}/kernel/nodes/graph_write.py", "timeout": "30s"}},
+      {"id": "handoff", "type": "x/python", "name": "decision -> effector request",
+       "configuration": {"script": "${module_dir}/steps/handoff.py", "timeout": "30s"}},
+      {"id": "still", "type": "switch", "name": "decision recorded?",
+       "configuration": {"cases": [{"case": "msg.act == true", "then": "Act"}]}},
+      {"id": "act", "type": "flow", "name": "switch the heater",
+       "configuration": {"targetId": "climate_heater_switch", "extend": true}}
+    ],
+    "connections": [
+      {"fromId": "recall", "toId": "decide", "type": "Success"},
+      {"fromId": "decide", "toId": "acting", "type": "Success"},
+      {"fromId": "acting", "toId": "record", "type": "Act"},
+      {"fromId": "record", "toId": "handoff", "type": "Success"},
+      {"fromId": "handoff", "toId": "still", "type": "Success"},
+      {"fromId": "still", "toId": "act", "type": "Act"}
+    ]
+  }
+}
