@@ -18,7 +18,6 @@ EXPECTED_VIOLATIONS = {
     EX.unattributed,
     EX.noPremises,
     "urn:kk:module:orphan",
-    "urn:kk:chain:c/s",
 }
 
 

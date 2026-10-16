@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
-# Gate G4 (kernel alone): only Postgres, the validator, the belief model and kernel-mcp — no Docker,
+# Gate G4 (kernel alone) and T13 (ingestion): only Postgres, the validator, the belief model, kernel-mcp and
+# the self-encoder command — no Docker,
 # no PostgREST, no runner. A fresh agent session submits a claim over MCP (stdio, its own login), sees it applied and
 # cites it; it cannot act as anyone else.
 # Usage: PGHOST=localhost PGUSER=<superuser> PGPASSWORD=... sh scripts/smoke_kernel.sh
@@ -21,9 +22,12 @@ psql -d "$db" -v ON_ERROR_STOP=1 -q -o /dev/null \
   -f "$root/deploy/postgres/040_people.sql" \
   -f "$root/deploy/postgres/050_agents.sql" \
   -f "$root/modules/pack-loader/migration.sql" \
+  -f "$root/modules/self-encoder/migration.sql" \
+  -f "$root/modules/ingest-filter-gitleaks/migration.sql" \
   -f "$root/modules/pack-loader/packs.sql"
 # Vocabulary packs installed as expected (D-23, D-40).
-psql -d "$db" -v ON_ERROR_STOP=1 -q -tA -f "$root/modules/pack-loader/tests/check_packs.sql" | tail -1
+packs=$(psql -d "$db" -v ON_ERROR_STOP=1 -q -tA -f "$root/modules/pack-loader/tests/check_packs.sql")
+echo "$packs" | tail -1
 # Throwaway passwords (never committed): the services' switching login, and the agent's and the
 # owner's own logins, which can act only as themselves (D-37).
 pw() { $py -c 'import secrets; print(secrets.token_hex(24))'; }
@@ -58,3 +62,5 @@ cleanup() {
 trap cleanup EXIT
 
 PYTHONPATH="$root/modules/kernel-mcp" $py "$root/scripts/e2e_kernel.py"
+# T13: ingestion without a runner (needs gitleaks on PATH for the ingest filter).
+PYTHONPATH="$root/modules/self-encoder:$root/modules/ingest-filter-gitleaks" $py "$root/scripts/e2e_ingest.py"

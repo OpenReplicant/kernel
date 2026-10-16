@@ -15,4 +15,5 @@ Work that is not part of the kernel (D-36), kept as it was when parked. Nothing 
 
 To revive one: move it back under `modules/` (or `scripts/`, `deploy/`), make it talk to the kernel the
 way D-36 describes (no runner required, the api schema under its own role), and bring its tests back
-into CI. Paths inside these files still refer to their old locations.
+into CI. Paths inside these files still refer to their old locations. The kernel chain format these runners
+and the decoder were built on is retired (D-41): a revived runner reads its own native format.

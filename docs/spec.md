@@ -41,7 +41,7 @@ modules plug into, and a default distribution of modules and vocabularies.
 | Layer | What it is | Changes how |
 | --- | --- | --- |
 | **Kernel** | Five primitives, six invariants, the apply function, row-level security. Plain Postgres 16+, no extensions. `kernel/schema/` | Frozen at v0. Change needs evaluator evidence + owner decision |
-| **ABI** (slot contracts) | Change-set format, module manifest, chain profile, slot catalog, hook contract. `kernel/schemas/`, `ontology/slots.yaml`, `kernel/contracts.py` | Versioned (semver). Additive changes are minor; breaking changes are major and need a decision |
+| **ABI** (slot contracts) | Change-set format, module manifest, slot catalog, hook contract. `kernel/schemas/`, `ontology/slots.yaml`, `kernel/contracts.py` | Versioned (semver). Additive changes are minor; breaking changes are major and need a decision |
 | **Distribution** | Default modules for the kernel's three jobs, each swappable: ingestion (self-encoder, ingest filter), processing (validator, belief model), recall (kernel-mcp). Optional: PostgREST, Caddy. Parked (D-36): runners, decoders, UI. `ontology/`, `modules/`, `deploy/` | Normal module lifecycle (review lane + eval) |
 
 Operating-system reading of the same thing: Postgres is the kernel (state, permissions, IPC via
@@ -229,7 +229,7 @@ belongs in a module that reads views and submits change sets.
 | pack | vocabulary content | via migrations |
 
 Python shapes of these contracts: `kernel/contracts.py`. Wire formats (all languages):
-`kernel/schemas/change_set.schema.json`, `module.schema.json`, `chain.schema.json`.
+`kernel/schemas/change_set.schema.json`, `module.schema.json`.
 
 ### 5.2 Module manifest
 
@@ -294,7 +294,7 @@ that concept, the newcomer is a format or is rejected.
 | Mappings | SSSOM semantics stored as `skos:*Match` claims; confidence feeds belief | — |
 | The module contract: module, slot, fills, slot contract, cardinality, module kind, runs-as, protected | `kk-core.ttl` — the only invented terms (D-40) | — |
 | Claims and the kernel's bookkeeping (scope, evidence type, status, statement key, belief, redaction) | Kernel columns, not vocabulary. Expressed in standard terms when validated or exported: `rdf:Statement`, PROV (attribution, run, generation time, derivation), `dcterms:accessRights` (scope), `dcterms:type` (evidence), DQV (belief, eval scores), EARL (verifications), `skos:closeMatch` (possible same-as) | — |
-| Chains (the home-grown chain format) | `kk-chain.ttl` (profile) until T13 retires the format | P-Plan for plans |
+| Automations (chains, workflows) | Retired as a kernel format (D-41): they stay in their runners' native formats; encoders read them into P-Plan claims when needed | P-Plan for plans |
 | Agent profiles and skills | `kk-profile.ttl` (profile) | A2A Agent Card, Agent Skills, harness files are formats |
 
 TOSCA is YAML-native with no official RDF vocabulary, so `kk-tosca.ttl` mirrors its metamodel one to
@@ -343,6 +343,9 @@ decoder-and-actuator pair.
 ---
 
 ## 8. Chains and runners
+
+**Retired from the kernel (D-36, D-41).** There is no kernel chain format and no kernel runner. This
+section describes the parked runner modules (`parked/`) and stays as history until they are revived.
 
 - **Chain profile.** Short, event-driven automations: a trigger and a DAG of steps (`http`, `script`
   in Python/JS/Lua, `subchain`, `switch`, `filter`, `transform`, `mcp_tool`, `log`) with routing labels

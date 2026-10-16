@@ -86,6 +86,21 @@ starting the harness. A hook never blocks the session: on any error it writes to
 Session runs are remembered in `KK_STATE_DIR` (default `~/.local/state/knowledge-kernel`). Other
 harnesses call the same commands with their own hook JSON (`session_id`, `prompt`, `reason`).
 
+## Ingesting a repository
+
+The self-encoder scans a repository into claims (module manifests, compose files, vocabularies, SQL),
+running the ingest filter first so files with secrets are never stored, and superseding what changed
+since the last scan:
+
+```sh
+pip install -r modules/self-encoder/requirements.txt          # gitleaks v8.30.1 must be on PATH
+DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk \
+  PYTHONPATH=modules/self-encoder:modules/ingest-filter-gitleaks python -m self_encoder scan --repo .
+```
+
+Run it from a git hook, a scheduler or the harness. Module and vocabulary claims wait in the review
+lane until a person approves them.
+
 ## Reviewing
 
 Typing new properties or classes goes to the review lane. A person approves with

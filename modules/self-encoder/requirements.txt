@@ -1,2 +1,4 @@
 PyYAML==6.0.3
 rdflib==7.6.0
+psycopg==3.3.6
+psycopg-binary==3.3.6

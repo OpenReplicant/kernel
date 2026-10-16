@@ -2,7 +2,6 @@
 the line span it was read from ({"start_line", "end_line"}, 1-based).
 
   modules/*/module.yaml      kk:Module + kk:fills + kkt:hasRequirement + kkt:hasAffordance
-  modules/*/chains/*.yaml    kk:Chain, kk:ChainStep, kk:next (qualifier kk:onLabel)
   deploy/compose.yaml        kkt:NodeTemplate + kkt:nodeType + kkt:dependsOn + kkt:memberOf
   **/*.ttl                   owl:Ontology (packs) or a graph entity (shapes, fixtures)
   *.sql (schema, migrations) schema objects (dcterms:isPartOf the db node or the module)
@@ -10,7 +9,6 @@ the line span it was read from ({"start_line", "end_line"}, 1-based).
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,7 +30,7 @@ SQL_OBJECT = re.compile(r"^\s*create\s+(?:or\s+replace\s+)?(schema|table|view|fu
 
 def list_files(repo: Path) -> list[str]:
     """The files the self-model is built from (relative paths, sorted)."""
-    patterns = ["modules/*/module.yaml", "modules/*/chains/*.yaml", "modules/*/migration.sql",
+    patterns = ["modules/*/module.yaml", "modules/*/migration.sql",
                 "deploy/compose.yaml", "kernel/schema/*.sql", "ontology/*.ttl", "shapes/**/*.ttl"]
     found = {str(p.relative_to(repo)) for pat in patterns for p in repo.glob(pat)}
     return sorted(p for p in found if "/_template/" not in f"/{p}")
@@ -95,7 +93,7 @@ class Builder:
 
 
 ENTITY_PREDICATES = {"rdf:type", "kk:moduleKind", "dcterms:license", "kk:runsAs", "kk:fills",
-                     "kkt:hasRequirement", "kkt:hasAffordance", "pplan:isStepOfPlan", "kk:next", "kkt:memberOf",
+                     "kkt:hasRequirement", "kkt:hasAffordance", "kkt:memberOf",
                      "kkt:nodeType", "kkt:dependsOn", "kkt:hasArtifact", "dcterms:isPartOf", "dcterms:hasPart"}
 
 
@@ -122,31 +120,6 @@ def encode_module(b: Builder, text: str, module_ids: dict) -> None:
         b.claim(s, "kkt:hasAffordance", a, sp[("interfaces", i)])
         b.claim(a, "rdf:type", AFFORDANCES[itf.get("affordance", "action")], sp[("interfaces", i)])
         b.claim(a, "rdfs:label", itf["name"], sp[("interfaces", i, "name")])
-
-
-def encode_chain(b: Builder, text: str, module_ids: dict) -> None:
-    c, sp = yaml_lines(text)
-    s = c["chain"]
-    b.claim(s, "rdf:type", "kk:Chain", sp[("chain",)])
-    b.claim(s, "rdfs:label", c["name"], sp[("name",)])
-    if c.get("description"):
-        b.claim(s, "rdfs:comment", c["description"], sp[("description",)])
-    b.claim(s, "kk:runsAs", c["runs_as"], sp[("runs_as",)])
-    t = c["trigger"]
-    b.claim(s, "kk:trigger", t["type"] + (f" {t['spec']}" if t.get("spec") else ""), sp[("trigger",)])
-    b.claim(s, "kk:protected", bool(c.get("protected", False)), sp.get(("protected",), sp[("chain",)]))
-    for i, step in enumerate(c["steps"]):
-        st = f"{s}/{step['id']}"
-        b.claim(st, "rdf:type", "kk:ChainStep", sp[("steps", i, "id")])
-        b.claim(st, "pplan:isStepOfPlan", s, sp[("steps", i, "id")])
-        b.claim(st, "rdfs:label", step["id"], sp[("steps", i, "id")])
-        b.claim(st, "kk:stepType", step["do"], sp[("steps", i, "do")])
-        if "with" in step:
-            b.claim(st, "kk:stepConfig", {"@value": json.dumps(step["with"], sort_keys=True), "@type": "rdf:JSON"},
-                    sp[("steps", i, "with")])
-        for label, targets in step.get("next", {}).items():
-            for target in [targets] if isinstance(targets, str) else targets:
-                b.claim(st, "kk:next", f"{s}/{target}", sp[("steps", i, "next", label)], {"kk:onLabel": str(label)})
 
 
 def encode_compose(b: Builder, text: str, module_ids: dict) -> None:
@@ -226,8 +199,6 @@ def encode_file(repo: Path, rel: str, artifacts_dir: Path) -> dict:
     b = Builder(rel, data, artifacts_dir)
     if rel.endswith("/module.yaml"):
         encode_module(b, text, module_ids)
-    elif "/chains/" in rel:
-        encode_chain(b, text, module_ids)
     elif rel.endswith("compose.yaml"):
         encode_compose(b, text, module_ids)
     elif rel.endswith(".ttl"):

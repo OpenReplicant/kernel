@@ -160,8 +160,9 @@ class Verifier(Protocol):
 
 @runtime_checkable
 class ChainRunner(Protocol):
-    """Executes chain definitions (kernel/schemas/chain.schema.json). One kernel run per
-    chain execution; plan_step set to the step IRI for each step's work."""
+    """Runs automations in its runner's own native format (no kernel chain format, D-41). One
+    kernel run per kernel-writing step, plan_step set to the step IRI. No runner is part of the
+    kernel; runner modules are parked (D-36)."""
     module: str
     def load(self, chain: JSON) -> None: ...
     def trigger(self, chain_iri: str, message: JSON) -> str: ...  # returns run id

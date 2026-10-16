@@ -1,9 +1,10 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:ingest-filter-gitleaks
 name: 'Ingest filter: secrets (gitleaks)'
-version: 0.1.0
-description: Blocks or redacts files containing secrets before anything is stored. PII filtering (Presidio)
-  is a later module in the same slot.
+version: 0.2.0
+description: 'Blocks files containing secrets before anything is stored. PII filtering (Presidio) is a later
+  module in the same slot. A plain command (paths in; clean paths and blocked findings out as JSON); fails
+  closed.'
 license: MIT
 kind: processor
 slots:
@@ -15,10 +16,10 @@ agent:
   member_of:
   - kk_agent
 runtime:
-  type: python-service
-  entrypoint: python -m ingest_filter
-  chains:
-  - chains/ingest-filter.yaml
+  type: command
+  entrypoint: python -m ingest_filter --repo <dir> <paths...>
+triggers:
+- type: manual
 mcp:
   expose: []
 migration: migration.sql
