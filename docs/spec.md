@@ -361,8 +361,8 @@ decoder-and-actuator pair.
 - **Identity.** RuleGo-Server's MCP mode does not pass the caller's identity into a chain (T1, D-21),
   so agent-facing tools live in `kernel-mcp`, which forwards each caller's token, and RuleGo runs
   system chains under their modules' identities.
-- **Triggers** (D-32). `notify`: a NOTIFY bridge (event-transport slot) listens on `kernel_change_set`
-  and calls the runner with `{id, status, scope, lane}`; the chain reads what it needs through the API
+- **Triggers** (D-32). `notify`: the `endpoint/pgNotify` component of our RuleGo build (event-transport
+  slot, D-35) listens on `kernel_change_set` and starts the chain with `{id, status, scope, lane}`; the chain reads what it needs through the API
   under its own token. `schedule`: periodic work only (e.g. the drift check). `http`: the runner's
   HTTP endpoint. `chain`: called as a sub-chain.
 

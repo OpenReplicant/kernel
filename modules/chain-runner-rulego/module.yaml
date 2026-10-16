@@ -17,7 +17,7 @@ agent:
   - kk_agent
 runtime:
   type: container
-  image: ${RULEGO_SERVER_IMAGE}
+  entrypoint: kk-rulego -c /config/config.conf   # built from this folder: RuleGo-Server v0.38.0 + our components (README.md)
 requires:
 - slot: decoder
 interfaces:
