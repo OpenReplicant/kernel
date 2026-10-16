@@ -61,7 +61,7 @@ jobs:
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   stack-smoke:
-    name: stack smoke test (T2-T7)
+    name: stack smoke test (T2-T8)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1

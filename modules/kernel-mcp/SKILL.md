@@ -29,7 +29,8 @@ Deprecated claims are history, not current fact; say so if you mention them.
    - `attributed_to`: your own agent IRI. Attribution to anyone else is rejected.
    - `target_scope`: a scope you have write clearance for.
    - `ops`: `add_claim`, `set_status`, `add_belief`, `add_verification`, `add_entity`, `add_artifact`.
-3. `submit_change_set(cs)` → `{id, status, lane}`.
+3. `submit_change_set(cs)` → `{id, status, lane}`; `get_change_set(id)` shows its status (and the
+   validation report if it was found invalid).
 4. `finish_run(run_id, status, cost)`.
 
 Rules the kernel enforces (your change set is marked invalid otherwise):
