@@ -11,7 +11,7 @@
 <https://w3id.org/knowledge-kernel/observables>
     a owl:Ontology ;
     rdfs:label "Observable properties" ;
-    owl:versionInfo "0.1.0" .
+    owl:versionInfo "0.2.0" .
 
 <urn:kk:property:case-count> a sosa:ObservableProperty ;
     rdfs:label "case count" ;
@@ -31,3 +31,9 @@
 <urn:kk:property:wait-seconds-mean> a sosa:ObservableProperty ;
     rdfs:label "mean wait (seconds)" ;
     skos:definition "Mean time in seconds between the step named in the qualifier bbo:has_previousFlowNode and this step, when it directly followed it." .
+<urn:kk:property:wait-seconds-max> a sosa:ObservableProperty ;
+    rdfs:label "longest wait (seconds)" ;
+    skos:definition "Longest time in seconds between the step named in the qualifier bbo:has_previousFlowNode and this step, when it directly followed it." .
+<urn:kk:property:wait-seconds> a sosa:ObservableProperty ;
+    rdfs:label "wait (seconds)" ;
+    skos:definition "Time in seconds between the step named in the qualifier bbo:has_previousFlowNode and this step in one case. Documented limits use it: <step> bbo:maxValue n with this property and the preceding step as qualifiers." .

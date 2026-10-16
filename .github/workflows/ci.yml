@@ -53,6 +53,8 @@ jobs:
         run: python modules/self-encoder/tests/test_encode.py
       - name: Event-log encoder tests (M2-T1)
         run: python modules/encoder-eventlog/tests/test_encode.py
+      - name: BPMN encoder tests (M2-T2)
+        run: python modules/encoder-bpmn/tests/test_encode.py
       - name: Belief eval (T7)
         run: python modules/belief-corroboration/tests/test_eval.py
       - name: Generated pack migration is up to date

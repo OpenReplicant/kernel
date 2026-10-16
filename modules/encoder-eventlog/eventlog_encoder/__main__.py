@@ -23,19 +23,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from kk.changes import prior as prior_claims, supersede
 from kk.lib import connect, ingest_filter, run, submit
 
-from .encode import WINDOWS, encode, read_csv, read_xes, supersede
+from .encode import WINDOWS, encode, read_csv, read_xes
 
 MODULE = "urn:kk:module:encoder-eventlog"
 AGENT = "urn:kk:agent:encoder-eventlog"
 SCOPE = "urn:kk:scope:default"
-PRIOR = """select c.id, c.subject, c.predicate, c.qualifiers, c.valid_from, c.status
-           from api.claims c join api.change_sets s on s.id = c.change_set
-           where c.attributed_to = %s and c.status <> 'deprecated'
-             and starts_with(s.idempotency_key, %s) and s.idempotency_key <> %s"""
-
-
 def change_set(log: Path, data: bytes, a, artifacts: Path) -> dict:
     sha = hashlib.sha256(data).hexdigest()
     if log.suffix.lower() == ".xes":
@@ -77,9 +72,7 @@ def main(argv=None) -> int:
     cs = change_set(log, log.read_bytes(), a, Path(a.artifacts))
     prefix, n_events = cs.pop("_prefix"), cs.pop("_events")
     with connect(os.environ.get("KK_ROLE", "kkm_encoder_eventlog")) as conn, conn.cursor() as cur:
-        cur.execute(PRIOR, (AGENT, prefix, cs["idempotency_key"]))
-        cols = [d.name for d in cur.description]
-        prior = [dict(zip(cols, r)) for r in cur.fetchall()]
+        prior = prior_claims(cur, AGENT, prefix, cs["idempotency_key"])
         if prior:
             supersede(cs, prior)
         with run(cur, MODULE, {"log": log.name, "process": a.process, "window": a.window}) as (run_id, outputs):

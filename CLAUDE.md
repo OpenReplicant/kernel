@@ -79,13 +79,13 @@ ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profil
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
-                 encoder-eventlog; _template/
+                 encoder-eventlog, encoder-bpmn, skill-process-extraction; _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
-                 export/import) + kk.lib
+                 export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/
 scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py, eval_self.py,
                  check_manifests.py, vocab_subset.py
-examples/        demo data (order-to-cash: event log and its generator)
+examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/)
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/

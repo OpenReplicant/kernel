@@ -1,0 +1,31 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:skill-process-extraction
+name: 'Skill: extract processes from text'
+version: 0.1.0
+description: 'Instructions for a harness agent to record a process described in prose (procedures, SOPs,
+  interview transcripts, tickets) as extracted claims with quotes, in the same terms and step IRIs as the
+  BPMN and event-log encoders, so the conformance processor can compare them. The agent records under its
+  own identity; the module has no code and no database role (D-49).'
+license: Apache-2.0
+kind: agent
+slots:
+- agent-skill
+protected: false
+agent:
+  iri: urn:kk:agent:skill-process-extraction
+runtime:
+  type: skill-only
+  entrypoint: SKILL.md
+requires:
+- slot: agent-interface
+accepts:
+- text/markdown
+- text/plain
+produces:
+- add_artifact
+- add_claim
+triggers:
+- type: manual
+mcp:
+  expose: []
+skill: SKILL.md

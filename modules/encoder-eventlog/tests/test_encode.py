@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(ROOT / "modules/encoder-eventlog"), str(ROOT)]
-from eventlog_encoder.encode import supersede  # noqa: E402
+from kk.changes import supersede  # noqa: E402
 from eventlog_encoder.encode import NEXT, OBSERVED_PROPERTY, PREV, RESULT, encode, read_csv, read_xes  # noqa: E402
 
 P = "urn:kk:process:order-to-cash"

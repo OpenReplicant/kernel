@@ -1,0 +1,45 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-bpmn
+name: BPMN encoder
+version: 0.1.0
+description: 'Encodes a BPMN 2.0 XML model into the documented process (BBO terms, deterministic): the
+  process, its tasks, gateways and events, the sequence between them (bbo:has_nextFlowNode, gateway branch
+  names as a qualifier), and lanes as roles. Tasks get the same step IRIs as the event-log encoder. Every
+  claim references the model artifact and the BPMN element id. A plain command; runs the ingest filter
+  first and supersedes its claims from earlier versions of the same model (D-49).'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-bpmn
+  db_role: kkm_encoder_bpmn
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m bpmn_encoder --process <iri> <model.bpmn>
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_bpmn
+    KK_INGEST_FILTER: ingest filter command (default python -m ingest_filter)
+requires:
+- slot: ingest-filter
+- slot: artifact-store
+accepts:
+- application/bpmn+xml
+produces:
+- add_artifact
+- add_claim
+- set_status
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql
