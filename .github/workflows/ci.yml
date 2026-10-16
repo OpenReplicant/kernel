@@ -1,0 +1,46 @@
+# Gate G1: kernel tests, shape tests and manifest validation (docs/milestone-1.md, T0).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  kernel:
+    name: kernel tests (postgres ${{ matrix.postgres }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # 16 is the kernel's floor (spec §2); 17 is what deploy/postgres/Dockerfile builds on.
+        postgres: ["16.15-bookworm", "17.11-bookworm"]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Kernel invariant tests
+        run: sh kernel/schema/tests/run.sh 2>&1 | tee kernel-tests.log; test "$(grep -c 'NOTICE:  ok:' kernel-tests.log)" -ge 30 && grep -q 'ALL KERNEL TESTS PASSED' kernel-tests.log
+
+  python-checks:
+    name: shapes and manifests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-ci.txt
+      - name: SHACL shape tests
+        run: python shapes/tests/test_shapes.py
+      - name: Manifests, chains and slots
+        run: python scripts/check_manifests.py
