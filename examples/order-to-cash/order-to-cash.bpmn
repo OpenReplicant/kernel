@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The documented order-to-cash process for the BPM demo (milestone 2). Synthetic; see make_log.py
+     for the observed log and the discrepancies planted in it. Diagram interchange omitted. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="order-to-cash-definitions" targetNamespace="urn:kk:example:order-to-cash">
+  <bpmn:process id="order_to_cash" name="Order to cash" isExecutable="false">
+    <bpmn:laneSet id="lanes">
+      <bpmn:lane id="lane_sales" name="Sales"><bpmn:flowNodeRef>start</bpmn:flowNodeRef><bpmn:flowNodeRef>receive_order</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="lane_credit" name="Credit"><bpmn:flowNodeRef>check_credit</bpmn:flowNodeRef><bpmn:flowNodeRef>credit_ok</bpmn:flowNodeRef><bpmn:flowNodeRef>reject_order</bpmn:flowNodeRef><bpmn:flowNodeRef>end_rejected</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="lane_warehouse" name="Warehouse"><bpmn:flowNodeRef>ship_goods</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="lane_billing" name="Billing"><bpmn:flowNodeRef>send_invoice</bpmn:flowNodeRef><bpmn:flowNodeRef>receive_payment</bpmn:flowNodeRef><bpmn:flowNodeRef>end_paid</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start" name="Order arrives"/>
+    <bpmn:userTask id="receive_order" name="Receive order"/>
+    <bpmn:serviceTask id="check_credit" name="Check credit"/>
+    <bpmn:exclusiveGateway id="credit_ok" name="Credit approved?"/>
+    <bpmn:userTask id="reject_order" name="Reject order"/>
+    <bpmn:manualTask id="ship_goods" name="Ship goods"/>
+    <bpmn:serviceTask id="send_invoice" name="Send invoice"/>
+    <bpmn:task id="receive_payment" name="Receive payment"/>
+    <bpmn:endEvent id="end_paid" name="Order paid"/>
+    <bpmn:endEvent id="end_rejected" name="Order rejected"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="start" targetRef="receive_order"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="receive_order" targetRef="check_credit"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="check_credit" targetRef="credit_ok"/>
+    <bpmn:sequenceFlow id="f4" name="approved" sourceRef="credit_ok" targetRef="ship_goods"/>
+    <bpmn:sequenceFlow id="f5" name="rejected" sourceRef="credit_ok" targetRef="reject_order"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="reject_order" targetRef="end_rejected"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="ship_goods" targetRef="send_invoice"/>
+    <bpmn:sequenceFlow id="f8" sourceRef="send_invoice" targetRef="receive_payment"/>
+    <bpmn:sequenceFlow id="f9" sourceRef="receive_payment" targetRef="end_paid"/>
+  </bpmn:process>
+</bpmn:definitions>

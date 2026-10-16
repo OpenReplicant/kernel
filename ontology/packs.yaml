@@ -92,7 +92,7 @@ profile:
     iri: https://www.irit.fr/recherches/MELODI/ontologies/BBO#
     file: bbo.ttl
     license: CC BY 4.0 (MELODI, IRIT)
-    pin: BBO 1.0.0 (2019-05-22), subset cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    pin: BBO 1.0.0 (2019-05-22), subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
     note: the documented process; P-Plan stays the home of plans in general (mappings.ttl)
     load_when: always (milestone 2)
   - id: sosa
@@ -100,7 +100,7 @@ profile:
     iri: http://www.w3.org/ns/sosa/
     file: sosa.ttl
     license: W3C Software and Document License
-    pin: 2017-10-19 (W3C Recommendation), subset cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    pin: 2017-10-19 (W3C Recommendation), subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
     note: an observation is one observed claim (subject = feature of interest, predicate = sosa:hasSimpleResult,
       qualifier sosa:observedProperty, valid time = the window), not a node per observation (D-47)
     load_when: always (milestone 2 — event logs, metrics)

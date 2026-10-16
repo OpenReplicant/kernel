@@ -8,7 +8,7 @@ window their first event falls in):
   <step>     sosa:hasSimpleResult n   {observedProperty: case-count | event-count | start-count | end-count}
   <step>     sosa:hasSimpleResult n   {observedProperty: event-count, bbo:has_resource: <resource>}
   <a>        bbo:has_nextFlowNode <b>                                       (evidence observed)
-  <b>        sosa:hasSimpleResult n   {observedProperty: directly-follows-count | wait-seconds-mean,
+  <b>        sosa:hasSimpleResult n   {observedProperty: directly-follows-count | wait-seconds-mean | -max,
                                        bbo:has_previousFlowNode: <a>}
 
 plus, once, `<step> rdfs:label "<activity>"` and `<step> bbo:has_container <process>` (deterministic).
@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import re
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
@@ -135,7 +134,7 @@ def encode(events: list[dict], process: str, window: str, sha: str) -> list[dict
                         "evidence_type": "observed", "references": ref, **valid})
 
         events_n, cases_n, starts, ends, by_res = Counter(), Counter(), Counter(), Counter(), Counter()
-        follows, waits = Counter(), defaultdict(float)
+        follows, waits, longest = Counter(), defaultdict(float), defaultdict(float)
         for trace in traces:
             acts = [e["activity"] for e in trace]
             events_n.update(acts)
@@ -145,7 +144,9 @@ def encode(events: list[dict], process: str, window: str, sha: str) -> list[dict
             by_res.update((e["activity"], e["resource"]) for e in trace if e["resource"])
             for a, b in zip(trace, trace[1:]):
                 follows[(a["activity"], b["activity"])] += 1
-                waits[(a["activity"], b["activity"])] += (b["time"] - a["time"]).total_seconds()
+                wait = (b["time"] - a["time"]).total_seconds()
+                waits[(a["activity"], b["activity"])] += wait
+                longest[(a["activity"], b["activity"])] = max(longest[(a["activity"], b["activity"])], wait)
 
         observe(process, "case-count", integer(len(traces)))
         for act in sorted(events_n):
@@ -164,26 +165,6 @@ def encode(events: list[dict], process: str, window: str, sha: str) -> list[dict
                         "evidence_type": "observed", "references": ref, **valid})
             observe(sb, "directly-follows-count", integer(n), **{PREV: sa})
             observe(sb, "wait-seconds-mean", integer(round(waits[(a, b)] / n)), **{PREV: sa})
+            observe(sb, "wait-seconds-max", integer(longest[(a, b)]), **{PREV: sa})
     return ops
 
-
-# ------------------------------------------------------------------ re-ingest
-def same(subject: str, predicate: str, qualifiers: dict, valid_from) -> str:
-    """What makes a new claim the replacement of an earlier one: subject, predicate, qualifiers, window start."""
-    if isinstance(valid_from, str):
-        valid_from = datetime.fromisoformat(valid_from)
-    vf = valid_from.astimezone(timezone.utc).isoformat() if valid_from else None
-    return json.dumps([subject, predicate, qualifiers or {}, vf], sort_keys=True)
-
-
-def supersede(cs: dict, prior: list[dict]) -> None:
-    """Append set_status ops deprecating `prior` (this encoder's claims from an earlier version of the log)."""
-    new = {}
-    for i, op in enumerate(cs["ops"]):
-        if op["op"] == "add_claim":
-            op["ref"] = f"c{i}"
-            new.setdefault(same(op["subject"], op["predicate"], op.get("qualifiers"), op.get("valid_from")), op["ref"])
-    for c in prior:
-        by = new.get(same(c["subject"], c["predicate"], c["qualifiers"], c["valid_from"]))
-        cs["ops"].append({"op": "set_status", "claim": str(c["id"]), "status": "deprecated", "expect_status": c["status"],
-                          **({"reason": "superseded", "replaced_by": by} if by else {"reason": "retracted"})})
