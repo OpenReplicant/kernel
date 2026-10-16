@@ -94,11 +94,12 @@ services:
     restart: unless-stopped
 
   chain-runner-python:
-    build: ../modules/chain-runner-python
+    build: {context: .., dockerfile: modules/chain-runner-python/Dockerfile}
     profiles: [modules]
     environment:
       <<: *module-env
-      KK_JWT: ${KK_JWT_RUNNER_PY:-}
+      # Chains act as their runs_as agent: one token per agent this runner may run chains for.
+      KK_AGENT_TOKENS: '{"urn:kk:agent:validator": "${KK_JWT_VALIDATOR:-}"}'
     volumes:
       - ../modules:/modules:ro
     depends_on: [postgrest]
