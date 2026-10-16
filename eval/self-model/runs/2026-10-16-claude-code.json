@@ -1,0 +1,50 @@
+[
+  {
+    "id": "q01",
+    "answer": "validator-shacl (\"Change-set validator (JSON Schema + SHACL)\") fills the shape-validator slot. Fills claim 55f1805f-cad3-418b-b1b0-600562b9d83b, belief 0.50."
+  },
+  {
+    "id": "q02",
+    "answer": "self-encoder fills two slots: source-connector (claim 7eddb6b1-24eb-4189-95d7-3c21edb6da4e, belief 0.50) and encoder (claim 8b70bfc2-2f54-47d1-abed-47ad9a3b9db0, belief 0.50)."
+  },
+  {
+    "id": "q03",
+    "answer": "Two modules fill the ui slot. The first is ui, the Web UI shell (fills claim ff1f9ad3-5483-4f8b-a874-3f5008ac79e5, belief 0.50). The second is view-modules, labelled \"Modules\" (fills claim 415b8a90-d9e5-41d5-8cc7-8f3ed13499d2, belief 0.50)."
+  },
+  {
+    "id": "q04",
+    "answer": "belief-corroboration-v0 runs as the agent urn:kk:agent:belief-corroboration. runsAs claim 1db24e9f-624c-4795-86ae-8478bad732b8, belief 0.50."
+  },
+  {
+    "id": "q05",
+    "answer": "ingest-filter-gitleaks is released under the MIT license (https://spdx.org/licenses/MIT). dcterms:license claim baf3e9cc-a863-409c-87c9-4dd72c00c5f7, belief 0.50."
+  },
+  {
+    "id": "q06",
+    "answer": "The belief-model slot has cardinality \"one\", so only one module may fill it at a time. Cardinality claim 62023b3a-6efa-4ec6-b762-7f98eafc2cdc, belief 0.50."
+  },
+  {
+    "id": "q07",
+    "answer": "Three modules are not protected, because their protected flag is false. They are self-encoder (claim cf7387b0-9e65-4b53-a332-19f0553fe521, belief 0.50), ui (claim d2b22c86-db42-4a69-91d9-00a290eeb63e, belief 0.50) and view-modules (claim bd40f44c-af38-41ba-9d5a-adf99fa0ba54, belief 0.50). The other modules are protected: belief-corroboration-v0, ingest-filter-gitleaks, kernel-mcp, pack-loader and validator-shacl."
+  },
+  {
+    "id": "q08",
+    "answer": "The kernel service depends on the init service (urn:kk:node:init). dependsOn claim b92f9526-a77d-4a7a-9721-2bc799abe7e6, belief 0.50."
+  },
+  {
+    "id": "q09",
+    "answer": "The caddy service depends on the kernel service (urn:kk:node:kernel). dependsOn claim 6e6c7251-4dac-4552-afd1-763250d7f975, belief 0.50."
+  },
+  {
+    "id": "q10",
+    "answer": "kernel-mcp is version 0.4.0. owl:versionInfo claim 889aef18-8d61-4300-8bcc-015ff25adf23, belief 0.50."
+  },
+  {
+    "id": "q11",
+    "answer": "pack-loader fills the vocabulary-pack slot. Fills claim 2f67de67-ea95-406d-a9ef-5bfbb128be97 is the pack-loader's own claim, but the vocabulary-pack object is in claim faea1e1d-5fe5-425f-9512-01d75937edb7, belief 0.50."
+  },
+  {
+    "id": "q12",
+    "answer": "kernel-mcp (\"Kernel MCP server\") provides the agent-interface slot. Fills claim b236a58c-f85c-48d5-990e-04e67a87a23f, belief 0.50."
+  }
+]

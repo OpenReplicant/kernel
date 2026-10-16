@@ -51,7 +51,7 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | T18 | **`kk module install`** (D-43): from this repository's module folder: manifest and license check, migration, the module's own login, a compose entry; locked-down container template (read-only filesystem, no capabilities, network to Postgres only) | installing a module from its folder gives a running, sandboxed worker | done |
 | T20 | **UI** (D-44): a shell served by `kk serve` at `/ui` that is an MCP client with the person's own token; core views (search and explain, review queue, graph, runs and status); further views are modules filling the `ui` slot | G3: the self-model renders as a graph from live claims, and a person approves a review-lane change set in the browser | done |
 | T19 | **Export and import** (D-45): all claims with provenance as N-Quads (scopes as named graphs) and back | round trip into a fresh kernel keeps every claim, reference and status | done |
-| T16 | **Self-questions eval**: 10+ questions about the system's own structure in `eval/self-model/questions.yaml` | G7 | next |
+| T16 | **Self-questions eval** (D-46): 10+ questions about the system's own structure in `eval/self-model/questions.yaml` | G7 | done |
 
 ## Gates
 
@@ -63,9 +63,9 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | G4 | **The kernel alone**: with only Postgres, the validator, the belief model and kernel-mcp over stdio, a fresh agent session submits a claim, sees it applied and scored (target < 2 s, spec §11) and cites it with id and belief; invalid change sets come back with the reason; the hooks recall the claim and record the session's run; forged attribution is refused, stdio refuses a login that can switch roles, and the agent's login cannot become the owner; a person approves a review-lane change set. Set up and run with `kk` alone (D-42). `scripts/smoke_kernel.sh` |
 | G5 | Parked (D-36): drift of a deployed RuleGo chain file is detected within one check interval |
 | G6 | Parked (D-36): round-trip verification of chains |
-| G7 | An agent connected over MCP answers the self-questions citing claim ids and showing belief; ≥ 90% correct with all citations resolvable via `explain` |
+| G7 | An agent connected over MCP answers the self-questions citing claim ids and showing belief; ≥ 90% correct with all citations resolvable via `explain`. Reference agent in the kernel smoke; Claude Code headless 12/12 (D-46) |
 
 ## Out of scope for milestone 1
 
-Chain runners and decoders (parked), the UI, BPMN and process runners, interviews, LLM extraction,
+Chain runners and decoders (parked), BPMN and process runners, interviews, LLM extraction,
 reasoner, agent-profile decoders, pgvector recall, OIDC sign-in for people.
