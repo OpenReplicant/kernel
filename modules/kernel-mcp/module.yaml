@@ -36,6 +36,7 @@ mcp:
   - explain
   - submit_change_set
   - start_run
+  - get_change_set
   - finish_run
   - list_slots
   - list_modules

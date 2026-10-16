@@ -10,6 +10,8 @@
 #       scripts/check_g2.py and the SQL below check the self-model is complete.
 #   T7: the belief chain scores every claim; copied sources don't inflate belief and changes over
 #       time aren't conflicts (scripts/e2e_belief.py).
+#   T8: an agent reads, explains and submits through kernel-mcp under its own identity
+#       (scripts/e2e_mcp.py, in the kernel-mcp container), and /mcp answers through Caddy.
 # PYTHON: interpreter with pyyaml, rdflib and pyshacl for check_g2.py (default python3).
 # Usage: sh scripts/smoke_stack.sh        (needs docker compose, python3, curl)
 #        KK_BUILD_CA=/path/to/ca.crt sh scripts/smoke_stack.sh   (behind a TLS-intercepting proxy)
@@ -21,7 +23,7 @@ cleanup() {
   status=$?
   if [ "$status" -ne 0 ]; then
     echo "--- smoke test failed ($status); module logs:"
-    $compose logs --tail 40 validator chain-runner-python belief 2>/dev/null || true
+    $compose logs --tail 40 validator chain-runner-python belief kernel-mcp 2>/dev/null || true
   fi
   $compose down -v >/dev/null 2>&1; rm -f "$env_file"
 }
@@ -67,12 +69,13 @@ sed -i -e "s/^KK_JWT_VALIDATOR=.*/KK_JWT_VALIDATOR=$token/" \
 # KK_BUILD_CA: optional CA bundle for pip inside the build (machines behind a TLS-intercepting proxy).
 if [ -n "${KK_BUILD_CA:-}" ]; then
   for m in validator:validator-shacl chain-runner-python:chain-runner-python \
-           self-encoder:self-encoder ingest-filter:ingest-filter-gitleaks belief:belief-corroboration; do
+           self-encoder:self-encoder ingest-filter:ingest-filter-gitleaks belief:belief-corroboration \
+           kernel-mcp:kernel-mcp; do
     docker build -q --secret id=ca,src="$KK_BUILD_CA" -f "$root/modules/${m#*:}/Dockerfile" \
       -t "kk-smoke-${m%%:*}" "$root" >/dev/null
   done
 else
-  $compose build validator chain-runner-python self-encoder ingest-filter belief
+  $compose build validator chain-runner-python self-encoder ingest-filter belief kernel-mcp
 fi
 $compose up -d --no-build --wait validator
 $compose exec -T \
@@ -143,3 +146,16 @@ $compose exec -T db psql -U postgres -d kk -tAc "select 'claims ' || count(*) ||
 [ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from api.claims where belief is null")" = 0 ]
 AGENT_A_JWT=$agent_token AGENT_B_JWT=$(mint kkm_graph_decoder) python3 "$root/scripts/e2e_belief.py"
 echo "T7 smoke test passed"
+
+# T8: an agent works through MCP under its own identity.
+$compose up -d --no-build --wait kernel-mcp
+agent_mcp=$(mint agent_claude_code)
+$compose exec -T -e AGENT_JWT="$agent_mcp" kernel-mcp python - < "$root/scripts/e2e_mcp.py"
+via_caddy=$(curl -s -X POST http://127.0.0.1:8080/mcp -H "Authorization: Bearer $agent_mcp" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2025-11-25' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' |
+  python3 -c 'import json,sys; print(len(json.load(sys.stdin)["result"]["tools"]))')
+echo "tools listed through Caddy at /mcp: $via_caddy"
+[ "$via_caddy" -ge 9 ]
+echo "T8 smoke test passed"
