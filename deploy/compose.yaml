@@ -13,6 +13,13 @@
 # Postgres (for stdio agents and kk review, each with its own login) and Caddy, which is replaceable
 # by any reverse proxy (it only routes /mcp). To split the kernel into one container per part, run
 # the same image three times with `kk serve --only mcp`, `--only validator` and `--only belief`.
+#
+# Further modules run in their own locked-down containers on the internal network `kernel-db`, which
+# reaches Postgres and nothing else (D-43):
+#   KK_ADMIN_URL=postgresql://postgres:<password>@localhost:5432/kk kk module install modules/<name>
+#   docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml --env-file deploy/.env up -d
+# KK_SERVE_PARTS chooses what the kernel container runs (default mcp,validator,belief): leave out a
+# part that runs as its own module container.
 
 name: knowledge-kernel
 
@@ -37,6 +44,7 @@ services:
       - db-data:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:${KK_DB_PORT:-5432}:5432"
+    networks: [default, kernel-db]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d kk"]
       interval: 5s
@@ -59,6 +67,7 @@ services:
   # One login that switches to each part's own role; never a superuser, never given to agents (D-37).
   kernel:
     <<: *kk
+    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief}"]
     environment:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
@@ -77,3 +86,8 @@ services:
 
 volumes:
   db-data:
+
+networks:
+  # Internal: module containers reach Postgres here and nothing else (no route out).
+  kernel-db:
+    internal: true

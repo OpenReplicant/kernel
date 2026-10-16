@@ -4,3 +4,5 @@ deploy/.env
 node_modules/
 build/
 *.egg-info/
+deploy/modules/*
+!deploy/modules/README.md

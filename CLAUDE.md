@@ -58,6 +58,7 @@ python scripts/check_manifests.py                                          # man
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
 sh scripts/smoke_kernel.sh                                                 # G4, T13 and T17 on kk alone; needs gitleaks
+sh scripts/e2e_module.sh                                                   # T18: a module in its own sandboxed container; needs Docker
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these. The kernel smoke test needs no Docker: a Postgres
@@ -75,9 +76,9 @@ ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profil
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader; _template/
-kk/              the kk command (init, person/agent add, serve, status, review, scan, token) + kk.lib
-deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), mcp/
-scripts/         smoke_kernel.sh + e2e_kernel.py + e2e_ingest.py, check_manifests.py
+kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module) + kk.lib
+deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/
+scripts/         smoke_kernel.sh + e2e_kernel.py + e2e_ingest.py, e2e_module.sh/.py, check_manifests.py
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/
@@ -86,5 +87,5 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T15 and T17 are done; G1, G2 and G4 pass (`scripts/smoke_kernel.sh`). Next: `kk module install`,
-export/import, then T16 (self-questions eval). Work one task at a time; each ends with its check passing.
+T0–T15, T17 and T18 are done; G1, G2 and G4 pass (`scripts/smoke_kernel.sh`). Next: the UI (T20),
+export/import (T19), then T16 (self-questions eval); then milestone 2 (BPM and devops modules). Work one task at a time; each ends with its check passing.
