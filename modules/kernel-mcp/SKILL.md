@@ -46,3 +46,22 @@ Rules the kernel enforces (your change set is marked invalid otherwise):
 - Conditions go in `qualifiers` (keys are property IRIs), never inside the value.
 
 Belief values come from belief-model modules, not from you. Don't submit `add_belief` unless you are one.
+
+## What to expect
+
+- **Status after submitting:** `submitted` → the validator → `applied`, or `invalid` (read
+  `get_change_set(id).validation_report`: JSON Schema errors or SHACL shape messages), or
+  `awaiting_review` when you type a property, class, module, chain or mapping. A person approves
+  those; don't resubmit while you wait. The same `idempotency_key` always returns the same change set.
+- **Evidence type:** `deterministic` for what you parsed from code, config or schemas (reference the
+  file, ideally with a span); `extracted` for what you read in prose (include the exact `quote`);
+  `inferred` for conclusions (list `derived_from`); `observed` for runtime observations; `testimony`
+  for what a person told you or what you assert yourself.
+- **Scopes:** `urn:kk:scope:default` for working claims, `urn:kk:scope:vocab` for terms and
+  self-model descriptions. Your token only shows and accepts what your role is cleared for.
+- **Belief** (`belief-corroboration-v0`): independent sources per statement ÷ (sources + conflicts + 1).
+  Two claims citing the same source, or made by the same agent, count once; a different value for a
+  single-valued property in an overlapping validity window is a conflict; non-overlapping
+  `valid_from`/`valid_to` windows are changes over time. Cite a different, real source to
+  corroborate; repeating a claim does not raise its belief.
+- CURIEs (`kk:fills`, `rdfs:label`, `dcterms:license` …) are accepted wherever IRIs are.

@@ -12,6 +12,8 @@ contracts and the default modules.
 2. `docs/milestone-1.md` — current work: tasks T0–T13 and gates G1–G7.
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
+5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
+   (`.claude/skills/kernel-dev/SKILL.md`) restores the environment and runs every check.
 
 If this file and the spec disagree, the spec wins; flag the conflict instead of picking silently.
 

@@ -1,0 +1,73 @@
+# Lessons
+
+What building milestone 1 taught, kept so the next session doesn't relearn it. Facts about external
+tools here were checked by experiment (details in `docs/spikes/` and the decisions they cite).
+
+## External tools, as they actually behave
+
+- **RuleGo-Server** is the `server/` module of github.com/rulego/rulego (no separate repository, no
+  published image; gitee unreachable). v0.38.0 = commit `1378763`; the `server/` module has no tag
+  of its own, so Go pins it by pseudo-version (`modules/chain-runner-rulego/go.mod`).
+- RuleGo runs **JavaScript, Lua and Python** (`x/python`, rulego-components, `with_extend` or a
+  blank import) and whitelisted commands (`exec`). An early claim that it runs "JavaScript only" was
+  wrong (D-33): check the component list before calling a step unmappable.
+- RuleGo's MCP mode does **not** pass the caller's identity into a chain (D-21); its default MCP
+  endpoint always exposes chain-editing tools and takes the API key in the URL path.
+- RuleGo has **no Postgres LISTEN endpoint**; ours is `endpoint/pgNotify` (D-35). Endpoint configs
+  are **not** run through `${global.X}` substitution; resolve them in `Init`.
+- RuleGo's guide pages name interfaces but not signatures; the sources are the reference
+  (`modules/chain-runner-rulego/README.md` has the how-to). Model endpoint: rulego-components
+  `endpoint/redis`.
+- RuleGo routing labels are `Success`/`Failure`/`True`/`False`; `for` with `do: chain:<id>`, mode 1
+  collects results into an array; embedded `schedule` endpoints take 6-field cron (seconds first).
+- **MCP Python SDK 2.3.0**: `MCPServer` (not `FastMCP`); `Context.headers` gives HTTP headers (never
+  treat them as identity: forward the bearer and let PostgREST verify it); only `ToolError` messages
+  reach the client; result fields are snake_case (`is_error`, `structured_content`); handshake
+  clients negotiate 2025-11-25, the SDK's latest is 2026-07-28.
+- A plain **GET on a streamable-HTTP MCP endpoint opens an SSE stream that never ends**: don't use it
+  as a readiness probe (use `curl -m 1` or a health route).
+- **PostgREST** filters: `in.("a","b")` with quoted IRIs; JSON paths like `object_value->>@value`
+  work; empty bearer → 401 when `kk_anon` has no grants.
+- **gitleaks** v8: `gitleaks dir <path> --redact -f json -r <file> --exit-code 0`; the binary is
+  static and can be copied out of its image.
+- Pick dependency versions at least ~2 weeks old (Cytoscape 3.34.4 was a day old; 3.34.3 was used),
+  and check npm tarballs against the registry's integrity hash before vendoring.
+
+## Kernel and design
+
+- `run.plan_step` must reference an existing entity: chain and step IRIs are registered at install
+  (`chains:identifiers:<hash>` in `packs.sql`).
+- `api.change_sets` has no ops and `api.claims` no references: modules add `security_invoker` views
+  in their migrations (`api.validation_queue`, `api.claim_references`); kernel RLS still applies.
+- Module, chain, vocabulary and TOSCA node-type typings are **forced into the review lane**: a person
+  must approve (`scripts/review.py`). Approve by id, not "everything from agent X" (that once
+  approved a test module).
+- Watermark polling loses work (a returned-but-lost change set left 600 claims unscored). Prefer
+  events (D-32) and make every consumer able to recover what it missed (the belief service rescans
+  unscored claims).
+- Decoders and views that serve people must run with the **viewer's** token (graph decoder, kernel
+  MCP), not the module's, or the view exceeds the viewer's clearance.
+- Single-valued properties are typed `owl:FunctionalProperty` in the packs; a version bump of a pack
+  reinstalls all of it (no diffing yet).
+- Supersede, don't edit: new value + `set_status deprecated superseded replaced_by` (decoder claims).
+
+## Tests
+
+- Gate checks that read a live system must tolerate other modules writing meanwhile: assert "every
+  claim older than 10 s has a belief", not "zero unscored right now".
+- A green eval proves little until it fails when the logic is broken: mutation-check evals (disable
+  SHACL, count copies naively) once when you write them.
+- Ask the real runtime, not just unit tests: compiled RuleGo chains were loaded into RuleGo-Server
+  and their HTTP calls recorded; the browser check of the UI runs in headless Chromium.
+
+## The cloud sandbox (Claude Code on the web)
+
+- The container restarts without warning: Docker and Postgres stop, `/tmp` files survive. Restore
+  with the steps in `.claude/skills/kernel-dev/SKILL.md`. After a restart Docker may fail with
+  "timeout waiting for containerd": remove `/var/run/docker/containerd/containerd.pid` first.
+- Outbound HTTPS goes through a TLS-intercepting proxy: pass its CA into image builds as a build
+  secret (`KK_BUILD_CA=/root/.ccr/ca-bundle.crt sh scripts/smoke_stack.sh`); never disable TLS checks.
+- Docker Hub rate-limits anonymous pulls (429): retry after a pause.
+- `pkill -f <pattern>` matches the calling shell's own command line and kills it (exit 144); stop
+  processes by `/proc/<pid>/exe` instead.
+- Local Postgres uses peer auth: run `psql` and `kernel/schema/tests/run.sh` as the `postgres` user.
