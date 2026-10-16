@@ -23,7 +23,11 @@ clearance:
   - urn:kk:scope:default
 runtime:
   type: python-service
-  entrypoint: python -m chain_decoder_rulego
+  entrypoint: python -m chain_decoder
+  chains:
+  - chains/deploy-rulego-chains.yaml
+  - chains/check-rulego-drift.yaml
+  - chains/submit-decoder-claims.yaml
 accepts:
 - https://w3id.org/knowledge-kernel/ns#Chain
 produces:

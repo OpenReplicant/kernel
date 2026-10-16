@@ -57,13 +57,15 @@ jobs:
         run: python modules/belief-corroboration/tests/test_eval.py
       - name: Graph decoder tests (T9)
         run: python modules/graph-decoder/tests/test_graph.py
+      - name: Chain decoder tests (T10)
+        run: python modules/chain-decoder-rulego/tests/test_compile.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   stack-smoke:
-    name: stack smoke test (T2-T9)
+    name: stack smoke test (T2-T10)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
