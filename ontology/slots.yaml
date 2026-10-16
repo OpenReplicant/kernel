@@ -1,0 +1,280 @@
+# Slot catalog — the explorable option space.
+# Each slot is a TOSCA-style requirement that modules fill (module.yaml `slots:`).
+# The self-encoder turns this file into claims (kkt:Requirement + kk:slotContract), so the
+# catalog is part of the system's self-model and changes only through the review lane.
+#
+# cardinality: one  = exactly one active module; alternatives run in shadow until the evaluator promotes one
+#              many = any number of modules
+# milestone:   1 = self-model milestone, 2 = build-and-deploy process loop, later = when needed
+# kind:        the module kind expected to fill it (kernel/schemas/module.schema.json)
+
+version: 0.1.0
+
+groups:
+
+  input:
+    - id: source-connector
+      contract: source -> raw artifacts
+      kind: encoder
+      cardinality: many
+      default: filesystem + git (self-encoder)
+      milestone: 1
+    - id: ingest-filter
+      contract: artifact -> pass | redacted artifact | blocked
+      kind: processor
+      cardinality: many
+      default: gitleaks; Presidio for PII later
+      milestone: 1
+    - id: encoder
+      contract: artifact -> change sets
+      kind: encoder
+      cardinality: many
+      default: self-encoder (deterministic parsers); LLM extraction later
+      milestone: 1
+    - id: observation-aggregator
+      contract: events / logs / telemetry -> windowed observed claims, OCEL 2.0 logs
+      kind: encoder
+      cardinality: many
+      default: chain run records -> observed claims; CI run logs -> OCEL in milestone 2
+      milestone: 1
+    - id: interviewer
+      contract: person <-> testimony claims, questions aimed at gaps and low belief
+      kind: encoder
+      cardinality: many
+      default: OntoAgent-style slot-filling interview
+      milestone: later
+    - id: entity-resolver
+      contract: candidate entity -> existing match | new | "possibly same as" for review
+      kind: processor
+      cardinality: one
+      default: exact IRI + label match
+      milestone: 1
+
+  knowledge:
+    - id: vocabulary-pack
+      contract: terms, shapes, mappings (content, installed by the pack loader)
+      kind: pack
+      cardinality: many
+      default: core packs in ontology/packs.yaml
+      milestone: 1
+    - id: shape-validator
+      contract: change set -> valid | invalid + report
+      kind: processor
+      cardinality: one
+      default: JSON Schema + pySHACL (validator-shacl)
+      milestone: 1
+    - id: belief-model
+      contract: claim + evidence view -> belief in [0,1] + explanation
+      kind: processor
+      cardinality: one
+      default: corroboration counting v0
+      milestone: 1
+    - id: verifier
+      contract: claim -> supported | refuted | inconclusive (never by the claim's own producer)
+      kind: processor
+      cardinality: many
+      default: round-trip check (decode, re-encode, compare); test execution; ProVe-style quote check later
+      milestone: 1
+    - id: reasoner
+      contract: claims -> inferred claims (evidence_type inferred, derived_from premises)
+      kind: processor
+      cardinality: many
+      default: SQL rules; Nemo (Datalog) later
+      milestone: later
+    - id: mapping-aligner
+      contract: two vocabularies -> candidate skos:*Match claims (review lane)
+      kind: processor
+      cardinality: many
+      default: manual; LLM matcher later
+      milestone: later
+    - id: consolidator
+      contract: belief decay, supersession sweeps, crystallization of repeated patterns
+      kind: processor
+      cardinality: many
+      default: none
+      milestone: later
+    - id: recall-index
+      contract: query -> ranked entity/claim candidates
+      kind: processor
+      cardinality: many
+      default: Postgres full-text search; pgvector later
+      milestone: 1
+    - id: read-model
+      contract: claims -> views, entity cards, graph projections
+      kind: decoder
+      cardinality: many
+      default: SQL views; graph-decoder
+      milestone: 1
+
+  decision:
+    - id: system1-engine
+      contract: question shape -> answer + explanation (fast, deterministic or small-model)
+      kind: processor
+      cardinality: many
+      default: lookup and saved queries
+      milestone: 1
+    - id: router
+      contract: question -> engine, chain or agent
+      kind: control
+      cardinality: one
+      default: rule table; learned classifier later
+      milestone: later
+    - id: model-provider
+      contract: prompt -> completion
+      kind: interface
+      cardinality: many
+      default: any hosted model or Ollama
+      milestone: 1
+
+  agent:
+    - id: agent-harness
+      contract: goal + tools + skills -> actions (the agent loop runtime)
+      kind: agent
+      cardinality: many
+      default: Claude Code / Agent SDK; any harness with MCP + Agent Skills
+      milestone: 1
+    - id: agent-profile
+      contract: role, instructions, model, allowed tools and skills, clearance role
+      kind: agent
+      cardinality: many
+      default: stored as claims; decoded to harness files and A2A Agent Cards
+      milestone: later
+    - id: agent-skill
+      contract: SKILL.md package (Agent Skills format)
+      kind: agent
+      cardinality: many
+      default: one skill per module plus task skills
+      milestone: 1
+    - id: harness-adapter
+      contract: kernel hook events (session_start, before_tool, after_tool, before_compact, stop) -> the harness's own hook mechanism
+      kind: agent
+      cardinality: many
+      default: Claude Code hooks adapter
+      milestone: later
+      notes: ergonomics only; guarantees are enforced at the MCP/API boundary
+    - id: tool-provider
+      contract: external MCP servers agents may use
+      kind: interface
+      cardinality: many
+      default: see docs/mcp-servers.md
+      milestone: 1
+    - id: context-assembler
+      contract: task -> claims, entity cards and skills to load into context
+      kind: processor
+      cardinality: one
+      default: read models + recall index
+      milestone: later
+
+  output:
+    - id: decoder
+      contract: shaped claims (+ mappings) -> artifact in a target standard; reports what it could not represent
+      kind: decoder
+      cardinality: many
+      default: chain profile -> RuleGo DSL; claims -> graph view; BPMN XML in milestone 2
+      milestone: 1
+    - id: actuator
+      contract: artifact -> effect in an external runtime; observations come back through an encoder
+      kind: actuator
+      cardinality: many
+      default: SpiffWorkflow calling CI (milestone 2)
+      milestone: 2
+    - id: orchestrator-driver
+      contract: approved topology / manifest -> running containers, fixed action list (start, stop, scale, roll back)
+      kind: actuator
+      cardinality: one
+      default: Docker Compose; Podman and Kubernetes later
+      milestone: 1
+
+  interfaces:
+    - id: api-adapter
+      contract: roles, views, RPC -> HTTP
+      kind: interface
+      cardinality: one
+      default: PostgREST
+      milestone: 1
+    - id: agent-interface
+      contract: kernel tools -> MCP, caller identity preserved
+      kind: interface
+      cardinality: many
+      default: kernel-mcp (thin Python); RuleGo-Server MCP if identity pass-through is proven
+      milestone: 1
+    - id: ui
+      contract: review, browse, manage, graph view
+      kind: interface
+      cardinality: many
+      default: Caddy + Alpine.js
+      milestone: 1
+    - id: event-transport
+      contract: NOTIFY -> browsers and agents
+      kind: interface
+      cardinality: one
+      default: pg_eventserv behind Caddy
+      milestone: later
+    - id: identity
+      contract: sign-in -> JWT carrying a database role
+      kind: interface
+      cardinality: one
+      default: static JWTs for modules; OIDC at Caddy for people
+      milestone: 1
+
+  control:
+    - id: clearance-policy
+      contract: policy file -> scope grants and roles
+      kind: control
+      cardinality: one
+      default: YAML -> kernel.scope_grant; OPA/Cedar later
+      milestone: 1
+    - id: review-lane
+      contract: change set awaiting review -> approved | rejected
+      kind: interface
+      cardinality: many
+      default: UI review queue; Git pull requests as an alternative
+      milestone: 1
+    - id: trigger
+      contract: time or event -> chain execution
+      kind: control
+      cardinality: many
+      default: runner schedules; pg_cron and a NOTIFY bridge later
+      milestone: 1
+    - id: chain-runner
+      contract: chain definition -> executions, one run per execution, plan_step per step
+      kind: control
+      cardinality: one
+      default: Python bootstrap runner, then RuleGo-Server (evaluator decides)
+      milestone: 1
+    - id: evaluator
+      contract: module or slot + eval set -> scores recorded as claims
+      kind: control
+      cardinality: one
+      default: evaluator module
+      milestone: 1
+    - id: curriculum
+      contract: model -> ranked unknowns (gaps, low belief, unrunnable fulfillments)
+      kind: processor
+      cardinality: one
+      default: SQL gap queries
+      milestone: later
+    - id: module-manager
+      contract: module package -> migration, role, manifest claims, compose entry (after review)
+      kind: control
+      cardinality: one
+      default: CLI
+      milestone: 1
+    - id: artifact-store
+      contract: bytes <-> sha256
+      kind: interface
+      cardinality: one
+      default: filesystem volume; MinIO later
+      milestone: 1
+    - id: secret-store
+      contract: -> credentials for modules
+      kind: interface
+      cardinality: one
+      default: env files; SOPS later
+      milestone: 1
+    - id: self-telemetry
+      contract: module traces and metrics -> observation aggregator
+      kind: processor
+      cardinality: one
+      default: OpenTelemetry Collector (RuleGo has an OTel client node)
+      milestone: later

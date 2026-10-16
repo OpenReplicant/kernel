@@ -1,0 +1,43 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:kernel-mcp
+name: Kernel MCP server
+version: 0.1.0
+description: 'Agent-facing MCP tools over PostgREST: search, get entity, query claims, explain, submit
+  change set, start/finish run, list slots and modules. Holds no database privileges of its own: it forwards
+  the caller''s JWT so row-level security and attribution apply per agent.'
+license: Apache-2.0
+kind: interface
+slots:
+- agent-interface
+protected: true
+agent:
+  iri: urn:kk:agent:kernel-mcp
+  db_role: kkm_kernel_mcp
+  member_of:
+  - kk_agent
+runtime:
+  type: python-service
+  entrypoint: python -m kernel_mcp
+  env:
+    KK_API: http://postgrest:3000
+requires:
+- slot: api-adapter
+- slot: identity
+interfaces:
+- name: mcp
+  affordance: action
+  transport: mcp
+  href: /mcp
+mcp:
+  expose:
+  - search
+  - get_entity
+  - query_claims
+  - explain
+  - submit_change_set
+  - start_run
+  - finish_run
+  - list_slots
+  - list_modules
+  read_only: false
+skill: SKILL.md

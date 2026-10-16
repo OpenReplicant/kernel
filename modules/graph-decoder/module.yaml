@@ -1,0 +1,37 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:graph-decoder
+name: Graph decoder (self-model view)
+version: 0.1.0
+description: 'Projects claims into a graph (nodes: entities; edges: entity-valued claims, with belief
+  and status) and emits Cytoscape.js JSON plus Mermaid text for the UI module. Read-only: produces artifacts,
+  not claims about the world.'
+license: Apache-2.0
+kind: decoder
+slots:
+- decoder
+- read-model
+protected: false
+agent:
+  iri: urn:kk:agent:graph-decoder
+  db_role: kkm_graph_decoder
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m graph_decoder
+produces:
+- application/vnd.cytoscape+json
+- text/vnd.mermaid
+interfaces:
+- name: graph
+  affordance: property
+  transport: http
+  href: /graph?root={iri}&depth={n}
+mcp:
+  expose:
+  - graph
+  read_only: true

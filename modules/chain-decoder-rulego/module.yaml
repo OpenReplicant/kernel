@@ -1,0 +1,36 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:chain-decoder-rulego
+name: 'Chain decoder: chain profile -> RuleGo DSL'
+version: 0.1.0
+description: Compiles approved chain claims (chain profile) into RuleGo rule-chain JSON, writes them to
+  the runner's chain folder, and records the hash of each deployed file so drift can be detected. Reports
+  anything it cannot map.
+license: Apache-2.0
+kind: decoder
+slots:
+- decoder
+protected: true
+agent:
+  iri: urn:kk:agent:chain-decoder-rulego
+  db_role: kkm_decoder_rulego
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m chain_decoder_rulego
+accepts:
+- https://w3id.org/knowledge-kernel/ns#Chain
+produces:
+- application/json (RuleGo DSL)
+- add_claim
+triggers:
+- type: notify
+  spec: kernel_change_set
+mcp:
+  expose: []

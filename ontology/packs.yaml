@@ -1,0 +1,122 @@
+# Vocabulary packs and formats — "one concept, one home".
+#
+# Tier rules (docs/spec.md §6):
+#   core    — owns a concept nothing else owns; always installed
+#   profile — loaded only for a domain or capability
+#   format  — an encoder source or decoder target; reached through mappings, never mixed into core terms
+# A new vocabulary is added only with an entry here naming the concept it owns. If another entry
+# already owns that concept, the newcomer is a format (or rejected), not a second home.
+#
+# pin: the pack loader fetches the upstream file once, stores it as an artifact (sha256), and
+# records the pinned version. "pin at install" = choose and record the version when first loaded.
+
+version: 0.1.0
+
+core:
+  - id: rdf-rdfs
+    owns: identity, types, labels, sub-class/sub-property
+    iri: http://www.w3.org/2000/01/rdf-schema#
+    license: W3C Software and Document License
+    pin: pin at install
+  - id: owl
+    owns: property kinds, equivalence, deprecation flag
+    iri: http://www.w3.org/2002/07/owl#
+    license: W3C Software and Document License
+    pin: pin at install
+    note: used for annotations and property kinds only; no OWL reasoning in the kernel
+  - id: skos
+    owns: concept schemes, preferred/alt labels, definitions, mapping relations (exact/close/broad/narrow/related)
+    iri: http://www.w3.org/2004/02/skos/core#
+    license: W3C Software and Document License
+    pin: pin at install
+  - id: dcterms
+    owns: source, part-of, replaced-by, license, version links
+    iri: http://purl.org/dc/terms/
+    license: CC BY 4.0 (DCMI)
+    pin: pin at install
+  - id: prov-o
+    owns: provenance — agents, activities (runs), derivation, attribution, invalidation
+    iri: http://www.w3.org/ns/prov#
+    license: W3C Software and Document License
+    pin: pin at install
+  - id: p-plan
+    owns: plans and steps, and links from runs to the steps they carried out
+    iri: http://purl.org/net/p-plan#
+    license: check at install (published by the P-Plan authors)
+    pin: pin at install
+  - id: web-annotation
+    owns: quotes and spans in sources (TextQuoteSelector, TextPositionSelector)
+    iri: http://www.w3.org/ns/oa#
+    license: W3C Software and Document License
+    pin: pin at install
+  - id: shacl
+    owns: constraints (shapes) used by the validator
+    iri: http://www.w3.org/ns/shacl#
+    license: W3C Software and Document License
+    pin: pin at install
+  - id: sssom
+    owns: mapping metadata (justification, confidence) — stored as skos:*Match claims with qualifiers
+    iri: https://w3id.org/sssom/
+    license: CC0 / BSD-3 (check at install)
+    pin: pin at install
+  - id: wot-td
+    owns: runtime interfaces (properties, actions, events) and transport bindings (forms), security schemes
+    iri: https://www.w3.org/2019/wot/td#
+    license: W3C Software and Document License
+    pin: TD 1.1 Recommendation; track TD 2.0 drafts
+  - id: kk-tosca
+    owns: system structure — node types/templates, requirements (slots), capabilities, fulfillment, relationships, substitution
+    iri: https://w3id.org/knowledge-kernel/tosca#
+    file: kk-tosca.ttl
+    license: Apache-2.0
+    note: RDF mirror of the OASIS TOSCA 2.0 metamodel; TOSCA YAML itself is a format
+  - id: kk-core
+    owns: claim, scope, statement key, evidence type, status, belief, verification, module, slot, chain, eval score
+    iri: https://w3id.org/knowledge-kernel/ns#
+    file: kk-core.ttl
+    license: Apache-2.0
+
+profile:
+  - id: kk-profile
+    owns: agent profiles and skills
+    iri: https://w3id.org/knowledge-kernel/profile#
+    file: kk-profile.ttl
+    license: Apache-2.0
+    load_when: agent profiles are modeled
+  - id: bpmn-ontology
+    owns: BPMN execution semantics (gateways, events, data flow) as subclasses of P-Plan steps
+    candidate: BBO (BPMN 2.0 Based Ontology, Annane et al. 2019) — evaluate before adopting
+    license: check at install
+    load_when: milestone 2 (process loop)
+  - id: sosa-ssn
+    owns: sensors, actuators, samplers (IoT)
+    iri: http://www.w3.org/ns/sosa/
+    license: W3C Software and Document License
+    load_when: an IoT domain is modeled; observations otherwise stay kk claims with evidence type observed
+  - id: wfprov-wfdesc
+    owns: nothing new — CWL provenance traces
+    load_when: CWL pipelines are used; mapped to P-Plan/PROV-O via skos:*Match claims
+
+format:
+  - {id: tosca-yaml,       direction: both,   note: TOSCA 2.0 service templates}
+  - {id: rulego-dsl,       direction: decode, note: chain runner target}
+  - {id: bpmn-xml,         direction: both,   note: milestone 2; SpiffWorkflow actuator}
+  - {id: ocel-2,           direction: encode, note: object-centric event logs from runs and CI}
+  - {id: openapi,          direction: both}
+  - {id: asyncapi,         direction: both}
+  - {id: mcp-tool-schema,  direction: both}
+  - {id: a2a-agent-card,   direction: decode, note: from kkp:AgentProfile}
+  - {id: agent-skills,     direction: both,   note: SKILL.md folders}
+  - {id: harness-config,   direction: decode, note: e.g. Claude Code agent files and hooks}
+  - {id: compose-yaml,     direction: both,   note: orchestrator driver}
+  - {id: cytoscape-json,   direction: decode, note: graph view}
+  - {id: mermaid,          direction: decode}
+  - {id: n-quads,          direction: both,   note: canonical export, scopes as named graphs}
+
+rejected_or_deferred:
+  - {id: wikidata-pids,      decision: link target only (skos:exactMatch to Wikidata items); never our own identifiers}
+  - {id: legacy-software-properties, decision: replaced by kk-tosca relationship types (dependsOn, hostedOn, connectsTo)}
+  - {id: sosa-in-core,       decision: rejected; profile only}
+  - {id: tosca-workflows,    decision: unused; P-Plan owns plans}
+  - {id: uvl,                decision: deferred; cross-slot constraints are SHACL shapes for now}
+  - {id: shex,               decision: not used; SHACL only}

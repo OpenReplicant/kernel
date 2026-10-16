@@ -1,0 +1,48 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:example
+name: Example module
+version: 0.1.0
+description: Copy this folder to start a module. Replace every field; delete what you don't use.
+license: Apache-2.0
+kind: processor
+slots:
+- reasoner
+protected: false
+agent:
+  iri: urn:kk:agent:example
+  db_role: kkm_example
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+budget:
+  max_cost_usd_per_day: 1.0
+runtime:
+  type: python-service
+  entrypoint: python -m example
+  chains:
+  - chains/example.yaml
+requires:
+- slot: recall-index
+  optional: true
+accepts:
+- https://w3id.org/knowledge-kernel/ns#Claim
+produces:
+- add_claim
+triggers:
+- type: notify
+  spec: kernel_change_set
+interfaces:
+- name: run
+  affordance: action
+  transport: http
+  href: /run
+mcp:
+  expose: []
+  read_only: true
+migration: migration.sql
+skill: SKILL.md
+eval: eval/
