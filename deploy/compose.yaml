@@ -1,46 +1,40 @@
-# Knowledge Kernel — the kernel and its default modules (D-36)
+# Knowledge Kernel — Postgres plus one kk image (D-36, D-42)
 #
-#   cp deploy/.env.example deploy/.env      # fill in secrets and pin image tags
-#   docker compose -f deploy/compose.yaml --env-file deploy/.env up -d            # kernel + validator + belief + MCP
-#   docker compose ... --profile http-api up -d                                    # + PostgREST at /api
+#   cp deploy/.env.example deploy/.env                       # fill in secrets
+#   docker compose -f deploy/compose.yaml --env-file deploy/.env up -d
+#   docker compose -f deploy/compose.yaml --env-file deploy/.env run --rm init kk person add owner --steward
+#   docker compose -f deploy/compose.yaml --env-file deploy/.env run --rm init kk agent add claude-code
+#   docker compose -f deploy/compose.yaml --env-file deploy/.env run --rm -v "$PWD":/repo:ro \
+#     -v kk-artifacts:/artifacts kernel kk scan --repo /repo       # ingest a repository
 #
-# The kernel needs none of this to be useful: an agent harness can run kernel-mcp over stdio against
-# any Postgres with the kernel installed (docs/harness.md). Works the same with Podman. Ports are
-# published on localhost only: Postgres (for stdio agents and review.py, each with its own login) and
-# Caddy, which is replaceable by any reverse proxy (it only routes /mcp, /api).
-# Pin every image by exact tag or digest in .env before first use (docs/decisions.md D-12).
-# Modules parked by D-36 (runners, chain decoder, graph decoder, UI) are under parked/.
+# `person add` and `agent add` print the new login's password once. The kernel needs none of this to
+# be useful: an agent harness can run kernel-mcp over stdio against any Postgres with the kernel
+# installed (docs/harness.md). Works the same with Podman. Ports are published on localhost only:
+# Postgres (for stdio agents and kk review, each with its own login) and Caddy, which is replaceable
+# by any reverse proxy (it only routes /mcp). To split the kernel into one container per part, run
+# the same image three times with `kk serve --only mcp`, `--only validator` and `--only belief`.
 
 name: knowledge-kernel
 
-x-kernel-login: &kernel-login
-  # One login that switches to each service's own role (SET ROLE); never a superuser. Only services
-  # hold it; agents and people log in as themselves (060_logins.sh, D-37).
-  DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
+x-kk: &kk
+  build: {context: .., dockerfile: Dockerfile}
+  image: knowledge-kernel:local
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: [/tmp]
 
 services:
 
-  # The kernel: plain Postgres + the kernel schema. Extensions are installed by module migrations.
+  # The kernel's store: plain Postgres. Extensions are installed by module migrations.
   db:
     build: ./postgres
     environment:
       POSTGRES_DB: kk
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
-      KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
-      KK_AGENT_CLAUDE_CODE_PASSWORD: ${KK_AGENT_CLAUDE_CODE_PASSWORD:-}
-      KK_OWNER_PASSWORD: ${KK_OWNER_PASSWORD:-}
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ../kernel/schema/001_kernel.sql:/docker-entrypoint-initdb.d/001_kernel.sql:ro
-      - ../kernel/schema/002_bootstrap.sql:/docker-entrypoint-initdb.d/002_bootstrap.sql:ro
-      - ./postgres/010_authenticator.sh:/docker-entrypoint-initdb.d/010_authenticator.sh:ro
-      - ./postgres/020_modules.sh:/docker-entrypoint-initdb.d/020_modules.sh:ro
-      - ./postgres/030_packs.sh:/docker-entrypoint-initdb.d/030_packs.sh:ro
-      - ./postgres/040_people.sql:/docker-entrypoint-initdb.d/040_people.sql:ro
-      - ./postgres/050_agents.sql:/docker-entrypoint-initdb.d/050_agents.sql:ro
-      - ./postgres/060_logins.sh:/docker-entrypoint-initdb.d/060_logins.sh:ro
-      - ../modules:/kk-modules:ro
     ports:
       - "127.0.0.1:${KK_DB_PORT:-5432}:5432"
     healthcheck:
@@ -49,34 +43,27 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # shape-validator slot: validates submitted change sets as they arrive (listen + sweep).
-  validator:
-    build: {context: .., dockerfile: modules/validator-shacl/Dockerfile}
+  # One-shot: installs the kernel, the default modules and the packs (does nothing once installed),
+  # and sets the services' login password. Also the place to run admin commands (see above).
+  init:
+    <<: *kk
+    command: ["kk", "init"]
     environment:
-      <<: *kernel-login
-      KK_ROLE: kkm_validator
+      KK_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/kk
+      KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
     depends_on:
       db: {condition: service_healthy}
-    restart: unless-stopped
+    restart: "no"
 
-  # belief-model slot: scores claims as change sets are applied (listen + sweep).
-  belief:
-    build: {context: .., dockerfile: modules/belief-corroboration/Dockerfile}
+  # MCP over HTTP (each request carries the agent's own token) + the validator + the belief model.
+  # One login that switches to each part's own role; never a superuser, never given to agents (D-37).
+  kernel:
+    <<: *kk
     environment:
-      <<: *kernel-login
-      KK_ROLE: kkm_belief
-    depends_on:
-      db: {condition: service_healthy}
-    restart: unless-stopped
-
-  # agent-interface slot: MCP over streamable HTTP; each request carries the agent's own JWT.
-  kernel-mcp:
-    build: {context: .., dockerfile: modules/kernel-mcp/Dockerfile}
-    environment:
-      <<: *kernel-login
+      DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
     depends_on:
-      db: {condition: service_healthy}
+      init: {condition: service_completed_successfully}
     restart: unless-stopped
 
   caddy:
@@ -85,22 +72,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     ports:
       - "127.0.0.1:8080:80"
-    depends_on: [kernel-mcp]
-    restart: unless-stopped
-
-  # Optional HTTP API over the same api schema, for clients that want REST (every request runs as
-  # the JWT's role). Not needed by the kernel or its default modules.
-  postgrest:
-    image: ${POSTGREST_IMAGE:?pin in .env}
-    profiles: [http-api]
-    environment:
-      PGRST_DB_URI: postgres://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
-      PGRST_DB_SCHEMAS: api
-      PGRST_DB_ANON_ROLE: kk_anon
-      PGRST_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
-      PGRST_OPENAPI_MODE: follow-privileges
-    depends_on:
-      db: {condition: service_healthy}
+    depends_on: [kernel]
     restart: unless-stopped
 
 volumes:

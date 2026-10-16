@@ -73,14 +73,14 @@ class Submitted:
 # ---------------------------------------------------------------- the kernel, as seen by a module
 @runtime_checkable
 class KernelClient(Protocol):
-    """Thin client over PostgREST using the module's own JWT (its database role)."""
+    """The api schema as a module sees it, under its own database role (SQL directly; kk.lib)."""
 
     def start_run(self, module: str, plan_step: Optional[str] = None,
                   used: Sequence[str] = (), info: Optional[JSON] = None) -> str: ...
     def finish_run(self, run_id: str, status: Literal["succeeded", "failed", "cancelled"],
                    cost: Optional[JSON] = None) -> None: ...
     def submit(self, change_set: ChangeSet) -> Submitted: ...
-    def claims(self, **filters: str) -> list[JSON]: ...          # GET /claims?<postgrest filters>
+    def claims(self, **filters: str) -> list[JSON]: ...          # select ... from api.claims where <filters>
     def explain(self, claim_id: str) -> JSON: ...
 
 

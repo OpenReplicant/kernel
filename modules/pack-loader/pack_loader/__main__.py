@@ -4,8 +4,8 @@ slot catalog (ontology/slots.yaml) into one kernel.install_ops call each, writte
 Usage:  python -m pack_loader > modules/pack-loader/packs.sql      (run from modules/pack-loader,
         or with PYTHONPATH=modules/pack-loader from the repository root)
 
-The output is committed and reviewed as code (D-19); deploy/postgres/030_packs.sh applies it on first
-database start. Typing claims (`x a owl:ObjectProperty`, ...) are what make a property approved.
+The output is committed and reviewed as code (D-19); `kk init` applies it after the module
+migrations. Typing claims (`x a owl:ObjectProperty`, ...) are what make a property approved.
 Every claim references its source file, pinned by content hash.
 """
 import hashlib

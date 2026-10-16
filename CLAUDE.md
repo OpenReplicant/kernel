@@ -33,7 +33,7 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
   it as a module that reads `api` views and submits change sets, or write up the case in
   `docs/decisions.md` and ask.
 - **Modules never write tables.** They read the `api` schema under their own database role (directly,
-  or through the optional PostgREST) and write only by `submit_change_set`. Actuators never write claims.
+  with `kk.lib`) and write only by `submit_change_set`. Actuators never write claims.
 - **Keep the kernel small (D-36).** No required middleware or runner: anything that needs one is a
   module. Prefer compatibility with existing tools over building our own. Work outside the kernel is
   parked under `parked/` until revived.
@@ -41,7 +41,7 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
   vocabulary owns the concept; `kk:` is only for the module contract (D-40). New terms go through the review lane (vocabulary typing claims are
   forced there) or a pack migration.
 - **Look things up; don't rely on memory** for external tools (MCP SDK v2, psycopg, pySHACL,
-  PostgREST, image tags). Pin exact versions and record what you pinned.
+  gitleaks, image tags). Pin exact versions and record what you pinned.
 - **Every module** has a `module.yaml` valid against `kernel/schemas/module.schema.json`, fills slots
   from `ontology/slots.yaml` and runs as its own `kkm_*` role.
 - Conditions go in qualifiers, never inside values. Ambiguous entity matches stay separate with
@@ -56,12 +56,12 @@ pip install -r requirements-ci.txt
 python shapes/tests/test_shapes.py                                         # SHACL fixtures
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
-sh scripts/smoke_kernel.sh                                                 # the kernel alone (G4) and ingestion (T13); needs gitleaks
+pip install -e .                                                           # the kk command and the default modules
+sh scripts/smoke_kernel.sh                                                 # G4, T13 and T17 on kk alone; needs gitleaks
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these. The kernel smoke test needs no Docker: a Postgres
-superuser (PGHOST/PGUSER/PGPASSWORD) and python3 with `requirements-ci.txt` plus the kernel-mcp and
-validator requirements. Docker builds behind a TLS-intercepting proxy take the proxy's CA as a build
+superuser (PGHOST/PGUSER/PGPASSWORD) and python3 with this repository installed (`pip install -e .`). Docker builds behind a TLS-intercepting proxy take the proxy's CA as a build
 secret (`--secret id=ca,src=/path/ca.crt`).
 
 ## Layout
@@ -75,8 +75,9 @@ ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profil
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader; _template/
-deploy/          compose.yaml (db, validator, kernel-mcp, caddy; PostgREST optional), postgres/, mcp/
-scripts/         smoke_kernel.sh + e2e_kernel.py + e2e_ingest.py, check_manifests.py, review.py, mint_jwt.py
+kk/              the kk command (init, person/agent add, serve, status, review, scan, token) + kk.lib
+deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), mcp/
+scripts/         smoke_kernel.sh + e2e_kernel.py + e2e_ingest.py, check_manifests.py
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/
@@ -85,5 +86,5 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T15 are done; G1, G2 and G4 pass (`scripts/smoke_kernel.sh`). Next: the module library and one
-`kk` command, `kk module install`, export/import, then T16 (self-questions eval). Work one task at a time; each ends with its check passing.
+T0–T15 and T17 are done; G1, G2 and G4 pass (`scripts/smoke_kernel.sh`). Next: `kk module install`,
+export/import, then T16 (self-questions eval). Work one task at a time; each ends with its check passing.

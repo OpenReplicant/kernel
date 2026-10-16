@@ -190,7 +190,7 @@ groups:
       contract: roles, views, RPC -> HTTP
       kind: interface
       cardinality: one
-      default: PostgREST
+      default: none (D-42); agents use kernel-mcp, modules use SQL; a REST adapter is an optional module
       milestone: 1
     - id: agent-interface
       contract: kernel tools -> MCP, caller identity preserved

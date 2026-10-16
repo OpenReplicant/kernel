@@ -45,7 +45,7 @@ jobs:
       - run: pip install -r requirements-ci.txt
       - name: SHACL shape tests
         run: python shapes/tests/test_shapes.py
-      - name: Manifests, chains and slots
+      - name: Manifests and slots
         run: python scripts/check_manifests.py
       - name: Validator eval (T4)
         run: python modules/validator-shacl/tests/test_eval.py
@@ -59,7 +59,7 @@ jobs:
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   kernel-smoke:
-    name: kernel alone (G4)
+    name: kernel alone (G4, T13, T17)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -78,20 +78,30 @@ jobs:
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.13"
-      - run: pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt -r modules/belief-corroboration/requirements.txt -r modules/self-encoder/requirements.txt
+      - name: Install the kernel (kk) with the pinned requirements
+        run: |
+          pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt -r modules/belief-corroboration/requirements.txt -r modules/self-encoder/requirements.txt
+          pip install --no-deps -e .
+          kk --help > /dev/null
       - name: gitleaks for the ingest filter (pinned release, checksum verified)
         run: |
           curl -sSL -o /tmp/gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
           echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tgz" | sha256sum -c -
           sudo tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
           gitleaks version
-      - name: Postgres + validator + belief + kernel-mcp over stdio + ingestion, nothing else
+      - name: Postgres + kk (init, person, agent, serve, review, scan, token, status), nothing else
         run: sh scripts/smoke_kernel.sh
-      - name: kernel-mcp installs as a package with its two commands
+      - name: kernel-mcp alone installs as a package with its two commands
         run: |
-          pip install ./modules/kernel-mcp
-          command -v kernel-mcp
-          kernel-mcp-hook < /dev/null || test $? = 2
+          python -m venv /tmp/mcp-only
+          /tmp/mcp-only/bin/pip install ./modules/kernel-mcp
+          test -x /tmp/mcp-only/bin/kernel-mcp
+          /tmp/mcp-only/bin/kernel-mcp-hook < /dev/null || test $? = 2
+      - name: The kk image builds and runs
+        run: |
+          docker build -t knowledge-kernel:ci .
+          docker run --rm knowledge-kernel:ci kk --help > /dev/null
+          docker run --rm knowledge-kernel:ci gitleaks version
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env

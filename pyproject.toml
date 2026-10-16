@@ -1,0 +1,32 @@
+# The kernel and its default modules as one install, with the `kk` command:
+#   pip install -e .          (from a checkout: kk init reads kernel/schema, modules/*, shapes/ from it)
+# For MCP alone in a harness, modules/kernel-mcp installs just kernel-mcp and its hooks.
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knowledge-kernel"
+version = "0.1.0"
+description = "A small knowledge kernel for agent harnesses: one Postgres, MCP, and swappable default modules"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+  "mcp==2.3.0", "psycopg[binary]==3.3.6", "PyJWT==2.15.1", "uvicorn==0.54.0",
+  "pyshacl==0.40.1", "rdflib==7.6.0", "PyYAML==6.0.3", "jsonschema==4.26.0",
+]
+
+[project.scripts]
+kk = "kk.cli:main"
+kernel-mcp = "kernel_mcp.__main__:main"
+kernel-mcp-hook = "kernel_mcp.hooks:main"
+
+[tool.setuptools]
+packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter"]
+
+[tool.setuptools.package-dir]
+kernel_mcp = "modules/kernel-mcp/kernel_mcp"
+validator = "modules/validator-shacl/validator"
+belief_corroboration = "modules/belief-corroboration/belief_corroboration"
+self_encoder = "modules/self-encoder/self_encoder"
+ingest_filter = "modules/ingest-filter-gitleaks/ingest_filter"
