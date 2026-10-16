@@ -148,6 +148,9 @@ i=0; until [ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*)
   || [ $i -ge 90 ]; do i=$((i+1)); sleep 1; done
 $compose exec -T db psql -U postgres -d kk -tAc "select 'claims ' || count(*) || ', without belief ' || count(*) filter (where belief is null)
   || ', belief runs ' || (select count(*) from kernel.run where plan_step = 'urn:kk:chain:submit-beliefs/submit') from api.claims"
+$compose exec -T db psql -U postgres -d kk -tAc "select 'belief change sets ' || status || ': ' || count(*)
+  || coalesce(' e.g. ' || left(min(validation_report::text), 300), '') from kernel.change_set
+  where attributed_to = 'urn:kk:agent:belief-corroboration' group by status"
 [ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from api.claims where belief is null")" = 0 ]
 AGENT_A_JWT=$agent_token AGENT_B_JWT=$(mint kkm_graph_decoder) python3 "$root/scripts/e2e_belief.py"
 echo "T7 smoke test passed"
