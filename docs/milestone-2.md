@@ -27,8 +27,8 @@ agent work guided by skill files, recorded under the agent's own identity.
 
 | ID | Task | Check | Status |
 | --- | --- | --- | --- |
-| M2-T0 | **Vocabularies and catalog pointers**: pick the process and observation vocabularies from existing ones (candidates: BBO for BPMN, P-Plan and PROV-O for plans and executions, SOSA/SSN for observations, schema.org for organisations) after checking LOV; add the upstream catalogs (LOV, OBO Foundry, BioPortal, schema.org) to `ontology/packs.yaml` and the look-up rule to the skill | packs install; check_packs; a decision entry per vocabulary | next |
-| M2-T1 | **Event-log encoder** (command module): CSV or XES in; cases, activities, resources and the directly-follows relation with counts and durations per time window out, as observed claims referencing the log artifact | a sample log gives the expected activities and edge counts; re-ingest supersedes | |
+| M2-T0 | **Vocabularies and catalog pointers**: pick the process and observation vocabularies from existing ones (candidates: BBO for BPMN, P-Plan and PROV-O for plans and executions, SOSA/SSN for observations, schema.org for organisations) after checking LOV; add the upstream catalogs (LOV, OBO Foundry, BioPortal, schema.org) to `ontology/packs.yaml` and the look-up rule to the skill | packs install; check_packs; a decision entry per vocabulary | done (D-47: BBO, SOSA, mappings, catalogs) |
+| M2-T1 | **Event-log encoder** (command module): CSV or XES in; cases, activities, resources and the directly-follows relation with counts and durations per time window out, as observed claims referencing the log artifact | a sample log gives the expected activities and edge counts; re-ingest supersedes | next |
 | M2-T2 | **Process document encoders**: BPMN 2.0 XML (deterministic parser → documented process: tasks, gateways, sequence flows) and a skill for agents to extract process claims from text and interview transcripts (extracted, with quotes) | a sample BPMN gives the expected plan; extracted claims without quotes are refused | |
 | M2-T3 | **Conformance processor** (worker): compares documented and observed processes; claims each discrepancy (skipped step, unexpected path, rework, threshold differences) with derivations from the claims it compared; discrepancies wait in the review lane | the sample log and BPMN give the planted discrepancies, each citing its evidence | |
 | M2-T4 | **BPM view** (view module): the process map (documented vs observed, frequencies, discrepancies highlighted), each edge explaining its claims | Playwright: map renders; a discrepancy explains | |
@@ -44,7 +44,8 @@ agent work guided by skill files, recorded under the agent's own identity.
 | M2-G2 | **Devops demo**: the MAPE-K run above end to end on the compose stack, with a person's approval as the only manual step, and every claim in the timeline cited |
 | M2-G3 | Every new module installs with `kk module install` and runs sandboxed; the kernel tests, G4 and G7 still pass |
 
-## Open for the owner
+## Decided by default (D-47 e)
 
-- Sample data for the BPM demo: a public event log (for example a BPI Challenge log) or one of yours.
-- The demo system for devops: our own compose stack with Prometheus added, or another system you run.
+- BPM sample data: a small synthetic order-to-cash event log and BPMN model written for the demo, with
+  planted discrepancies; a public BPI Challenge log or one of the owner's can replace it later.
+- Devops demo system: our own compose stack with Prometheus added.

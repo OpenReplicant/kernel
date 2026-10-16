@@ -10,7 +10,7 @@
 # pin: the pack loader fetches the upstream file once, stores it as an artifact (sha256), and
 # records the pinned version. "pin at install" = choose and record the version when first loaded.
 
-version: 0.3.0
+version: 0.4.0
 
 core:
   - id: rdf-rdfs
@@ -87,16 +87,28 @@ profile:
     file: kk-profile.ttl
     license: Apache-2.0
     load_when: agent profiles are modeled
-  - id: bpmn-ontology
-    owns: BPMN execution semantics (gateways, events, data flow) as subclasses of P-Plan steps
-    candidate: BBO (BPMN 2.0 Based Ontology, Annane et al. 2019) — evaluate before adopting
-    license: check at install
-    load_when: milestone 2 (process loop)
-  - id: sosa-ssn
-    owns: sensors, actuators, samplers (IoT)
+  - id: bbo
+    owns: BPMN process models — processes, tasks, gateways, events, sequence (next/previous flow node), roles (D-47)
+    iri: https://www.irit.fr/recherches/MELODI/ontologies/BBO#
+    file: bbo.ttl
+    license: CC BY 4.0 (MELODI, IRIT)
+    pin: BBO 1.0.0 (2019-05-22), subset cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: the documented process; P-Plan stays the home of plans in general (mappings.ttl)
+    load_when: always (milestone 2)
+  - id: sosa
+    owns: observations and actuations — feature of interest, observed property, simple result, sensor, actuator (D-47)
     iri: http://www.w3.org/ns/sosa/
+    file: sosa.ttl
     license: W3C Software and Document License
-    load_when: an IoT domain is modeled; observations otherwise stay kk claims with evidence type observed
+    pin: 2017-10-19 (W3C Recommendation), subset cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: an observation is one observed claim (subject = feature of interest, predicate = sosa:hasSimpleResult,
+      qualifier sosa:observedProperty, valid time = the window), not a node per observation (D-47)
+    load_when: always (milestone 2 — event logs, metrics)
+  - id: mappings
+    owns: nothing new — the skos:*Match links between packs that name the same concept
+    iri: https://w3id.org/knowledge-kernel/mappings
+    file: mappings.ttl
+    license: Apache-2.0
   - id: wfprov-wfdesc
     owns: nothing new — CWL provenance traces
     load_when: CWL pipelines are used; mapped to P-Plan/PROV-O via skos:*Match claims
@@ -121,6 +133,19 @@ rejected_or_deferred:
   - {id: wikidata-pids,      decision: link target only (skos:exactMatch to Wikidata items); never our own identifiers}
   - {id: legacy-software-properties, decision: replaced by kk-tosca relationship types (dependsOn, hostedOn, connectsTo)}
   - {id: sosa-in-core,       decision: rejected; profile only}
+  - {id: bpmn-fbk-ontology,  decision: not used; BBO is maintained with a stated license and covers the BPMN fragment we need (D-47)}
+  - {id: pm4py,              decision: AGPL-3.0; optional module only, never in the default distribution (milestone 2)}
   - {id: tosca-workflows,    decision: unused; P-Plan owns plans}
   - {id: uvl,                decision: deferred; cross-slot constraints are SHACL shapes for now}
   - {id: shex,               decision: not used; SHACL only}
+
+# Where to look before minting a term (D-47). Search these, in order, for an existing vocabulary that
+# owns the concept; pick one with a stated license and a stable namespace; add it here as a pack
+# (cut a subset with scripts/vocab_subset.py) or as a format. Only the module contract is ours (D-40).
+catalogs:
+  - {id: lov,          url: https://lov.linkeddata.es/dataset/lov/,  covers: general Linked Open Vocabularies (search by term)}
+  - {id: w3c-tr,       url: https://www.w3.org/TR/,                  covers: W3C Recommendations (PROV, SOSA, ORG, DCAT, ODRL, Time, ...)}
+  - {id: schema-org,   url: https://schema.org/,                     covers: everyday entities — organisations, people, products, events, places}
+  - {id: obo-foundry,  url: https://obofoundry.org/,                 covers: biomedical and life-science ontologies}
+  - {id: bioportal,    url: https://bioportal.bioontology.org/,      covers: biomedical ontologies (search across many)}
+  - {id: wikidata,     url: https://www.wikidata.org/,               covers: link targets for real-world items (skos:exactMatch only, never our identifiers)}

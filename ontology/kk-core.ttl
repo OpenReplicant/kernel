@@ -24,13 +24,14 @@
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;
     rdfs:label "Knowledge Kernel core vocabulary" ;
-    owl:versionInfo "0.4.0" ;
+    owl:versionInfo "0.4.1" ;
     dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
     owl:imports <http://www.w3.org/ns/prov-o> .
 
 # ------------------------------------------------------------------ standard terms the kernel stores
 # Typing them here makes them approved predicates (kernel.is_approved_property).
 owl:versionInfo a owl:AnnotationProperty ; rdfs:label "version" .
+rdfs:isDefinedBy a owl:AnnotationProperty ; rdfs:label "is defined by" .   # profile packs cut from upstream (D-47)
 
 # ------------------------------------------------------------------ the module contract
 kk:Module a owl:Class ;

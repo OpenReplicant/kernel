@@ -58,4 +58,7 @@ smoke test prints module logs on failure.
   chain runner (D-36).
 - **Parked work** (`parked/`): see `parked/README.md` before reviving anything.
 - **A vocabulary term:** check `ontology/packs.yaml` for a standard vocabulary that owns the concept
-  first (T12 moves us off `kk:` terms); only the module contract stays in `kk-core.ttl`.
+  first, then the catalogs listed there (LOV, W3C TR, schema.org, OBO Foundry, BioPortal); only the
+  module contract stays in `kk-core.ttl` (D-40). To adopt upstream terms, cut a subset pack with
+  `scripts/vocab_subset.py` (records source, version, sha256 and license), add mappings to
+  `ontology/mappings.ttl`, regenerate `packs.sql` and extend `check_packs.sql` (D-47).

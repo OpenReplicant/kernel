@@ -1,0 +1,25 @@
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix pplan: <http://purl.org/net/p-plan#> .
+@prefix bbo:   <https://www.irit.fr/recherches/MELODI/ontologies/BBO#> .
+@prefix sosa:  <http://www.w3.org/ns/sosa/> .
+
+# Mappings between the packs (D-47): one concept, one home; where two packs name the same concept,
+# the mapping says so instead of a second definition. BPMN models use BBO terms (the documented
+# process); P-Plan stays the home of plans in general; SOSA observations are PROV activities.
+
+<https://w3id.org/knowledge-kernel/mappings>
+    a owl:Ontology ;
+    rdfs:label "Mappings between vocabulary packs" ;
+    owl:versionInfo "0.1.0" .
+
+bbo:Process              skos:closeMatch pplan:Plan .
+bbo:FlowNode             skos:closeMatch pplan:Step .
+bbo:has_previousFlowNode skos:closeMatch pplan:isPrecededBy .
+bbo:has_container        skos:closeMatch pplan:isStepOfPlan .
+sosa:Observation         skos:broadMatch prov:Activity .
+sosa:Actuation           skos:broadMatch prov:Activity .
+sosa:Sensor              skos:broadMatch prov:Agent .
+sosa:Actuator            skos:broadMatch prov:Agent .
