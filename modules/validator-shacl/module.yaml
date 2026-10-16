@@ -1,9 +1,10 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:validator-shacl
 name: Change-set validator (JSON Schema + SHACL)
-version: 0.1.0
+version: 0.2.0
 description: Validates submitted change sets against kernel/schemas/change_set.schema.json and the SHACL
-  shapes of the installed packs, then records the result. Kernel apply re-checks the invariants regardless.
+  shapes of the installed packs, then records the result. Starts itself (listens on kernel_change_set and
+  sweeps the queue); needs no runner. Kernel apply re-checks the invariants regardless.
 license: Apache-2.0
 kind: processor
 slots:
@@ -21,21 +22,18 @@ clearance:
 runtime:
   type: python-service
   entrypoint: python -m validator
-  chains:
-  - chains/validate-change-sets.yaml
-  - chains/validate-one.yaml
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_validator (kk_authenticator)
+    KK_ROLE: kkm_validator
 accepts:
 - change_set
 produces:
 - validation_report
 triggers:
+- type: notify
+  spec: kernel_change_set
 - type: schedule
-  spec: every 2s
-interfaces:
-- name: validate
-  affordance: action
-  transport: http
-  href: /validate
+  spec: every 30s (sweep; NOTIFY is not durable)
 mcp:
   expose: []
 migration: migration.sql

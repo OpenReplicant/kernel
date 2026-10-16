@@ -1,4 +1,4 @@
-"""Review lane for people (stdlib only).
+"""Review lane for people.
 
   python scripts/review.py list
   python scripts/review.py show <change set id>
@@ -6,28 +6,20 @@
   python scripts/review.py approve --all [--from AGENT_IRI] [--note TEXT]
   python scripts/review.py reject <id>... --note TEXT
 
-Env: KK_URL (default http://127.0.0.1:8080/api), KK_TOKEN (a reviewer's JWT, e.g. person_owner).
-The kernel refuses self-approval (KK025) and approvals outside the reviewer's cleared scopes.
+Env: DATABASE_URL, the reviewer's own login (e.g. person_owner; deploy/postgres/060_logins.sh).
+Needs psycopg. The kernel refuses self-approval (KK025) and
+approvals outside the reviewer's cleared scopes.
 """
 import argparse
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
 
-URL = os.environ.get("KK_URL", "http://127.0.0.1:8080/api")
+import psycopg
 
 
-def call(method, path, body=None):
-    req = urllib.request.Request(URL + path, method=method, data=None if body is None else json.dumps(body).encode(),
-                                 headers={"Authorization": f"Bearer {os.environ['KK_TOKEN']}",
-                                          "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        sys.exit(f"{method} {path} -> {e.code}: {e.read().decode()[:500]}")
+def connect():
+    return psycopg.connect(os.environ["DATABASE_URL"], autocommit=True)
 
 
 def summary(row):
@@ -45,7 +37,9 @@ def main():
     p.add_argument("--from", dest="agent")
     p.add_argument("--note")
     a = p.parse_args()
-    queue = call("GET", "/review_queue?order=submitted_at")
+    conn = connect()
+    queue = conn.execute("select coalesce(jsonb_agg(to_jsonb(q) order by submitted_at), '[]') from api.review_queue q"
+                         ).fetchone()[0]
     if a.action == "list":
         for row in queue:
             print(summary(row))
@@ -60,7 +54,10 @@ def main():
     if a.action == "reject" and not a.note:
         sys.exit("reject needs --note")
     for cs_id in ids:
-        status = call("POST", "/rpc/review", {"change_set_id": cs_id, "approve": a.action == "approve", "note": a.note})
+        try:
+            status = conn.execute("select api.review(%s::uuid, %s, %s)", (cs_id, a.action == "approve", a.note)).fetchone()[0]
+        except psycopg.Error as e:
+            sys.exit(f"{cs_id}: {e.diag.message_primary or e}")
         print(cs_id, status)
 
 

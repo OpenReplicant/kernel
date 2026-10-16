@@ -10,4 +10,4 @@ COPY modules/kernel-mcp/kernel_mcp /app/kernel_mcp
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 USER nobody
-CMD ["python", "-m", "kernel_mcp"]
+CMD ["python", "-m", "kernel_mcp", "--http"]

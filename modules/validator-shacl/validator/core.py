@@ -18,7 +18,7 @@ from pyshacl import validate as shacl_validate
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, PROV, RDF, SH, XSD
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[3])
 SCHEMA = json.loads((ROOT / "kernel/schemas/change_set.schema.json").read_text())
 SHAPES = Graph().parse(ROOT / "shapes/kernel.shacl.ttl")

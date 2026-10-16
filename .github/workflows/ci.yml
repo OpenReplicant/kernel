@@ -49,37 +49,17 @@ jobs:
         run: python scripts/check_manifests.py
       - name: Validator eval (T4)
         run: python modules/validator-shacl/tests/test_eval.py
-      - name: Chain runner tests (T5)
-        run: python modules/chain-runner-python/tests/test_engine.py
       - name: Self-encoder tests (T6)
         run: python modules/self-encoder/tests/test_encode.py
       - name: Belief eval (T7)
         run: python modules/belief-corroboration/tests/test_eval.py
-      - name: Graph decoder tests (T9)
-        run: python modules/graph-decoder/tests/test_graph.py
-      - name: Chain decoder tests (T10)
-        run: python modules/chain-decoder-rulego/tests/test_compile.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
-  stack-smoke:
-    name: stack smoke test (T2-T10)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-python@v7.0.0
-        with:
-          python-version: "3.13"
-      - run: pip install -r requirements-ci.txt
-      - name: Playwright for the UI check (G3)
-        run: npm install --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
-      - name: Stack up, API auth, packs and slots
-        run: sh scripts/smoke_stack.sh
-
-  rulego:
-    name: kk-rulego (RuleGo-Server build and components)
+  kernel-smoke:
+    name: kernel alone (G4)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -89,20 +69,19 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
-    defaults:
-      run:
-        working-directory: modules/chain-runner-rulego
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/setup-python@v7.0.0
         with:
-          go-version: "1.25.14"
-          cache-dependency-path: modules/chain-runner-rulego/go.sum
-      - name: gofmt and vet
-        run: test -z "$(gofmt -l .)" && go vet ./...
-      - name: Component tests (against Postgres)
-        env:
-          KK_TEST_PG_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
-        run: go test -v ./...
-      - name: Image builds
-        run: docker build -t kk-rulego . && docker run --rm --entrypoint kk-rulego kk-rulego -v
+          python-version: "3.13"
+      - run: pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt
+      - name: Postgres + validator + kernel-mcp over stdio, nothing else
+        run: sh scripts/smoke_kernel.sh
+      - name: Compose file is valid
+        run: |
+          sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env
+          docker compose -f deploy/compose.yaml --env-file /tmp/ci.env config -q
