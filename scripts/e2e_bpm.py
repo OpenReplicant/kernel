@@ -6,6 +6,9 @@ a changed log supersedes the observations it changes.
 M2-T2: the BPMN encoder gives the documented process on the same step IRIs, so documented and observed
 flows between two tasks are the same statement; an agent following the process-extraction skill records
 the written procedure as extracted claims, and the kernel refuses an extracted claim without its quote.
+M2-T3: the conformance processor finds the planted discrepancies; each waits in the review lane derived
+from the claims it compared; a person approves one and it is applied with its derivations; another pass
+changes nothing.
 
 Env: DATABASE_URL (kk_authenticator), OWNER_DATABASE_URL (reads), AGENT_DATABASE_URL (the agent); gitleaks on PATH; the
 knowledge-kernel package installed (pip install -e .).
@@ -113,6 +116,41 @@ def extracted() -> None:
           f"({status})")
 
 
+def conformance(db) -> None:
+    def once() -> dict:
+        out = subprocess.run([sys.executable, "-m", "conformance", "--once"], capture_output=True, text=True,
+                             env={**os.environ, "KK_ROLE": "kkm_conformance"})
+        if out.returncode != 0:
+            raise SystemExit(f"conformance failed: {out.stderr[-1500:]}")
+        return json.loads(out.stdout)["discrepancies"]
+
+    found = once()
+    for cs in found.values():
+        settled(db, cs)
+    rows = db.execute("""select s.id, s.status, s.lane, c.ops from api.change_sets s join kernel.change_set c using (id)
+                         where s.id = any(%s::uuid[])""", (list(found.values()),)).fetchall()
+    kinds = sorted(op["object"]["entity"].rsplit(":", 1)[1] for _, _, _, ops in rows for op in ops
+                   if op["predicate"].endswith("/terms/type"))
+    check("M2-T3 the planted discrepancies are found", kinds == ["limit", "rework", "skip", "skip", "skip", "swap"],
+          f"{kinds}")
+    check("M2-T3 each waits in the review lane", all(st == "awaiting_review" and lane == "review"
+                                                    for _, st, lane, _ in rows), f"{[r[1] for r in rows]}")
+    premises = {p for _, _, _, ops in rows for op in ops for p in op.get("derived_from", [])}
+    evidence = {e for (e,) in db.execute("select distinct evidence_type from api.claims where id = any(%s::uuid[])",
+                                         (sorted(premises),)).fetchall()}
+    check("M2-T3 each is derived from the observed and documented claims it compares",
+          all(op.get("derived_from") for _, _, _, ops in rows for op in ops) and {"observed", "deterministic"} <= evidence,
+          f"({len(premises)} premises: {sorted(evidence)})")
+    skip = next(cs for cs, _, _, ops in rows if any("without Check credit" in str(op["object"]) for op in ops))
+    out = subprocess.run([sys.executable, "-m", "kk", "review", "approve", str(skip), "--note", "smoke: confirmed"],
+                         capture_output=True, text=True, env={**os.environ, "KK_DATABASE_URL": os.environ["OWNER_DATABASE_URL"]})
+    derived = db.execute("""select count(*) from kernel.claim_derivation d join api.claims c on c.id = d.claim_id
+                            where c.change_set = %s""", (skip,)).fetchone()[0]
+    check("M2-T3 a person approves a discrepancy; it is applied with its derivations",
+          settled(db, skip) == "applied" and derived > 0, f"({out.returncode}, {derived} derivations)")
+    check("M2-T3 another pass changes nothing", once() == found)
+
+
 def main() -> int:
     db = psycopg.connect(os.environ["OWNER_DATABASE_URL"], autocommit=True)
     step = lambda name: f"{P}:step:{name}"
@@ -153,6 +191,7 @@ def main() -> int:
               f"({second['superseded']} earlier claims deprecated: {reasons})")
         documented(db, step, art)
         extracted()
+        conformance(db)
     print(f"M2 BPM passed ({sum(checks)}/{len(checks)})" if all(checks) else "M2 BPM FAILED")
     return 0 if all(checks) else 1
 

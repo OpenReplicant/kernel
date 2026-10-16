@@ -28,7 +28,7 @@ cleanup() {
   if [ "$status" -ne 0 ]; then
     tail -20 "$log"; dc -f "$out/belief-corroboration.yaml" logs --tail 40 2>/dev/null || dc logs --tail 40 || true
   fi
-  KK_INPUT=/nonexistent dc ${files:-} down -v > /dev/null 2>&1 || dc down -v --remove-orphans > /dev/null 2>&1 || true
+  KK_INPUT=/nonexistent dc ${files:-} --profile run down -v > /dev/null 2>&1 || dc down -v --remove-orphans > /dev/null 2>&1 || true
   rm -rf "$env" "$out" "$log"
 }
 trap cleanup EXIT
@@ -75,4 +75,24 @@ PY
 }
 command_module encoder-eventlog kkm_encoder_eventlog --process urn:kk:process:order-to-cash /input/order-to-cash.csv
 command_module encoder-bpmn kkm_encoder_bpmn --process urn:kk:process:order-to-cash /input/order-to-cash.bpmn
-echo "M2-G3 command modules passed"
+# The conformance processor is a worker: installed the same way, it compares the two and submits the
+# discrepancies from its own container, each to the review lane.
+$py -m kk module install "$root/modules/conformance" --out "$out" > /dev/null
+files="$files -f $out/conformance.yaml"
+KK_INPUT=/nonexistent dc $files up -d module-conformance >> "$log" 2>&1
+$py - <<'PY'
+import os, sys, time
+import psycopg
+with psycopg.connect(os.environ["KK_ADMIN_URL"], autocommit=True) as conn:
+    for _ in range(120):
+        n = conn.execute("""select count(*) from kernel.change_set where submitted_by = 'kkm_conformance'
+                            and lane = 'review' and status = 'awaiting_review'""").fetchone()[0]
+        if n >= 5:
+            break
+        time.sleep(1)
+ok = n == 5      # the planted skips, swap and rework; the time limit needs the written procedure
+print(("ok  " if ok else "FAIL"), "the conformance worker runs sandboxed and submits the discrepancies for review",
+      f"({n} awaiting review)")
+sys.exit(0 if ok else 1)
+PY
+echo "M2-G3 command and worker modules passed"
