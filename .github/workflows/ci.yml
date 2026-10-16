@@ -51,15 +51,21 @@ jobs:
         run: python modules/validator-shacl/tests/test_eval.py
       - name: Chain runner tests (T5)
         run: python modules/chain-runner-python/tests/test_engine.py
+      - name: Self-encoder tests (T6)
+        run: python modules/self-encoder/tests/test_encode.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   stack-smoke:
-    name: stack smoke test (T2-T5)
+    name: stack smoke test (T2-T6)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-ci.txt
       - name: Stack up, API auth, packs and slots
         run: sh scripts/smoke_stack.sh

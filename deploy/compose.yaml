@@ -35,6 +35,7 @@ services:
       - ./postgres/010_authenticator.sh:/docker-entrypoint-initdb.d/010_authenticator.sh:ro
       - ./postgres/020_modules.sh:/docker-entrypoint-initdb.d/020_modules.sh:ro
       - ./postgres/030_packs.sh:/docker-entrypoint-initdb.d/030_packs.sh:ro
+      - ./postgres/040_people.sql:/docker-entrypoint-initdb.d/040_people.sql:ro
       - ../modules:/kk-modules:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d kk"]
@@ -99,22 +100,34 @@ services:
     environment:
       <<: *module-env
       # Chains act as their runs_as agent: one token per agent this runner may run chains for.
-      KK_AGENT_TOKENS: '{"urn:kk:agent:validator": "${KK_JWT_VALIDATOR:-}"}'
+      KK_AGENT_TOKENS: >-
+        {"urn:kk:agent:validator": "${KK_JWT_VALIDATOR:-}",
+         "urn:kk:agent:self-encoder": "${KK_JWT_SELF_ENCODER:-}",
+         "urn:kk:agent:ingest-filter": "${KK_JWT_INGEST_FILTER:-}"}
     volumes:
       - ../modules:/modules:ro
     depends_on: [postgrest]
     restart: unless-stopped
 
+  # Encodes files and stores artifact bytes; its scan chain (run by the chain runner) submits.
   self-encoder:
-    build: ../modules/self-encoder
+    build: {context: .., dockerfile: modules/self-encoder/Dockerfile}
     profiles: [modules]
     environment:
       <<: *module-env
-      KK_JWT: ${KK_JWT_SELF_ENCODER:-}
     volumes:
       - ..:/repo:ro                 # milestone 1: the system scans its own repository
       - artifacts:/artifacts
     depends_on: [postgrest]
+    restart: unless-stopped
+
+  # ingest-filter slot: gitleaks over candidate files before anything is stored.
+  ingest-filter:
+    build: {context: .., dockerfile: modules/ingest-filter-gitleaks/Dockerfile}
+    profiles: [modules]
+    volumes:
+      - ..:/repo:ro
+    restart: unless-stopped
 
   graph-decoder:
     build: ../modules/graph-decoder

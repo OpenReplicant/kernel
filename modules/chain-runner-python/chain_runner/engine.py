@@ -6,6 +6,7 @@ Runs: each step that writes to the kernel (a non-GET call to KK_API) gets its ow
 plan_step = the step IRI (<chain IRI>/<step id>), started before the step and finished after it.
 `${run.id}` in that step's config is the run id (e.g. generated_by of a change set). Steps that
 only read, and executions that do nothing, create no runs.
+A subchain step's output is the subchain's final message (a list of them with for_each).
 """
 from __future__ import annotations
 
@@ -155,7 +156,8 @@ class Runner:
             errors = [t for r in results if not r.ok for t in r.trace if "error" in t]
             if errors:
                 entry["sub_errors"] = errors[:3]
-            return ("success" if all(r.ok for r in results) else "failure"), msg
+            out = [r.msg for r in results] if "for_each" in cfg else results[0].msg
+            return ("success" if all(r.ok for r in results) else "failure"), out
         out = self._python(chain, step, msg)
         if kind == "filter":
             return ("true" if out else "false"), msg
