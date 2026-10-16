@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/no-reference
+input:
+  change_set: fixtures/no-reference.json
+expect:
+  outcome: invalid
+  reason: "schema: ops/0"

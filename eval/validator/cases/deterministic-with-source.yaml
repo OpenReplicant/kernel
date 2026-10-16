@@ -1,0 +1,5 @@
+id: urn:kk:eval:validator/deterministic-with-source
+input:
+  change_set: fixtures/deterministic-with-source.json
+expect:
+  outcome: valid

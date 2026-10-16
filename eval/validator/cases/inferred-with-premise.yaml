@@ -1,0 +1,5 @@
+id: urn:kk:eval:validator/inferred-with-premise
+input:
+  change_set: fixtures/inferred-with-premise.json
+expect:
+  outcome: valid

@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/chain-step-bad-type
+input:
+  change_set: fixtures/chain-step-bad-type.json
+expect:
+  outcome: invalid
+  reason: "shape: https://w3id.org/knowledge-kernel/ns#stepType"

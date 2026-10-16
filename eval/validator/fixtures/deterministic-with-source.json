@@ -1,0 +1,24 @@
+{
+  "idempotency_key": "e:1",
+  "attributed_to": "urn:kk:agent:self-encoder",
+  "generated_by": "00000000-0000-0000-0000-000000000001",
+  "target_scope": "urn:kk:scope:default",
+  "ops": [
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "rdfs:comment",
+      "object": {
+        "value": {
+          "@value": "Validates change sets"
+        }
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    }
+  ]
+}

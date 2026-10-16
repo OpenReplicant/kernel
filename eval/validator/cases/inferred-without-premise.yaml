@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/inferred-without-premise
+input:
+  change_set: fixtures/inferred-without-premise.json
+expect:
+  outcome: invalid
+  reason: "Invariant 3: inferred claims carry prov:wasDerivedFrom links to their premises."

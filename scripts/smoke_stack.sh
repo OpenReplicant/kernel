@@ -3,7 +3,9 @@
 #   T2: db, postgrest and caddy come up; GET /api/claims works with a module JWT, fails without one.
 #   T3: packs and slot catalog installed on first start (modules/pack-loader/tests/check_packs.sql),
 #       and a module sees the 42 slots through the API.
+#   T4: the validator container judges submitted change sets end to end (scripts/e2e_validator.py).
 # Usage: sh scripts/smoke_stack.sh        (needs docker compose, python3, curl)
+#        KK_BUILD_CA=/path/to/ca.crt sh scripts/smoke_stack.sh   (behind a TLS-intercepting proxy)
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 env_file=$(mktemp)
@@ -41,3 +43,16 @@ slots=$(curl -s -H "Authorization: Bearer $token" \
 echo "slots visible to a module through the API: $slots"
 [ "$slots" = 42 ]
 echo "T3 smoke test passed"
+
+sed -i "s/^KK_JWT_VALIDATOR=.*/KK_JWT_VALIDATOR=$token/" "$env_file"
+# KK_BUILD_CA: optional CA bundle for pip inside the build (machines behind a TLS-intercepting proxy).
+if [ -n "${KK_BUILD_CA:-}" ]; then
+  docker build -q --secret id=ca,src="$KK_BUILD_CA" -f "$root/modules/validator-shacl/Dockerfile" \
+    -t kk-smoke-validator "$root" >/dev/null
+else
+  $compose build validator
+fi
+$compose up -d --no-build --wait validator
+$compose exec -T \
+  -e AGENT_JWT="$(KK_JWT_SECRET=$KK_JWT_SECRET python3 "$root/scripts/mint_jwt.py" kkm_self_encoder --days 0.01)" \
+  -e VALIDATOR_JWT="$token" validator python - < "$root/scripts/e2e_validator.py"

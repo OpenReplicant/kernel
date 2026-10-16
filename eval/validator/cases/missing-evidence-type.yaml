@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/missing-evidence-type
+input:
+  change_set: fixtures/missing-evidence-type.json
+expect:
+  outcome: invalid
+  reason: "schema: ops/0"

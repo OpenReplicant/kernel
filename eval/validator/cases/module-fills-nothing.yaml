@@ -1,0 +1,8 @@
+id: urn:kk:eval:validator/module-fills-nothing
+input:
+  change_set: fixtures/module-fills-nothing.json
+  context:      # rdf:type claims the validator would fetch for referenced entities
+    - [urn:kk:slot:shape-validator, rdf:type, kk:Slot]
+expect:
+  outcome: invalid
+  reason: "A module fills at least one slot from the slot catalog."

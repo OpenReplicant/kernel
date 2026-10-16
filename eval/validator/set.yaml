@@ -1,0 +1,9 @@
+id: urn:kk:eval:validator
+under_test: urn:kk:module:validator-shacl
+slot: shape-validator
+gate: T4
+metrics:
+  - {name: accuracy, description: share of cases with the expected outcome and reason}
+pass: {accuracy: 1.0}
+# reason forms: a shape's sh:message; "shape: <path IRI>" for a violation on that path;
+# "schema: <JSON path prefix>" for a JSON Schema error at or below that path.

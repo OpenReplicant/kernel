@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
 
   validator:
-    build: ../modules/validator-shacl
+    build: {context: .., dockerfile: modules/validator-shacl/Dockerfile}
     profiles: [modules]
     environment:
       <<: *module-env

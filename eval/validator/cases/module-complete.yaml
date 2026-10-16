@@ -1,0 +1,7 @@
+id: urn:kk:eval:validator/module-complete
+input:
+  change_set: fixtures/module-complete.json
+  context:      # rdf:type claims the validator would fetch for referenced entities
+    - [urn:kk:slot:shape-validator, rdf:type, kk:Slot]
+expect:
+  outcome: valid
