@@ -14,7 +14,7 @@
 #   identity/labels  RDFS, SKOS, DCTerms     provenance  PROV-O       plans  P-Plan
 #   quotes/spans     Web Annotation (oa:)     constraints SHACL        mappings SSSOM as skos:*Match
 #   structure        TOSCA mirror (kk-tosca.ttl)                       interfaces WoT TD (td:)
-# Namespace is a placeholder until a w3id.org redirect is registered (docs/decisions.md D-14).
+# Namespace is a placeholder until a w3id.org redirect is registered (docs/decisions.md O-2).
 
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;

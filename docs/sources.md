@@ -65,7 +65,7 @@ link wasn't recorded; search by name.
 
 | Piece | Source |
 | --- | --- |
-| Chain runner | RuleGo — https://github.com/rulego/rulego ; RuleGo-Server — https://gitee.com/rulego/rulego-server ; components — https://github.com/rulego/rulego-components |
+| Chain runner | RuleGo — https://github.com/rulego/rulego ; RuleGo-Server — https://github.com/rulego/rulego/tree/main/server (v0.38.0 is tag v0.38.0 of that repository; the gitee mirror was unreachable in T1) ; components — https://github.com/rulego/rulego-components |
 | Durable workflows on Postgres (considered, dropped from default) | DBOS Transact — https://github.com/DBOS-project/dbos-transact-py |
 | Workflow platform on Postgres (considered; AGPL) | Windmill — https://cdn.jsdelivr.net/gh/windmill-labs/windmill@main/README.md |
 | NOTIFY → WebSocket | pg_eventserv — https://github.com/crunchydata/pg_eventserv |
