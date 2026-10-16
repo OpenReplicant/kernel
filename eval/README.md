@@ -33,9 +33,15 @@ expect:
 | --- | --- | --- |
 | `validator` | validator-shacl | T4 |
 | `belief-v0` | belief-corroboration-v0 | T7 |
-| `runner-parity` | chain-runner slot: Python vs RuleGo-Server on the same messages | G4 |
-| `round-trip` | chain encoder/decoder pair | G6 |
-| `self-model` | agent + kernel-mcp: questions about the system's own structure (`questions.yaml`) | G7 |
+| `self-model` | an agent over kernel-mcp: 12 questions about the system's own structure (`questions.yaml`; graded by `scripts/eval_self.py`, D-46) | G7 |
+
+The chain sets (`runner-parity`, `round-trip`) were retired with the chain format (D-41).
+
+The self-model set has its own format (one file, `questions.yaml`): each question names the expected
+answer terms and the claim pattern that answers it. `scripts/eval_self.py` runs a deterministic
+reference agent over MCP (in the kernel smoke), grades any live agent's answers (`--grade FILE`), or asks
+Claude Code headless (`--claude`). Live runs are kept in `self-model/runs/` (their claim ids belong to the
+database they ran against).
 
 A slot competition is two modules run against the same set; for single-active slots the evaluator's
 recorded scores decide which module is active, and the decision is logged in `docs/decisions.md`.

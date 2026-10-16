@@ -9,7 +9,7 @@ existing open tooling — what this repo builds is the kernel, its conventions a
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
-2. `docs/milestone-1.md` — current work: tasks T0–T16 and gates G1–G7.
+2. `docs/milestone-2.md` — current work (BPM and devops); `docs/milestone-1.md` — the kernel (done).
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
 5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
@@ -57,7 +57,7 @@ python shapes/tests/test_shapes.py                                         # SHA
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, T13, T17, T19, T20 on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20 on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1
 sh scripts/e2e_module.sh                                                   # T18: a module in its own sandboxed container; needs Docker
 ```
@@ -80,14 +80,15 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/
-scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer.py + e2e_ui.mjs, e2e_module.sh/.py, check_manifests.py
+scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer.py + e2e_ui.mjs, e2e_module.sh/.py, eval_self.py,
+                 check_manifests.py
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
-eval/            eval sets (data): validator, belief-v0
+eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/)
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/
 ```
 
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T15 and T17–T20 are done; G1–G4 pass (`scripts/smoke_kernel.sh`). Next: T16 (self-questions eval,
-G7); then milestone 2 (BPM and devops modules and views). Work one task at a time; each ends with its check passing.
+Milestone 1 is done: T0–T20; G1–G4 and G7 pass (`scripts/smoke_kernel.sh`; G5 and G6 parked with the
+chain format). Next: milestone 2 (`docs/milestone-2.md`): BPM and devops modules and views. Work one task at a time; each ends with its check passing.

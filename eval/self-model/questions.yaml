@@ -1,0 +1,77 @@
+# Self-questions (T16, gate G7): questions about the system's own structure, answered from the self-model
+# (claims made by the self-encoder and the packs). An agent connected over MCP answers each one citing
+# claim ids and showing their belief. Graded by scripts/eval_self.py:
+#   correct   every `expect` term (or the value read from `expect_from`, file:key) appears in the answer
+#             and is the subject or object of a claim the answer cites (grounded); no `exclude` term is
+#             both named and backed by a cited claim of the question's predicate (so citing everything
+#             is wrong, while naming the others for contrast is fine)
+#   cited     the answer cites at least one claim id, and every cited id resolves with `explain`
+#   belief    the answer shows belief (the word and a number)
+# `evidence` is the claim pattern that answers the question (subject/predicate/object_entity/value) and
+# `answer` which side of it is the answer; the reference agent uses them, a live agent never sees them.
+version: 1
+questions:
+  - id: q01
+    question: Which module fills the shape-validator slot?
+    expect: [validator-shacl]
+    exclude: [kernel-mcp, belief-corroboration-v0]
+    evidence: {predicate: "kk:fills", object_entity: "urn:kk:slot:shape-validator"}
+    answer: subject
+  - id: q02
+    question: Which slots does the self-encoder module fill?
+    expect: [source-connector, encoder]
+    evidence: {subject: "urn:kk:module:self-encoder", predicate: "kk:fills"}
+    answer: object
+  - id: q03
+    question: Which modules fill the ui slot?
+    expect: [ui, view-modules]
+    exclude: [kernel-mcp, validator-shacl]
+    evidence: {predicate: "kk:fills", object_entity: "urn:kk:slot:ui"}
+    answer: subject
+  - id: q04
+    question: Which agent does the belief model module (belief-corroboration-v0) run as?
+    expect: [belief-corroboration]
+    evidence: {subject: "urn:kk:module:belief-corroboration-v0", predicate: "kk:runsAs"}
+    answer: object
+  - id: q05
+    question: Under which license is the ingest filter module (ingest-filter-gitleaks) released?
+    expect: [MIT]
+    evidence: {subject: "urn:kk:module:ingest-filter-gitleaks", predicate: "dcterms:license"}
+    answer: object
+  - id: q06
+    question: How many modules may fill the belief-model slot at once (its cardinality)?
+    expect: [one]
+    evidence: {subject: "urn:kk:slot:belief-model", predicate: "kk:cardinality"}
+    answer: object
+  - id: q07
+    question: Which modules are not protected?
+    expect: [self-encoder, ui, view-modules]
+    exclude: [validator-shacl, kernel-mcp, pack-loader, ingest-filter-gitleaks]
+    evidence: {predicate: "kk:protected", value: false}
+    answer: subject
+  - id: q08
+    question: In the compose stack, which service does the kernel service depend on?
+    expect: [init]
+    evidence: {subject: "urn:kk:node:kernel", predicate: "kkt:dependsOn"}
+    answer: object
+  - id: q09
+    question: In the compose stack, which service does the caddy service depend on?
+    expect: [kernel]
+    evidence: {subject: "urn:kk:node:caddy", predicate: "kkt:dependsOn"}
+    answer: object
+  - id: q10
+    question: What version is the kernel-mcp module?
+    expect_from: modules/kernel-mcp/module.yaml:version
+    evidence: {subject: "urn:kk:module:kernel-mcp", predicate: "owl:versionInfo"}
+    answer: object
+  - id: q11
+    question: Which slot does the pack-loader module fill?
+    expect: [vocabulary-pack]
+    evidence: {subject: "urn:kk:module:pack-loader", predicate: "kk:fills"}
+    answer: object
+  - id: q12
+    question: Which module provides the agent-interface slot?
+    expect: [kernel-mcp]
+    exclude: [validator-shacl, ui]
+    evidence: {predicate: "kk:fills", object_entity: "urn:kk:slot:agent-interface"}
+    answer: subject

@@ -6,7 +6,7 @@ each done by a swappable default module; everything else is a module too. Use it
 add the skill file, harness hooks and further modules (`docs/harness.md`).
 
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
-- **Current work and status:** `docs/milestone-1.md`
+- **Current work and status:** `docs/milestone-2.md` (milestone 1, the kernel, is done: `docs/milestone-1.md`)
 - **Decisions and open questions:** `docs/decisions.md`
 - **Working rules:** `CLAUDE.md`
 
