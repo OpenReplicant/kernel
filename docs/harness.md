@@ -104,6 +104,13 @@ docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml --env-file d
 The module gets its own login (it acts only as itself), a read-only filesystem, no capabilities and a
 network that reaches Postgres and nothing else.
 
+## Moving or sharing claims
+
+`kk export > kernel.nq` writes every claim with its provenance as N-Quads, one named graph per scope, in
+standard vocabularies (PROV, Dublin Core, Web Annotation, DQV; D-45); `--scope` limits it. `kk import
+kernel.nq` loads it into another kernel, keeping each claim's agent, scope, references, derivations
+and status; claims already there are not added twice.
+
 ## Ingesting a repository
 
 The self-encoder scans a repository into claims (module manifests, compose files, vocabularies, SQL),

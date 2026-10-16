@@ -8,9 +8,10 @@
   kk review list|show|approve|reject
   kk scan --repo DIR           ingest a repository (self-encoder, ingest filter first)
   kk module install DIR        a module from this repository: migration, own login, sandboxed container
+  kk export / kk import FILE   every claim with its provenance as N-Quads (scopes as named graphs)
   kk token ROLE                a bearer token for MCP over HTTP
 
-Logins. Admin commands (init, person, agent, module) use KK_ADMIN_URL, a superuser connection string (default:
+Logins. Admin commands (init, person, agent, module, export, import) use KK_ADMIN_URL, a superuser connection string (default:
 the libpq PG* variables). serve uses DATABASE_URL (kk_authenticator, which switches to each module's
 role). status, review and the agent's harness use the caller's own login (KK_DATABASE_URL, else
 DATABASE_URL). Agents never get the authenticator or admin logins (D-37).
@@ -109,11 +110,11 @@ def cmd_agent(a) -> None:
 
 
 # ---------------------------------------------------------------- init
-def migrations() -> list[Path]:
+def migrations(packs: bool = True) -> list[Path]:
     """Kernel v0, then each default module's migration (role + agent row), then the vocabulary packs."""
     mods = sorted(p for p in ROOT.glob("modules/*/migration.sql") if p.parent.name != "_template")
     return [ROOT / "kernel/schema/001_kernel.sql", ROOT / "kernel/schema/002_bootstrap.sql", *mods,
-            ROOT / "modules/pack-loader/packs.sql"]
+            *([ROOT / "modules/pack-loader/packs.sql"] if packs else [])]
 
 
 def cmd_init(a) -> None:
@@ -122,7 +123,7 @@ def cmd_init(a) -> None:
     if installed:
         print("kernel already installed; nothing to do", file=sys.stderr)
     else:
-        for f in migrations():
+        for f in migrations(packs=not a.no_packs):
             with admin() as conn:  # a fresh session per file: files SET ROLE
                 conn.execute("set client_min_messages = warning")
                 conn.execute(f.read_text())
@@ -228,6 +229,9 @@ def main(argv=None) -> None:
     if argv[:1] == ["review"]:
         from .review import main as review
         return review(argv[1:])
+    if argv[:1] in (["export"], ["import"]):
+        from .transfer import main as transfer
+        return transfer(argv[0], argv[1:])
     if argv[:1] == ["module"]:
         from .modules import main as module
         return module(argv[1:])
@@ -239,7 +243,9 @@ def main(argv=None) -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog="\n".join(__doc__.splitlines()[2:]))
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("init", help="install the kernel, default modules and packs").set_defaults(fn=cmd_init)
+    p = sub.add_parser("init", help="install the kernel, default modules and packs")
+    p.add_argument("--no-packs", action="store_true", help="leave out the vocabulary packs (e.g. to import a kk export)")
+    p.set_defaults(fn=cmd_init)
     for kind, fn in (("person", cmd_person), ("agent", cmd_agent)):
         p = sub.add_parser(kind, help=f"add an own login for a {kind}").add_subparsers(dest="action", required=True)
         p = p.add_parser("add")
@@ -259,6 +265,8 @@ def main(argv=None) -> None:
     sub.add_parser("review", help="review lane: list, show, approve, reject")
     sub.add_parser("scan", help="ingest a repository (--repo DIR)")
     sub.add_parser("module", help="install a module from this repository, sandboxed")
+    sub.add_parser("export", help="every claim with provenance as N-Quads, scopes as named graphs")
+    sub.add_parser("import", help="claims from a kk export, keeping attribution")
     p = sub.add_parser("token", help="bearer token for MCP over HTTP (needs KK_JWT_SECRET)")
     p.add_argument("role")
     p.add_argument("--days", type=float, default=30)

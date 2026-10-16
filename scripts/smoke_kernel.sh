@@ -51,6 +51,8 @@ $py "$root/scripts/e2e_kernel.py"
 $py "$root/scripts/e2e_ingest.py"
 KK_DATABASE_URL="$OWNER_DATABASE_URL" kk status > /dev/null
 echo "T17 kk alone passed"
+# T19: export and import round trip into a fresh kernel.
+KK_SMOKE_DB="$db" $py "$root/scripts/e2e_transfer.py"
 # T20 and G3: the UI in headless Chromium (needs Node and the playwright package; KK_REQUIRE_UI=1 makes
 # a missing browser a failure, as in CI).
 if (cd "$root" && node -e "require('playwright')" 2> /dev/null); then
