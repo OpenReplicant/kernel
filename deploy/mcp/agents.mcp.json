@@ -8,8 +8,7 @@
       ],
       "env": {
         "PYTHONPATH": "${KK_REPO_PATH}/modules/kernel-mcp",
-        "DATABASE_URL": "${KK_DATABASE_URL}",
-        "KK_ROLE": "agent_claude_code"
+        "DATABASE_URL": "${KK_AGENT_DATABASE_URL}"
       }
     },
     "git": {

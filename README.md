@@ -23,8 +23,8 @@ python scripts/mint_jwt.py agent_claude_code   # the agent's bearer token for /m
 
 | Who | Role | Identity |
 | --- | --- | --- |
-| Local owner (reviews, redacts) | `person_owner` | `KK_ROLE=person_owner python scripts/review.py list` |
-| Claude Code over MCP | `agent_claude_code` | `KK_ROLE` (stdio) or a JWT minted for the role (HTTP) |
+| Local owner (reviews, redacts) | `person_owner` | own login (`KK_OWNER_PASSWORD`), used by `scripts/review.py` |
+| Claude Code over MCP | `agent_claude_code` | own login (`KK_AGENT_CLAUDE_CODE_PASSWORD`) for stdio, or a JWT minted for the role (HTTP) |
 
 Module and vocabulary changes wait in the review lane: `python scripts/review.py list`, then
 `approve <ids>`.

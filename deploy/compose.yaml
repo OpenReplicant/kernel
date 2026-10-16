@@ -5,15 +5,17 @@
 #   docker compose ... --profile http-api up -d                                    # + PostgREST at /api
 #
 # The kernel needs none of this to be useful: an agent harness can run kernel-mcp over stdio against
-# any Postgres with the kernel installed (docs/harness.md). Works the same with Podman. Only Caddy
-# publishes a port, on localhost; it is replaceable by any reverse proxy (it only routes /mcp, /api).
+# any Postgres with the kernel installed (docs/harness.md). Works the same with Podman. Ports are
+# published on localhost only: Postgres (for stdio agents and review.py, each with its own login) and
+# Caddy, which is replaceable by any reverse proxy (it only routes /mcp, /api).
 # Pin every image by exact tag or digest in .env before first use (docs/decisions.md D-12).
 # Modules parked by D-36 (runners, chain decoder, graph decoder, UI) are under parked/.
 
 name: knowledge-kernel
 
 x-kernel-login: &kernel-login
-  # One login that switches to each service's own role (SET ROLE); never a superuser.
+  # One login that switches to each service's own role (SET ROLE); never a superuser. Only services
+  # hold it; agents and people log in as themselves (060_logins.sh, D-37).
   DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
 
 services:
@@ -26,6 +28,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
       KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
+      KK_AGENT_CLAUDE_CODE_PASSWORD: ${KK_AGENT_CLAUDE_CODE_PASSWORD:-}
+      KK_OWNER_PASSWORD: ${KK_OWNER_PASSWORD:-}
     volumes:
       - db-data:/var/lib/postgresql/data
       - ../kernel/schema/001_kernel.sql:/docker-entrypoint-initdb.d/001_kernel.sql:ro
@@ -35,7 +39,10 @@ services:
       - ./postgres/030_packs.sh:/docker-entrypoint-initdb.d/030_packs.sh:ro
       - ./postgres/040_people.sql:/docker-entrypoint-initdb.d/040_people.sql:ro
       - ./postgres/050_agents.sql:/docker-entrypoint-initdb.d/050_agents.sql:ro
+      - ./postgres/060_logins.sh:/docker-entrypoint-initdb.d/060_logins.sh:ro
       - ../modules:/kk-modules:ro
+    ports:
+      - "127.0.0.1:${KK_DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d kk"]
       interval: 5s

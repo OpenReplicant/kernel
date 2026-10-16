@@ -2,7 +2,8 @@
 through kernel-mcp over stdio, submits a claim, sees the validator apply it, finds and explains it;
 the kernel refuses what that identity may not do; the shared HTTP mode refuses missing or forged tokens.
 
-Env: DATABASE_URL (kk_authenticator), PYTHONPATH including modules/kernel-mcp.
+Env: DATABASE_URL (kk_authenticator, for the http server), AGENT_DATABASE_URL (agent_claude_code's
+own login), OWNER_DATABASE_URL (person_owner's own login), PYTHONPATH including modules/kernel-mcp.
 """
 import asyncio
 import json
@@ -16,6 +17,7 @@ from pathlib import Path
 
 import httpx2 as httpx
 import jwt
+import psycopg
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
@@ -30,10 +32,9 @@ def check(name, ok, detail=""):
     print(("ok  " if ok else "FAIL"), name, detail)
 
 
-def stdio(role):
-    env = {k: v for k, v in os.environ.items() if k in ("PATH", "PYTHONPATH", "DATABASE_URL", "HOME")}
-    if role:
-        env["KK_ROLE"] = role
+def stdio(dsn):
+    env = {k: v for k, v in os.environ.items() if k in ("PATH", "PYTHONPATH", "HOME")}
+    env["DATABASE_URL"] = dsn
     return stdio_client(StdioServerParameters(command=sys.executable, args=["-m", "kernel_mcp"], env=env))
 
 
@@ -65,7 +66,7 @@ async def settle(s, cs_id):
 
 
 async def agent_session():
-    async with stdio("agent_claude_code") as (r, w), ClientSession(r, w) as s:
+    async with stdio(os.environ["AGENT_DATABASE_URL"]) as (r, w), ClientSession(r, w) as s:
         await s.initialize()
         names = {t.name for t in (await s.list_tools()).tools}
         check("tools listed over stdio", {"search", "get_entity", "query_claims", "explain", "submit_change_set",
@@ -108,7 +109,8 @@ async def agent_session():
         row = await settle(s, sub["id"])
         check("typing a new property goes to the review lane", row["status"] == "awaiting_review", row["status"])
         reviewed = subprocess.run([sys.executable, str(ROOT / "scripts/review.py"), "approve", sub["id"], "--note", "smoke"],
-                                  capture_output=True, text=True, env={**os.environ, "KK_ROLE": "person_owner"})
+                                  capture_output=True, text=True,
+                                  env={**os.environ, "DATABASE_URL": os.environ["OWNER_DATABASE_URL"]})
         row, _ = await tool(s, "get_change_set", {"change_set_id": sub["id"]})
         check("a person approves it (scripts/review.py) and it is applied", row["status"] == "applied",
               (reviewed.stdout + reviewed.stderr).strip()[:100])
@@ -116,10 +118,18 @@ async def agent_session():
         done, _ = await tool(s, "finish_run", {"run_id": run, "status": "succeeded"})
         check("finishes its run", done == "succeeded")
 
-    async with stdio(None) as (r, w), ClientSession(r, w) as s:
+    async with stdio(os.environ["DATABASE_URL"]) as (r, w), ClientSession(r, w) as s:
         await s.initialize()
         _, err = await tool(s, "query_claims")
-        check("no identity is refused", err and "KK_ROLE" in err, (err or "")[:60])
+        check("stdio refuses a login that can switch roles", err and "own login" in err, (err or "")[:70])
+
+    with psycopg.connect(os.environ["AGENT_DATABASE_URL"]) as conn:
+        try:
+            conn.execute("set role person_owner")
+            became = True
+        except psycopg.Error:
+            became = False
+        check("the agent's login cannot become the owner", not became)
 
 
 async def http_session():

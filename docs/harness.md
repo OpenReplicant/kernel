@@ -19,14 +19,23 @@ Postgres 16+ you run yourself:
 psql -d kk -f kernel/schema/001_kernel.sql -f kernel/schema/002_bootstrap.sql \
             -f modules/validator-shacl/migration.sql -f deploy/postgres/040_people.sql \
             -f deploy/postgres/050_agents.sql
-psql -d kk -c "alter role kk_authenticator password '<secret>'"
+psql -d kk -c "alter role kk_authenticator password '<service secret>'" \
+           -c "alter role agent_claude_code login password '<agent secret>'" \
+           -c "alter role person_owner login password '<owner secret>'"
 pip install -r modules/validator-shacl/requirements.txt
-DATABASE_URL=postgresql://kk_authenticator:<secret>@localhost/kk KK_ROLE=kkm_validator \
+DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_ROLE=kkm_validator \
   PYTHONPATH=modules/validator-shacl python -m validator
 ```
 
-`kk_authenticator` is a login that can only switch to the roles granted to it (each agent's own role);
-the kernel enforces clearance and attribution by that role. `scripts/smoke_kernel.sh` does all of this
+Who holds which login (D-37):
+
+| Login | Held by | Can act as |
+| --- | --- | --- |
+| `kk_authenticator` | services you run (validator, kernel-mcp `--http`, PostgREST) | any role granted to it, so never give it to an agent |
+| `agent_claude_code` (one per agent) | that agent's harness | itself only |
+| `person_owner` (one per person) | that person | itself only |
+
+The kernel enforces clearance and attribution by the role. `scripts/smoke_kernel.sh` does all of this
 in a throwaway database and checks it end to end.
 
 ## 2. The MCP server
@@ -38,12 +47,13 @@ stdio, one agent per harness. For Claude Code (`.mcp.json`; the same entry is in
 {"mcpServers": {"kernel": {
   "command": "python", "args": ["-m", "kernel_mcp"],
   "env": {"PYTHONPATH": "/path/to/kernel/modules/kernel-mcp",
-          "DATABASE_URL": "postgresql://kk_authenticator:<secret>@localhost/kk",
-          "KK_ROLE": "agent_claude_code"}}}}
+          "DATABASE_URL": "postgresql://agent_claude_code:<agent secret>@localhost/kk"}}}}
 ```
 
 Install its dependencies once: `pip install -r modules/kernel-mcp/requirements.txt`. Each agent gets
-its own role and agent IRI (pattern: `deploy/postgres/050_agents.sql`).
+its own login and agent IRI (pattern: `deploy/postgres/050_agents.sql`); stdio refuses a login that
+can switch roles. With the compose stack, Postgres is on `localhost:5432` and the agent's password is
+`KK_AGENT_CLAUDE_CODE_PASSWORD` in `deploy/.env`.
 
 Shared server for several agents: `python -m kernel_mcp --http` with `KK_JWT_SECRET`; each request
 sends `Authorization: Bearer <JWT>` whose `role` claim is the agent's role
@@ -57,4 +67,5 @@ Copy `modules/kernel-mcp/SKILL.md` into the harness's skills folder (Claude Code
 ## Reviewing
 
 Typing new properties or classes goes to the review lane. A person approves with
-`DATABASE_URL=... KK_ROLE=person_owner python scripts/review.py list | approve <ids>`.
+`DATABASE_URL=postgresql://person_owner:<owner secret>@localhost/kk python scripts/review.py list`, then
+`approve <ids>`.

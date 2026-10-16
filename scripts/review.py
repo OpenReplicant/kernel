@@ -6,8 +6,8 @@
   python scripts/review.py approve --all [--from AGENT_IRI] [--note TEXT]
   python scripts/review.py reject <id>... --note TEXT
 
-Env: DATABASE_URL (a login that may SET ROLE to the reviewer, e.g. kk_authenticator), KK_ROLE (the
-reviewer's role, default person_owner). Needs psycopg. The kernel refuses self-approval (KK025) and
+Env: DATABASE_URL, the reviewer's own login (e.g. person_owner; deploy/postgres/060_logins.sh).
+Needs psycopg. The kernel refuses self-approval (KK025) and
 approvals outside the reviewer's cleared scopes.
 """
 import argparse
@@ -16,13 +16,10 @@ import os
 import sys
 
 import psycopg
-from psycopg import sql
 
 
 def connect():
-    conn = psycopg.connect(os.environ["DATABASE_URL"], autocommit=True)
-    conn.execute(sql.SQL("set role {}").format(sql.Identifier(os.environ.get("KK_ROLE", "person_owner"))))
-    return conn
+    return psycopg.connect(os.environ["DATABASE_URL"], autocommit=True)
 
 
 def summary(row):

@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 # Gate G4 (kernel alone): only Postgres, the validator and kernel-mcp — no Docker, no PostgREST, no
-# runner. A fresh agent session submits a claim over MCP (stdio), sees it applied and cites it.
+# runner. A fresh agent session submits a claim over MCP (stdio, its own login), sees it applied and
+# cites it; it cannot act as anyone else.
 # Usage: PGHOST=localhost PGUSER=<superuser> PGPASSWORD=... sh scripts/smoke_kernel.sh
 #        PYTHON: interpreter with requirements-ci.txt installed (default python3).
 set -eu
@@ -18,12 +19,19 @@ psql -d "$db" -v ON_ERROR_STOP=1 -q -o /dev/null \
   -f "$root/modules/validator-shacl/migration.sql" \
   -f "$root/deploy/postgres/040_people.sql" \
   -f "$root/deploy/postgres/050_agents.sql"
-# A throwaway password for the login both services use to switch to their roles (never committed).
-pw=$($py -c 'import secrets; print(secrets.token_hex(24))')
-psql -d "$db" -v ON_ERROR_STOP=1 -q -v pw="$pw" <<'SQL'
-alter role kk_authenticator password :'pw';
+# Throwaway passwords (never committed): the services' switching login, and the agent's and the
+# owner's own logins, which can act only as themselves (D-37).
+pw() { $py -c 'import secrets; print(secrets.token_hex(24))'; }
+auth_pw=$(pw); agent_pw=$(pw); owner_pw=$(pw)
+psql -d "$db" -v ON_ERROR_STOP=1 -q -v a="$auth_pw" -v g="$agent_pw" -v o="$owner_pw" <<'SQL'
+alter role kk_authenticator password :'a';
+alter role agent_claude_code login password :'g';
+alter role person_owner login password :'o';
 SQL
-export DATABASE_URL="postgresql://kk_authenticator:$pw@$host:${PGPORT:-5432}/$db"
+url() { echo "postgresql://$1:$2@$host:${PGPORT:-5432}/$db"; }
+export DATABASE_URL="$(url kk_authenticator "$auth_pw")"
+export AGENT_DATABASE_URL="$(url agent_claude_code "$agent_pw")"
+export OWNER_DATABASE_URL="$(url person_owner "$owner_pw")"
 
 log=$(mktemp)
 KK_ROLE=kkm_validator KK_SWEEP_SECONDS=5 PYTHONPATH="$root/modules/validator-shacl" \

@@ -191,10 +191,10 @@ belongs in a module that reads views and submits change sets.
   role mapped one-to-one to an agent IRI in `kernel.agent`. Modules use roles named `kkm_*`, members of
   `kk_agent` (plus `kk_validator`, `kk_reviewer` or `kk_steward` where needed). People use `person_*` roles
   (the local owner, `person_owner`, reviews and may redact; D-26) and harness agents that work through MCP
-  use `agent_*` roles (`agent_claude_code`; D-28). Clients connect as `kk_authenticator` and switch to
-  the caller's role (`SET ROLE`): kernel-mcp from `KK_ROLE` (stdio) or the role in the caller's JWT
-  (`--http`, `scripts/mint_jwt.py`), PostgREST from the JWT (D-36). Each role is granted to
-  `kk_authenticator`.
+  use `agent_*` roles (`agent_claude_code`; D-28). Agents and people log in as themselves (stdio kernel-mcp,
+  `scripts/review.py`). Services the operator runs (validator, kernel-mcp `--http`, PostgREST) connect
+  as `kk_authenticator` and switch to the caller's role from a JWT (`scripts/mint_jwt.py`); agents never
+  hold that login (D-36, D-37). Each role is granted to `kk_authenticator`.
 - **Scopes are trust boundaries.** `kernel.scope_grant` says which roles may read and write each
   scope. Defaults: `urn:kk:scope:vocab` and `urn:kk:scope:default`, readable and writable by `kk_agent`.
   Validators and reviewers see change sets only for scopes they can read.

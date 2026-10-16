@@ -1,12 +1,14 @@
 """Agent-facing MCP tools over the kernel's api schema, on the MCP Python SDK v2 (MCPServer).
 
 Talks to Postgres directly. Every tool call runs in its own transaction as the caller's database
-role (SET LOCAL ROLE), so row-level security, write clearance and attribution are enforced by
-Postgres per agent; this server decides nothing. Who the caller is:
-  - stdio (one harness, one agent): KK_ROLE, e.g. agent_claude_code.
-  - http (shared server): a bearer JWT signed with KK_JWT_SECRET whose `role` claim names the role
-    (the same tokens PostgREST accepts); a request without a valid token is refused.
-DATABASE_URL is a login that may SET ROLE to those roles (kk_authenticator in the default install).
+role, so row-level security, write clearance and attribution are enforced by Postgres per agent;
+this server decides nothing. Who the caller is:
+  - stdio (one harness, one agent): DATABASE_URL is the agent's own login (e.g. agent_claude_code).
+    The server never switches roles in this mode, and refuses a login that could (kk_authenticator,
+    superusers): whoever holds such a password could act as anyone, the owner included.
+  - http (shared server): DATABASE_URL is kk_authenticator, which only this server holds; each
+    request's bearer JWT (signed with KK_JWT_SECRET, `role` claim, the same tokens PostgREST accepts)
+    names the role it switches to (SET LOCAL ROLE). A request without a valid token is refused.
 Every claim returned carries its id and belief, so answers can cite them (invariant 6).
 """
 from __future__ import annotations
@@ -57,30 +59,36 @@ def expand(term: str | None) -> str | None:
     return term
 
 
-def caller_role(ctx: Context) -> str:
-    auth = (ctx.headers or {}).get("authorization", "") if REQUIRE_TOKEN else ""
-    if REQUIRE_TOKEN:
-        if not auth.lower().startswith("bearer ") or not auth[7:].strip():
-            raise KernelError("no bearer token: send 'Authorization: Bearer <your agent JWT>'")
-        try:
-            claims = jwt.decode(auth[7:].strip(), os.environ["KK_JWT_SECRET"], algorithms=["HS256"])
-        except jwt.PyJWTError as e:
-            raise KernelError(f"invalid token: {e}") from None
-        if not claims.get("role"):
-            raise KernelError("token has no role claim")
-        return claims["role"]
-    role = os.environ.get("KK_ROLE")
-    if not role:
-        raise KernelError("no identity: set KK_ROLE to your agent's database role")
-    return role
+def caller_role(ctx: Context) -> str | None:
+    """The role to switch to (http), or None when the login itself is the caller (stdio)."""
+    if not REQUIRE_TOKEN:
+        return None
+    auth = (ctx.headers or {}).get("authorization", "")
+    if not auth.lower().startswith("bearer ") or not auth[7:].strip():
+        raise KernelError("no bearer token: send 'Authorization: Bearer <your agent JWT>'")
+    try:
+        claims = jwt.decode(auth[7:].strip(), os.environ["KK_JWT_SECRET"], algorithms=["HS256"])
+    except jwt.PyJWTError as e:
+        raise KernelError(f"invalid token: {e}") from None
+    if not claims.get("role"):
+        raise KernelError("token has no role claim")
+    return claims["role"]
+
+
+SWITCHING_LOGIN = """select rolsuper or rolname = 'kk_authenticator' from pg_roles where rolname = current_user"""
 
 
 async def query(ctx: Context, statement: str, params: tuple | dict = ()) -> Any:
-    """Run one statement as the caller's role; returns the first column of the first row."""
+    """Run one statement as the caller; returns the first column of the first row."""
+    role = caller_role(ctx)
     try:
         async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"]) as conn:
             async with conn.transaction():
-                await conn.execute(sql.SQL("set local role {}").format(sql.Identifier(caller_role(ctx))))
+                if role:
+                    await conn.execute(sql.SQL("set local role {}").format(sql.Identifier(role)))
+                elif (await (await conn.execute(SWITCHING_LOGIN)).fetchone())[0]:
+                    raise KernelError("stdio needs the agent's own login in DATABASE_URL, not one that can "
+                                      "switch roles (kk_authenticator or a superuser)")
                 cur = await conn.execute(statement, params)
                 row = await cur.fetchone()
                 return row[0] if row else None

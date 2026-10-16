@@ -1,8 +1,8 @@
 """Run kernel-mcp.
 
-  python -m kernel_mcp            stdio, one agent: DATABASE_URL + KK_ROLE (drop into any MCP harness)
+  python -m kernel_mcp            stdio, one agent: DATABASE_URL = the agent's own login (any MCP harness)
   python -m kernel_mcp --http     streamable HTTP at /mcp (stateless, JSON responses), many agents:
-                                  DATABASE_URL + KK_JWT_SECRET; each request carries its own bearer JWT
+                                  DATABASE_URL (kk_authenticator) + KK_JWT_SECRET; each request carries its own bearer JWT
 
 HTTP env: PORT (default 8000), KK_MCP_ALLOWED_HOSTS (comma-separated Host values accepted, for
 DNS-rebinding protection; default: localhost and 127.0.0.1 on any port, and kernel-mcp:8000).
