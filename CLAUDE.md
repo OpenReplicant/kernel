@@ -73,7 +73,8 @@ kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
-ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile, packs.yaml, slots.yaml
+ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile/bbo/sosa, mappings.ttl,
+                 packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); _template/

@@ -50,8 +50,16 @@ Rules the kernel enforces (your change set is marked invalid otherwise):
 - `evidence_type: extracted` claims include the exact supporting `quote`.
 - `evidence_type: inferred` claims list their premises in `derived_from`, and a derived claim cannot be
   placed in a scope readable by more people than its inputs.
-- Predicates must be approved properties. To propose a new one, submit `rdf:type owl:ObjectProperty`
-  (or similar) for it — that goes to the review lane automatically.
+- Predicates must be approved properties. Before proposing a new one, look for a term that already
+  exists: first in the installed packs (`search` or `query_claims` on `rdf:type owl:ObjectProperty`),
+  then in the catalogs listed under `catalogs:` in `ontology/packs.yaml` (LOV, W3C Recommendations,
+  schema.org, OBO Foundry, BioPortal). Only if none fits, submit `rdf:type owl:ObjectProperty` (or
+  similar) for it with the vocabulary it comes from — that goes to the review lane automatically.
+- Processes use BBO (`https://www.irit.fr/recherches/MELODI/ontologies/BBO#`: `has_nextFlowNode`,
+  `has_container`, `Task`, gateways); observations use SOSA (`http://www.w3.org/ns/sosa/`): one
+  `observed` claim per feature, property and window — subject the feature of interest, predicate
+  `sosa:hasSimpleResult`, qualifier `sosa:observedProperty`, `valid_from`/`valid_to` the window. These
+  two have no kernel prefix: write full IRIs.
 - You cannot verify claims made by your own module or agent.
 - Nothing is deleted: use `set_status` with `deprecated` + `reason` (`superseded` with `replaced_by`,
   `refuted`, or `retracted`). Use `expect_status` so you don't overwrite someone else's change.

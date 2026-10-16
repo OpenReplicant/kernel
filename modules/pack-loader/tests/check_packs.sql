@@ -30,6 +30,33 @@ begin
   end if;
   raise notice 'ok: 32 kk/kkt/kkp properties typed';
 
+  -- Milestone 2 vocabularies (D-47): the BBO and SOSA terms the process and devops modules write.
+  select string_agg(p, ', ') into missing
+  from unnest(array[
+    'https://www.irit.fr/recherches/MELODI/ontologies/BBO#has_nextFlowNode',
+    'https://www.irit.fr/recherches/MELODI/ontologies/BBO#has_previousFlowNode',
+    'https://www.irit.fr/recherches/MELODI/ontologies/BBO#has_flowElements',
+    'https://www.irit.fr/recherches/MELODI/ontologies/BBO#has_container',
+    'https://www.irit.fr/recherches/MELODI/ontologies/BBO#has_resource',
+    'http://www.w3.org/ns/sosa/hasSimpleResult', 'http://www.w3.org/ns/sosa/observedProperty',
+    'http://www.w3.org/ns/sosa/hasFeatureOfInterest', 'http://www.w3.org/ns/sosa/madeBySensor',
+    'http://www.w3.org/ns/sosa/madeByActuator', 'http://www.w3.org/ns/sosa/actsOnProperty',
+    'rdfs:isDefinedBy']) p
+  where not kernel.is_approved_property(kernel.expand(p));
+  if missing is not null then
+    raise exception 'M2-T0: properties not approved: %', missing;
+  end if;
+  raise notice 'ok: BBO and SOSA properties approved';
+
+  select count(*) into n from kernel.claim
+  where predicate = kernel.expand('skos:closeMatch')
+    and subject = 'https://www.irit.fr/recherches/MELODI/ontologies/BBO#Process'
+    and object_entity = kernel.expand('pplan:Plan');
+  if n <> 1 then
+    raise exception 'M2-T0: bbo:Process is not mapped to pplan:Plan';
+  end if;
+  raise notice 'ok: pack mappings installed';
+
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = kernel.expand('kk:Slot');
   if n <> 42 then
