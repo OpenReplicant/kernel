@@ -49,8 +49,8 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | T15 | **Harness kit**: the skill file, Claude Code hooks (a session run at start, recall on every prompt, the run finished at the end), ranked full-text recall, and a drop-in guide (`docs/harness.md`) | a fresh Claude Code session with only the kit and the kernel stack recalls and records | done (D-39); checked with Claude Code's hook JSON in G4, a live session still to run |
 | T17 | **Module library and one `kk` command**: the listen/sweep/submit loop shared by workers; `kk init`, `kk agent add`, `kk person add`, `kk serve` (MCP + validator + belief in one process or three containers), `kk status`, `kk review`, `kk scan`; PostgREST removed (D-42) | the kernel smoke runs on `kk` alone | done |
 | T18 | **`kk module install`** (D-43): from this repository's module folder: manifest and license check, migration, the module's own login, a compose entry; locked-down container template (read-only filesystem, no capabilities, network to Postgres only) | installing a module from its folder gives a running, sandboxed worker | done |
-| T20 | **UI** (D-44): a shell served by `kk serve` at `/ui` that is an MCP client with the person's own token; core views (search and explain, review queue, graph, runs and status); further views are modules filling the `ui` slot | G3: the self-model renders as a graph from live claims, and a person approves a review-lane change set in the browser | next |
-| T19 | **Export and import**: all claims with provenance as N-Quads (scopes as named graphs) and back | round trip into a fresh kernel keeps every claim, reference and status | |
+| T20 | **UI** (D-44): a shell served by `kk serve` at `/ui` that is an MCP client with the person's own token; core views (search and explain, review queue, graph, runs and status); further views are modules filling the `ui` slot | G3: the self-model renders as a graph from live claims, and a person approves a review-lane change set in the browser | done |
+| T19 | **Export and import**: all claims with provenance as N-Quads (scopes as named graphs) and back | round trip into a fresh kernel keeps every claim, reference and status | next |
 | T16 | **Self-questions eval**: 10+ questions about the system's own structure in `eval/self-model/questions.yaml` | G7 | |
 
 ## Gates
@@ -59,7 +59,7 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | --- | --- |
 | G1 | Kernel tests, shape tests and manifest validation pass in CI |
 | G2 | **Self-model complete**: every module manifest, compose service and `.ttl` file has claims; 0 claims without a reference; every `kk:Module` fills at least one slot (SHACL, enforced by the validator). Checked by `scripts/e2e_ingest.py` in the kernel smoke |
-| G3 | The self-model renders as a graph in the UI from live claims (revived by T20) |
+| G3 | The self-model renders as a graph in the UI from live claims (revived by T20; `scripts/e2e_ui.mjs`) |
 | G4 | **The kernel alone**: with only Postgres, the validator, the belief model and kernel-mcp over stdio, a fresh agent session submits a claim, sees it applied and scored (target < 2 s, spec §11) and cites it with id and belief; invalid change sets come back with the reason; the hooks recall the claim and record the session's run; forged attribution is refused, stdio refuses a login that can switch roles, and the agent's login cannot become the owner; a person approves a review-lane change set. Set up and run with `kk` alone (D-42). `scripts/smoke_kernel.sh` |
 | G5 | Parked (D-36): drift of a deployed RuleGo chain file is detected within one check interval |
 | G6 | Parked (D-36): round-trip verification of chains |

@@ -1,0 +1,27 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:ui
+name: Web UI shell
+version: 0.2.0
+description: 'The kernel in a browser, served by kk serve at /ui: search and explain, the review queue,
+  change sets, the self-model graph and your identity, plus every view module that fills the ui slot.
+  It is an MCP client: each call carries the person''s own token, so the kernel enforces what they may see
+  and do. Static files; vendored Alpine.js and Cytoscape.js, no CDN, no build step.'
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:ui
+runtime:
+  type: view
+  entrypoint: web/index.html
+requires:
+- slot: agent-interface
+interfaces:
+- name: web
+  affordance: property
+  transport: http
+  href: /ui/
+mcp:
+  expose: []

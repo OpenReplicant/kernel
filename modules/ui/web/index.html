@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge Kernel</title>
+<!-- The UI shell (D-44): an MCP client served by kk serve. Every call carries the person's own token
+     (kk token person_<name>), so the kernel decides what they may see and do. Libraries are vendored and
+     pinned (vendor/README.md); no inline scripts (the Content-Security-Policy forbids them). -->
+<link rel="stylesheet" href="style.css">
+<script src="vendor/cytoscape-3.34.3.min.js"></script>
+<script src="app.js"></script>
+<script defer src="vendor/alpinejs-3.17.4.min.js"></script>
+</head>
+<body x-data="shell()" x-init="init()">
+<header>
+  <h1>Knowledge Kernel</h1>
+  <nav aria-label="Views">
+    <template x-for="t in tabs()" :key="t.id">
+      <button :class="{on: tab === t.id}" @click="open(t.id)" x-text="t.title"></button>
+    </template>
+  </nav>
+  <div class="who">
+    <span class="muted" x-show="me" x-text="me ? me.agent : ''"></span>
+    <input type="password" placeholder="Your token (kk token person_…)" aria-label="Token" x-model="token"
+           @change="signIn()">
+  </div>
+</header>
+<main>
+  <p class="bad" role="alert" x-show="error" x-text="error"></p>
+
+  <section x-show="tab === 'search'">
+    <form class="row" @submit.prevent="find()">
+      <input type="search" placeholder="Search claims (any words)" aria-label="Search" x-model="query">
+      <button type="submit">Search</button>
+    </form>
+    <table x-show="rows.length">
+      <thead><tr><th>Subject</th><th>Predicate</th><th>Object</th><th>Belief</th><th>Status</th></tr></thead>
+      <tbody>
+        <template x-for="c in rows" :key="c.id">
+          <tr class="click" @click="explain(c.id)">
+            <td x-text="short(c.subject)" :title="c.subject"></td><td x-text="short(c.predicate)" :title="c.predicate"></td>
+            <td x-text="objectOf(c)"></td><td x-text="belief(c.belief)"></td><td x-text="c.status"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <p class="muted" x-show="searched && !rows.length">No claims match.</p>
+  </section>
+
+  <section x-show="tab === 'review'">
+    <p class="muted" x-show="!rows.length">Nothing waiting for your review.</p>
+    <template x-for="r in rows" :key="r.id">
+      <article class="card" :data-id="r.id">
+        <div><strong x-text="r.attributed_to"></strong> → <span x-text="r.target_scope"></span>
+             <span class="muted" x-text="r.submitted_at"></span></div>
+        <ul class="ops">
+          <template x-for="(op, i) in r.ops" :key="i">
+            <li><code x-text="op.op"></code> <span x-text="opText(op)"></span></li>
+          </template>
+        </ul>
+        <div class="row">
+          <input placeholder="Note (required to reject)" aria-label="Note" x-model="notes[r.id]">
+          <button class="approve" @click="decide(r.id, true)">Approve</button>
+          <button @click="decide(r.id, false)">Reject</button>
+        </div>
+      </article>
+    </template>
+  </section>
+
+  <section x-show="tab === 'changes'">
+    <table x-show="rows.length">
+      <thead><tr><th>Submitted</th><th>By</th><th>Scope</th><th>Lane</th><th>Status</th><th>Ops</th></tr></thead>
+      <tbody>
+        <template x-for="c in rows" :key="c.id">
+          <tr><td x-text="c.submitted_at"></td><td x-text="short(c.attributed_to)"></td><td x-text="short(c.target_scope)"></td>
+              <td x-text="c.lane"></td><td x-text="c.status" :title="c.validation_report ? JSON.stringify(c.validation_report) : ''"></td>
+              <td x-text="c.op_count"></td></tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  <section x-show="tab === 'graph'">
+    <div class="row">
+      <select x-model="graphBy" @change="graphOn = ''; graphBy ? null : drawGraph()" aria-label="Show">
+        <option value="">Everything you can see</option><option value="module">One module</option><option value="slot">One slot</option>
+      </select>
+      <select x-show="graphBy" x-model="graphOn" @change="drawGraph()" aria-label="Which">
+        <option value="">Choose…</option>
+        <template x-for="o in choices()" :key="o.id"><option :value="o.id" x-text="o.label"></option></template>
+      </select>
+      <span class="muted" x-text="graphInfo"></span>
+    </div>
+    <p class="legend muted">
+      <span><i class="k-module"></i>module</span><span><i class="k-slot"></i>slot</span><span><i class="k-node"></i>service</span>
+      <span><i class="k-ontology"></i>vocabulary</span><span>edge width = belief · click an edge to explain its claim</span>
+    </p>
+    <div id="cy" data-nodes="0" data-edges="0"></div>
+  </section>
+
+  <section x-show="tab === 'me'">
+    <dl x-show="me">
+      <dt>Agent</dt><dd x-text="me && me.agent"></dd>
+      <dt>Login role</dt><dd x-text="me && me.role"></dd>
+      <dt>Claims you can see</dt><dd x-text="me && me.claims_visible"></dd>
+      <dt>Waiting for your review</dt><dd x-text="me && me.awaiting_review"></dd>
+    </dl>
+  </section>
+
+  <section x-show="tab.startsWith('view:')"><div id="view"></div></section>
+
+  <aside x-show="detail" class="detail" aria-label="Explain">
+    <div class="row"><strong>Claim</strong> <code x-text="detail && detail.id"></code>
+      <button @click="detail = null" aria-label="Close">Close</button></div>
+    <pre x-text="detail ? JSON.stringify(detail.body, null, 2) : ''"></pre>
+  </aside>
+</main>
+</body>
+</html>

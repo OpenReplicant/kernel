@@ -59,7 +59,7 @@ jobs:
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   kernel-smoke:
-    name: kernel alone (G4, T13, T17, T18)
+    name: kernel alone (G3, G4, T13, T17, T18, T20)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -89,8 +89,12 @@ jobs:
           echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tgz" | sha256sum -c -
           sudo tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
           gitleaks version
-      - name: Postgres + kk (init, person, agent, serve, review, scan, token, status), nothing else
-        run: sh scripts/smoke_kernel.sh
+      - name: Playwright and Chromium for the UI check (pinned)
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Postgres + kk (init, person, agent, serve, review, scan, token, status) + the UI, nothing else
+        run: KK_REQUIRE_UI=1 sh scripts/smoke_kernel.sh
       - name: kernel-mcp alone installs as a package with its two commands
         run: |
           python -m venv /tmp/mcp-only

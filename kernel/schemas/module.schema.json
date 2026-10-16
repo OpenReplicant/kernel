@@ -137,9 +137,10 @@
             "python-service",
             "container",
             "sql",
-            "skill-only"
+            "skill-only",
+            "view"
           ],
-          "description": "command: a program run on demand or on a schedule (stdin/stdout or arguments); python-service: a long-running worker; container: an OCI image; sql: database objects only; skill-only: instructions for agents."
+          "description": "command: a program run on demand or on a schedule (stdin/stdout or arguments); python-service: a long-running worker; container: an OCI image; sql: database objects only; skill-only: instructions for agents; view: a UI view, its entrypoint a page or script in the module folder that the UI shell loads (slot ui)."
         },
         "image": {
           "type": "string",

@@ -29,7 +29,7 @@ su postgres -c "sh kernel/schema/tests/run.sh"            # 30 kernel checks (pe
 python shapes/tests/test_shapes.py && python scripts/check_manifests.py
 python modules/<module>/tests/<test>.py                    # each module's tests and evals
 PYTHONPATH=modules/pack-loader python -m pack_loader | diff -q - modules/pack-loader/packs.sql
-PATH=/tmp/claude-0/bin:$PATH PGDATABASE=postgres PYTHON=/tmp/venv/bin/python sh scripts/smoke_kernel.sh   # G4 + T13 + T17 on kk alone, ~40 s
+PATH=/tmp/claude-0/bin:$PATH PGDATABASE=postgres PYTHON=/tmp/venv/bin/python sh scripts/smoke_kernel.sh   # G3, G4, T13, T17, T20 on kk alone, ~60 s
 ```
 
 The venv also needs this repository installed: `/tmp/venv/bin/pip install -e .` (the `kk` command and

@@ -3,8 +3,12 @@
 :80 {
 	encode zstd gzip
 
-	# Kernel MCP server (streamable HTTP). Callers send their own bearer token (kk token ROLE).
+	# Kernel MCP server (streamable HTTP) and the UI (an MCP client). Callers send their own bearer
+	# token (kk token ROLE).
 	handle /mcp* {
+		reverse_proxy kernel:8000
+	}
+	handle {
 		reverse_proxy kernel:8000
 	}
 }

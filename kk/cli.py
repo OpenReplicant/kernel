@@ -3,7 +3,7 @@
   kk init                      install the kernel, the default modules and the vocabulary packs
   kk person add NAME           a person's own login (reviews; --steward may also redact)
   kk agent add NAME            a harness agent's own login (MCP stdio, hooks)
-  kk serve                     MCP over HTTP + the validator + the belief model, in one process
+  kk serve                     MCP over HTTP (+ the UI at /ui) + the validator + the belief model, in one process
   kk status                    who you are, what you can see, what is waiting
   kk review list|show|approve|reject
   kk scan --repo DIR           ingest a repository (self-encoder, ingest filter first)
@@ -165,7 +165,9 @@ def cmd_serve(a) -> None:
             threading.Thread(target=guard, args=(name, worker(name)), name=name, daemon=True).start()
     if "mcp" in parts:
         from kernel_mcp.__main__ import http
-        http(host=a.host, port=a.port)
+
+        from .ui import routes
+        http(host=a.host, port=a.port, extra_routes=routes(ROOT))
     else:
         while True:
             time.sleep(3600)
