@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
-# T2 gate: bring up db, postgrest and caddy with throwaway secrets; GET /api/claims must work with
-# a module JWT and fail without one. Tears the stack down afterwards (volumes included).
-# Usage: sh scripts/smoke_t2.sh        (needs docker compose or podman compose, python3, curl)
+# Stack smoke test with throwaway secrets; tears the stack down afterwards (volumes included).
+#   T2: db, postgrest and caddy come up; GET /api/claims works with a module JWT, fails without one.
+#   T3: packs and slot catalog installed on first start (modules/pack-loader/tests/check_packs.sql),
+#       and a module sees the 42 slots through the API.
+# Usage: sh scripts/smoke_stack.sh        (needs docker compose, python3, curl)
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 env_file=$(mktemp)
@@ -31,3 +33,11 @@ agents=$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from k
 echo "with module JWT: $with; without: $without; forged JWT: $forged; module agents: $agents"
 [ "$with" = 200 ] && [ "$without" != 200 ] && [ "$forged" != 200 ] && [ "$agents" -ge 11 ]
 echo "T2 smoke test passed"
+
+$compose exec -T db psql -v ON_ERROR_STOP=1 -q -U postgres -d kk < "$root/modules/pack-loader/tests/check_packs.sql"
+slots=$(curl -s -H "Authorization: Bearer $token" \
+  "$url?predicate=eq.http://www.w3.org/1999/02/22-rdf-syntax-ns%23type&object_entity=eq.https://w3id.org/knowledge-kernel/ns%23Slot&select=subject" |
+  python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+echo "slots visible to a module through the API: $slots"
+[ "$slots" = 42 ]
+echo "T3 smoke test passed"
