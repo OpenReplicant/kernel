@@ -79,7 +79,8 @@ ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profil
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
-                 encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance; _template/
+                 encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,
+                 view-bpm; _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/

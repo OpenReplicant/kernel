@@ -1,0 +1,22 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:view-bpm
+name: Processes
+version: 0.1.0
+description: 'A view module for the UI (BPM): the process map of a documented process next to what was
+  observed — tasks, gateways and events; documented flows, observed flows with their case counts, and the
+  conformance discrepancies, confirmed or awaiting review, highlighted on the steps and flows they concern.
+  Every node, edge and discrepancy explains the claims behind it (D-51).'
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:view-bpm
+runtime:
+  type: view
+  entrypoint: view/view.js
+requires:
+- slot: agent-interface
+mcp:
+  expose: []

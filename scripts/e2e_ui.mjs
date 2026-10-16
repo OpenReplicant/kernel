@@ -2,7 +2,8 @@
 // Chromium, signed in as the owner with their own token. The self-model renders as a graph from live
 // claims and an edge explains its claim; search finds and explains a claim; a change set an agent
 // submitted for review is approved in the browser and applied; the Modules view module loads and
-// lists the modules; no page errors and no Content-Security-Policy violations.
+// lists the modules; the BPM view (M2-T4) draws the process map, lists the discrepancies and explains
+// one; no page errors and no Content-Security-Policy violations.
 // Env: KK_URL (http://127.0.0.1:<port>), KK_OWNER_TOKEN, KK_AGENT_TOKEN; SHOT_DIR (optional screenshots).
 import { chromium } from 'playwright';
 
@@ -87,7 +88,27 @@ const modules = await page.$$eval('#view tr[data-module]', rows => rows.map(r =>
 check('the Modules view module loads and lists the modules', modules.includes('urn:kk:module:validator-shacl'), `${modules.length} modules`);
 await shot('modules');
 
+// M2-T4: the BPM view (after scripts/e2e_bpm.py): the process map renders, documented and observed;
+// the discrepancies are listed (one confirmed, the others awaiting review); a confirmed one explains.
+await page.getByRole('button', { name: 'Processes' }).click();
+await page.waitForFunction(() => Number((document.querySelector('#bpm-map') || {dataset: {}}).dataset.edges) > 0,
+                           null, { timeout: 30000 });
+const map = await page.$eval('#bpm-map', e => ({ nodes: Number(e.dataset.nodes), edges: Number(e.dataset.edges) }));
+check('M2-T4 the process map renders documented and observed flows', map.nodes === 10 && map.edges >= 14,
+      `${map.nodes} nodes, ${map.edges} flows`);
+const listed = await page.$$eval('#bpm-discrepancies li.discrepancy', ls => ls.map(l => l.dataset.status));
+check('M2-T4 the discrepancies are listed, confirmed and awaiting review',
+      listed.filter(s => s === 'confirmed').length === 1 && listed.filter(s => s === 'awaiting review').length === 5,
+      listed.join(', '));
+await shot('processes');
+await page.click('#bpm-discrepancies li[data-status="confirmed"] a');
+await page.waitForFunction(() => /derived_from/.test((document.querySelector('aside.detail pre') || {}).textContent || ''),
+                           null, { timeout: 15000 });
+const explained = JSON.parse(await page.textContent('aside.detail pre'));
+check('M2-T4 a discrepancy explains: the claims it was derived from', (explained.derived_from || []).length > 0,
+      `${(explained.derived_from || []).length} premises`);
+
 check('no page errors or CSP violations', errors.length === 0, errors.join(' | ').slice(0, 200));
 await browser.close();
-console.log('T20 UI', checks.every(Boolean) ? 'passed' : 'FAILED', `(${checks.filter(Boolean).length}/${checks.length})`);
+console.log('T20 and M2-T4 UI', checks.every(Boolean) ? 'passed' : 'FAILED', `(${checks.filter(Boolean).length}/${checks.length})`);
 process.exit(checks.every(Boolean) ? 0 : 1);
