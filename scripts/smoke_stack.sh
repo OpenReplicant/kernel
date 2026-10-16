@@ -8,6 +8,8 @@
 #       (scripts/e2e_runner.py); each recorded verdict has a kernel run linked to its step IRI.
 #   T6/G2: the scan chain filters and encodes this repository; the owner approves the review lane;
 #       scripts/check_g2.py and the SQL below check the self-model is complete.
+#   T7: the belief chain scores every claim; copied sources don't inflate belief and changes over
+#       time aren't conflicts (scripts/e2e_belief.py).
 # PYTHON: interpreter with pyyaml, rdflib and pyshacl for check_g2.py (default python3).
 # Usage: sh scripts/smoke_stack.sh        (needs docker compose, python3, curl)
 #        KK_BUILD_CA=/path/to/ca.crt sh scripts/smoke_stack.sh   (behind a TLS-intercepting proxy)
@@ -19,7 +21,7 @@ cleanup() {
   status=$?
   if [ "$status" -ne 0 ]; then
     echo "--- smoke test failed ($status); module logs:"
-    $compose logs --tail 40 validator chain-runner-python 2>/dev/null || true
+    $compose logs --tail 40 validator chain-runner-python belief 2>/dev/null || true
   fi
   $compose down -v >/dev/null 2>&1; rm -f "$env_file"
 }
@@ -60,16 +62,17 @@ echo "T3 smoke test passed"
 mint() { KK_JWT_SECRET=$KK_JWT_SECRET python3 "$root/scripts/mint_jwt.py" "$1" --days 0.02; }
 sed -i -e "s/^KK_JWT_VALIDATOR=.*/KK_JWT_VALIDATOR=$token/" \
        -e "s/^KK_JWT_SELF_ENCODER=.*/KK_JWT_SELF_ENCODER=$(mint kkm_self_encoder)/" \
-       -e "s/^KK_JWT_INGEST_FILTER=.*/KK_JWT_INGEST_FILTER=$(mint kkm_ingest_filter)/" "$env_file"
+       -e "s/^KK_JWT_INGEST_FILTER=.*/KK_JWT_INGEST_FILTER=$(mint kkm_ingest_filter)/" \
+       -e "s/^KK_JWT_BELIEF=.*/KK_JWT_BELIEF=$(mint kkm_belief)/" "$env_file"
 # KK_BUILD_CA: optional CA bundle for pip inside the build (machines behind a TLS-intercepting proxy).
 if [ -n "${KK_BUILD_CA:-}" ]; then
   for m in validator:validator-shacl chain-runner-python:chain-runner-python \
-           self-encoder:self-encoder ingest-filter:ingest-filter-gitleaks; do
+           self-encoder:self-encoder ingest-filter:ingest-filter-gitleaks belief:belief-corroboration; do
     docker build -q --secret id=ca,src="$KK_BUILD_CA" -f "$root/modules/${m#*:}/Dockerfile" \
       -t "kk-smoke-${m%%:*}" "$root" >/dev/null
   done
 else
-  $compose build validator chain-runner-python self-encoder ingest-filter
+  $compose build validator chain-runner-python self-encoder ingest-filter belief
 fi
 $compose up -d --no-build --wait validator
 $compose exec -T \
@@ -77,7 +80,7 @@ $compose exec -T \
   -e VALIDATOR_JWT="$token" validator python - < "$root/scripts/e2e_validator.py"
 
 agent_token=$(KK_JWT_SECRET=$KK_JWT_SECRET python3 "$root/scripts/mint_jwt.py" kkm_self_encoder --days 0.01)
-$compose up -d --no-build --wait chain-runner-python
+$compose up -d --no-build --wait belief chain-runner-python
 AGENT_JWT=$agent_token python3 "$root/scripts/e2e_runner.py"
 runs=$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from kernel.run
   where plan_step = 'urn:kk:chain:validate-one/record' and agent = 'urn:kk:agent:validator'
@@ -131,3 +134,12 @@ unused=$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from k
 echo "claims without a reference: $unreferenced; artifacts no claim references: $unused"
 [ "$unreferenced" = 0 ] && [ "$unused" = 0 ]
 echo "T6 smoke test passed (G2)"
+
+# T7: beliefs for every claim, and the corroboration rules end to end.
+i=0; until [ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from api.claims where belief is null")" = 0 ] \
+  || [ $i -ge 90 ]; do i=$((i+1)); sleep 1; done
+$compose exec -T db psql -U postgres -d kk -tAc "select 'claims ' || count(*) || ', without belief ' || count(*) filter (where belief is null)
+  || ', belief runs ' || (select count(*) from kernel.run where plan_step = 'urn:kk:chain:submit-beliefs/submit') from api.claims"
+[ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from api.claims where belief is null")" = 0 ]
+AGENT_A_JWT=$agent_token AGENT_B_JWT=$(mint kkm_graph_decoder) python3 "$root/scripts/e2e_belief.py"
+echo "T7 smoke test passed"

@@ -1,0 +1,26 @@
+id: urn:kk:eval:belief-v0/multi-valued-property-no-conflict
+description: 'A module fills two slots: kk:fills is not single-valued.'
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: s1
+    subject: urn:x:m
+    predicate: kk:fills
+    object: s1
+    agent: enc
+    sources:
+    - file:a
+  - id: b
+    key: s2
+    subject: urn:x:m
+    predicate: kk:fills
+    object: s2
+    agent: other
+    sources:
+    - file:b
+expect:
+  beliefs:
+    a: 0.5
+    b: 0.5

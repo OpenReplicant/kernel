@@ -1,0 +1,10 @@
+id: urn:kk:eval:belief-v0
+under_test: urn:kk:module:belief-corroboration-v0
+slot: belief-model
+gate: T7
+metrics:
+  - {name: accuracy, description: share of cases where every expected belief matches (to 4 decimals)}
+pass: {accuracy: 1.0}
+# Case format: claims (id, statement key, subject, predicate, object, agent, sources, optional
+# valid_from / valid_to / deprecated), functional (single-valued predicates), expect {claim id: belief}.
+# Formula: S / (S + C + 1), S = independent supporting groups, C = independent conflicting groups.

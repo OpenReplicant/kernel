@@ -19,7 +19,7 @@
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;
     rdfs:label "Knowledge Kernel core vocabulary" ;
-    owl:versionInfo "0.1.0" ;
+    owl:versionInfo "0.2.0" ;
     dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
     owl:imports <http://www.w3.org/ns/prov-o>, <http://purl.org/net/p-plan> .
 
@@ -165,3 +165,19 @@ kk:evalScore a owl:DatatypeProperty ; rdfs:range xsd:decimal ; rdfs:label "eval 
     skos:definition "Score of a module on an eval set; qualifiers kk:evalSet and kk:metric say which." .
 kk:evalSet a owl:ObjectProperty ; rdfs:subPropertyOf kk:qualifier ; rdfs:label "eval set" .
 kk:metric a owl:DatatypeProperty ; rdfs:subPropertyOf kk:qualifier ; rdfs:label "metric" .
+
+# ------------------------------------------------------------------ single-valued properties
+# One value per subject at a time. Belief models treat claims with different values and overlapping
+# validity windows as conflicting; non-overlapping windows are changes over time.
+kk:moduleKind a owl:FunctionalProperty .
+kk:version a owl:FunctionalProperty .
+kk:runsAs a owl:FunctionalProperty .
+kk:protected a owl:FunctionalProperty .
+kk:slotContract a owl:FunctionalProperty .
+kk:cardinality a owl:FunctionalProperty .
+kk:stepType a owl:FunctionalProperty .
+kk:stepConfig a owl:FunctionalProperty .
+kk:trigger a owl:FunctionalProperty .
+kk:runnable a owl:FunctionalProperty .
+kk:notRunnableBecause a owl:FunctionalProperty .
+kk:deployedHash a owl:FunctionalProperty .

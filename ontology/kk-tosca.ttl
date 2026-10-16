@@ -17,7 +17,7 @@
 <https://w3id.org/knowledge-kernel/tosca>
     a owl:Ontology ;
     rdfs:label "TOSCA 2.0 metamodel mirror" ;
-    owl:versionInfo "0.1.0" ;
+    owl:versionInfo "0.2.0" ;
     rdfs:seeAlso <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
 
 # ------------------------------------------------------------------ types and templates
@@ -95,3 +95,6 @@ kkt:memberOf a owl:ObjectProperty ; rdfs:range kkt:ServiceTemplate ; rdfs:label 
     skos:definition "A node template belongs to a service template (topology)." .
 kkt:hasAffordance a owl:ObjectProperty ; rdfs:range td:InteractionAffordance ; rdfs:label "has affordance" ;
     skos:definition "Bridge to WoT TD: runtime properties, actions and events of a node, each with forms (transport bindings)." .
+
+# ------------------------------------------------------------------ single-valued properties
+kkt:nodeType a owl:FunctionalProperty .

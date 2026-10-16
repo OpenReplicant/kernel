@@ -1,0 +1,35 @@
+id: urn:kk:eval:belief-v0/corroborated-side-wins
+description: Two independent sources say v1, one says v2.
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: enc
+    sources:
+    - file:a
+  - id: b
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: other
+    sources:
+    - file:b
+  - id: d
+    key: v2
+    subject: urn:x:m
+    predicate: kk:version
+    object: v2
+    agent: third
+    sources:
+    - file:d
+expect:
+  beliefs:
+    a: 0.5
+    b: 0.5
+    d: 0.25

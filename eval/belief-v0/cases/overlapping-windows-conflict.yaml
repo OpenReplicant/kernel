@@ -1,0 +1,28 @@
+id: urn:kk:eval:belief-v0/overlapping-windows-conflict
+description: 'Windows overlap by a day: conflict.'
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: enc
+    sources:
+    - file:a
+    valid_to: '2026-10-02T00:00:00Z'
+  - id: b
+    key: v2
+    subject: urn:x:m
+    predicate: kk:version
+    object: v2
+    agent: other
+    sources:
+    - file:b
+    valid_from: '2026-10-01T00:00:00Z'
+expect:
+  beliefs:
+    a: 0.3333
+    b: 0.3333

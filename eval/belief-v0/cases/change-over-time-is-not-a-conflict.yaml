@@ -1,0 +1,28 @@
+id: urn:kk:eval:belief-v0/change-over-time-is-not-a-conflict
+description: Version 0.1 until a date, 0.2 from that date.
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: enc
+    sources:
+    - file:a
+    valid_to: '2026-10-01T00:00:00Z'
+  - id: b
+    key: v2
+    subject: urn:x:m
+    predicate: kk:version
+    object: v2
+    agent: other
+    sources:
+    - file:b
+    valid_from: '2026-10-01T00:00:00Z'
+expect:
+  beliefs:
+    a: 0.5
+    b: 0.5
