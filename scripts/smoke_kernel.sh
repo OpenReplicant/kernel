@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Gate G4 (kernel alone): only Postgres, the validator and kernel-mcp — no Docker, no PostgREST, no
-# runner. A fresh agent session submits a claim over MCP (stdio, its own login), sees it applied and
+# Gate G4 (kernel alone): only Postgres, the validator, the belief model and kernel-mcp — no Docker,
+# no PostgREST, no runner. A fresh agent session submits a claim over MCP (stdio, its own login), sees it applied and
 # cites it; it cannot act as anyone else.
 # Usage: PGHOST=localhost PGUSER=<superuser> PGPASSWORD=... sh scripts/smoke_kernel.sh
 #        PYTHON: interpreter with requirements-ci.txt installed (default python3).
@@ -17,6 +17,7 @@ psql -d "$db" -v ON_ERROR_STOP=1 -q -o /dev/null \
   -f "$root/kernel/schema/001_kernel.sql" \
   -f "$root/kernel/schema/002_bootstrap.sql" \
   -f "$root/modules/validator-shacl/migration.sql" \
+  -f "$root/modules/belief-corroboration/migration.sql" \
   -f "$root/deploy/postgres/040_people.sql" \
   -f "$root/deploy/postgres/050_agents.sql"
 # Throwaway passwords (never committed): the services' switching login, and the agent's and the
@@ -37,11 +38,18 @@ log=$(mktemp)
 KK_ROLE=kkm_validator KK_SWEEP_SECONDS=5 PYTHONPATH="$root/modules/validator-shacl" \
   $py -m validator > "$log" 2>&1 &
 validator=$!
+blog=$(mktemp)
+KK_ROLE=kkm_belief KK_SWEEP_SECONDS=5 PYTHONPATH="$root/modules/belief-corroboration" \
+  $py -m belief_corroboration > "$blog" 2>&1 &
+belief=$!
 cleanup() {
   status=$?
-  kill "$validator" 2>/dev/null || true
-  if [ "$status" -ne 0 ]; then echo "--- smoke test failed ($status); validator log:"; tail -40 "$log"; fi
-  rm -f "$log"
+  kill "$validator" "$belief" 2>/dev/null || true
+  if [ "$status" -ne 0 ]; then
+    echo "--- smoke test failed ($status); validator log:"; tail -40 "$log"
+    echo "--- belief log:"; tail -40 "$blog"
+  fi
+  rm -f "$log" "$blog"
 }
 trap cleanup EXIT
 

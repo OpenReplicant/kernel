@@ -15,7 +15,8 @@ rm -f /var/run/docker.pid /var/run/docker/containerd/containerd.pid
 (nohup dockerd > /tmp/dockerd.log 2>&1 &)
 service postgresql start
 python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -r requirements-ci.txt \
-  -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt   # if gone
+  -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt \
+  -r modules/belief-corroboration/requirements.txt   # if gone
 ```
 
 Proxy CA: `/root/.ccr/ca-bundle.crt`.

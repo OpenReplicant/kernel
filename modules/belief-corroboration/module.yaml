@@ -1,10 +1,11 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:belief-corroboration-v0
 name: 'Belief model: corroboration counting v0'
-version: 0.1.0
+version: 0.2.0
 description: Scores claims by counting independent sources per statement_key (independent = different
   source artifact/URI and different generating agent), minus conflicting values on single-value properties;
-  claims with non-overlapping validity windows are changes, not conflicts.
+  claims with non-overlapping validity windows are changes, not conflicts. Starts itself (listens for applied
+  change sets, sweeps for unscored claims) and submits its scores; needs no runner.
 license: Apache-2.0
 kind: processor
 slots:
@@ -24,16 +25,18 @@ clearance:
 runtime:
   type: python-service
   entrypoint: python -m belief_corroboration
-  chains:
-  - chains/rescore.yaml
-  - chains/submit-beliefs.yaml
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_belief (kk_authenticator)
+    KK_ROLE: kkm_belief
 accepts:
 - applied change sets
 produces:
 - add_belief
 triggers:
+- type: notify
+  spec: kernel_change_set
 - type: schedule
-  spec: every 5s
+  spec: every 30s (sweep; NOTIFY is not durable)
 mcp:
   expose: []
 migration: migration.sql

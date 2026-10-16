@@ -12,7 +12,7 @@ can use it; how deeply depends on what you add (D-36):
 
 ## 1. A database with the kernel
 
-Either the compose stack (`deploy/compose.yaml`: Postgres, validator, kernel-mcp over HTTP), or any
+Either the compose stack (`deploy/compose.yaml`: Postgres, validator, belief model, kernel-mcp over HTTP), or any
 Postgres 16+ you run yourself:
 
 ```sh
@@ -24,14 +24,17 @@ psql -d kk -c "alter role kk_authenticator password '<service secret>'" \
            -c "alter role person_owner login password '<owner secret>'"
 pip install -r modules/validator-shacl/requirements.txt
 DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_ROLE=kkm_validator \
-  PYTHONPATH=modules/validator-shacl python -m validator
+  PYTHONPATH=modules/validator-shacl python -m validator &
+# optional, for belief scores (also run modules/belief-corroboration/migration.sql above):
+DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_ROLE=kkm_belief \
+  PYTHONPATH=modules/belief-corroboration python -m belief_corroboration &
 ```
 
 Who holds which login (D-37):
 
 | Login | Held by | Can act as |
 | --- | --- | --- |
-| `kk_authenticator` | services you run (validator, kernel-mcp `--http`, PostgREST) | any role granted to it, so never give it to an agent |
+| `kk_authenticator` | services you run (validator, belief model, kernel-mcp `--http`, PostgREST) | any role granted to it, so never give it to an agent |
 | `agent_claude_code` (one per agent) | that agent's harness | itself only |
 | `person_owner` (one per person) | that person | itself only |
 
