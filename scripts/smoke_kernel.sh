@@ -51,3 +51,13 @@ $py "$root/scripts/e2e_kernel.py"
 $py "$root/scripts/e2e_ingest.py"
 KK_DATABASE_URL="$OWNER_DATABASE_URL" kk status > /dev/null
 echo "T17 kk alone passed"
+# T20 and G3: the UI in headless Chromium (needs Node and the playwright package; KK_REQUIRE_UI=1 makes
+# a missing browser a failure, as in CI).
+if (cd "$root" && node -e "require('playwright')" 2> /dev/null); then
+  KK_URL="http://127.0.0.1:$port" KK_OWNER_TOKEN="$(kk token person_owner --days 0.01)" \
+    KK_AGENT_TOKEN="$(kk token agent_claude_code --days 0.01)" node "$root/scripts/e2e_ui.mjs"
+elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
+  echo "FAIL the UI check needs Node and playwright (npm install --no-save playwright)"; exit 1
+else
+  echo "skip the UI check (no playwright; npm install --no-save playwright to run it)"
+fi

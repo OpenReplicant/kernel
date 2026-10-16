@@ -202,7 +202,7 @@ groups:
       contract: review, browse, manage, graph view
       kind: interface
       cardinality: many
-      default: Caddy + Alpine.js
+      default: ui shell (Alpine.js, an MCP client served by kk serve at /ui) + view modules
       milestone: 1
     - id: event-transport
       contract: NOTIFY -> browsers and agents

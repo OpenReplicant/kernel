@@ -203,3 +203,50 @@ async def finish_run(ctx: Context, run_id: str, status: str = "succeeded", cost:
     """Finish one of your runs: status succeeded or failed, cost e.g. {"tokens": 1200, "ms": 5300}."""
     await query(ctx, "select api.finish_run(%s::uuid, %s, %s)", (run_id, status, Jsonb(cost or {})))
     return status
+
+
+# ------------------------------------------------------------------ people and views (the UI uses these too)
+@mcp.tool()
+async def whoami(ctx: Context) -> dict:
+    """Your identity as the kernel sees it: login role, agent IRI, claims you can see, what waits for review."""
+    return await query(ctx, """select jsonb_build_object('role', current_user, 'agent', kernel.my_agent(),
+        'claims_visible', (select count(*) from api.claims where status <> 'deprecated'),
+        'awaiting_review', (select count(*) from api.review_queue))""")
+
+
+@mcp.tool()
+async def list_change_sets(ctx: Context, status: str | None = None, limit: int = 50) -> list[dict]:
+    """Change sets you can see (your own; reviewers and validators: all in their cleared scopes), newest first."""
+    return await query(ctx, rows(
+        "select id, idempotency_key, attributed_to, target_scope, lane, status, submitted_at, validation_report,"
+        " jsonb_array_length(ops) as op_count from api.change_sets"
+        " where (%(st)s::text is null or status = %(st)s) order by submitted_at desc limit %(n)s"),
+        {"st": status, "n": max(1, min(limit, 500))})
+
+
+@mcp.tool()
+async def review_queue(ctx: Context, limit: int = 50) -> list[dict]:
+    """Change sets waiting for a person's review in scopes you may review (reviewers only), oldest first."""
+    return await query(ctx, rows("select * from api.review_queue order by submitted_at limit %s"),
+                       (max(1, min(limit, 200)),))
+
+
+@mcp.tool()
+async def review(ctx: Context, change_set_id: str, approve: bool, note: str | None = None) -> str:
+    """Approve or reject a change set in the review lane. People only: the kernel refuses anyone who is
+    not a reviewer for its scope, and anyone reviewing their own change set."""
+    return await query(ctx, "select api.review(%s::uuid, %s, %s)", (change_set_id, approve, note))
+
+
+@mcp.tool()
+async def graph(ctx: Context, module: str | None = None, slot: str | None = None, root: str | None = None,
+                depth: int = 1) -> dict:
+    """The claims you can see as a graph (Cytoscape.js elements): nodes are entities, edges are claims with
+    id, belief and status. Optional focus: a module, a slot, or a root entity with a depth."""
+    from .graph import build, cytoscape, select
+    claims = await query(ctx, rows(
+        "select id, subject, predicate, object_entity, object_value, status, belief from api.claims"
+        " where status <> 'deprecated' and (object_entity is not null or predicate = %s) limit 20000"),
+        (PREFIXES["rdfs"] + "label",))
+    g = build(claims)
+    return cytoscape(g, select(g, expand(module), expand(slot), expand(root), max(1, min(depth, 4))))

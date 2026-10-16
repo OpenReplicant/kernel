@@ -57,7 +57,8 @@ python shapes/tests/test_shapes.py                                         # SHA
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G4, T13 and T17 on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, T13, T17, T20 on kk alone; needs gitleaks
+                                                                           # and, for the UI, npm install --no-save playwright@1.56.1
 sh scripts/e2e_module.sh                                                   # T18: a module in its own sandboxed container; needs Docker
 ```
 
@@ -75,7 +76,7 @@ kernel/
 ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile, packs.yaml, slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
-                 ingest-filter-gitleaks, pack-loader; _template/
+                 ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module) + kk.lib
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/
 scripts/         smoke_kernel.sh + e2e_kernel.py + e2e_ingest.py, e2e_module.sh/.py, check_manifests.py
@@ -87,5 +88,5 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T15, T17 and T18 are done; G1, G2 and G4 pass (`scripts/smoke_kernel.sh`). Next: the UI (T20),
-export/import (T19), then T16 (self-questions eval); then milestone 2 (BPM and devops modules). Work one task at a time; each ends with its check passing.
+T0–T15, T17, T18 and T20 are done; G1–G4 pass (`scripts/smoke_kernel.sh`). Next: export/import (T19),
+then T16 (self-questions eval); then milestone 2 (BPM and devops modules and views). Work one task at a time; each ends with its check passing.

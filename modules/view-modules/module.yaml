@@ -1,0 +1,21 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:view-modules
+name: Modules
+version: 0.1.0
+description: 'A view module for the UI: the modules in the self-model with their version, kind, the slots
+  they fill and the agent they run as, each value linked to the claim behind it. The pattern for further
+  views (BPM, devops): one script that registers itself with the shell and calls MCP tools.'
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:view-modules
+runtime:
+  type: view
+  entrypoint: view/view.js
+requires:
+- slot: agent-interface
+mcp:
+  expose: []

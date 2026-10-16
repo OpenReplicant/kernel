@@ -27,15 +27,18 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | --- | --- |
 | `kk init` | installs kernel v0, every default module's migration and the vocabulary packs (once) |
 | `kk person add NAME` / `kk agent add NAME` | an own login that can act only as itself (D-37) |
-| `kk serve [--only mcp,validator,belief]` | the running kernel: one process, or one container per part |
+| `kk serve [--only mcp,validator,belief]` | the running kernel: one process, or one container per part; the UI at `/ui` |
 | `kk status` | who you are, what you can see, what is waiting for review |
 | `kk review list \| show \| approve \| reject` | the review lane, as yourself |
 | `kk scan --repo DIR` | ingest a repository (ingest filter first; needs gitleaks) |
 | `kk token ROLE` | a bearer token for MCP over HTTP |
 | `kk module install DIR` | a module from `modules/`: its own login and a locked-down container |
 
+Open http://127.0.0.1:8000/ui/ and paste your token (`kk token person_owner`): search and explain,
+the review queue, change sets, the graph, and view modules (`modules/view-modules` is the pattern).
+
 Or as a compose stack (Postgres, then one image running `kk serve` behind Caddy at
-http://127.0.0.1:8080/mcp):
+http://127.0.0.1:8080/mcp and http://127.0.0.1:8080/ui/):
 
 ```sh
 cp deploy/.env.example deploy/.env       # fill in passwords and KK_JWT_SECRET (>= 32 chars), never commit it

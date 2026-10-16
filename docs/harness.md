@@ -83,6 +83,14 @@ starting the harness. A hook never blocks the session: on any error it writes to
 Session runs are remembered in `KK_STATE_DIR` (default `~/.local/state/knowledge-kernel`). Other
 harnesses call the same commands with their own hook JSON (`session_id`, `prompt`, `reason`).
 
+## The UI
+
+`kk serve` also serves the UI at `/ui/` (behind Caddy: http://127.0.0.1:8080/ui/). Paste your own token
+(`kk token person_<name>`, with `KK_JWT_SECRET` set): search and explain, the review queue, change
+sets, the graph, and every view module. A view module is a folder with a manifest (runtime type
+`view`, slot `ui`) and one script that calls `KK.register({id, title, render(el, kk)})` and renders with
+`kk.call(tool, args)`; see `modules/view-modules` (D-44).
+
 ## Installing further modules
 
 Modules in this repository's `modules/` folder install into a running kernel, each in its own

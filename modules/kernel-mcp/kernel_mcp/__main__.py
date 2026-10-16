@@ -14,7 +14,8 @@ import sys
 from . import server
 
 
-def http(host: str = "0.0.0.0", port: int | None = None) -> None:
+def http(host: str = "0.0.0.0", port: int | None = None, extra_routes: list | None = None) -> None:
+    """extra_routes: Starlette routes served before /mcp (kk serve adds the UI)."""
     import uvicorn
     from mcp.server.transport_security import TransportSecuritySettings
 
@@ -24,6 +25,8 @@ def http(host: str = "0.0.0.0", port: int | None = None) -> None:
         stateless_http=True, json_response=True, host="0.0.0.0",
         transport_security=TransportSecuritySettings(allowed_hosts=[h.strip() for h in hosts if h.strip()],
                                                      allowed_origins=["http://localhost:*", "http://127.0.0.1:*"]))
+    if extra_routes:
+        app.router.routes[0:0] = extra_routes
     uvicorn.run(app, host=host, port=port or int(os.environ.get("PORT", "8000")), log_level="info")
 
 
