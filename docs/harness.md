@@ -83,6 +83,19 @@ starting the harness. A hook never blocks the session: on any error it writes to
 Session runs are remembered in `KK_STATE_DIR` (default `~/.local/state/knowledge-kernel`). Other
 harnesses call the same commands with their own hook JSON (`session_id`, `prompt`, `reason`).
 
+## Installing further modules
+
+Modules in this repository's `modules/` folder install into a running kernel, each in its own
+locked-down container (D-43):
+
+```sh
+KK_ADMIN_URL=postgresql://postgres:<password>@localhost:5432/kk kk module install modules/<name>
+docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml --env-file deploy/.env up -d
+```
+
+The module gets its own login (it acts only as itself), a read-only filesystem, no capabilities and a
+network that reaches Postgres and nothing else.
+
 ## Ingesting a repository
 
 The self-encoder scans a repository into claims (module manifests, compose files, vocabularies, SQL),

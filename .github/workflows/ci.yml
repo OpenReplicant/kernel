@@ -59,7 +59,7 @@ jobs:
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   kernel-smoke:
-    name: kernel alone (G4, T13, T17)
+    name: kernel alone (G4, T13, T17, T18)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -99,9 +99,11 @@ jobs:
           /tmp/mcp-only/bin/kernel-mcp-hook < /dev/null || test $? = 2
       - name: The kk image builds and runs
         run: |
-          docker build -t knowledge-kernel:ci .
-          docker run --rm knowledge-kernel:ci kk --help > /dev/null
-          docker run --rm knowledge-kernel:ci gitleaks version
+          docker build -t knowledge-kernel:local .
+          docker run --rm knowledge-kernel:local kk --help > /dev/null
+          docker run --rm knowledge-kernel:local gitleaks version
+      - name: A module installs into its own sandboxed container (T18)
+        run: sh scripts/e2e_module.sh
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env

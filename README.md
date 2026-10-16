@@ -32,6 +32,7 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | `kk review list \| show \| approve \| reject` | the review lane, as yourself |
 | `kk scan --repo DIR` | ingest a repository (ingest filter first; needs gitleaks) |
 | `kk token ROLE` | a bearer token for MCP over HTTP |
+| `kk module install DIR` | a module from `modules/`: its own login and a locked-down container |
 
 Or as a compose stack (Postgres, then one image running `kk serve` behind Caddy at
 http://127.0.0.1:8080/mcp):

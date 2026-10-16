@@ -7,9 +7,10 @@
   kk status                    who you are, what you can see, what is waiting
   kk review list|show|approve|reject
   kk scan --repo DIR           ingest a repository (self-encoder, ingest filter first)
+  kk module install DIR        a module from this repository: migration, own login, sandboxed container
   kk token ROLE                a bearer token for MCP over HTTP
 
-Logins. Admin commands (init, person, agent) use KK_ADMIN_URL, a superuser connection string (default:
+Logins. Admin commands (init, person, agent, module) use KK_ADMIN_URL, a superuser connection string (default:
 the libpq PG* variables). serve uses DATABASE_URL (kk_authenticator, which switches to each module's
 role). status, review and the agent's harness use the caller's own login (KK_DATABASE_URL, else
 DATABASE_URL). Agents never get the authenticator or admin logins (D-37).
@@ -225,6 +226,9 @@ def main(argv=None) -> None:
     if argv[:1] == ["review"]:
         from .review import main as review
         return review(argv[1:])
+    if argv[:1] == ["module"]:
+        from .modules import main as module
+        return module(argv[1:])
     if argv[:1] == ["scan"]:
         from self_encoder.__main__ import main as scan
         sys.exit(scan(["scan", *argv[1:]]))
@@ -252,6 +256,7 @@ def main(argv=None) -> None:
     sub.add_parser("status", help="who you are, what you can see, what is waiting").set_defaults(fn=cmd_status)
     sub.add_parser("review", help="review lane: list, show, approve, reject")
     sub.add_parser("scan", help="ingest a repository (--repo DIR)")
+    sub.add_parser("module", help="install a module from this repository, sandboxed")
     p = sub.add_parser("token", help="bearer token for MCP over HTTP (needs KK_JWT_SECRET)")
     p.add_argument("role")
     p.add_argument("--days", type=float, default=30)
