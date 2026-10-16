@@ -29,7 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Kernel invariant tests
-        run: sh kernel/schema/tests/run.sh 2>&1 | tee kernel-tests.log; test "$(grep -c 'NOTICE:  ok:' kernel-tests.log)" -ge 30 && grep -q 'ALL KERNEL TESTS PASSED' kernel-tests.log
+        run: |
+          sh kernel/schema/tests/run.sh 2>&1 | tee kernel-tests.log
+          test "$(grep -c 'NOTICE:  ok:' kernel-tests.log)" -ge 30
+          grep -q 'ALL KERNEL TESTS PASSED' kernel-tests.log
 
   python-checks:
     name: shapes and manifests
