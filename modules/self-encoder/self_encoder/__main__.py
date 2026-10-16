@@ -21,13 +21,11 @@ import argparse
 import hashlib
 import json
 import os
-import shlex
-import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
 
-from kk.lib import connect, run, submit
+from kk.lib import connect, ingest_filter, run, submit
 
 from .encode import AGENT, SCOPE, encode_file, list_files
 
@@ -36,15 +34,6 @@ KEY = "self-encoder:"
 PRIOR = """select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.status, s.idempotency_key
            from api.claims c join api.change_sets s on s.id = c.change_set
            where c.attributed_to = %s and c.status <> 'deprecated' and s.idempotency_key like 'self-encoder:%%'"""
-
-
-def ingest_filter(repo: Path, paths: list[str]) -> dict:
-    cmd = shlex.split(os.environ.get("KK_INGEST_FILTER") or f"{shlex.quote(sys.executable)} -m ingest_filter")
-    proc = subprocess.run(cmd + ["--repo", str(repo)], input=json.dumps(paths), capture_output=True, text=True,
-                          timeout=600)
-    if proc.returncode != 0:
-        raise RuntimeError(f"ingest filter failed (fail closed): {proc.stderr.strip()[-400:]}")
-    return json.loads(proc.stdout)
 
 
 def path_of(key: str) -> str:

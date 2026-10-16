@@ -1,0 +1,47 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-eventlog
+name: Event-log encoder
+version: 0.1.0
+description: 'Encodes an event log (CSV or XES) into observed claims about a process: its steps, the
+  directly-follows relation between them (bbo:has_nextFlowNode, evidence observed) and, per time window,
+  SOSA observations of case, event, start, end and directly-follows counts and mean waits, per resource
+  too. Every claim references the log artifact. A plain command; runs the ingest filter first and
+  supersedes its claims from earlier versions of the same log (D-48).'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+- observation-aggregator
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-eventlog
+  db_role: kkm_encoder_eventlog
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m eventlog_encoder --process <iri> <log.csv|log.xes>
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_eventlog
+    KK_INGEST_FILTER: ingest filter command (default python -m ingest_filter)
+requires:
+- slot: ingest-filter
+- slot: artifact-store
+accepts:
+- text/csv
+- application/xml (XES)
+produces:
+- add_artifact
+- add_claim
+- set_status
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql

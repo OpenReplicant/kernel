@@ -1,0 +1,33 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+
+# The properties the platform's own modules observe (sosa:ObservableProperty individuals, D-47/D-48).
+# An observation is one observed claim: subject = feature of interest, predicate sosa:hasSimpleResult,
+# qualifier sosa:observedProperty = one of these, valid time = the window.
+
+<https://w3id.org/knowledge-kernel/observables>
+    a owl:Ontology ;
+    rdfs:label "Observable properties" ;
+    owl:versionInfo "0.1.0" .
+
+<urn:kk:property:case-count> a sosa:ObservableProperty ;
+    rdfs:label "case count" ;
+    skos:definition "Number of cases (process instances) that started in the window; on a step, the cases in which the step occurred at least once." .
+<urn:kk:property:event-count> a sosa:ObservableProperty ;
+    rdfs:label "event count" ;
+    skos:definition "Number of times a step occurred in cases that started in the window (more than the case count means rework). With the qualifier bbo:has_resource, the occurrences carried out by that resource." .
+<urn:kk:property:start-count> a sosa:ObservableProperty ;
+    rdfs:label "start count" ;
+    skos:definition "Number of cases that began with the step." .
+<urn:kk:property:end-count> a sosa:ObservableProperty ;
+    rdfs:label "end count" ;
+    skos:definition "Number of cases that ended with the step." .
+<urn:kk:property:directly-follows-count> a sosa:ObservableProperty ;
+    rdfs:label "directly-follows count" ;
+    skos:definition "Number of times the step directly followed the step named in the qualifier bbo:has_previousFlowNode, within one case." .
+<urn:kk:property:wait-seconds-mean> a sosa:ObservableProperty ;
+    rdfs:label "mean wait (seconds)" ;
+    skos:definition "Mean time in seconds between the step named in the qualifier bbo:has_previousFlowNode and this step, when it directly followed it." .

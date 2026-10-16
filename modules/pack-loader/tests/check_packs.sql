@@ -58,6 +58,13 @@ begin
   raise notice 'ok: pack mappings installed';
 
   select count(distinct subject) into n from kernel.claim
+  where predicate = kernel.expand('rdf:type') and object_entity = 'http://www.w3.org/ns/sosa/ObservableProperty';
+  if n < 6 then
+    raise exception 'M2-T1: expected the observable properties, found %', n;
+  end if;
+  raise notice 'ok: observable properties installed';
+
+  select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = kernel.expand('kk:Slot');
   if n <> 42 then
     raise exception 'T3: expected 42 slot entities, found %', n;
