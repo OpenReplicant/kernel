@@ -1,0 +1,37 @@
+# Chain definition — schema: kernel/schemas/chain.schema.json
+chain: urn:kk:chain:rescore-belief
+name: Re-score affected claims
+description: On each applied change set, find claims sharing a statement_key or subject+predicate with
+  its claims and submit new belief values.
+protected: true
+runs_as: urn:kk:agent:belief-corroboration
+trigger:
+  type: notify
+  spec: kernel_change_set
+steps:
+- id: applied_only
+  do: filter
+  with:
+    lang: js
+    source: return msg.status === 'applied';
+  next:
+    'true': affected
+- id: affected
+  do: http
+  with:
+    method: GET
+    url: ${KK_API}/claims?change_set=eq.${msg.id}
+  next:
+    success: score
+- id: score
+  do: script
+  with:
+    lang: python
+    path: scripts/score.py
+  next:
+    success: submit
+- id: submit
+  do: http
+  with:
+    method: POST
+    url: ${KK_API}/rpc/submit_change_set

@@ -1,0 +1,30 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:evaluator
+name: Evaluator
+version: 0.1.0
+description: Runs eval sets (eval/) against modules or whole slots, and records scores as observed claims
+  about the module (kk:evalScore with the eval set and metric as qualifiers). Also runs slot competitions,
+  e.g. Python runner vs RuleGo runner on the same fixtures.
+license: Apache-2.0
+kind: control
+slots:
+- evaluator
+protected: true
+agent:
+  iri: urn:kk:agent:evaluator
+  db_role: kkm_evaluator
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m evaluator
+mcp:
+  expose:
+  - run_eval
+  read_only: false

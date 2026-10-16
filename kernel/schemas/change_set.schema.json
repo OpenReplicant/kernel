@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://w3id.org/knowledge-kernel/schemas/change_set.schema.json",
+  "title": "Change set",
+  "description": "The only way anything is written to the kernel. Submitted via POST /rpc/submit_change_set {\"cs\": <this>}. Terms may be full IRIs or CURIEs registered in kernel.prefix.",
+  "type": "object",
+  "required": ["idempotency_key", "attributed_to", "generated_by", "target_scope", "ops"],
+  "additionalProperties": false,
+  "properties": {
+    "idempotency_key": {"type": "string", "minLength": 1, "description": "Stable key, e.g. '<module>:<source hash>'. Resubmitting returns the existing change set."},
+    "attributed_to": {"type": "string", "description": "Agent IRI; must be the agent mapped to the submitting database role."},
+    "generated_by": {"type": "string", "format": "uuid", "description": "Run id from api.start_run, owned by the same agent."},
+    "target_scope": {"type": "string", "description": "Scope IRI; the submitter needs write clearance."},
+    "lane": {"enum": ["auto", "review"], "default": "auto", "description": "The kernel upgrades to 'review' for vocabulary, mapping, module and profile changes."},
+    "ops": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/op"}}
+  },
+  "$defs": {
+    "op": {
+      "oneOf": [
+        {"$ref": "#/$defs/add_entity"},
+        {"$ref": "#/$defs/add_artifact"},
+        {"$ref": "#/$defs/add_claim"},
+        {"$ref": "#/$defs/set_status"},
+        {"$ref": "#/$defs/add_belief"},
+        {"$ref": "#/$defs/add_verification"}
+      ]
+    },
+    "claim_ref": {"type": "string", "description": "A claim UUID, or the 'ref' of an add_claim earlier in the same change set."},
+    "add_entity": {
+      "type": "object", "required": ["op", "iri"], "additionalProperties": false,
+      "properties": {"op": {"const": "add_entity"}, "iri": {"type": "string"}}
+    },
+    "add_artifact": {
+      "type": "object", "required": ["op", "sha256", "media_type", "byte_size", "location"], "additionalProperties": false,
+      "properties": {
+        "op": {"const": "add_artifact"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "media_type": {"type": "string"},
+        "byte_size": {"type": "integer", "minimum": 0},
+        "location": {"type": "string", "description": "Artifact-store URI where the bytes already are."},
+        "source_uri": {"type": "string"},
+        "retrieved_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "reference": {
+      "type": "object", "additionalProperties": false,
+      "anyOf": [{"required": ["artifact"]}, {"required": ["source_uri"]}],
+      "properties": {
+        "artifact": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_uri": {"type": "string"},
+        "quote": {"type": "string", "description": "oa:TextQuoteSelector exact. Required for evidence_type 'extracted'."},
+        "quote_prefix": {"type": "string"},
+        "quote_suffix": {"type": "string"},
+        "span": {"type": "object", "description": "oa:TextPositionSelector {start, end} or another Web Annotation selector."}
+      }
+    },
+    "object": {
+      "type": "object", "additionalProperties": false,
+      "oneOf": [{"required": ["entity"]}, {"required": ["value"]}],
+      "properties": {
+        "entity": {"type": "string"},
+        "value": {
+          "type": "object", "required": ["@value"], "additionalProperties": false,
+          "properties": {"@value": {}, "@type": {"type": "string"}, "@language": {"type": "string"}}
+        }
+      }
+    },
+    "add_claim": {
+      "type": "object", "required": ["op", "subject", "predicate", "object", "evidence_type"], "additionalProperties": false,
+      "anyOf": [{"required": ["references"]}, {"required": ["derived_from"]}],
+      "properties": {
+        "op": {"const": "add_claim"},
+        "ref": {"type": "string", "description": "Local name other ops in this change set can use."},
+        "subject": {"type": "string"},
+        "predicate": {"type": "string", "description": "Must be an approved property."},
+        "object": {"$ref": "#/$defs/object"},
+        "qualifiers": {"type": "object", "description": "Conditions; keys are property IRIs or CURIEs."},
+        "valid_from": {"type": "string", "format": "date-time"},
+        "valid_to": {"type": "string", "format": "date-time"},
+        "evidence_type": {"enum": ["deterministic", "extracted", "inferred", "observed", "testimony"]},
+        "references": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/reference"}},
+        "derived_from": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/claim_ref"}}
+      }
+    },
+    "set_status": {
+      "type": "object", "required": ["op", "claim", "status"], "additionalProperties": false,
+      "properties": {
+        "op": {"const": "set_status"},
+        "claim": {"$ref": "#/$defs/claim_ref"},
+        "status": {"enum": ["normal", "preferred", "deprecated"]},
+        "reason": {"enum": ["superseded", "refuted", "retracted", "review", "belief"]},
+        "replaced_by": {"$ref": "#/$defs/claim_ref"},
+        "expect_status": {"enum": ["normal", "preferred", "deprecated"], "description": "Optimistic concurrency: conflict if the current status differs."}
+      }
+    },
+    "add_belief": {
+      "type": "object", "required": ["op", "claim", "model", "value"], "additionalProperties": false,
+      "properties": {
+        "op": {"const": "add_belief"},
+        "claim": {"$ref": "#/$defs/claim_ref"},
+        "model": {"type": "string", "description": "Belief model module IRI."},
+        "value": {"type": "number", "minimum": 0, "maximum": 1},
+        "explanation": {"type": "object"}
+      }
+    },
+    "add_verification": {
+      "type": "object", "required": ["op", "claim", "verdict", "method"], "additionalProperties": false,
+      "properties": {
+        "op": {"const": "add_verification"},
+        "claim": {"$ref": "#/$defs/claim_ref"},
+        "verdict": {"enum": ["supported", "refuted", "inconclusive"]},
+        "method": {"type": "string", "description": "Verifier module IRI; must differ from the module and agent that produced the claim."},
+        "details": {"type": "object"}
+      }
+    }
+  }
+}

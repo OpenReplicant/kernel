@@ -1,0 +1,31 @@
+# Chain definition — schema: kernel/schemas/chain.schema.json
+chain: urn:kk:chain:ingest-filter
+name: Filter secrets
+description: Runs gitleaks on the candidate files; fails the message if any finding is not allow-listed.
+protected: true
+runs_as: urn:kk:agent:ingest-filter
+trigger:
+  type: chain
+steps:
+- id: scan
+  do: script
+  with:
+    lang: python
+    path: scripts/gitleaks_scan.py
+  next:
+    success: decide
+- id: decide
+  do: switch
+  with:
+    lang: js
+    source: 'return msg.findings.length === 0 ? ''clean'' : ''blocked'';'
+  next:
+    clean: pass
+    blocked: block
+- id: pass
+  do: transform
+  with:
+    lang: js
+    source: return msg;
+- id: block
+  do: log

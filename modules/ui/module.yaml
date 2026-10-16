@@ -1,0 +1,31 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:ui
+name: Web UI (Caddy + Alpine.js over PostgREST)
+version: 0.1.0
+description: Review queue, claim browser with explain view, module/slot catalog, and the self-model graph.
+  People sign in through the identity slot; every action uses their own role.
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:ui
+  db_role: kkm_ui
+  member_of:
+  - kk_agent
+runtime:
+  type: container
+  image: caddy:2-alpine
+requires:
+- slot: api-adapter
+- slot: identity
+- slot: event-transport
+  optional: true
+interfaces:
+- name: web
+  affordance: property
+  transport: http
+  href: /
+mcp:
+  expose: []

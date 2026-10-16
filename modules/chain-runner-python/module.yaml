@@ -1,0 +1,24 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:chain-runner-python
+name: Bootstrap chain runner (Python)
+version: 0.1.0
+description: 'Minimal interpreter for chain definitions: walks steps, runs http/script/subchain/filter/transform/log
+  steps, routes on labels, starts and finishes a run per chain execution with plan_step set per step.
+  Exists to bootstrap milestone 1 and as the comparison baseline for RuleGo.'
+license: Apache-2.0
+kind: control
+slots:
+- chain-runner
+protected: true
+agent:
+  iri: urn:kk:agent:chain-runner-python
+  db_role: kkm_runner_py
+  member_of:
+  - kk_agent
+runtime:
+  type: python-service
+  entrypoint: python -m chain_runner
+accepts:
+- https://w3id.org/knowledge-kernel/schemas/chain.schema.json
+mcp:
+  expose: []

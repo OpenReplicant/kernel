@@ -1,0 +1,34 @@
+@prefix kkp:     <https://w3id.org/knowledge-kernel/profile#> .
+@prefix kk:      <https://w3id.org/knowledge-kernel/ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+
+# Agent profile pack (tier: profile). Profiles are data; a decoder turns one profile into
+# each harness's own format (Claude Code agent file, A2A Agent Card, ...). Skills are
+# Agent Skills packages (SKILL.md folders), referenced by IRI.
+
+<https://w3id.org/knowledge-kernel/profile>
+    a owl:Ontology ;
+    rdfs:label "Knowledge Kernel agent profile pack" ;
+    owl:versionInfo "0.1.0" .
+
+kkp:AgentProfile a owl:Class ; rdfs:subClassOf prov:Agent ; rdfs:label "agent profile" ;
+    skos:definition "A role an agent can run as: instructions, model, allowed tools and skills, clearance role." .
+kkp:Skill a owl:Class ; rdfs:label "skill" ;
+    skos:definition "An Agent Skills package (folder with SKILL.md)." ;
+    rdfs:seeAlso <https://agentskills.io/specification> .
+
+kkp:instructions a owl:DatatypeProperty ; rdfs:domain kkp:AgentProfile ; rdfs:range xsd:string ; rdfs:label "instructions" .
+kkp:model a owl:DatatypeProperty ; rdfs:domain kkp:AgentProfile ; rdfs:label "model" ;
+    skos:definition "Model identifier or model-provider module IRI." .
+kkp:allowedTool a owl:DatatypeProperty ; rdfs:domain kkp:AgentProfile ; rdfs:label "allowed tool" ;
+    skos:definition "MCP tool name (server/tool) the profile may call." .
+kkp:usesSkill a owl:ObjectProperty ; rdfs:domain kkp:AgentProfile ; rdfs:range kkp:Skill ; rdfs:label "uses skill" .
+kkp:clearanceRole a owl:DatatypeProperty ; rdfs:domain kkp:AgentProfile ; rdfs:label "clearance role" ;
+    skos:definition "Database role the profile acts as; clearance is granted to the role by people." .
+kkp:delegatesTo a owl:ObjectProperty ; rdfs:domain kkp:AgentProfile ; rdfs:range kkp:AgentProfile ; rdfs:label "delegates to" ;
+    skos:definition "Sub-agent profiles this profile may start." .
+kkp:skillPath a owl:DatatypeProperty ; rdfs:domain kkp:Skill ; rdfs:label "skill path" .

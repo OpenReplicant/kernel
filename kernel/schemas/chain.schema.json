@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://w3id.org/knowledge-kernel/schemas/chain.schema.json",
+  "title": "Chain definition (chain profile)",
+  "description": "A short, event-driven automation in the chain profile (ontology/profiles/chain.ttl, built on P-Plan). Stored as claims; this YAML/JSON form is how modules ship them. The chain decoder compiles it to RuleGo DSL (or another runner). Step types are deliberately few; each maps to a runner component chosen by the decoder.",
+  "type": "object",
+  "required": ["chain", "name", "runs_as", "trigger", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "chain": {"type": "string", "pattern": "^urn:kk:chain:[a-z0-9][a-z0-9-]*$"},
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "protected": {"type": "boolean", "default": false},
+    "runs_as": {"type": "string", "pattern": "^urn:kk:agent:", "description": "Agent whose database role (via JWT) the chain uses for every kernel call."},
+    "trigger": {
+      "type": "object", "required": ["type"], "additionalProperties": false,
+      "properties": {
+        "type": {"enum": ["schedule", "http", "mcp", "notify", "chain"]},
+        "spec": {"type": "string"}
+      }
+    },
+    "steps": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["id", "do"], "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "do": {"enum": ["http", "script", "subchain", "switch", "filter", "transform", "mcp_tool", "log"]},
+          "with": {"type": "object", "description": "Step configuration. script: {lang: python|js|lua, path|source}. http: {method, url, body}. subchain: {chain}."},
+          "next": {
+            "type": "object",
+            "description": "Routing label -> step id(s). Standard labels: success, failure, true, false; switch steps may use their own labels.",
+            "additionalProperties": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+          }
+        }
+      }
+    }
+  }
+}

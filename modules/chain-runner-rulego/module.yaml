@@ -1,0 +1,30 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:chain-runner-rulego
+name: RuleGo-Server chain runner
+version: 0.1.0
+description: RuleGo-Server running chains compiled by the chain decoder. Its chain folder is written only
+  by the decoder from approved chain claims; its editing API and editor are never exposed to agents; its
+  MCP mode exposes only the allow-listed chains.
+license: Apache-2.0
+kind: control
+slots:
+- chain-runner
+protected: true
+agent:
+  iri: urn:kk:agent:chain-runner-rulego
+  db_role: kkm_runner_rulego
+  member_of:
+  - kk_agent
+runtime:
+  type: container
+  image: ${RULEGO_SERVER_IMAGE}
+requires:
+- slot: decoder
+interfaces:
+- name: mcp
+  affordance: action
+  transport: mcp
+  href: /mcp
+mcp:
+  expose: []
+  read_only: true

@@ -1,0 +1,23 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:pack-loader
+name: Vocabulary pack loader
+version: 0.1.0
+description: Runs as a migration step with the kk_owner credential (installs go through kernel.install_ops,
+  attributed to urn:kk:agent:pack-loader). Reads ontology/packs.yaml and the local .ttl files, converts
+  terms (types, labels, sub-class/property links, mappings) into ops, and installs each pack version with
+  kernel.install_ops as a migration. Pinned upstream vocabularies are fetched once and stored as artifacts.
+license: Apache-2.0
+kind: pack
+slots:
+- vocabulary-pack
+protected: true
+agent:
+  iri: urn:kk:agent:pack-loader
+  db_role: kkm_pack_loader
+  member_of:
+  - kk_agent
+runtime:
+  type: python-service
+  entrypoint: python -m pack_loader
+mcp:
+  expose: []

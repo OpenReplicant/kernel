@@ -1,0 +1,47 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:self-encoder
+name: Repository encoder (self-model first)
+version: 0.1.0
+description: 'Scans a repository (first: this project''s own folder) and emits deterministic claims: module
+  manifests -> kk:Module node types and the slots they fill; chain files -> kk:Chain plans and steps;
+  compose files -> node templates and their relationships; ontology files -> packs; SQL migrations ->
+  schema objects. Every claim references the file artifact and line span.'
+license: Apache-2.0
+kind: encoder
+slots:
+- source-connector
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:self-encoder
+  db_role: kkm_self_encoder
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m self_encoder
+  chains:
+  - chains/scan.yaml
+requires:
+- slot: ingest-filter
+- slot: artifact-store
+accepts:
+- git repository
+- directory
+produces:
+- add_artifact
+- add_claim
+triggers:
+- type: manual
+- type: schedule
+  spec: on git change
+mcp:
+  expose:
+  - scan
+  read_only: false

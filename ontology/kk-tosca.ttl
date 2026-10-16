@@ -1,0 +1,97 @@
+@prefix kkt:     <https://w3id.org/knowledge-kernel/tosca#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix td:      <https://www.w3.org/2019/wot/td#> .
+
+# RDF mirror of the TOSCA 2.0 metamodel (tier: core) — the system-structure layer.
+# TOSCA is YAML-native and has no official RDF vocabulary, so these terms mirror its
+# metamodel one to one and nothing more. TOSCA YAML is an encoder source and decoder target.
+# Spec: OASIS TOSCA Version 2.0 (OASIS Standard, September 2025).
+# Runtime interfaces and transports are NOT modeled here: they use WoT Thing Description (td:).
+# TOSCA workflows are deliberately unused; plans and chains use P-Plan.
+
+<https://w3id.org/knowledge-kernel/tosca>
+    a owl:Ontology ;
+    rdfs:label "TOSCA 2.0 metamodel mirror" ;
+    owl:versionInfo "0.1.0" ;
+    rdfs:seeAlso <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+# ------------------------------------------------------------------ types and templates
+kkt:NodeType a owl:Class ; rdfs:label "node type" ;
+    skos:definition "A reusable kind of component, declaring requirements, capabilities, properties, interfaces and artifacts." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:NodeTemplate a owl:Class ; rdfs:label "node template" ;
+    skos:definition "A configured use of a node type in a topology: property values set, requirements fulfilled." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:ServiceTemplate a owl:Class ; rdfs:label "service template" ;
+    skos:definition "A topology of node templates and relationships; a whole distribution of the platform is one." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:RequirementDefinition a owl:Class ; rdfs:label "requirement definition" ;
+    skos:definition "A need declared by a node type or template that another node's capability must satisfy (a slot)." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:CapabilityDefinition a owl:Class ; rdfs:label "capability definition" ;
+    skos:definition "A feature a node type offers that can satisfy requirements." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:RelationshipType a owl:Class ; rdfs:label "relationship type" ;
+    skos:definition "A kind of link between node templates, e.g. depends on, hosted on, connects to." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:InterfaceDefinition a owl:Class ; rdfs:label "interface definition" ;
+    skos:definition "Lifecycle and management operations of a node (create, configure, start, stop, delete). Runtime affordances use td:InteractionAffordance." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:OperationDefinition a owl:Class ; rdfs:label "operation definition" ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:ArtifactDefinition a owl:Class ; rdfs:label "artifact definition" ;
+    skos:definition "Code, image, script or file that implements a node or operation." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:PolicyDefinition a owl:Class ; rdfs:label "policy definition" ;
+    skos:definition "A constraint or behaviour rule applied to nodes or groups (placement, scaling, clearance)." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:SubstitutionMapping a owl:Class ; rdfs:label "substitution mapping" ;
+    skos:definition "Declares that a whole service template can stand in for one node type: the source of sub-chains and sub-topologies." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+kkt:Profile a owl:Class ; rdfs:label "profile" ;
+    skos:definition "A named, versioned collection of TOSCA type definitions for a domain." ;
+    rdfs:isDefinedBy <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
+
+# ------------------------------------------------------------------ properties
+kkt:derivedFrom a owl:ObjectProperty ; rdfs:label "derived from" ;
+    skos:definition "Type inheritance between TOSCA types." .
+kkt:nodeType a owl:ObjectProperty ; rdfs:domain kkt:NodeTemplate ; rdfs:range kkt:NodeType ; rdfs:label "node type" .
+kkt:hasRequirement a owl:ObjectProperty ; rdfs:range kkt:RequirementDefinition ; rdfs:label "has requirement" .
+kkt:hasCapability a owl:ObjectProperty ; rdfs:range kkt:CapabilityDefinition ; rdfs:label "has capability" .
+kkt:fulfills a owl:ObjectProperty ; rdfs:range kkt:RequirementDefinition ; rdfs:label "fulfills" ;
+    skos:definition "A node type or template satisfies a requirement. Qualifiers carry the configuration chosen for this fulfillment." .
+kkt:relationshipType a owl:ObjectProperty ; rdfs:range kkt:RelationshipType ; rdfs:label "relationship type" ;
+    skos:definition "Used as a qualifier on a requirement fulfillment or a dependency claim." .
+kkt:dependsOn a owl:ObjectProperty ; rdfs:domain kkt:NodeTemplate ; rdfs:range kkt:NodeTemplate ; rdfs:label "depends on" ;
+    skos:closeMatch <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html#DependsOn> .
+kkt:hostedOn a owl:ObjectProperty ; rdfs:subPropertyOf kkt:dependsOn ; rdfs:label "hosted on" .
+kkt:connectsTo a owl:ObjectProperty ; rdfs:subPropertyOf kkt:dependsOn ; rdfs:label "connects to" .
+kkt:propertyValue a rdf:Property ; rdfs:label "property value" ;
+    skos:definition "A configuration value of a template; the property name is the qualifier kkt:propertyName." .
+kkt:propertyName a owl:DatatypeProperty ; rdfs:label "property name" .
+kkt:hasInterface a owl:ObjectProperty ; rdfs:range kkt:InterfaceDefinition ; rdfs:label "has interface" .
+kkt:hasOperation a owl:ObjectProperty ; rdfs:domain kkt:InterfaceDefinition ; rdfs:range kkt:OperationDefinition ; rdfs:label "has operation" .
+kkt:hasArtifact a owl:ObjectProperty ; rdfs:range kkt:ArtifactDefinition ; rdfs:label "has artifact" .
+kkt:hasPolicy a owl:ObjectProperty ; rdfs:range kkt:PolicyDefinition ; rdfs:label "has policy" .
+kkt:substitutes a owl:ObjectProperty ; rdfs:domain kkt:SubstitutionMapping ; rdfs:range kkt:NodeType ; rdfs:label "substitutes" .
+kkt:substitutedBy a owl:ObjectProperty ; rdfs:domain kkt:SubstitutionMapping ; rdfs:range kkt:ServiceTemplate ; rdfs:label "substituted by" .
+kkt:memberOf a owl:ObjectProperty ; rdfs:range kkt:ServiceTemplate ; rdfs:label "member of" ;
+    skos:definition "A node template belongs to a service template (topology)." .
+kkt:hasAffordance a owl:ObjectProperty ; rdfs:range td:InteractionAffordance ; rdfs:label "has affordance" ;
+    skos:definition "Bridge to WoT TD: runtime properties, actions and events of a node, each with forms (transport bindings)." .
