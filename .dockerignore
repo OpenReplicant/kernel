@@ -1,0 +1,10 @@
+.git
+node_modules
+parked
+docs
+eval
+**/__pycache__
+**/tests
+build
+*.egg-info
+deploy/.env

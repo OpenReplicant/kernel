@@ -2,15 +2,14 @@
 through kernel-mcp over stdio, submits a claim, sees the validator apply it, finds and explains it;
 the kernel refuses what that identity may not do; the shared HTTP mode refuses missing or forged tokens.
 
-Env: DATABASE_URL (kk_authenticator, for the http server), AGENT_DATABASE_URL (agent_claude_code's
-own login), OWNER_DATABASE_URL (person_owner's own login), PYTHONPATH including modules/kernel-mcp.
+Env: DATABASE_URL (kk_authenticator), AGENT_DATABASE_URL (agent_claude_code's own login),
+OWNER_DATABASE_URL (person_owner's own login), KK_MCP_URL and KK_JWT_SECRET (the running `kk serve`);
+the knowledge-kernel package installed (pip install -e .).
 """
 import asyncio
 import json
 import os
-import secrets
 import re
-import socket
 import subprocess
 import sys
 import tempfile
@@ -147,11 +146,11 @@ async def agent_session():
         sub, _ = await tool(s, "submit_change_set", {"change_set": prop})
         row = await settle(s, sub["id"])
         check("typing a new property goes to the review lane", row["status"] == "awaiting_review", row["status"])
-        reviewed = subprocess.run([sys.executable, str(ROOT / "scripts/review.py"), "approve", sub["id"], "--note", "smoke"],
+        reviewed = subprocess.run([sys.executable, "-m", "kk", "review", "approve", sub["id"], "--note", "smoke"],
                                   capture_output=True, text=True,
-                                  env={**os.environ, "DATABASE_URL": os.environ["OWNER_DATABASE_URL"]})
+                                  env={**os.environ, "KK_DATABASE_URL": os.environ["OWNER_DATABASE_URL"]})
         row, _ = await tool(s, "get_change_set", {"change_set_id": sub["id"]})
-        check("a person approves it (scripts/review.py) and it is applied", row["status"] == "applied",
+        check("a person approves it (kk review) and it is applied", row["status"] == "applied",
               (reviewed.stdout + reviewed.stderr).strip()[:100])
 
         done, _ = await tool(s, "finish_run", {"run_id": run, "status": "succeeded"})
@@ -172,36 +171,27 @@ async def agent_session():
 
 
 async def http_session():
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
-    secret = secrets.token_hex(32)
-    proc = subprocess.Popen([sys.executable, "-m", "kernel_mcp", "--http"], stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL, env={**os.environ, "PORT": str(port), "KK_JWT_SECRET": secret})
-    url = f"http://127.0.0.1:{port}/mcp"
-    try:
-        for _ in range(50):
-            try:
-                httpx.get(url, timeout=1)
-                break
-            except httpx.TransportError:
-                time.sleep(0.2)
-        exp = int(time.time()) + 300
-        tokens = {"none": None, "forged": jwt.encode({"role": "agent_claude_code", "exp": exp}, "wrong" * 8, "HS256"),
-                  "valid": jwt.encode({"role": "agent_claude_code", "exp": exp}, secret, "HS256")}
-        results = {}
-        for name, token in tokens.items():
-            client = httpx.AsyncClient(headers={"Authorization": f"Bearer {token}"} if token else {}, timeout=30)
-            async with client, streamable_http_client(url, http_client=client) as (r, w, *_), ClientSession(r, w) as s:
-                await s.initialize()
-                results[name] = await tool(s, "query_claims", {"predicate": "rdfs:label", "limit": 5})
-        check("http: no token refused", results["none"][1] and "bearer" in results["none"][1])
-        check("http: forged token refused", results["forged"][1] and "invalid token" in results["forged"][1])
-        check("http: valid token reads", results["valid"][1] is None and results["valid"][0],
-              f"{len(results['valid'][0] or [])} claims")
-    finally:
-        proc.terminate()
-        proc.wait(10)
+    url, secret = os.environ["KK_MCP_URL"], os.environ["KK_JWT_SECRET"]
+    for _ in range(50):
+        try:
+            httpx.get(url, timeout=1)
+            break
+        except httpx.TransportError:
+            time.sleep(0.2)
+    exp = int(time.time()) + 300
+    tokens = {"none": None, "forged": jwt.encode({"role": "agent_claude_code", "exp": exp}, "wrong" * 8, "HS256"),
+              "valid": subprocess.run([sys.executable, "-m", "kk", "token", "agent_claude_code", "--days", "0.01"],
+                                      capture_output=True, text=True, check=True).stdout.strip()}
+    results = {}
+    for name, token in tokens.items():
+        client = httpx.AsyncClient(headers={"Authorization": f"Bearer {token}"} if token else {}, timeout=30)
+        async with client, streamable_http_client(url, http_client=client) as (r, w, *_), ClientSession(r, w) as s:
+            await s.initialize()
+            results[name] = await tool(s, "query_claims", {"predicate": "rdfs:label", "limit": 5})
+    check("http: no token refused", results["none"][1] and "bearer" in results["none"][1])
+    check("http: forged token refused", results["forged"][1] and "invalid token" in results["forged"][1])
+    check("http: valid token (kk token) reads", results["valid"][1] is None and results["valid"][0],
+          f"{len(results['valid'][0] or [])} claims")
 
 
 async def main():

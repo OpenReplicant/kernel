@@ -7,7 +7,7 @@ this server decides nothing. Who the caller is:
     The server never switches roles in this mode, and refuses a login that could (kk_authenticator,
     superusers): whoever holds such a password could act as anyone, the owner included.
   - http (shared server): DATABASE_URL is kk_authenticator, which only this server holds; each
-    request's bearer JWT (signed with KK_JWT_SECRET, `role` claim, the same tokens PostgREST accepts)
+    request's bearer JWT (signed with KK_JWT_SECRET, `role` claim; minted by `kk token ROLE`)
     names the role it switches to (SET LOCAL ROLE). A request without a valid token is refused.
 Every claim returned carries its id and belief, so answers can cite them (invariant 6).
 """

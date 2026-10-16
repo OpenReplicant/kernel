@@ -1,14 +1,13 @@
 """Review lane for people.
 
-  python scripts/review.py list
-  python scripts/review.py show <change set id>
-  python scripts/review.py approve <id>... [--note TEXT]
-  python scripts/review.py approve --all [--from AGENT_IRI] [--note TEXT]
-  python scripts/review.py reject <id>... --note TEXT
+  kk review list
+  kk review show <change set id>
+  kk review approve <id>... [--note TEXT]
+  kk review approve --all [--from AGENT_IRI] [--note TEXT]
+  kk review reject <id>... --note TEXT
 
-Env: DATABASE_URL, the reviewer's own login (e.g. person_owner; deploy/postgres/060_logins.sh).
-Needs psycopg. The kernel refuses self-approval (KK025) and
-approvals outside the reviewer's cleared scopes.
+Env: KK_DATABASE_URL (or DATABASE_URL), the reviewer's own login (`kk person add NAME`). The kernel
+refuses self-approval (KK025) and approvals outside the reviewer's cleared scopes.
 """
 import argparse
 import json
@@ -19,7 +18,10 @@ import psycopg
 
 
 def connect():
-    return psycopg.connect(os.environ["DATABASE_URL"], autocommit=True)
+    url = os.environ.get("KK_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not url:
+        sys.exit("set KK_DATABASE_URL (or DATABASE_URL) to your own login")
+    return psycopg.connect(url, autocommit=True)
 
 
 def summary(row):
@@ -29,14 +31,14 @@ def summary(row):
     return f"{row['id']}  {row['attributed_to']}  {row['target_scope']}  {len(row['ops'])} ops  {preds}"
 
 
-def main():
-    p = argparse.ArgumentParser(description="Review lane")
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="kk review", description="Review lane")
     p.add_argument("action", choices=["list", "show", "approve", "reject"])
     p.add_argument("ids", nargs="*")
     p.add_argument("--all", action="store_true")
     p.add_argument("--from", dest="agent")
     p.add_argument("--note")
-    a = p.parse_args()
+    a = p.parse_args(argv)
     conn = connect()
     queue = conn.execute("select coalesce(jsonb_agg(to_jsonb(q) order by submitted_at), '[]') from api.review_queue q"
                          ).fetchone()[0]

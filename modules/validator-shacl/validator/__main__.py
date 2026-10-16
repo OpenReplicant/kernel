@@ -1,18 +1,19 @@
-"""Validator service: validates submitted change sets and records each verdict. Needs no runner.
+"""Validator worker: validates submitted change sets and records each verdict. Needs no runner.
 
 It listens on the kernel_change_set channel and, because NOTIFY is not durable, also sweeps the
 queue on start and every KK_SWEEP_SECONDS. Each submitted change set is judged by validator.core
 and the verdict recorded with api.record_validation; the kernel applies valid auto-lane sets.
 
-Env: DATABASE_URL (a login that may SET ROLE to KK_ROLE, e.g. kk_authenticator; or the module's own
-login), KK_ROLE (default kkm_validator), KK_SWEEP_SECONDS (default 30).
+Runs inside `kk serve`, or alone: python -m validator (needs the kk package for kk.lib).
+Env: DATABASE_URL (a login that may SET ROLE to KK_ROLE, e.g. kk_authenticator), KK_ROLE (default
+kkm_validator), KK_SWEEP_SECONDS (default 30).
 """
 import os
 import sys
 
-import psycopg
-from psycopg import sql
 from psycopg.types.json import Jsonb
+
+from kk.lib import connect, listen
 
 from .core import entity_objects, validate
 
@@ -53,16 +54,9 @@ def drain(conn) -> int:
 
 
 def main() -> None:
-    sweep = float(os.environ.get("KK_SWEEP_SECONDS", "30"))
-    with psycopg.connect(os.environ["DATABASE_URL"], autocommit=True) as conn:
-        conn.execute(sql.SQL("set role {}").format(sql.Identifier(os.environ.get("KK_ROLE", "kkm_validator"))))
-        conn.execute("listen kernel_change_set")
+    with connect(os.environ.get("KK_ROLE", "kkm_validator")) as conn:
         print("validator: listening on kernel_change_set", flush=True)
-        while True:
-            drain(conn)
-            # Wake on the next notification, or after the sweep interval at the latest.
-            for _ in conn.notifies(timeout=sweep, stop_after=1):
-                pass
+        listen(conn, drain)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ do $$ begin
   end if;
 end $$;
 grant kk_agent to kkm_example;
-grant kkm_example to kk_authenticator;           -- PostgREST may switch to it with a valid JWT
+grant kkm_example to kk_authenticator;           -- services that run the module switch to it
 
 set role kk_owner;
 insert into kernel.agent(iri, db_role, kind, label)

@@ -29,15 +29,16 @@ su postgres -c "sh kernel/schema/tests/run.sh"            # 30 kernel checks (pe
 python shapes/tests/test_shapes.py && python scripts/check_manifests.py
 python modules/<module>/tests/<test>.py                    # each module's tests and evals
 PYTHONPATH=modules/pack-loader python -m pack_loader | diff -q - modules/pack-loader/packs.sql
-PATH=/tmp/claude-0/bin:$PATH PGDATABASE=postgres PYTHON=/tmp/venv/bin/python sh scripts/smoke_kernel.sh   # G4 + T13, ~40 s
+PATH=/tmp/claude-0/bin:$PATH PGDATABASE=postgres PYTHON=/tmp/venv/bin/python sh scripts/smoke_kernel.sh   # G4 + T13 + T17 on kk alone, ~40 s
 ```
 
-The venv also needs `modules/kernel-mcp/requirements.txt` and `modules/validator-shacl/requirements.txt`.
+The venv also needs this repository installed: `/tmp/venv/bin/pip install -e .` (the `kk` command and
+every default module; uninstall a stale non-editable `knowledge-kernel-mcp` first).
 Run the smoke test as root, not as postgres: the postgres user cannot read the proxy CA that
 `SSL_CERT_FILE` points to. The ingestion part needs gitleaks v8.30.1 on PATH; copy it out of its image:
 `docker create --name gl zricethezav/gitleaks:v8.30.1 && docker cp gl:/usr/bin/gitleaks /tmp/claude-0/bin/ && docker rm gl`.
 Regenerate `modules/pack-loader/packs.sql` after changing `ontology/*.ttl` or `slots.yaml`. Docker image builds behind the proxy:
-`docker build --secret id=ca,src=/root/.ccr/ca-bundle.crt -f modules/<m>/Dockerfile .`. Scan for secrets
+`docker build --secret id=ca,src=/root/.ccr/ca-bundle.crt -t knowledge-kernel:local .` (one image, D-42). Scan for secrets
 before pushing: `docker run --rm -v "$PWD":/repo:ro zricethezav/gitleaks:v8.30.1 dir /repo --redact --exit-code 0`.
 
 ## Ship a task
@@ -52,9 +53,9 @@ smoke test prints module logs on failure.
 
 - **A module:** `modules/<name>/` with `module.yaml` (schema `kernel/schemas/module.schema.json`,
   slots from `ontology/slots.yaml`), `migration.sql` (role + agent row, see `modules/_template`),
-  code that reads the `api` schema under its own role (`DATABASE_URL` + `SET ROLE`, as the validator
-  does) and never writes tables, tests, and a Dockerfile whose build context is the repo root. It must
-  run without a chain runner (D-36).
+  code that reads the `api` schema under its own role and writes only by `submit_change_set`, using
+  `kk.lib` (`connect`, `listen`, `run`, `submit`; see the validator), and tests. It must run without a
+  chain runner (D-36).
 - **Parked work** (`parked/`): see `parked/README.md` before reviving anything.
 - **A vocabulary term:** check `ontology/packs.yaml` for a standard vocabulary that owns the concept
   first (T12 moves us off `kk:` terms); only the module contract stays in `kk-core.ttl`.

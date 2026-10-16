@@ -9,7 +9,7 @@ Everything else is a module or a vocabulary pack and may change freely through t
 **Scope change (D-36, Oct 2026).** The kernel is small and drops into any agent harness: the frozen
 schema, its conventions, and swappable default modules for ingestion, processing and recall. No runner
 and no HTTP middleware is required; kernel-mcp and the modules talk to Postgres directly under their
-own roles, and PostgREST is optional. Chain runners, chain decoders, the graph decoder and the UI are
+own roles (PostgREST is gone, D-42). One command, `kk`, sets up and runs a kernel. Chain runners, chain decoders, the graph decoder and the UI are
 parked (`parked/`). Sections below that describe those (§7, §8, parts of §12–§13) describe parked
 modules, not the kernel; T12 replaces most `kk:` terms with standard vocabularies (§6).
 
@@ -135,19 +135,18 @@ agent ──submit_change_set──▶ submitted ──validator──▶ valid 
 
 ### 3.4 Read path
 
-Clients (kernel-mcp, modules, the optional PostgREST) see only schema `api`, under their own role.
-In PostgREST's terms:
+Clients (kernel-mcp, `kk`, modules) see only schema `api`, under their own role, over SQL (D-42):
 
-| Endpoint | What |
+| Object | What |
 | --- | --- |
-| `GET /claims` | All visible claims with current `status` and the active model's latest `belief` |
-| `GET /change_sets` | Your own change sets (validators/reviewers: all in their cleared scopes) |
-| `GET /review_queue` | Reviewers only |
-| `GET /rpc/explain?claim_id=` | Sources and quotes, derived-from, used-by, status history, beliefs, verifications, run |
-| `POST /rpc/start_run`, `/rpc/finish_run`, `/rpc/submit_change_set` | All agents |
-| `POST /rpc/record_validation` / `/rpc/review` / `/rpc/redact` | Validators / reviewers / stewards |
-| `GET /validation_queue` | Validators: submitted change sets with their ops (view added by the validator module's migration, D-24) |
-| `GET /claim_references` | References of the claims you can see (view added by the belief module's migration, D-27) |
+| `api.claims` | All visible claims with current `status` and the active model's latest `belief` |
+| `api.change_sets` | Your own change sets (validators/reviewers: all in their cleared scopes) |
+| `api.review_queue` | Reviewers only |
+| `api.explain(claim_id)` | Sources and quotes, derived-from, used-by, status history, beliefs, verifications, run |
+| `api.start_run`, `api.finish_run`, `api.submit_change_set` | All agents |
+| `api.record_validation` / `api.review` / `api.redact` | Validators / reviewers / stewards |
+| `api.validation_queue` | Validators: submitted change sets with their ops (view added by the validator module's migration, D-24) |
+| `api.claim_references` | References of the claims you can see (view added by the belief module's migration, D-27) |
 
 Module migrations may add `security_invoker` views to `api`; kernel row-level security still applies.
 
@@ -191,10 +190,11 @@ belongs in a module that reads views and submits change sets.
   role mapped one-to-one to an agent IRI in `kernel.agent`. Modules use roles named `kkm_*`, members of
   `kk_agent` (plus `kk_validator`, `kk_reviewer` or `kk_steward` where needed). People use `person_*` roles
   (the local owner, `person_owner`, reviews and may redact; D-26) and harness agents that work through MCP
-  use `agent_*` roles (`agent_claude_code`; D-28). Agents and people log in as themselves (stdio kernel-mcp,
-  `scripts/review.py`). Services the operator runs (validator, kernel-mcp `--http`, PostgREST) connect
-  as `kk_authenticator` and switch to the caller's role from a JWT (`scripts/mint_jwt.py`); agents never
-  hold that login (D-36, D-37). Each role is granted to `kk_authenticator`.
+  use `agent_*` roles (`agent_claude_code`; D-28); `kk person add` and `kk agent add` create them. Agents
+  and people log in as themselves (stdio kernel-mcp, `kk review`). Services the operator runs (`kk serve`:
+  validator, belief, kernel-mcp over HTTP) connect as `kk_authenticator` and switch to each module's
+  role, or to the caller's role from a JWT (`kk token`); agents never hold that login (D-36, D-37, D-42).
+  Each role is granted to `kk_authenticator`.
 - **Scopes are trust boundaries.** `kernel.scope_grant` says which roles may read and write each
   scope. Defaults: `urn:kk:scope:vocab` and `urn:kk:scope:default`, readable and writable by `kk_agent`.
   Validators and reviewers see change sets only for scopes they can read.
@@ -362,7 +362,7 @@ section describes the parked runner modules (`parked/`) and stays as history unt
     OpenTelemetry client node. Decoder: `modules/chain-decoder-rulego` (D-30, D-33).
   - Further runners are further decoder targets (the compile rule in §7 is per runner).
 - **Protection, in three layers.**
-  1. The invariants never live in a runner. Chains reach the kernel only through PostgREST under their
+  1. The invariants never live in a runner. Chains reach the kernel only through the `api` schema under their
      `runs_as` agent's JWT, so an edited or broken chain can only submit change sets.
   2. System chains are protected: defined as claims, changed only through the review lane, decoded
      into the runner's chain folder by the chain decoder (the only writer). Agents never get RuleGo's

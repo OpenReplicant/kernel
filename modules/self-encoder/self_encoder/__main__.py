@@ -27,9 +27,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import psycopg
-from psycopg import sql
-from psycopg.types.json import Jsonb
+from kk.lib import connect, run, submit
 
 from .encode import AGENT, SCOPE, encode_file, list_files
 
@@ -97,47 +95,35 @@ def scan(conn, repo: Path, artifacts: Path, use_filter: bool) -> dict:
         r = dict(zip(cols, row))
         prior.setdefault(path_of(r["idempotency_key"]), []).append(r)
 
-    run = conn.execute("select api.start_run(%s, null, '[]'::jsonb, %s)",
-                       (MODULE, Jsonb({"repo": str(repo), "filtered": use_filter}))).fetchone()[0]
     statuses: Counter = Counter()
-    try:
+    with conn.cursor() as cur, run(cur, MODULE, {"repo": str(repo), "filtered": use_filter}) as (run_id, outputs):
         for rel in filtered["paths"]:
             cs = encode_file(repo, rel, artifacts)
             old = [c for c in prior.get(rel, []) if c["idempotency_key"] != cs["idempotency_key"]]
             if old:
                 supersede(cs, old, expand)
-            statuses[submit(conn, cs, run)] += 1
+            statuses[submit(cur, cs, run_id)["status"]] += 1
         for rel in sorted(set(prior) - set(files)):
             gone = sorted(prior[rel], key=lambda c: str(c["id"]))
             digest = hashlib.sha256(" ".join(str(c["id"]) for c in gone).encode()).hexdigest()[:16]
             cs = {"idempotency_key": f"{KEY}{rel}:removed:{digest}", "attributed_to": AGENT, "target_scope": SCOPE,
                   "ops": [{"op": "set_status", "claim": str(c["id"]), "status": "deprecated", "reason": "retracted",
                            "expect_status": c["status"]} for c in gone]}
-            statuses[submit(conn, cs, run)] += 1
-        conn.execute("select api.finish_run(%s, 'succeeded', %s)",
-                     (run, Jsonb({"files": len(filtered["paths"]), "blocked": len(filtered["blocked"])})))
-    except Exception:
-        conn.execute("select api.finish_run(%s, 'failed', '{}'::jsonb)", (run,))
-        raise
-    return {"run": str(run), "files": len(files), "encoded": len(filtered["paths"]),
+            statuses[submit(cur, cs, run_id)["status"]] += 1
+        outputs.update(files=len(filtered["paths"]), blocked=len(filtered["blocked"]))
+    return {"run": run_id, "files": len(files), "encoded": len(filtered["paths"]),
             "blocked": filtered["blocked"], "change_sets": dict(statuses)}
 
 
-def submit(conn, cs: dict, run) -> str:
-    return conn.execute("select api.submit_change_set(%s)",
-                        (Jsonb({**cs, "generated_by": str(run)}),)).fetchone()[0]["status"]
-
-
-def main() -> int:
+def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Scan a repository into the kernel (self-model).")
     ap.add_argument("command", choices=["scan"])
     ap.add_argument("--repo", default=".")
     ap.add_argument("--artifacts", default=os.environ.get("KK_ARTIFACTS")
                     or str(Path.home() / ".local/share/knowledge-kernel/artifacts"))
     ap.add_argument("--no-filter", action="store_true", help="skip the ingest filter (secrets may be stored)")
-    a = ap.parse_args()
-    with psycopg.connect(os.environ["DATABASE_URL"], autocommit=True) as conn:
-        conn.execute(sql.SQL("set role {}").format(sql.Identifier(os.environ.get("KK_ROLE", "kkm_self_encoder"))))
+    a = ap.parse_args(argv)
+    with connect(os.environ.get("KK_ROLE", "kkm_self_encoder")) as conn:
         print(json.dumps(scan(conn, Path(a.repo).resolve(), Path(a.artifacts), not a.no_filter)))
     return 0
 

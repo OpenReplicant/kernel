@@ -7,7 +7,7 @@
    new one); a removed file's claims are retracted; a file with a secret is blocked and never stored.
 
 Env: DATABASE_URL (kk_authenticator), AGENT_DATABASE_URL (reads), OWNER_DATABASE_URL (review); gitleaks
-on PATH; PYTHONPATH including modules/self-encoder and modules/ingest-filter-gitleaks.
+on PATH; the knowledge-kernel package installed (pip install -e .).
 """
 import json
 import os
@@ -21,10 +21,9 @@ import time
 from pathlib import Path
 
 import psycopg
+from self_encoder.encode import list_files
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "modules/self-encoder"))
-from self_encoder.encode import list_files  # noqa: E402
 
 ENCODER = "urn:kk:agent:self-encoder"
 VERSION = "http://www.w3.org/2002/07/owl#versionInfo"
@@ -37,7 +36,7 @@ def check(name, ok, detail=""):
 
 
 def scan(repo: Path, artifacts: str) -> dict:
-    out = subprocess.run([sys.executable, "-m", "self_encoder", "scan", "--repo", str(repo), "--artifacts", artifacts],
+    out = subprocess.run([sys.executable, "-m", "kk", "scan", "--repo", str(repo), "--artifacts", artifacts],
                          capture_output=True, text=True, env={**os.environ, "KK_ROLE": "kkm_self_encoder"})
     if out.returncode != 0:
         raise SystemExit(f"scan failed: {out.stderr[-1500:]}")
@@ -54,9 +53,9 @@ def settle():
 
 def approve_encoder_sets() -> str:
     settle()
-    out = subprocess.run([sys.executable, str(ROOT / "scripts/review.py"), "approve", "--all", "--from", ENCODER,
+    out = subprocess.run([sys.executable, "-m", "kk", "review", "approve", "--all", "--from", ENCODER,
                           "--note", "smoke test: self-model"], capture_output=True, text=True,
-                         env={**os.environ, "DATABASE_URL": os.environ["OWNER_DATABASE_URL"]})
+                         env={**os.environ, "KK_DATABASE_URL": os.environ["OWNER_DATABASE_URL"]})
     return (out.stdout + out.stderr).strip()
 
 

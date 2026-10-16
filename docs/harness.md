@@ -8,35 +8,31 @@ can use it; how deeply depends on what you add (D-36):
 | 1 | the MCP server | the agent reads, cites and submits claims under its own identity |
 | 2 | + the skill file | the agent knows the conventions: attribution, references, evidence types, citing belief |
 | 3 | + hooks | the harness recalls on its own: identity and a session run at start, related claims with every prompt, the run finished at the end |
-| 4 | + modules | encoders, belief, further processors and decoders, a UI |
+| 4 | + modules | encoders, belief, further processors and decoders, a UI (`kk serve` runs the default ones) |
 
 ## 1. A database with the kernel
 
-Either the compose stack (`deploy/compose.yaml`: Postgres, validator, belief model, kernel-mcp over HTTP), or any
-Postgres 16+ you run yourself:
+Either the compose stack (`deploy/compose.yaml`: Postgres and one image running `kk serve`), or any
+Postgres 16+ you run yourself, set up with `kk` (`pip install -e .` from a checkout):
 
 ```sh
-psql -d kk -f kernel/schema/001_kernel.sql -f kernel/schema/002_bootstrap.sql \
-            -f modules/validator-shacl/migration.sql -f deploy/postgres/040_people.sql \
-            -f deploy/postgres/050_agents.sql
-psql -d kk -c "alter role kk_authenticator password '<service secret>'" \
-           -c "alter role agent_claude_code login password '<agent secret>'" \
-           -c "alter role person_owner login password '<owner secret>'"
-pip install -r modules/validator-shacl/requirements.txt
-DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_ROLE=kkm_validator \
-  PYTHONPATH=modules/validator-shacl python -m validator &
-# optional, for belief scores (also run modules/belief-corroboration/migration.sql above):
-DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_ROLE=kkm_belief \
-  PYTHONPATH=modules/belief-corroboration python -m belief_corroboration &
+export KK_ADMIN_URL=postgresql://postgres:<password>@localhost/kk     # a superuser, for setup only
+KK_AUTHENTICATOR_PASSWORD=<service secret> kk init
+kk person add owner --steward      # prints {"role": "person_owner", "password": ..., "database_url": ...}
+kk agent add claude-code           # prints the same for agent_claude_code
+DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_SECRET=<32+ chars> kk serve &
 ```
+
+`kk serve` runs the validator and the belief model (and MCP over HTTP); without the validator nothing
+submitted is ever applied. `kk serve --only validator,belief` leaves MCP to the harness's stdio server.
 
 Who holds which login (D-37):
 
 | Login | Held by | Can act as |
 | --- | --- | --- |
-| `kk_authenticator` | services you run (validator, belief model, kernel-mcp `--http`, PostgREST) | any role granted to it, so never give it to an agent |
-| `agent_claude_code` (one per agent) | that agent's harness | itself only |
-| `person_owner` (one per person) | that person | itself only |
+| `kk_authenticator` | services you run (`kk serve`) | any role granted to it, so never give it to an agent |
+| `agent_<name>` (`kk agent add`) | that agent's harness | itself only |
+| `person_<name>` (`kk person add`) | that person | itself only |
 
 The kernel enforces clearance and attribution by the role. `scripts/smoke_kernel.sh` does all of this
 in a throwaway database and checks it end to end.
@@ -56,14 +52,15 @@ stdio, one agent per harness. For Claude Code (`.mcp.json`; the same entry is in
   "env": {"KK_DATABASE_URL": "postgresql://agent_claude_code:<agent secret>@localhost/kk"}}}}
 ```
 
-Each agent gets its own login and agent IRI (pattern: `deploy/postgres/050_agents.sql`); stdio refuses
+Each agent gets its own login and agent IRI (`kk agent add NAME`: role `agent_<name>`, IRI
+`urn:kk:agent:<name>`); stdio refuses
 a login that can switch roles. `KK_DATABASE_URL` (or `DATABASE_URL`) names it; the `KK_` name wins so
 a project's own `DATABASE_URL` does not collide. With the compose stack, Postgres is on
-`localhost:5432` and the agent's password is `KK_AGENT_CLAUDE_CODE_PASSWORD` in `deploy/.env`.
+`localhost:5432` and the agent's password is what `kk agent add` printed.
 
-Shared server for several agents: `kernel-mcp --http` with `KK_JWT_SECRET`; each request sends
-`Authorization: Bearer <JWT>` whose `role` claim is the agent's role
-(`python scripts/mint_jwt.py agent_claude_code`).
+Shared server for several agents: `kk serve` (or `kernel-mcp --http`) with `KK_JWT_SECRET`; each
+request sends `Authorization: Bearer <JWT>` whose `role` claim is the agent's role
+(`kk token agent_claude_code`).
 
 ## 3. The skill file
 
@@ -93,9 +90,7 @@ running the ingest filter first so files with secrets are never stored, and supe
 since the last scan:
 
 ```sh
-pip install -r modules/self-encoder/requirements.txt          # gitleaks v8.30.1 must be on PATH
-DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk \
-  PYTHONPATH=modules/self-encoder:modules/ingest-filter-gitleaks python -m self_encoder scan --repo .
+DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk kk scan --repo .   # gitleaks v8.30.1 on PATH
 ```
 
 Run it from a git hook, a scheduler or the harness. Module and vocabulary claims wait in the review
@@ -104,5 +99,5 @@ lane until a person approves them.
 ## Reviewing
 
 Typing new properties or classes goes to the review lane. A person approves with
-`DATABASE_URL=postgresql://person_owner:<owner secret>@localhost/kk python scripts/review.py list`, then
-`approve <ids>`.
+`KK_DATABASE_URL=postgresql://person_owner:<owner secret>@localhost/kk kk review list`, then
+`kk review approve <ids>`. `kk status` shows what is waiting.

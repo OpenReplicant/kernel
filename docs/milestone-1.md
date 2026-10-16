@@ -4,7 +4,7 @@
 schema, the conventions (standard vocabularies, change-set and module schemas, slot catalog), and
 swappable default modules for its three jobs: **ingestion** (encoders, ingest filter), **processing**
 (validator, belief) and **recall** (MCP tools; hooks). Integration is a ladder: MCP only → + skill
-file → + harness hooks → + further modules. Nothing else is required: no runner, no PostgREST, no UI.
+file → + harness hooks → + further modules. Nothing else is required: no runner, no HTTP middleware, no UI. One command, `kk`, sets it up and runs it.
 
 **Target uses** (owner, Oct 2026). Every later choice is measured against these three products. Each one is the
 same kernel plus modules, built after the kernel is settled (some from `parked/`):
@@ -42,8 +42,8 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | T13 | **Ingestion without a runner**: the self-encoder and the ingest filter are plain commands; supersede on re-ingest; the home-grown chain format is retired | the self-model scan runs with only the kernel stack; G2 | done (D-41) |
 | T14 | **Processing without a runner**: the belief model listens for applied change sets (plus a sweep) and scores their claims | every applied claim gets a belief within 2 s locally | done (D-38; done before T12, T13) |
 | T15 | **Harness kit**: the skill file, Claude Code hooks (a session run at start, recall on every prompt, the run finished at the end), ranked full-text recall, and a drop-in guide (`docs/harness.md`) | a fresh Claude Code session with only the kit and the kernel stack recalls and records | done (D-39); checked with Claude Code's hook JSON in G4, a live session still to run |
-| T17 | **Module library and one `kk` command**: the listen/sweep/submit loop shared by workers; `kk init`, `kk agent add`, `kk person add`, `kk serve` (MCP + validator + belief in one process or three containers), `kk status`, `kk review`, `kk scan`; PostgREST removed | the kernel smoke runs on `kk` alone | next |
-| T18 | **`kk module install`**: migration, manifest claims and a compose entry from an approved module; locked-down container template (read-only filesystem, no capabilities, network to Postgres only) | installing a module from its folder gives a running, sandboxed worker | |
+| T17 | **Module library and one `kk` command**: the listen/sweep/submit loop shared by workers; `kk init`, `kk agent add`, `kk person add`, `kk serve` (MCP + validator + belief in one process or three containers), `kk status`, `kk review`, `kk scan`; PostgREST removed (D-42) | the kernel smoke runs on `kk` alone | done |
+| T18 | **`kk module install`**: migration, manifest claims and a compose entry from an approved module; locked-down container template (read-only filesystem, no capabilities, network to Postgres only) | installing a module from its folder gives a running, sandboxed worker | next |
 | T19 | **Export and import**: all claims with provenance as N-Quads (scopes as named graphs) and back | round trip into a fresh kernel keeps every claim, reference and status | |
 | T16 | **Self-questions eval**: 10+ questions about the system's own structure in `eval/self-model/questions.yaml` | G7 | |
 
@@ -54,7 +54,7 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | G1 | Kernel tests, shape tests and manifest validation pass in CI |
 | G2 | **Self-model complete**: every module manifest, compose service and `.ttl` file has claims; 0 claims without a reference; every `kk:Module` fills at least one slot (SHACL, enforced by the validator). Checked by `scripts/e2e_ingest.py` in the kernel smoke |
 | G3 | Parked (D-36): the self-model renders as a graph in the UI from live claims |
-| G4 | **The kernel alone**: with only Postgres, the validator, the belief model and kernel-mcp over stdio, a fresh agent session submits a claim, sees it applied and scored (target < 2 s, spec §11) and cites it with id and belief; invalid change sets come back with the reason; the hooks recall the claim and record the session's run; forged attribution is refused, stdio refuses a login that can switch roles, and the agent's login cannot become the owner; a person approves a review-lane change set. `scripts/smoke_kernel.sh` |
+| G4 | **The kernel alone**: with only Postgres, the validator, the belief model and kernel-mcp over stdio, a fresh agent session submits a claim, sees it applied and scored (target < 2 s, spec §11) and cites it with id and belief; invalid change sets come back with the reason; the hooks recall the claim and record the session's run; forged attribution is refused, stdio refuses a login that can switch roles, and the agent's login cannot become the owner; a person approves a review-lane change set. Set up and run with `kk` alone (D-42). `scripts/smoke_kernel.sh` |
 | G5 | Parked (D-36): drift of a deployed RuleGo chain file is detected within one check interval |
 | G6 | Parked (D-36): round-trip verification of chains |
 | G7 | An agent connected over MCP answers the self-questions citing claim ids and showing belief; ≥ 90% correct with all citations resolvable via `explain` |
