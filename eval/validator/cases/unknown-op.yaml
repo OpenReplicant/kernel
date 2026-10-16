@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/unknown-op
+input:
+  change_set: fixtures/unknown-op.json
+expect:
+  outcome: invalid
+  reason: "schema: ops/0"

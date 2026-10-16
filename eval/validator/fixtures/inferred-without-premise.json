@@ -1,0 +1,22 @@
+{
+  "idempotency_key": "e:6",
+  "attributed_to": "urn:kk:agent:self-encoder",
+  "generated_by": "00000000-0000-0000-0000-000000000001",
+  "target_scope": "urn:kk:scope:default",
+  "ops": [
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "kkt:dependsOn",
+      "object": {
+        "entity": "urn:kk:module:kernel"
+      },
+      "evidence_type": "inferred",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    }
+  ]
+}

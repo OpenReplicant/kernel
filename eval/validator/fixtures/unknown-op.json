@@ -1,0 +1,12 @@
+{
+  "idempotency_key": "e:9",
+  "attributed_to": "urn:kk:agent:self-encoder",
+  "generated_by": "00000000-0000-0000-0000-000000000001",
+  "target_scope": "urn:kk:scope:default",
+  "ops": [
+    {
+      "op": "drop_claim",
+      "claim": "x"
+    }
+  ]
+}

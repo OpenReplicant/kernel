@@ -1,0 +1,110 @@
+{
+  "idempotency_key": "e:12",
+  "attributed_to": "urn:kk:agent:self-encoder",
+  "generated_by": "00000000-0000-0000-0000-000000000001",
+  "target_scope": "urn:kk:scope:vocab",
+  "ops": [
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "rdf:type",
+      "object": {
+        "entity": "kk:Module"
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    },
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "rdfs:label",
+      "object": {
+        "value": {
+          "@value": "Change-set validator"
+        }
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    },
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "kk:version",
+      "object": {
+        "value": {
+          "@value": "0.1.0"
+        }
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    },
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "kk:moduleKind",
+      "object": {
+        "entity": "kk:Processor"
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    },
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "kk:fills",
+      "object": {
+        "entity": "urn:kk:slot:shape-validator"
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    },
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "kk:runsAs",
+      "object": {
+        "entity": "urn:kk:agent:validator"
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    },
+    {
+      "op": "add_claim",
+      "subject": "urn:kk:module:validator-shacl",
+      "predicate": "dcterms:license",
+      "object": {
+        "entity": "https://spdx.org/licenses/Apache-2.0"
+      },
+      "evidence_type": "deterministic",
+      "references": [
+        {
+          "source_uri": "file:modules/validator-shacl/module.yaml"
+        }
+      ]
+    }
+  ]
+}

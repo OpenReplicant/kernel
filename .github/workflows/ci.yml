@@ -47,13 +47,15 @@ jobs:
         run: python shapes/tests/test_shapes.py
       - name: Manifests, chains and slots
         run: python scripts/check_manifests.py
+      - name: Validator eval (T4)
+        run: python modules/validator-shacl/tests/test_eval.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
   stack-smoke:
-    name: stack smoke test (T2, T3)
+    name: stack smoke test (T2, T3, T4)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1

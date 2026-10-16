@@ -1,0 +1,5 @@
+id: urn:kk:eval:validator/extracted-with-quote
+input:
+  change_set: fixtures/extracted-with-quote.json
+expect:
+  outcome: valid

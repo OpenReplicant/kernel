@@ -13,7 +13,7 @@ steps:
   do: http
   with:
     method: GET
-    url: ${KK_API}/change_sets?status=eq.submitted&order=submitted_at&limit=20
+    url: ${KK_API}/validation_queue?order=submitted_at&limit=20
   next:
     success: each
 - id: each

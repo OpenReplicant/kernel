@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/extracted-without-quote
+input:
+  change_set: fixtures/extracted-without-quote.json
+expect:
+  outcome: invalid
+  reason: "Invariant 1: extracted claims carry the supporting quote."

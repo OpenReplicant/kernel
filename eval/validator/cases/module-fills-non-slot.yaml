@@ -1,0 +1,6 @@
+id: urn:kk:eval:validator/module-fills-non-slot
+input:
+  change_set: fixtures/module-fills-non-slot.json
+expect:
+  outcome: invalid
+  reason: "A module fills at least one slot from the slot catalog."
