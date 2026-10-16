@@ -33,6 +33,7 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | `kk scan --repo DIR` | ingest a repository (ingest filter first; needs gitleaks) |
 | `kk token ROLE` | a bearer token for MCP over HTTP |
 | `kk module install DIR` | a module from `modules/`: its own login and a locked-down container |
+| `kk export` / `kk import FILE` | every claim with its provenance as N-Quads, scopes as named graphs |
 
 Open http://127.0.0.1:8000/ui/ and paste your token (`kk token person_owner`): search and explain,
 the review queue, change sets, the graph, and view modules (`modules/view-modules` is the pattern).

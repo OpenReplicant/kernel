@@ -50,8 +50,8 @@ The kernel gate (G4) is checked by `scripts/smoke_kernel.sh` locally and in CI, 
 | T17 | **Module library and one `kk` command**: the listen/sweep/submit loop shared by workers; `kk init`, `kk agent add`, `kk person add`, `kk serve` (MCP + validator + belief in one process or three containers), `kk status`, `kk review`, `kk scan`; PostgREST removed (D-42) | the kernel smoke runs on `kk` alone | done |
 | T18 | **`kk module install`** (D-43): from this repository's module folder: manifest and license check, migration, the module's own login, a compose entry; locked-down container template (read-only filesystem, no capabilities, network to Postgres only) | installing a module from its folder gives a running, sandboxed worker | done |
 | T20 | **UI** (D-44): a shell served by `kk serve` at `/ui` that is an MCP client with the person's own token; core views (search and explain, review queue, graph, runs and status); further views are modules filling the `ui` slot | G3: the self-model renders as a graph from live claims, and a person approves a review-lane change set in the browser | done |
-| T19 | **Export and import**: all claims with provenance as N-Quads (scopes as named graphs) and back | round trip into a fresh kernel keeps every claim, reference and status | next |
-| T16 | **Self-questions eval**: 10+ questions about the system's own structure in `eval/self-model/questions.yaml` | G7 | |
+| T19 | **Export and import** (D-45): all claims with provenance as N-Quads (scopes as named graphs) and back | round trip into a fresh kernel keeps every claim, reference and status | done |
+| T16 | **Self-questions eval**: 10+ questions about the system's own structure in `eval/self-model/questions.yaml` | G7 | next |
 
 ## Gates
 
