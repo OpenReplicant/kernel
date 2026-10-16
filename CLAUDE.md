@@ -9,7 +9,7 @@ existing open tooling — what this repo builds is the kernel, its conventions a
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
-2. `docs/milestone-1.md` — current work: tasks T0–T16 and gates G1–G7.
+2. `docs/milestone-2.md` — current work (BPM and devops); `docs/milestone-1.md` — the kernel (done).
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
 5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
@@ -91,4 +91,4 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
 Milestone 1 is done: T0–T20; G1–G4 and G7 pass (`scripts/smoke_kernel.sh`; G5 and G6 parked with the
-chain format). Next: milestone 2 (BPM and devops modules and views). Work one task at a time; each ends with its check passing.
+chain format). Next: milestone 2 (`docs/milestone-2.md`): BPM and devops modules and views. Work one task at a time; each ends with its check passing.
