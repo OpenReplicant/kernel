@@ -82,13 +82,18 @@ async def agent_session():
         check("validated and applied without a runner", row["status"] == "applied",
               f"{row['status']} in {time.time() - t0:.1f}s")
 
-        found, _ = await tool(s, "search", {"text": "smoke test entity"})
-        mine = [f for f in found if f["subject"] == subject]
-        check("search finds it by label", mine, f"{len(found)} matches")
-        claim = mine[0]
-        check("the claim is attributed to the caller and carries id and belief",
-              claim["attributed_to"] == ME and "belief" in claim,
-              f"claim {claim['id']} belief {claim['belief']} (no belief module installed)")
+        claim = None
+        for _ in range(40):
+            found, _ = await tool(s, "search", {"text": "smoke test entity"})
+            mine = [f for f in found if f["subject"] == subject]
+            if mine and mine[0]["belief"] is not None:
+                claim = mine[0]
+                break
+            await asyncio.sleep(0.25)
+        check("search finds it by label, scored by the belief model",
+              claim and claim["belief"] == 0.5, f"{time.time() - t0:.1f}s after submit")
+        check("the claim is attributed to the caller and carries id and belief", claim["attributed_to"] == ME,
+              f"claim {claim['id']} belief {claim['belief']}")
         why, _ = await tool(s, "explain", {"claim_id": claim["id"]})
         check("explain gives the source", why["references"][0]["source_uri"] == "file:scripts/e2e_kernel.py")
         card, _ = await tool(s, "get_entity", {"iri": subject})

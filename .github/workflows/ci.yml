@@ -78,8 +78,8 @@ jobs:
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.13"
-      - run: pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt
-      - name: Postgres + validator + kernel-mcp over stdio, nothing else
+      - run: pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt -r modules/belief-corroboration/requirements.txt
+      - name: Postgres + validator + belief + kernel-mcp over stdio, nothing else
         run: sh scripts/smoke_kernel.sh
       - name: Compose file is valid
         run: |

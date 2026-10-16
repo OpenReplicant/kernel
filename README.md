@@ -13,7 +13,7 @@ add the skill file, harness hooks and further modules (`docs/harness.md`).
 ## Run it locally
 
 In an agent harness, with your own Postgres: `docs/harness.md`. As a compose stack (Postgres, validator,
-kernel-mcp over HTTP behind Caddy at http://127.0.0.1:8080/mcp):
+belief model, kernel-mcp over HTTP behind Caddy at http://127.0.0.1:8080/mcp):
 
 ```sh
 cp deploy/.env.example deploy/.env       # fill in passwords and KK_JWT_SECRET (>= 32 chars), never commit it
