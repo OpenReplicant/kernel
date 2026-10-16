@@ -35,3 +35,4 @@ triggers:
   spec: kernel_change_set
 mcp:
   expose: []
+migration: migration.sql

@@ -29,3 +29,4 @@ interfaces:
   href: /
 mcp:
   expose: []
+migration: migration.sql

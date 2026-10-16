@@ -28,3 +28,4 @@ mcp:
   expose:
   - run_eval
   read_only: false
+migration: migration.sql

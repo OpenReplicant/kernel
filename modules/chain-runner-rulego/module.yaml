@@ -28,3 +28,4 @@ interfaces:
 mcp:
   expose: []
   read_only: true
+migration: migration.sql

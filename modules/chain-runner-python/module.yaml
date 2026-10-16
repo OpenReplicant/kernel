@@ -22,3 +22,4 @@ accepts:
 - https://w3id.org/knowledge-kernel/schemas/chain.schema.json
 mcp:
   expose: []
+migration: migration.sql

@@ -38,3 +38,4 @@ interfaces:
   href: /validate
 mcp:
   expose: []
+migration: migration.sql
