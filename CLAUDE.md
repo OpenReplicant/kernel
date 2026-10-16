@@ -48,11 +48,16 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
 
 ```sh
 PGHOST=<socket or host> PGUSER=<superuser> sh kernel/schema/tests/run.sh   # 30 kernel checks
+pip install -r requirements-ci.txt
 python shapes/tests/test_shapes.py                                         # SHACL fixtures
 python scripts/check_manifests.py                                          # manifests, chains, slots
+python modules/<module>/tests/*.py                                         # each module's tests and evals
+sh scripts/smoke_stack.sh                                                  # the full stack in Docker, gates G1–G5
 ```
 
-All three pass on the handoff as delivered (Postgres 16; rdflib + pyshacl).
+CI (`.github/workflows/ci.yml`) runs all of these. The smoke test needs Docker, python3 with
+`requirements-ci.txt`, and node with `playwright@1.56.1`; behind a TLS-intercepting proxy pass the
+proxy's CA as `KK_BUILD_CA=/path/ca.crt`.
 
 ## Layout
 
@@ -63,14 +68,17 @@ kernel/
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl, kk-tosca.ttl, kk-profile.ttl, packs.yaml, slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
-modules/         one folder per module (module.yaml, chains/, SKILL.md, migration.sql); _template/
+modules/         one folder per module (module.yaml, chains/, migration.sql, code, tests/, Dockerfile); _template/
 deploy/          compose.yaml, postgres/, Caddyfile, rulego/, mcp/agents.mcp.json, .env.example
-scripts/         mint_jwt.py, check_manifests.py
-eval/            eval sets (data) and their format
-docs/            spec, milestone-1, decisions, mcp-servers, sources
+scripts/         mint_jwt.py, check_manifests.py, review.py, smoke_stack.sh and the gate checks it runs
+eval/            eval sets (data): validator, belief-v0
+docs/            spec, milestone-1, decisions, mcp-servers, sources; spikes/ (checked-by-experiment notes)
 ```
 
 ## Current milestone
 
-Milestone 1 — the system models itself and hands its entrypoint to RuleGo-Server
-(`docs/milestone-1.md`). Start with T0 and T1. Work one task at a time; each ends with its check passing.
+Milestone 1 — the system models itself and runs its own chains on RuleGo-Server
+(`docs/milestone-1.md`, which carries the status of every task). T0–T10 are done (G1, G2, G3, G5
+pass). Next: T11 (round-trip verifier), T12 (handover to RuleGo-Server and kernel events; the Python
+stand-in runner is then removed, D-31, D-32), T13. Work one task at a time; each ends with its check
+passing.

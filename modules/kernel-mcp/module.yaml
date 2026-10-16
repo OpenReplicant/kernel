@@ -12,7 +12,6 @@ slots:
 protected: true
 agent:
   iri: urn:kk:agent:kernel-mcp
-  db_role: kkm_kernel_mcp
   member_of:
   - kk_agent
 runtime:

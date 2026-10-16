@@ -138,6 +138,10 @@ PostgREST exposes only schema `api`:
 | `GET /rpc/explain?claim_id=` | Sources and quotes, derived-from, used-by, status history, beliefs, verifications, run |
 | `POST /rpc/start_run`, `/rpc/finish_run`, `/rpc/submit_change_set` | All agents |
 | `POST /rpc/record_validation` / `/rpc/review` / `/rpc/redact` | Validators / reviewers / stewards |
+| `GET /validation_queue` | Validators: submitted change sets with their ops (view added by the validator module's migration, D-24) |
+| `GET /claim_references` | References of the claims you can see (view added by the belief module's migration, D-27) |
+
+Module migrations may add `security_invoker` views to `api`; kernel row-level security still applies.
 
 Row-level security filters every claim table by the caller's scope clearance; dependent rows
 (references, derivations, status, belief, verification) are visible exactly when their claim is.
@@ -177,7 +181,9 @@ belongs in a module that reads views and submits change sets.
 
 - **Agents are roles.** Every agent (module, person, external system that logs in) is a database
   role mapped one-to-one to an agent IRI in `kernel.agent`. Modules use roles named `kkm_*`, members of
-  `kk_agent` (plus `kk_validator`, `kk_reviewer` or `kk_steward` where needed). PostgREST connects as
+  `kk_agent` (plus `kk_validator`, `kk_reviewer` or `kk_steward` where needed). People use `person_*` roles
+  (the local owner, `person_owner`, reviews and may redact; D-26) and harness agents that work through MCP
+  use `agent_*` roles (`agent_claude_code`; D-28). PostgREST connects as
   `kk_authenticator` and switches to the role in the caller's JWT (`scripts/mint_jwt.py`). Each role is
   granted to `kk_authenticator`.
 - **Scopes are trust boundaries.** `kernel.scope_grant` says which roles may read and write each
@@ -332,13 +338,15 @@ decoder-and-actuator pair.
   (`success`, `failure`, `true`, `false`, switch labels). Modules ship them as YAML
   (`kernel/schemas/chain.schema.json`); the self-encoder turns them into claims; a chain decoder compiles
   claims into a runner's format. Long-running processes with human tasks use BPMN (milestone 2).
-- **Runners (chain-runner slot, single-active).**
-  - *Python bootstrap runner* — a small interpreter that runs chain YAML directly. Exists to start
-    milestone 1 and as the baseline.
-  - *RuleGo-Server* (Apache-2.0) — the intended default: hot-reloaded file-based chains, JWT auth, a
-    `cmd` node with a command whitelist (Python steps), JS/Lua scripting, sub-chains, an MCP mode that
-    exposes chains as tools with include/exclude lists, and an OpenTelemetry client node.
-  - The evaluator decides which is active (milestone 1 gate G4).
+- **Runners: existing ones, reached through decoders** (chain-runner slot, single-active; D-31). The
+  chain claims are the runner-neutral source; a decoder per runner compiles them and records what it
+  could not represent. We do not maintain an interpreter of our own (a Python stand-in carried
+  milestone 1 up to T10 and is retired).
+  - *RuleGo-Server* (Apache-2.0, v0.38.0 built with `with_extend`) — the runner: hot-reloaded
+    file-based chains, JWT auth, JavaScript and Lua nodes, an `x/python` node (inline script or `.py`
+    file) and an `exec` node with a command whitelist, sub-chains and `for` loops, an MCP mode, an
+    OpenTelemetry client node. Decoder: `modules/chain-decoder-rulego` (D-30, D-33).
+  - Further runners are further decoder targets (the compile rule in §7 is per runner).
 - **Protection, in three layers.**
   1. The invariants never live in a runner. Chains reach the kernel only through PostgREST under their
      `runs_as` agent's JWT, so an edited or broken chain can only submit change sets.
@@ -347,12 +355,16 @@ decoder-and-actuator pair.
      editor or editing API. The decoder records each deployed file's hash (`kk:deployedHash`); a drift
      check compares deployed files with approved chains.
   3. MCP exposure is an allow-list of approved chains; raw `cmd`, HTTP and component tools are excluded.
-- **Runs.** One kernel run per chain execution; each step's work carries its step IRI as `plan_step`.
-- **Open risk (milestone 1, task T1):** whether RuleGo-Server's MCP mode passes the *caller's*
-  identity into the chain. If not, agent-facing tools stay in `kernel-mcp` (which forwards each
-  caller's token) and RuleGo runs system chains with module identities.
-- **Triggers.** RuleGo has no Postgres LISTEN endpoint: milestone 1 polls on a schedule; a NOTIFY
-  bridge (or pg_eventserv + a WebSocket endpoint) comes later.
+- **Runs.** Every step that writes to the kernel gets its own kernel run with `plan_step` = the step
+  IRI (`<chain IRI>/<step id>`), started before the call and finished after it; read-only steps and
+  executions that find nothing to do record no runs (D-25, D-31). Every decoder compiles to this.
+- **Identity.** RuleGo-Server's MCP mode does not pass the caller's identity into a chain (T1, D-21),
+  so agent-facing tools live in `kernel-mcp`, which forwards each caller's token, and RuleGo runs
+  system chains under their modules' identities.
+- **Triggers** (D-32). `notify`: a NOTIFY bridge (event-transport slot) listens on `kernel_change_set`
+  and calls the runner with `{id, status, scope, lane}`; the chain reads what it needs through the API
+  under its own token. `schedule`: periodic work only (e.g. the drift check). `http`: the runner's
+  HTTP endpoint. `chain`: called as a sub-chain.
 
 ---
 
@@ -414,18 +426,19 @@ entities and claims, not a new primitive.
 - The evaluator records results as observed claims about the module: `kk:evalScore` with qualifiers
   `kk:evalSet` and `kk:metric`.
 - **Slot competitions:** two modules for the same slot run on the same eval set; single-active slots
-  promote the winner. First competition: Python runner vs RuleGo-Server (G4).
+  promote the winner. The first competitions are expected in the belief-model and entity-resolver
+  slots; the chain runner is chosen by decision (D-31) and checked by its own eval (G4).
 - Each milestone ends on gates checked by the evaluator.
 
 ---
 
 ## 13. Milestones
 
-- **Milestone 1 — the system models itself** (details and gates: `docs/milestone-1.md`). Bootstrap
-  with the Python runner; the self-encoder scans this repository into claims; the graph decoder shows
-  the self-model; the chain decoder compiles the modeled chains to RuleGo DSL and RuleGo-Server takes
-  over as the entrypoint; parity, drift and round-trip checks prove it; an agent answers questions
-  about the system's structure with cited claims and belief.
+- **Milestone 1 — the system models itself** (details, status and gates: `docs/milestone-1.md`). The
+  self-encoder scans this repository into claims; the validator, belief model and verifier process
+  them; the graph decoder shows the self-model; the chain decoder compiles the modeled chains for
+  RuleGo-Server, which runs them on kernel events; drift and round-trip checks prove the deployment;
+  an agent answers questions about the system's structure with cited claims and belief.
 - **Milestone 2 — a real process loop.** Model a repository's build-and-deploy pipeline, decode it to
   BPMN, run it with SpiffWorkflow calling the real CI, bring traces back as OCEL observations, check
   conformance, adapt once through the review lane.

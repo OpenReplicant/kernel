@@ -1,34 +1,46 @@
-# Knowledge Kernel — handoff
+# Knowledge Kernel
 
-Everything needed to start building in a fresh Claude Code session. This replaces the earlier
-`governed-wiki-handoff.zip` and the Wikibase-based "Governed Wiki Knowledge Core" design.
+A general-purpose engine that learns from claims and acts on them. One Postgres holds every claim,
+each attributed, referenced, belief-scored and scoped. Modules plug into slots as encoders,
+processors, decoders, actuators, interfaces, agents and controls, and the system describes itself in
+its own model. Almost every component is existing open tooling; this repository builds the kernel,
+the slot contracts and the default modules.
 
-**Start here:** `KICKOFF.md` (what to paste into Claude Code), then `CLAUDE.md` (the project brief).
+- **Specification:** `docs/spec.md` (kernel v0 is frozen)
+- **Current work and status:** `docs/milestone-1.md`
+- **Decisions and open questions:** `docs/decisions.md`
+- **Working rules:** `CLAUDE.md`
 
-## What's in the box
-
-| Path | What | State |
-| --- | --- | --- |
-| `docs/spec.md` | The specification: kernel, ABI, ontology tiers, system-modeling profile, chains, agents, MAPE-K, milestones | final for milestone 1 |
-| `docs/milestone-1.md` | The self-model milestone: 14 tasks, 7 gates | ready |
-| `docs/decisions.md` | 20 decisions (some "adopted — confirm") and 7 open questions | ready |
-| `docs/mcp-servers.md` | Default, optional and excluded MCP servers, with licenses, flags and CVEs | researched Oct 2026 |
-| `docs/sources.md` | Research lineage | — |
-| `kernel/schema/` | Kernel v0: SQL schema + bootstrap + invariant tests | **tested**: 30 checks pass on Postgres 16 |
-| `kernel/schemas/` | JSON Schemas: change set, module manifest, chain | validated against every manifest and chain |
-| `kernel/contracts.py` | Python Protocols for module kinds | imports; output validates against the schema |
-| `ontology/` | `kk-core.ttl`, `kk-tosca.ttl`, `kk-profile.ttl`, `packs.yaml` (tiers), `slots.yaml` (42 slots) | parse cleanly |
-| `shapes/` | SHACL shapes + valid/invalid fixtures | **tested** with pySHACL |
-| `modules/` | 12 module manifests (+ template) with chains for validator, belief, self-encoder, ingest filter; kernel MCP skill; starter UI page | manifests valid; implementations are milestone-1 work |
-| `deploy/` | Compose stack (Postgres, PostgREST, Caddy; module, RuleGo and realtime profiles), Postgres image, init script, RuleGo rules, agent MCP config | `docker compose config` passes; images to pin |
-| `scripts/` | `mint_jwt.py` (module/agent JWTs for PostgREST), `check_manifests.py` (manifests, chains, slots) | tested |
-| `eval/` | Eval-set format and the milestone-1 sets | format only |
-
-## Run the checks
+## Run it locally
 
 ```sh
-PGHOST=... PGUSER=postgres sh kernel/schema/tests/run.sh
-pip install rdflib pyshacl pyyaml jsonschema
-python shapes/tests/test_shapes.py
-python scripts/check_manifests.py
+cp deploy/.env.example deploy/.env       # fill in passwords and KK_JWT_SECRET (>= 32 chars), never commit it
+python scripts/mint_jwt.py kkm_validator # repeat for each KK_JWT_* in .env (module roles, see modules/*/migration.sql)
+docker compose -f deploy/compose.yaml --env-file deploy/.env --profile modules up -d --build
+```
+
+The UI and API are on http://127.0.0.1:8080 (`/`, `/api`, `/mcp`, `/graph`). People and agents use
+their own tokens:
+
+| Who | Role | Token |
+| --- | --- | --- |
+| Local owner (reviews, redacts) | `person_owner` | `python scripts/mint_jwt.py person_owner` |
+| Claude Code over MCP | `agent_claude_code` | the `KK_AGENT_JWT` in `deploy/mcp/agents.mcp.json` |
+
+Module, chain and vocabulary changes wait in the review lane: `python scripts/review.py list`, then
+`approve <ids>` (with `KK_TOKEN` set to the owner's token), or use the UI's review tab.
+
+To see everything working end to end with throwaway secrets: `sh scripts/smoke_stack.sh`.
+
+## Layout
+
+```
+kernel/    schema (frozen v0), JSON Schemas for change sets, manifests and chains, Python contracts
+ontology/  kk-core, kk-tosca, kk-profile vocabularies; packs.yaml; slots.yaml (42 slots)
+shapes/    SHACL shapes and fixtures
+modules/   one folder per module: manifest, chains, migration, code, tests, Dockerfile
+deploy/    compose stack, Postgres image and init scripts, Caddyfile, RuleGo notes, MCP client config
+scripts/   tokens, manifest checks, review CLI, the stack smoke test and gate checks
+eval/      eval sets
+docs/      spec, milestone, decisions, MCP servers, sources, spikes
 ```

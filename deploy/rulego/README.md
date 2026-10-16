@@ -1,8 +1,13 @@
 # RuleGo-Server settings (chain-runner slot, alternative runner)
 
-Put RuleGo-Server's config file in this folder; it is mounted read-only at `/config`. Look up the
-current RuleGo-Server documentation for the exact file name and syntax; don't copy settings from
-memory. Whatever the syntax, the deployment must satisfy these rules:
+Put RuleGo-Server's config file in this folder; it is mounted read-only at `/config`. What we have
+checked (T1, T10; docs/spikes/): RuleGo-Server is the `server/` module of github.com/rulego/rulego,
+pinned at **v0.38.0**, built from source with the `with_extend` build tag (needed for the `x/python`
+node, D-33); there is no published image. The config is an ini file (`config.conf`): `require_auth`,
+`jwt_secret_key`, `[users]` (`name = password,apiKey`), `[mcp]` and `[mcp.groups]`, and `[global]`
+values that chains read as `${global.X}`. The chain decoder's output expects `KK_API` and one
+`KK_TOKEN_<AGENT>` per `runs_as` agent in `[global]`, and reads chains from
+`<data_dir>/workflows/kk/rules/`. Whatever the syntax, the deployment must satisfy these rules:
 
 | Rule | Why | Setting area (check current docs) |
 | --- | --- | --- |
@@ -14,7 +19,7 @@ memory. Whatever the syntax, the deployment must satisfy these rules:
 | `cmd` component whitelist limited to the Python interpreter and the scripts folder | Python steps run as `cmd` nodes | `cmd_white_list` |
 | Every chain calls PostgREST with the JWT of its `runs_as` agent | Attribution and clearance stay per agent | chain variables / secrets |
 
-## Milestone 1 spike (first task in docs/milestone-1.md)
+## Milestone 1 spike (T1, done: D-21)
 
 Prove or disprove that, when an agent calls a RuleGo chain through RuleGo-Server's MCP mode, the
 **caller's** identity reaches the chain, so the chain can act with the caller's database role.
