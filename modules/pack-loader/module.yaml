@@ -21,3 +21,4 @@ runtime:
   entrypoint: python -m pack_loader
 mcp:
   expose: []
+migration: migration.sql

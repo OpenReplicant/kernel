@@ -35,3 +35,4 @@ mcp:
   expose:
   - graph
   read_only: true
+migration: migration.sql

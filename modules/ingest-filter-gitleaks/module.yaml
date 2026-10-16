@@ -21,3 +21,4 @@ runtime:
   - chains/ingest-filter.yaml
 mcp:
   expose: []
+migration: migration.sql

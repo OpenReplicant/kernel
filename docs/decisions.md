@@ -27,6 +27,7 @@ or overturn), **open** (needs the owner).
 | D-19 | **Vocabulary packs and module installs run as migrations** (`kk_owner`, `kernel.install_ops`): attributed and recorded like any change set, reviewed as code rather than in the in-app review lane | adopted — confirm |
 | D-20 | **kernel-mcp holds no database role**; it forwards each caller's bearer token so RLS and attribution apply per agent | adopted |
 | D-21 | **RuleGo-Server's MCP mode does not carry caller identity** (T1 spike, v0.38.0, docs/spikes/T1-rulego-mcp-identity.md): a chain tool receives only the tool arguments. Agent-facing tools stay in kernel-mcp; RuleGo runs system chains under module identities; only allow-listed MCP groups are routed, never the default endpoint. Closes O-7 | adopted — confirm |
+| D-22 | **Default modules install on first database start** (`deploy/postgres/020_modules.sh` runs each `modules/*/migration.sql`: role + agent row; clearance via the default scope grants to `kk_agent`). Images pinned: Postgres 17.11-bookworm (pgvector 0.8.7, pg_cron 1.6.8), PostgREST v16.4, Caddy 2.11.7-alpine. kernel-mcp gets no role, per D-20, although its manifest names `kkm_kernel_mcp` | adopted |
 
 ## Open
 

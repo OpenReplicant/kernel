@@ -45,3 +45,4 @@ mcp:
   expose:
   - scan
   read_only: false
+migration: migration.sql
