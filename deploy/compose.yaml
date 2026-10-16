@@ -132,12 +132,12 @@ services:
       - ..:/repo:ro
     restart: unless-stopped
 
+  # Reads with each viewer's forwarded token; holds no token of its own for viewing.
   graph-decoder:
-    build: ../modules/graph-decoder
+    build: {context: .., dockerfile: modules/graph-decoder/Dockerfile}
     profiles: [modules]
     environment:
       <<: *module-env
-      KK_JWT: ${KK_JWT_GRAPH_DECODER:-}
     depends_on: [postgrest]
     restart: unless-stopped
 

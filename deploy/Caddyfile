@@ -14,6 +14,11 @@
 		reverse_proxy kernel-mcp:8000
 	}
 
+	# Graph decoder (self-model graph for the UI). The viewer's own token is forwarded.
+	handle /graph* {
+		reverse_proxy graph-decoder:8000
+	}
+
 	# Real-time events (profile realtime). pg_eventserv has no auth: keep this behind
 	# forward_auth before exposing it beyond localhost.
 	handle_path /events/* {
