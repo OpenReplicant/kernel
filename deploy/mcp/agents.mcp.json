@@ -1,28 +1,55 @@
 {
   "mcpServers": {
     "kernel": {
-      "type": "http",
-      "url": "http://localhost:8080/mcp",
-      "headers": {
-        "Authorization": "Bearer ${KK_AGENT_JWT}"
+      "command": "python",
+      "args": [
+        "-m",
+        "kernel_mcp"
+      ],
+      "env": {
+        "PYTHONPATH": "${KK_REPO_PATH}/modules/kernel-mcp",
+        "DATABASE_URL": "${KK_DATABASE_URL}",
+        "KK_ROLE": "agent_claude_code"
       }
     },
     "git": {
       "command": "uvx",
-      "args": ["--from", "mcp-server-git>=2026.1.14", "mcp-server-git", "--repository", "${KK_REPO_PATH}"]
+      "args": [
+        "--from",
+        "mcp-server-git>=2026.1.14",
+        "mcp-server-git",
+        "--repository",
+        "${KK_REPO_PATH}"
+      ]
     },
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${KK_WORKSPACE}"]
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${KK_WORKSPACE}"
+      ]
     },
     "fetch": {
       "command": "uvx",
-      "args": ["mcp-server-fetch"]
+      "args": [
+        "mcp-server-fetch"
+      ]
     },
     "github": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
-               "ghcr.io/github/github-mcp-server", "stdio", "--read-only", "--toolsets", "repos,actions"],
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server",
+        "stdio",
+        "--read-only",
+        "--toolsets",
+        "repos,actions"
+      ],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }

@@ -1,34 +1,15 @@
-# UI module front door. Local only (compose publishes 127.0.0.1:8080).
-# People sign in through the identity slot (OIDC at Caddy, added later); modules use their own JWTs
-# and talk to PostgREST directly on the internal network.
+# Front door. Local only (compose publishes 127.0.0.1:8080). Replaceable by any reverse proxy:
+# the kernel depends on nothing here.
 :80 {
 	encode zstd gzip
-
-	# PostgREST: /api/claims, /api/rpc/submit_change_set, ...
-	handle_path /api/* {
-		reverse_proxy postgrest:3000
-	}
 
 	# Kernel MCP server (streamable HTTP). Callers send their own bearer token.
 	handle /mcp* {
 		reverse_proxy kernel-mcp:8000
 	}
 
-	# Graph decoder (self-model graph for the UI). The viewer's own token is forwarded.
-	handle /graph* {
-		reverse_proxy graph-decoder:8000
-	}
-
-	# Real-time events (profile realtime). pg_eventserv has no auth: keep this behind
-	# forward_auth before exposing it beyond localhost.
-	handle_path /events/* {
-		reverse_proxy eventserv:7700
-	}
-
-	# Static Alpine.js app
-	handle {
-		root * /srv/ui
-		try_files {path} /index.html
-		file_server
+	# Optional REST API (profile http-api).
+	handle_path /api/* {
+		reverse_proxy postgrest:3000
 	}
 }

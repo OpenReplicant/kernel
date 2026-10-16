@@ -6,6 +6,13 @@ Everything else is a module or a vocabulary pack and may change freely through t
 
 "Knowledge Kernel" is a working name (decisions O-1).
 
+**Scope change (D-36, Oct 2026).** The kernel is small and drops into any agent harness: the frozen
+schema, its conventions, and swappable default modules for ingestion, processing and recall. No runner
+and no HTTP middleware is required; kernel-mcp and the modules talk to Postgres directly under their
+own roles, and PostgREST is optional. Chain runners, chain decoders, the graph decoder and the UI are
+parked (`parked/`). Sections below that describe those (§7, §8, parts of §12–§13) describe parked
+modules, not the kernel; T12 replaces most `kk:` terms with standard vocabularies (§6).
+
 ---
 
 ## 1. What this is
@@ -35,10 +42,10 @@ modules plug into, and a default distribution of modules and vocabularies.
 | --- | --- | --- |
 | **Kernel** | Five primitives, six invariants, the apply function, row-level security. Plain Postgres 16+, no extensions. `kernel/schema/` | Frozen at v0. Change needs evaluator evidence + owner decision |
 | **ABI** (slot contracts) | Change-set format, module manifest, chain profile, slot catalog, hook contract. `kernel/schemas/`, `ontology/slots.yaml`, `kernel/contracts.py` | Versioned (semver). Additive changes are minor; breaking changes are major and need a decision |
-| **Distribution** | Default vocabulary packs and modules: API (PostgREST), UI (Caddy + Alpine.js), MCP, validator, belief model, encoders, decoders, runners. `ontology/`, `modules/`, `deploy/` | Normal module lifecycle (review lane + eval) |
+| **Distribution** | Default modules for the kernel's three jobs, each swappable: ingestion (self-encoder, ingest filter), processing (validator, belief model), recall (kernel-mcp). Optional: PostgREST, Caddy. Parked (D-36): runners, decoders, UI. `ontology/`, `modules/`, `deploy/` | Normal module lifecycle (review lane + eval) |
 
 Operating-system reading of the same thing: Postgres is the kernel (state, permissions, IPC via
-NOTIFY), PostgREST is the system-call interface (views + `submit_change_set`), each module runs under
+NOTIFY), the `api` schema is the system-call interface (views + `submit_change_set`), each module runs under
 its own database role (its uid), modules are processes in containers, encoders and actuators are
 drivers, and agents and the UI are user space.
 
@@ -128,7 +135,8 @@ agent ──submit_change_set──▶ submitted ──validator──▶ valid 
 
 ### 3.4 Read path
 
-PostgREST exposes only schema `api`:
+Clients (kernel-mcp, modules, the optional PostgREST) see only schema `api`, under their own role.
+In PostgREST's terms:
 
 | Endpoint | What |
 | --- | --- |
@@ -183,9 +191,10 @@ belongs in a module that reads views and submits change sets.
   role mapped one-to-one to an agent IRI in `kernel.agent`. Modules use roles named `kkm_*`, members of
   `kk_agent` (plus `kk_validator`, `kk_reviewer` or `kk_steward` where needed). People use `person_*` roles
   (the local owner, `person_owner`, reviews and may redact; D-26) and harness agents that work through MCP
-  use `agent_*` roles (`agent_claude_code`; D-28). PostgREST connects as
-  `kk_authenticator` and switches to the role in the caller's JWT (`scripts/mint_jwt.py`). Each role is
-  granted to `kk_authenticator`.
+  use `agent_*` roles (`agent_claude_code`; D-28). Clients connect as `kk_authenticator` and switch to
+  the caller's role (`SET ROLE`): kernel-mcp from `KK_ROLE` (stdio) or the role in the caller's JWT
+  (`--http`, `scripts/mint_jwt.py`), PostgREST from the JWT (D-36). Each role is granted to
+  `kk_authenticator`.
 - **Scopes are trust boundaries.** `kernel.scope_grant` says which roles may read and write each
   scope. Defaults: `urn:kk:scope:vocab` and `urn:kk:scope:default`, readable and writable by `kk_agent`.
   Validators and reviewers see change sets only for scopes they can read.
@@ -371,8 +380,9 @@ decoder-and-actuator pair.
 ## 9. Agents
 
 - Agents work through MCP. The kernel's own tools come from `kernel-mcp` (MCP Python SDK v2,
-  implementing the 2026-07-28 spec), which holds no database role and forwards each caller's bearer
-  token. Agent instructions for those tools: `modules/kernel-mcp/SKILL.md`.
+  implementing the 2026-07-28 spec), which talks to Postgres directly and runs every call as the
+  caller's role (D-36). Agent instructions for those tools: `modules/kernel-mcp/SKILL.md`; dropping it
+  into a harness: `docs/harness.md`.
 - Default and optional MCP servers, and the ones deliberately excluded (generic SQL servers, the
   Memory reference server): `docs/mcp-servers.md`. MCP servers are a convenience layer, never the
   enforcement layer.
@@ -434,11 +444,10 @@ entities and claims, not a new primitive.
 
 ## 13. Milestones
 
-- **Milestone 1 — the system models itself** (details, status and gates: `docs/milestone-1.md`). The
-  self-encoder scans this repository into claims; the validator, belief model and verifier process
-  them; the graph decoder shows the self-model; the chain decoder compiles the modeled chains for
-  RuleGo-Server, which runs them on kernel events; drift and round-trip checks prove the deployment;
-  an agent answers questions about the system's structure with cited claims and belief.
+- **Milestone 1 — the kernel, on its own** (details, status and gates: `docs/milestone-1.md`; D-36).
+  Postgres, the validator and kernel-mcp work with nothing else; vocabularies move to standards;
+  ingestion and belief run without a runner; a harness kit (skill, hooks, guide) lets any agent recall
+  and record; an agent answers questions about the system's structure with cited claims and belief.
 - **Milestone 2 — a real process loop.** Model a repository's build-and-deploy pipeline, decode it to
   BPMN, run it with SpiffWorkflow calling the real CI, bring traces back as OCEL observations, check
   conformance, adapt once through the review lane.

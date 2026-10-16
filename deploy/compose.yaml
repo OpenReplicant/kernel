@@ -1,21 +1,20 @@
-# Knowledge Kernel — default distribution (milestone 1)
+# Knowledge Kernel — the kernel and its default modules (D-36)
 #
 #   cp deploy/.env.example deploy/.env      # fill in secrets and pin image tags
-#   docker compose -f deploy/compose.yaml --env-file deploy/.env up -d                 # kernel + API + UI
-#   docker compose -f deploy/compose.yaml --env-file deploy/.env --profile modules up -d   # + Python modules (once built)
-#   docker compose -f deploy/compose.yaml --env-file deploy/.env --profile rulego up -d    # + RuleGo-Server runner
-#   docker compose ... --profile realtime up -d                                       # + pg_eventserv
+#   docker compose -f deploy/compose.yaml --env-file deploy/.env up -d            # kernel + validator + MCP
+#   docker compose ... --profile http-api up -d                                    # + PostgREST at /api
 #
-# Works the same with Podman (podman compose). Only Caddy publishes a port, on localhost.
+# The kernel needs none of this to be useful: an agent harness can run kernel-mcp over stdio against
+# any Postgres with the kernel installed (docs/harness.md). Works the same with Podman. Only Caddy
+# publishes a port, on localhost; it is replaceable by any reverse proxy (it only routes /mcp, /api).
 # Pin every image by exact tag or digest in .env before first use (docs/decisions.md D-12).
+# Modules parked by D-36 (runners, chain decoder, graph decoder, UI) are under parked/.
 
 name: knowledge-kernel
 
-# Shared module settings. Each module also gets its own KK_JWT (its database role), minted by
-# scripts/mint_jwt.py and stored in .env as KK_JWT_<MODULE>.
-x-module-env: &module-env
-  KK_API: http://postgrest:3000
-  KK_ARTIFACTS: /artifacts
+x-kernel-login: &kernel-login
+  # One login that switches to each service's own role (SET ROLE); never a superuser.
+  DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
 
 services:
 
@@ -27,7 +26,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
       KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
-    command: ["postgres", "-c", "shared_preload_libraries=pg_cron", "-c", "cron.database_name=kk"]
     volumes:
       - db-data:/var/lib/postgresql/data
       - ../kernel/schema/001_kernel.sql:/docker-entrypoint-initdb.d/001_kernel.sql:ro
@@ -44,9 +42,40 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # api-adapter slot: exposes only the `api` schema; every request runs as the JWT's role.
+  # shape-validator slot: validates submitted change sets as they arrive (listen + sweep).
+  validator:
+    build: {context: .., dockerfile: modules/validator-shacl/Dockerfile}
+    environment:
+      <<: *kernel-login
+      KK_ROLE: kkm_validator
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+
+  # agent-interface slot: MCP over streamable HTTP; each request carries the agent's own JWT.
+  kernel-mcp:
+    build: {context: .., dockerfile: modules/kernel-mcp/Dockerfile}
+    environment:
+      <<: *kernel-login
+      KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+
+  caddy:
+    image: ${CADDY_IMAGE:?pin in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on: [kernel-mcp]
+    restart: unless-stopped
+
+  # Optional HTTP API over the same api schema, for clients that want REST (every request runs as
+  # the JWT's role). Not needed by the kernel or its default modules.
   postgrest:
     image: ${POSTGREST_IMAGE:?pin in .env}
+    profiles: [http-api]
     environment:
       PGRST_DB_URI: postgres://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       PGRST_DB_SCHEMAS: api
@@ -57,124 +86,5 @@ services:
       db: {condition: service_healthy}
     restart: unless-stopped
 
-  # ui slot (module: modules/ui): static Alpine.js app + reverse proxy for /api and /mcp.
-  caddy:
-    image: ${CADDY_IMAGE:?pin in .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../modules/ui/web:/srv/ui:ro
-    ports:
-      - "127.0.0.1:8080:80"
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # ---------------------------------------------------------------- Python modules (built in milestone 1)
-  kernel-mcp:
-    build: {context: .., dockerfile: modules/kernel-mcp/Dockerfile}
-    profiles: [modules]
-    environment:
-      KK_API: http://postgrest:3000      # forwards each caller's bearer token; holds no role of its own
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  validator:
-    build: {context: .., dockerfile: modules/validator-shacl/Dockerfile}
-    profiles: [modules]
-    environment:
-      <<: *module-env
-      KK_JWT: ${KK_JWT_VALIDATOR:-}
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # belief-model slot: scores claims; its rescore chain (run by the chain runner) submits.
-  belief:
-    build: {context: .., dockerfile: modules/belief-corroboration/Dockerfile}
-    profiles: [modules]
-    environment:
-      <<: *module-env
-      KK_JWT: ${KK_JWT_BELIEF:-}
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  chain-runner-python:
-    build: {context: .., dockerfile: modules/chain-runner-python/Dockerfile}
-    profiles: [modules]
-    environment:
-      <<: *module-env
-      # Chains act as their runs_as agent: one token per agent this runner may run chains for.
-      KK_AGENT_TOKENS: >-
-        {"urn:kk:agent:validator": "${KK_JWT_VALIDATOR:-}",
-         "urn:kk:agent:self-encoder": "${KK_JWT_SELF_ENCODER:-}",
-         "urn:kk:agent:ingest-filter": "${KK_JWT_INGEST_FILTER:-}",
-         "urn:kk:agent:belief-corroboration": "${KK_JWT_BELIEF:-}",
-         "urn:kk:agent:chain-decoder-rulego": "${KK_JWT_DECODER_RULEGO:-}"}
-    volumes:
-      - ../modules:/modules:ro
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # Encodes files and stores artifact bytes; its scan chain (run by the chain runner) submits.
-  self-encoder:
-    build: {context: .., dockerfile: modules/self-encoder/Dockerfile}
-    profiles: [modules]
-    environment:
-      <<: *module-env
-    volumes:
-      - ..:/repo:ro                 # milestone 1: the system scans its own repository
-      - artifacts:/artifacts
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # ingest-filter slot: gitleaks over candidate files before anything is stored.
-  ingest-filter:
-    build: {context: .., dockerfile: modules/ingest-filter-gitleaks/Dockerfile}
-    profiles: [modules]
-    volumes:
-      - ..:/repo:ro
-    restart: unless-stopped
-
-  # Reads with each viewer's forwarded token; holds no token of its own for viewing.
-  graph-decoder:
-    build: {context: .., dockerfile: modules/graph-decoder/Dockerfile}
-    profiles: [modules]
-    environment:
-      <<: *module-env
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # The only writer of the RuleGo chain folder; records runnable / deployedHash / observedHash claims.
-  chain-decoder-rulego:
-    build: {context: .., dockerfile: modules/chain-decoder-rulego/Dockerfile}
-    profiles: [modules]
-    environment:
-      <<: *module-env
-      KK_JWT: ${KK_JWT_DECODER_RULEGO:-}
-    volumes:
-      - rulego-chains:/rulego/workflows        # the decoder is the only writer
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # chain-runner slot, alternative: RuleGo-Server. Its editor/API is never exposed to agents;
-  # its MCP mode exposes allow-listed chains only. See deploy/rulego/README.md.
-  rulego:
-    build: ../modules/chain-runner-rulego      # kk-rulego: RuleGo-Server v0.38.0 + our components
-    profiles: [rulego]
-    volumes:
-      - rulego-chains:/data/workflows:ro
-      - ./rulego:/config:ro
-    depends_on: [postgrest]
-    restart: unless-stopped
-
-  # event-transport slot (later): NOTIFY -> WebSocket. No auth of its own: Caddy fronts it.
-  eventserv:
-    image: ${PG_EVENTSERV_IMAGE:-replace-with-pinned-pg-eventserv-image}
-    profiles: [realtime]
-    environment:
-      DATABASE_URL: postgres://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
-    depends_on: [db]
-    restart: unless-stopped
-
 volumes:
   db-data:
-  artifacts:
-  rulego-chains:

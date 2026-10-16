@@ -13,7 +13,7 @@ and the kernel validates and applies it (or sends it to a person for review).
 
 - `search(text)` → candidate entities and claims.
 - `get_entity(iri)` → the entity card: current claims with status and belief.
-- `query_claims(filters)` → claims by subject, predicate, object, scope, status (PostgREST filters).
+- `query_claims(filters)` → claims by subject, predicate, object or scope (IRIs or CURIEs); deprecated claims only on request.
 - `explain(claim_id)` → sources and quotes, what it was derived from, what uses it, status history,
   beliefs and verifications. Use this before relying on a claim you didn't make.
 - `list_slots()`, `list_modules()` → the platform's own self-model.

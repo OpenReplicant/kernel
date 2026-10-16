@@ -16,7 +16,7 @@ Researched October 2026. Re-check versions, flags and licenses before pinning.
 
 | Server | Slot | Use | License | Configuration notes |
 | --- | --- | --- | --- | --- |
-| **kernel-mcp** (this project, `modules/kernel-mcp`) | agent-interface | search, get entity card, query claims, explain, submit change set, start/finish run, list slots and modules | Apache-2.0 | Built on the official MCP Python SDK v2 (stable since Aug 2026; implements the 2026-07-28 spec and still serves 2025-era clients; `MCPServer` replaced `FastMCP`). Holds no database role: forwards the caller's bearer token to PostgREST. Pinned: `mcp==2.3.0` (checked Oct 2026, D-28) |
+| **kernel-mcp** (this project, `modules/kernel-mcp`) | agent-interface | search, get entity card, query claims, explain, submit change set, start/finish run, list slots and modules | Apache-2.0 | Built on the official MCP Python SDK v2 (stable since Aug 2026; implements the 2026-07-28 spec and still serves 2025-era clients; `MCPServer` replaced `FastMCP`). Talks to Postgres directly and runs each call as the caller's role (stdio: `KK_ROLE`; http: the role in the bearer JWT), D-36. Pinned: `mcp==2.3.0` (checked Oct 2026, D-28) |
 | **Git** reference server (`mcp-server-git`) | tool-provider | read history, diffs and blame for the repository being modeled | MIT | Use ≥ 2026.1.14: CVE-2026-27735 let `git_add` stage paths outside the repo before that. Agents read only; commits happen through actuators |
 | **Filesystem** reference server | tool-provider | read workspace files | MIT | Scope to the workspace directory only |
 | **Fetch** reference server | tool-provider | read web pages (vocabulary specs, docs) | MIT | |

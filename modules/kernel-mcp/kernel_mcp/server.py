@@ -1,21 +1,26 @@
-"""Agent-facing MCP tools over PostgREST, on the MCP Python SDK v2 (MCPServer).
+"""Agent-facing MCP tools over the kernel's api schema, on the MCP Python SDK v2 (MCPServer).
 
-kernel-mcp holds no database role (D-20). Every tool forwards the caller's own bearer token, so
-PostgREST runs the call as the caller's role: row-level security, write clearance and attribution
-are enforced by Postgres per agent. A request without a token is refused here, before any call.
+Talks to Postgres directly. Every tool call runs in its own transaction as the caller's database
+role (SET LOCAL ROLE), so row-level security, write clearance and attribution are enforced by
+Postgres per agent; this server decides nothing. Who the caller is:
+  - stdio (one harness, one agent): KK_ROLE, e.g. agent_claude_code.
+  - http (shared server): a bearer JWT signed with KK_JWT_SECRET whose `role` claim names the role
+    (the same tokens PostgREST accepts); a request without a valid token is refused.
+DATABASE_URL is a login that may SET ROLE to those roles (kk_authenticator in the default install).
 Every claim returned carries its id and belief, so answers can cite them (invariant 6).
 """
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 
-import httpx2 as httpx
+import jwt
+import psycopg
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from psycopg import sql
+from psycopg.types.json import Jsonb
 
-API = os.environ.get("KK_API", "http://postgrest:3000").rstrip("/")
 PREFIXES = {  # same as kernel.prefix (kernel/schema/002_bootstrap.sql)
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "owl": "http://www.w3.org/2002/07/owl#", "xsd": "http://www.w3.org/2001/XMLSchema#",
@@ -25,8 +30,11 @@ PREFIXES = {  # same as kernel.prefix (kernel/schema/002_bootstrap.sql)
     "kk": "https://w3id.org/knowledge-kernel/ns#", "kkt": "https://w3id.org/knowledge-kernel/tosca#",
     "kkp": "https://w3id.org/knowledge-kernel/profile#",
 }
-CLAIM_COLUMNS = "id,subject,predicate,object_entity,object_value,qualifiers,scope,evidence_type,attributed_to,status,belief,valid_from,valid_to"
+CLAIM_COLUMNS = ("id, subject, predicate, object_entity, object_value, qualifiers, scope, evidence_type, "
+                 "attributed_to, status, belief, valid_from, valid_to")
 RDF_TYPE = PREFIXES["rdf"] + "type"
+LABEL = PREFIXES["rdfs"] + "label"
+REQUIRE_TOKEN = False  # set by the http entrypoint
 
 mcp = MCPServer(
     "knowledge-kernel",
@@ -37,34 +45,52 @@ mcp = MCPServer(
 
 
 class KernelError(ToolError):
-    """An anticipated failure (no token, the kernel refused): the agent sees the message."""
+    """An anticipated failure (no identity, the kernel refused): the agent sees the message."""
 
 
-def expand(term: str) -> str:
+def expand(term: str | None) -> str | None:
+    if term is None:
+        return None
     prefix, sep, local = term.partition(":")
     if sep and prefix in PREFIXES and not local.startswith("//"):
         return PREFIXES[prefix] + local
     return term
 
 
-def token(ctx: Context) -> str:
-    auth = (ctx.headers or {}).get("authorization", "")
-    if not auth.lower().startswith("bearer ") or not auth[7:].strip():
-        raise KernelError("no bearer token: send 'Authorization: Bearer <your agent JWT>'")
-    return auth[7:].strip()
+def caller_role(ctx: Context) -> str:
+    auth = (ctx.headers or {}).get("authorization", "") if REQUIRE_TOKEN else ""
+    if REQUIRE_TOKEN:
+        if not auth.lower().startswith("bearer ") or not auth[7:].strip():
+            raise KernelError("no bearer token: send 'Authorization: Bearer <your agent JWT>'")
+        try:
+            claims = jwt.decode(auth[7:].strip(), os.environ["KK_JWT_SECRET"], algorithms=["HS256"])
+        except jwt.PyJWTError as e:
+            raise KernelError(f"invalid token: {e}") from None
+        if not claims.get("role"):
+            raise KernelError("token has no role claim")
+        return claims["role"]
+    role = os.environ.get("KK_ROLE")
+    if not role:
+        raise KernelError("no identity: set KK_ROLE to your agent's database role")
+    return role
 
 
-async def call(ctx: Context, method: str, path: str, params: dict | None = None, body: Any = None) -> Any:
-    async with httpx.AsyncClient(timeout=30) as http:
-        r = await http.request(method, f"{API}{path}", params=params, json=body,
-                               headers={"Authorization": f"Bearer {token(ctx)}", "Accept": "application/json"})
-    if r.status_code >= 300:
-        raise KernelError(f"kernel refused ({r.status_code}): {r.text[:500]}")
-    return r.json() if r.content else None
+async def query(ctx: Context, statement: str, params: tuple | dict = ()) -> Any:
+    """Run one statement as the caller's role; returns the first column of the first row."""
+    try:
+        async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"]) as conn:
+            async with conn.transaction():
+                await conn.execute(sql.SQL("set local role {}").format(sql.Identifier(caller_role(ctx))))
+                cur = await conn.execute(statement, params)
+                row = await cur.fetchone()
+                return row[0] if row else None
+    except psycopg.Error as e:
+        raise KernelError(f"kernel refused: {(e.diag.message_primary or str(e))[:500]}") from None
 
 
-def quoted(values) -> str:
-    return "(" + ",".join('"' + v.replace('"', "") + '"' for v in values) + ")"
+def rows(select: str) -> str:
+    """Wrap a select so Postgres returns its rows as one JSON array."""
+    return f"select coalesce(jsonb_agg(to_jsonb(r)), '[]'::jsonb) from ({select}) r"
 
 
 # ------------------------------------------------------------------ reading
@@ -72,66 +98,54 @@ def quoted(values) -> str:
 async def query_claims(ctx: Context, subject: str | None = None, predicate: str | None = None,
                        object_entity: str | None = None, scope: str | None = None,
                        include_deprecated: bool = False, limit: int = 100) -> list[dict]:
-    """Claims matching all given filters (IRIs or CURIEs such as kk:fills). Each has id, status and belief."""
-    params = {"select": CLAIM_COLUMNS, "order": "subject,predicate", "limit": str(min(limit, 1000))}
-    for key, value in (("subject", subject), ("predicate", predicate), ("object_entity", object_entity),
-                       ("scope", scope)):
-        if value:
-            params[key] = f"eq.{expand(value)}"
-    if not include_deprecated:
-        params["status"] = "neq.deprecated"
-    return await call(ctx, "GET", "/claims", params)
+    """Claims matching all given filters (IRIs or CURIEs such as rdfs:label). Each has id, status and belief."""
+    return await query(ctx, rows(
+        f"select {CLAIM_COLUMNS} from api.claims"
+        " where (%(s)s::text is null or subject = %(s)s) and (%(p)s::text is null or predicate = %(p)s)"
+        "   and (%(o)s::text is null or object_entity = %(o)s) and (%(sc)s::text is null or scope = %(sc)s)"
+        "   and (%(dep)s or status <> 'deprecated')"
+        " order by subject, predicate limit %(n)s"),
+        {"s": expand(subject), "p": expand(predicate), "o": expand(object_entity), "sc": expand(scope),
+         "dep": include_deprecated, "n": max(1, min(limit, 1000))})
 
 
 @mcp.tool()
 async def get_entity(ctx: Context, iri: str) -> dict:
     """The entity card: current claims about the entity, and claims that point at it."""
     iri = expand(iri)
-    about = await call(ctx, "GET", "/claims", {"select": CLAIM_COLUMNS, "subject": f"eq.{iri}",
-                                               "status": "neq.deprecated", "order": "predicate", "limit": "500"})
-    pointing = await call(ctx, "GET", "/claims", {"select": CLAIM_COLUMNS, "object_entity": f"eq.{iri}",
-                                                  "status": "neq.deprecated", "order": "predicate", "limit": "200"})
-    return {"iri": iri, "claims": about, "referenced_by": pointing}
+    return await query(ctx, f"""select jsonb_build_object('iri', %(i)s::text,
+        'claims', ({rows(f"select {CLAIM_COLUMNS} from api.claims where subject = %(i)s and status <> 'deprecated' order by predicate limit 500")}),
+        'referenced_by', ({rows(f"select {CLAIM_COLUMNS} from api.claims where object_entity = %(i)s and status <> 'deprecated' order by predicate limit 200")}))""",
+        {"i": iri})
 
 
 @mcp.tool()
 async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
-    """Entities whose IRI or label contains the text (case-insensitive), with the matching claims."""
-    pattern = "*" + text.replace("*", "").replace(",", " ").replace("(", " ").replace(")", " ") + "*"
-    by_iri = await call(ctx, "GET", "/claims", {"select": CLAIM_COLUMNS, "subject": f"ilike.{pattern}",
-                                                "predicate": f"in.{quoted([RDF_TYPE, PREFIXES['rdfs'] + 'label'])}",
-                                                "status": "neq.deprecated", "limit": str(limit)})
-    by_label = await call(ctx, "GET", "/claims", {"select": CLAIM_COLUMNS, "predicate": f"eq.{PREFIXES['rdfs']}label",
-                                                  "object_value->>@value": f"ilike.{pattern}",
-                                                  "status": "neq.deprecated", "limit": str(limit)})
-    seen, out = set(), []
-    for row in by_label + by_iri:
-        if row["id"] not in seen:
-            seen.add(row["id"])
-            out.append(row)
-    return out[:limit]
+    """Claims whose subject IRI or label contains the text (case-insensitive): labels and types first."""
+    return await query(ctx, rows(
+        f"select {CLAIM_COLUMNS} from api.claims"
+        " where status <> 'deprecated' and ("
+        "   (predicate = %(label)s and object_value->>'@value' ilike %(pat)s)"
+        "   or (predicate in (%(label)s, %(type)s) and subject ilike %(pat)s))"
+        " order by (predicate = %(label)s) desc, subject limit %(n)s"),
+        {"label": LABEL, "type": RDF_TYPE, "pat": "%" + text.replace("%", "").replace("_", r"\_") + "%",
+         "n": max(1, min(limit, 200))})
 
 
 @mcp.tool()
 async def explain(ctx: Context, claim_id: str) -> dict:
     """Where a claim came from: sources and quotes, derivations, uses, status history, beliefs, verifications, run."""
-    return await call(ctx, "GET", "/rpc/explain", {"claim_id": claim_id})
+    return await query(ctx, "select api.explain(%s::uuid)", (claim_id,))
 
 
 async def _typed(ctx: Context, cls: str, props: list[str]) -> list[dict]:
-    typed = await call(ctx, "GET", "/claims", {"select": "id,subject,belief", "predicate": f"eq.{RDF_TYPE}",
-                                               "object_entity": f"eq.{expand(cls)}", "status": "neq.deprecated",
-                                               "order": "subject", "limit": "1000"})
-    if not typed:
-        return []
-    facts = await call(ctx, "GET", "/claims", {
-        "select": CLAIM_COLUMNS, "subject": f"in.{quoted(r['subject'] for r in typed)}",
-        "predicate": f"in.{quoted(expand(p) for p in props)}", "status": "neq.deprecated", "limit": "5000"})
-    out = {r["subject"]: {"iri": r["subject"], "type_claim": {"id": r["id"], "belief": r["belief"]}, "claims": []}
-           for r in typed}
-    for f in facts:
-        out[f["subject"]]["claims"].append(f)
-    return list(out.values())
+    return await query(ctx, f"""
+        select coalesce(jsonb_agg(jsonb_build_object(
+                 'iri', t.subject, 'type_claim', jsonb_build_object('id', t.id, 'belief', t.belief),
+                 'claims', ({rows(f"select {CLAIM_COLUMNS} from api.claims f where f.subject = t.subject and f.predicate = any(%(props)s) and f.status <> 'deprecated'")}))
+               order by t.subject), '[]'::jsonb)
+        from api.claims t where t.predicate = %(type)s and t.object_entity = %(cls)s and t.status <> 'deprecated'""",
+        {"type": RDF_TYPE, "cls": expand(cls), "props": [expand(p) for p in props]})
 
 
 @mcp.tool()
@@ -152,28 +166,28 @@ async def list_modules(ctx: Context) -> list[dict]:
 async def start_run(ctx: Context, module: str | None = None, plan_step: str | None = None,
                     info: dict | None = None) -> str:
     """Start a run under your own identity; every change set names the run that produced it."""
-    return await call(ctx, "POST", "/rpc/start_run", body={"module": module, "plan_step": plan_step,
-                                                           "info": info or {}})
+    return str(await query(ctx, "select api.start_run(%s, %s, '[]'::jsonb, %s)",
+                           (module, plan_step, Jsonb(info or {}))))
 
 
 @mcp.tool()
 async def submit_change_set(ctx: Context, change_set: dict) -> dict:
     """Submit a change set (kernel/schemas/change_set.schema.json). Returns {id, status, lane}.
     attributed_to must be your own agent IRI and generated_by one of your running runs."""
-    return await call(ctx, "POST", "/rpc/submit_change_set", body={"cs": change_set})
+    return await query(ctx, "select api.submit_change_set(%s)", (Jsonb(change_set),))
 
 
 @mcp.tool()
 async def get_change_set(ctx: Context, change_set_id: str) -> dict:
     """Status of one of your change sets, with the validation report when it is invalid."""
-    rows = await call(ctx, "GET", "/change_sets", {"id": f"eq.{change_set_id}"})
-    if not rows:
+    found = await query(ctx, "select to_jsonb(c) from api.change_sets c where id = %s::uuid", (change_set_id,))
+    if not found:
         raise KernelError(f"change set {change_set_id} not found among those you can see")
-    return rows[0]
+    return found
 
 
 @mcp.tool()
 async def finish_run(ctx: Context, run_id: str, status: str = "succeeded", cost: dict | None = None) -> str:
     """Finish one of your runs: status succeeded or failed, cost e.g. {"tokens": 1200, "ms": 5300}."""
-    await call(ctx, "POST", "/rpc/finish_run", body={"run_id": run_id, "status": status, "cost": cost or {}})
+    await query(ctx, "select api.finish_run(%s::uuid, %s, %s)", (run_id, status, Jsonb(cost or {})))
     return status
