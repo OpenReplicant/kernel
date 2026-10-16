@@ -22,7 +22,8 @@ kernel-mcp = "kernel_mcp.__main__:main"
 kernel-mcp-hook = "kernel_mcp.hooks:main"
 
 [tool.setuptools]
-packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter"]
+packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter",
+            "eventlog_encoder"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -30,3 +31,4 @@ validator = "modules/validator-shacl/validator"
 belief_corroboration = "modules/belief-corroboration/belief_corroboration"
 self_encoder = "modules/self-encoder/self_encoder"
 ingest_filter = "modules/ingest-filter-gitleaks/ingest_filter"
+eventlog_encoder = "modules/encoder-eventlog/eventlog_encoder"

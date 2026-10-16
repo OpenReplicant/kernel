@@ -57,9 +57,9 @@ python shapes/tests/test_shapes.py                                         # SHA
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20 on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2 on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1
-sh scripts/e2e_module.sh                                                   # T18: a module in its own sandboxed container; needs Docker
+sh scripts/e2e_module.sh                                                   # T18, M2-G3: modules in their own sandboxed containers; needs Docker
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these. The kernel smoke test needs no Docker: a Postgres
@@ -73,16 +73,19 @@ kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
-ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile/bbo/sosa, mappings.ttl,
+ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile/bbo/sosa,
+                 observables.ttl, mappings.ttl,
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
-                 ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); _template/
+                 ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
+                 encoder-eventlog; _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/
-scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer.py + e2e_ui.mjs, e2e_module.sh/.py, eval_self.py,
-                 check_manifests.py
+scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py, eval_self.py,
+                 check_manifests.py, vocab_subset.py
+examples/        demo data (order-to-cash: event log and its generator)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/)
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/

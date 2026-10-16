@@ -104,6 +104,11 @@ profile:
     note: an observation is one observed claim (subject = feature of interest, predicate = sosa:hasSimpleResult,
       qualifier sosa:observedProperty, valid time = the window), not a node per observation (D-47)
     load_when: always (milestone 2 — event logs, metrics)
+  - id: observables
+    owns: nothing new — the sosa:ObservableProperty individuals our modules observe (urn:kk:property:*)
+    iri: https://w3id.org/knowledge-kernel/observables
+    file: observables.ttl
+    license: Apache-2.0
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

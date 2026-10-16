@@ -49,6 +49,8 @@ trap cleanup EXIT
 $py "$root/scripts/e2e_kernel.py"
 # T13: ingestion without a runner (needs gitleaks on PATH for the ingest filter).
 $py "$root/scripts/e2e_ingest.py"
+# Milestone 2, BPM: event-log encoder (M2-T1).
+$py "$root/scripts/e2e_bpm.py"
 # T16 and G7: the self-questions, answered over MCP by the reference agent (eval/self-model).
 $py "$root/scripts/eval_self.py"
 KK_DATABASE_URL="$OWNER_DATABASE_URL" kk status > /dev/null

@@ -3,13 +3,16 @@
 1. Check the manifest (kernel/schemas/module.schema.json) and its license (D-11: permissive or LGPL).
 2. Apply its migration (its role and agent row; views it adds to `api`) unless its role exists.
 3. Give its role its own login: the module acts only as itself and cannot switch roles (D-37).
-4. For a worker (runtime python-service or container) write a compose service to OUT/<name>.yaml and
-   its login to OUT/<name>.env (never committed). The service runs locked down: read-only filesystem,
-   no capabilities, no new privileges, nobody, memory and process limits, and only the internal
-   network that reaches Postgres (no internet).
+4. For a worker (runtime python-service or container) or a command, write a compose service to
+   OUT/<name>.yaml and its login to OUT/<name>.env (never committed). The service runs locked down:
+   read-only filesystem, no capabilities, no new privileges, nobody, memory and process limits, and only
+   the internal network that reaches Postgres (no internet). A command's service is in the `run`
+   profile: it reads its input from KK_INPUT (mounted read-only at /input) and keeps artifacts in the
+   kk-artifacts volume.
 
-Then: docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml up -d. Record its manifest
-in the self-model with `kk scan`. Admin connection: KK_ADMIN_URL.
+Then: docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml up -d (a worker), or
+KK_INPUT=DIR docker compose ... run --rm module-<name> ARGS... (a command, e.g. /input/log.csv).
+Record its manifest in the self-model with `kk scan`. Admin connection: KK_ADMIN_URL.
 """
 from __future__ import annotations
 
@@ -26,6 +29,7 @@ from psycopg import sql
 PERMISSIVE = {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "PSF-2.0", "0BSD", "Unlicense",
               "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later"}
 WORKERS = {"python-service", "container"}
+SANDBOXED = WORKERS | {"command"}
 
 
 def check(manifest: dict, root: Path, allow_license: bool) -> list[str]:
@@ -35,8 +39,8 @@ def check(manifest: dict, root: Path, allow_license: bool) -> list[str]:
     if manifest.get("license") not in PERMISSIVE and not allow_license:
         errors.append(f"license {manifest.get('license')!r} is not in the default distribution's allow list (D-11);"
                       " pass --allow-license to install it anyway")
-    if manifest.get("runtime", {}).get("type") in WORKERS and not manifest.get("agent", {}).get("db_role"):
-        errors.append("a worker needs agent.db_role (its own database role)")
+    if manifest.get("runtime", {}).get("type") in SANDBOXED and not manifest.get("agent", {}).get("db_role"):
+        errors.append("a worker or command needs agent.db_role (its own database role)")
     return errors
 
 
@@ -59,6 +63,13 @@ def service(name: str, manifest: dict, env_file: str, image: str) -> dict:
     if rt["type"] == "python-service":
         svc["working_dir"] = f"/kk/modules/{name}"
         svc["command"] = shlex.split(rt["entrypoint"])
+    if rt["type"] == "command":           # one-shot: docker compose run --rm module-<name> ARGS...
+        words = shlex.split(rt["entrypoint"])
+        svc.update(working_dir=f"/kk/modules/{name}", profiles=["run"], restart="no",
+                   entrypoint=words[:next((i for i, w in enumerate(words) if w[:2] == "--" or w[:1] == "<"), len(words))],
+                   environment={"KK_ARTIFACTS": "/artifacts"},
+                   volumes=["${KK_INPUT:?set KK_INPUT to the input folder}:/input:ro", "kk-artifacts:/artifacts"])
+        return {"services": {f"module-{name}": svc}, "volumes": {"kk-artifacts": {}}}
     return {"services": {f"module-{name}": svc}}
 
 
@@ -79,7 +90,7 @@ def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str,
         conn.execute("reset role")
     result["migration"] = "applied" if not exists and migration.exists() else "skipped (role exists)" if exists else "none"
 
-    if manifest["runtime"]["type"] in WORKERS:
+    if manifest["runtime"]["type"] in SANDBOXED:
         pw = secrets.token_urlsafe(24)
         conn.execute(sql.SQL("alter role {} login password {}").format(sql.Identifier(role), sql.Literal(pw)))
         out.mkdir(parents=True, exist_ok=True)
