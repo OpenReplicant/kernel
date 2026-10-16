@@ -19,7 +19,11 @@ psql -d "$db" -v ON_ERROR_STOP=1 -q -o /dev/null \
   -f "$root/modules/validator-shacl/migration.sql" \
   -f "$root/modules/belief-corroboration/migration.sql" \
   -f "$root/deploy/postgres/040_people.sql" \
-  -f "$root/deploy/postgres/050_agents.sql"
+  -f "$root/deploy/postgres/050_agents.sql" \
+  -f "$root/modules/pack-loader/migration.sql" \
+  -f "$root/modules/pack-loader/packs.sql"
+# Vocabulary packs installed as expected (D-23, D-40).
+psql -d "$db" -v ON_ERROR_STOP=1 -q -tA -f "$root/modules/pack-loader/tests/check_packs.sql" | tail -1
 # Throwaway passwords (never committed): the services' switching login, and the agent's and the
 # owner's own logins, which can act only as themselves (D-37).
 pw() { $py -c 'import secrets; print(secrets.token_hex(24))'; }

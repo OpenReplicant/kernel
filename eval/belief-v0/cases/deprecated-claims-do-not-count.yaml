@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/deprecated-claims-do-not-count
 description: A superseded rival and a superseded supporter are ignored.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -15,7 +15,7 @@ input:
   - id: b
     key: v2
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v2
     agent: other
     sources:
@@ -24,7 +24,7 @@ input:
   - id: d
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: third
     sources:

@@ -2,6 +2,7 @@
 @prefix kkt:     <https://w3id.org/knowledge-kernel/tosca#> .
 @prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
 @prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
 @prefix pplan:   <http://purl.org/net/p-plan#> .
@@ -17,7 +18,7 @@
 
 <urn:kk:module:validator-shacl> a kk:Module ;
     rdfs:label "Change-set validator (JSON Schema + SHACL)" ;
-    kk:version "0.1.0" ; kk:moduleKind kk:Processor ;
+    owl:versionInfo "0.1.0" ; kk:moduleKind kk:Processor ;
     kk:fills <urn:kk:slot:shape-validator> ;
     kk:runsAs <urn:kk:agent:validator> ;
     dcterms:license <https://spdx.org/licenses/Apache-2.0> .
@@ -30,21 +31,18 @@
 <urn:kk:chain:validate-one/record> a kk:ChainStep ;
     pplan:isStepOfPlan <urn:kk:chain:validate-one> ; kk:stepType "http" .
 
-ex:c1 a kk:Claim ;
+ex:c1 a rdf:Statement ;
     rdf:subject <urn:kk:module:validator-shacl> ; rdf:predicate rdfs:comment ; rdf:object "Validates change sets" ;
     prov:wasAttributedTo <urn:kk:agent:self-encoder> ; prov:wasGeneratedBy <urn:kk:run:1> ;
-    kk:scope <urn:kk:scope:default> ; kk:evidenceType kk:Extracted ;
-    kk:recordedAt "2026-10-15T18:00:00Z"^^xsd:dateTime ;
+    dcterms:accessRights <urn:kk:scope:default> ; dcterms:type <urn:kk:evidence:extracted> ;
+    prov:generatedAtTime "2026-10-15T18:00:00Z"^^xsd:dateTime ;
     dcterms:source [ a oa:SpecificResource ; oa:hasSource <file:modules/validator-shacl/module.yaml> ;
                      oa:hasSelector [ a oa:TextQuoteSelector ; oa:exact "Validates submitted change sets" ] ] .
 
-ex:c2 a kk:Claim ;
+ex:c2 a rdf:Statement ;
     rdf:subject <urn:kk:module:validator-shacl> ; rdf:predicate kkt:dependsOn ; rdf:object <urn:kk:module:kernel> ;
     prov:wasAttributedTo <urn:kk:agent:reasoner> ; prov:wasGeneratedBy <urn:kk:run:2> ;
-    kk:scope <urn:kk:scope:default> ; kk:evidenceType kk:Inferred ;
-    kk:recordedAt "2026-10-15T18:01:00Z"^^xsd:dateTime ;
+    dcterms:accessRights <urn:kk:scope:default> ; dcterms:type <urn:kk:evidence:inferred> ;
+    prov:generatedAtTime "2026-10-15T18:01:00Z"^^xsd:dateTime ;
     prov:wasDerivedFrom ex:c1 .
 
-ex:b1 a kk:BeliefScore ;
-    kk:beliefOf ex:c1 ; kk:beliefModel <urn:kk:module:belief-corroboration-v0> ;
-    kk:beliefValue 0.75 ; prov:wasGeneratedBy <urn:kk:run:3> .

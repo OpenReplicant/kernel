@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/overlapping-windows-conflict
 description: 'Windows overlap by a day: conflict.'
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -16,7 +16,7 @@ input:
   - id: b
     key: v2
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v2
     agent: other
     sources:

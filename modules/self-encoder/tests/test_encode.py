@@ -47,7 +47,7 @@ def test_spans_point_at_the_source_line():
     lines = (ROOT / "modules/validator-shacl/module.yaml").read_text().splitlines()
     fills = next(op for op in cs["ops"] if op.get("predicate") == "kk:fills")
     assert "shape-validator" in lines[fills["references"][0]["span"]["start_line"] - 1]
-    version = next(op for op in cs["ops"] if op.get("predicate") == "kk:version")
+    version = next(op for op in cs["ops"] if op.get("predicate") == "owl:versionInfo")
     assert lines[version["references"][0]["span"]["start_line"] - 1].startswith("version:")
 
 

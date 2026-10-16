@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://w3id.org/knowledge-kernel/schemas/module.schema.json",
   "title": "Module manifest (module.yaml)",
-  "description": "Describes one module. The module manager turns an approved manifest into entities and claims (kk:Module, a TOSCA-style node type filling one or more slots), a database role, a compose/k8s entry, RuleGo chains and MCP exposure. Installing or changing a manifest always goes through the review lane.",
+  "description": "Describes one module. The module manager turns an approved manifest into entities and claims (kk:Module filling one or more slots; a TOSCA node type in the kk-tosca profile), a database role, a compose entry and MCP exposure. Installing or changing a manifest always goes through the review lane.",
   "type": "object",
   "required": ["id", "name", "version", "kind", "slots", "license", "runtime", "agent"],
   "additionalProperties": false,

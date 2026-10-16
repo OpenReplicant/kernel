@@ -105,7 +105,7 @@ def encode_module(b: Builder, text: str, module_ids: dict) -> None:
     s = m["id"]
     b.claim(s, "rdf:type", "kk:Module", sp[("id",)])
     b.claim(s, "rdfs:label", m["name"], sp[("name",)])
-    b.claim(s, "kk:version", m["version"], sp[("version",)])
+    b.claim(s, "owl:versionInfo", m["version"], sp[("version",)])
     b.claim(s, "kk:moduleKind", KINDS[m["kind"]], sp[("kind",)])
     b.claim(s, "dcterms:license", f"https://spdx.org/licenses/{m['license']}", sp[("license",)])
     b.claim(s, "kk:runsAs", m["agent"]["iri"], sp[("agent", "iri")])
@@ -189,7 +189,7 @@ def encode_ttl(b: Builder, text: str, module_ids: dict) -> None:
         for label in g.objects(o, rdflib.RDFS.label):
             b.claim(str(o), "rdfs:label", str(label), span)
         for v in g.objects(o, rdflib.OWL.versionInfo):
-            b.claim(str(o), "kk:version", str(v), span)
+            b.claim(str(o), "owl:versionInfo", str(v), span)
     if onts and not list(g.subjects(rdflib.RDF.type, rdflib.SH.NodeShape)):
         return
     graph = f"urn:kk:graph:{b.rel}"

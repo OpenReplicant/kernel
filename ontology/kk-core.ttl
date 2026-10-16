@@ -1,5 +1,4 @@
 @prefix kk:      <https://w3id.org/knowledge-kernel/ns#> .
-@prefix kkt:     <https://w3id.org/knowledge-kernel/tosca#> .
 @prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:     <http://www.w3.org/2002/07/owl#> .
@@ -7,103 +6,49 @@
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
-@prefix pplan:   <http://purl.org/net/p-plan#> .
 
-# Knowledge Kernel core vocabulary (tier: core).
-# These are the only terms the project invents. Everything else is reused:
-#   identity/labels  RDFS, SKOS, DCTerms     provenance  PROV-O       plans  P-Plan
-#   quotes/spans     Web Annotation (oa:)     constraints SHACL        mappings SSSOM as skos:*Match
-#   structure        TOSCA mirror (kk-tosca.ttl)                       interfaces WoT TD (td:)
+# Knowledge Kernel core vocabulary (tier: core). D-40.
+# Only the module contract is ours: modules, the slots they fill, their kind, the agent they run as.
+# Everything else uses a standard vocabulary (ontology/packs.yaml):
+#   labels, types        RDFS, SKOS, DCTerms, owl:versionInfo
+#   provenance           PROV-O (attribution, runs, derivation, generation time)
+#   sources and quotes   DCTerms source + Web Annotation selectors
+#   access (scopes)      dcterms:accessRights
+#   constraints          SHACL          mappings  SKOS *Match + SSSOM metadata
+# The kernel's own bookkeeping (claim status, statement key, belief, evidence type, redaction) lives in
+# database columns, not in this vocabulary; validation and export express it with the terms above
+# (docs/decisions.md D-40 has the table). System modeling (TOSCA mirror, kk-tosca.ttl) and agent
+# profiles (kk-profile.ttl) are profile packs, not core.
 # Namespace is a placeholder until a w3id.org redirect is registered (docs/decisions.md O-2).
 
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;
     rdfs:label "Knowledge Kernel core vocabulary" ;
-    owl:versionInfo "0.3.0" ;
+    owl:versionInfo "0.4.0" ;
     dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
-    owl:imports <http://www.w3.org/ns/prov-o>, <http://purl.org/net/p-plan> .
+    owl:imports <http://www.w3.org/ns/prov-o> .
 
-# ------------------------------------------------------------------ claims (RDF export form)
-# In the database a claim is one row. In RDF export each claim is a statement node
-# (rdf:Statement reification, upgradeable to RDF 1.2 reifiers) placed in the named graph of its scope.
+# ------------------------------------------------------------------ standard terms the kernel stores
+# Typing them here makes them approved predicates (kernel.is_approved_property).
+owl:versionInfo a owl:AnnotationProperty ; rdfs:label "version" .
 
-kk:Claim a owl:Class ;
-    rdfs:subClassOf rdf:Statement, prov:Entity ;
-    rdfs:label "claim" ;
-    skos:definition "One attributed, referenced statement about an entity, with qualifiers, valid time, recorded time and a belief history." .
-
-kk:Scope a owl:Class ;
-    rdfs:label "scope" ;
-    skos:definition "A trust boundary. Exported as a named graph; clearance is granted per scope." .
-
-kk:scope a owl:ObjectProperty ;
-    rdfs:domain kk:Claim ; rdfs:range kk:Scope ;
-    rdfs:label "scope" .
-
-kk:statementKey a owl:DatatypeProperty ;
-    rdfs:domain kk:Claim ; rdfs:range xsd:string ;
-    rdfs:label "statement key" ;
-    skos:definition "Hash of subject, predicate, object and qualifiers. Claims from different sources with the same key corroborate each other." .
-
-kk:qualifier a rdf:Property ;
-    rdfs:domain kk:Claim ;
-    rdfs:label "qualifier" ;
-    skos:definition "Super-property of all qualifier properties when exported (a condition on the claim, like an edge property)." .
-
-kk:validFrom a owl:DatatypeProperty ; rdfs:domain kk:Claim ; rdfs:range xsd:dateTime ; rdfs:label "valid from" .
-kk:validTo   a owl:DatatypeProperty ; rdfs:domain kk:Claim ; rdfs:range xsd:dateTime ; rdfs:label "valid to" .
-kk:recordedAt a owl:DatatypeProperty ; rdfs:domain kk:Claim ; rdfs:range xsd:dateTime ; rdfs:label "recorded at" ;
-    rdfs:subPropertyOf prov:generatedAtTime .
-
-kk:redactedAt a owl:DatatypeProperty ; rdfs:range xsd:dateTime ; rdfs:label "redacted at" ;
-    skos:definition "Content was removed by an erasure request; identity and lineage remain." .
-
-# ------------------------------------------------------------------ evidence types
-kk:EvidenceTypeScheme a skos:ConceptScheme ; rdfs:label "evidence types" .
-
-kk:evidenceType a owl:ObjectProperty ;
-    rdfs:domain kk:Claim ; rdfs:range skos:Concept ;
-    rdfs:label "evidence type" .
-
-kk:Deterministic a skos:Concept ; skos:inScheme kk:EvidenceTypeScheme ; skos:prefLabel "deterministic" ;
-    skos:definition "Produced by parsing code, schemas, configuration or traces." .
-kk:Extracted a skos:Concept ; skos:inScheme kk:EvidenceTypeScheme ; skos:prefLabel "extracted" ;
-    skos:definition "Read from prose by a model or parser; always carries the supporting quote." .
-kk:Inferred a skos:Concept ; skos:inScheme kk:EvidenceTypeScheme ; skos:prefLabel "inferred" ;
-    skos:definition "Concluded from other claims; always carries prov:wasDerivedFrom links." .
-kk:Observed a skos:Concept ; skos:inScheme kk:EvidenceTypeScheme ; skos:prefLabel "observed" ;
-    skos:definition "Aggregated from runtime observation (runs, logs, telemetry) over a time window." .
-kk:Testimony a skos:Concept ; skos:inScheme kk:EvidenceTypeScheme ; skos:prefLabel "testimony" ;
-    skos:definition "Stated by a person, e.g. in an interview or review, attributed to them." .
-
-# ------------------------------------------------------------------ status, belief, verification
-kk:StatusScheme a skos:ConceptScheme ; rdfs:label "claim status" .
-kk:status a owl:ObjectProperty ; rdfs:domain kk:Claim ; rdfs:range skos:Concept ; rdfs:label "status" .
-kk:Normal a skos:Concept ; skos:inScheme kk:StatusScheme ; skos:prefLabel "normal" .
-kk:Preferred a skos:Concept ; skos:inScheme kk:StatusScheme ; skos:prefLabel "preferred" .
-kk:Deprecated a skos:Concept ; skos:inScheme kk:StatusScheme ; skos:prefLabel "deprecated" ;
-    skos:definition "Kept but no longer believed current; see dcterms:isReplacedBy or prov:wasInvalidatedBy." .
-
-kk:BeliefScore a owl:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "belief score" .
-kk:beliefOf a owl:ObjectProperty ; rdfs:domain kk:BeliefScore ; rdfs:range kk:Claim ; rdfs:label "belief of" .
-kk:beliefValue a owl:DatatypeProperty ; rdfs:domain kk:BeliefScore ; rdfs:range xsd:decimal ; rdfs:label "belief value" ;
-    skos:definition "Between 0 and 1. Computed by a belief model; never set by hand." .
-kk:beliefModel a owl:ObjectProperty ; rdfs:domain kk:BeliefScore ; rdfs:range kk:Module ; rdfs:label "belief model" .
-
-kk:Verification a owl:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "verification" .
-kk:verifies a owl:ObjectProperty ; rdfs:domain kk:Verification ; rdfs:range kk:Claim ; rdfs:label "verifies" .
-kk:verdict a owl:DatatypeProperty ; rdfs:domain kk:Verification ; rdfs:range xsd:string ; rdfs:label "verdict" .
-kk:method a owl:ObjectProperty ; rdfs:domain kk:Verification ; rdfs:range kk:Module ; rdfs:label "method" .
-
-kk:possiblySameAs a owl:ObjectProperty, owl:SymmetricProperty ;
-    rdfs:label "possibly same as" ;
-    skos:definition "Entity-resolution candidate awaiting review; never merged automatically." .
-
-# ------------------------------------------------------------------ modules and slots (the self-model)
+# ------------------------------------------------------------------ the module contract
 kk:Module a owl:Class ;
-    rdfs:subClassOf kkt:NodeType ;
+    rdfs:subClassOf prov:SoftwareAgent ;
     rdfs:label "module" ;
     skos:definition "A versioned, installable unit that fills one or more slots. Described by module.yaml." .
+
+kk:Slot a owl:Class ;
+    rdfs:label "slot" ;
+    skos:definition "A role in the platform with a contract, filled by modules (ontology/slots.yaml)." .
+
+kk:fills a owl:ObjectProperty ;
+    rdfs:domain kk:Module ; rdfs:range kk:Slot ;
+    rdfs:label "fills" .
+
+kk:slotContract a owl:DatatypeProperty ; rdfs:domain kk:Slot ; rdfs:range xsd:string ; rdfs:label "slot contract" .
+kk:cardinality a owl:DatatypeProperty ; rdfs:domain kk:Slot ; rdfs:range xsd:string ; rdfs:label "cardinality" ;
+    skos:definition "'one' (single active module, others in shadow) or 'many'." .
 
 kk:ModuleKindScheme a skos:ConceptScheme ; rdfs:label "module kinds" .
 kk:moduleKind a owl:ObjectProperty ; rdfs:domain kk:Module ; rdfs:range skos:Concept ; rdfs:label "module kind" .
@@ -116,71 +61,16 @@ kk:AgentKind a skos:Concept ; skos:inScheme kk:ModuleKindScheme ; skos:prefLabel
 kk:Control   a skos:Concept ; skos:inScheme kk:ModuleKindScheme ; skos:prefLabel "control" ;   skos:definition "Runs, schedules, evaluates or installs other modules." .
 kk:Pack      a skos:Concept ; skos:inScheme kk:ModuleKindScheme ; skos:prefLabel "pack" ;      skos:definition "Vocabulary content: terms, shapes, mappings." .
 
-kk:Slot a owl:Class ;
-    rdfs:subClassOf kkt:RequirementDefinition ;
-    rdfs:label "slot" ;
-    skos:definition "A role in the platform with a contract, filled by modules (ontology/slots.yaml)." .
-
-kk:fills a owl:ObjectProperty ;
-    rdfs:subPropertyOf kkt:fulfills ;
-    rdfs:domain kk:Module ; rdfs:range kk:Slot ;
-    rdfs:label "fills" .
-
-kk:slotContract a owl:DatatypeProperty ; rdfs:domain kk:Slot ; rdfs:range xsd:string ; rdfs:label "slot contract" .
-kk:cardinality a owl:DatatypeProperty ; rdfs:domain kk:Slot ; rdfs:range xsd:string ; rdfs:label "cardinality" ;
-    skos:definition "'one' (single active module, others in shadow) or 'many'." .
-kk:protected a owl:DatatypeProperty ; rdfs:range xsd:boolean ; rdfs:label "protected" ;
-    skos:definition "System component: never exposed for editing; changes need review and a passing eval." .
-kk:runsAs a owl:ObjectProperty ; rdfs:range prov:Agent ; rdfs:label "runs as" .
-kk:version a owl:DatatypeProperty ; rdfs:subPropertyOf owl:versionInfo ; rdfs:label "version" .
-
-# ------------------------------------------------------------------ chains (chain profile on P-Plan)
-kk:Chain a owl:Class ;
-    rdfs:subClassOf pplan:Plan ;
-    rdfs:label "chain" ;
-    skos:definition "A short, event-driven automation; compiled by a decoder for a chain runner (RuleGo or the Python runner)." .
-
-kk:ChainStep a owl:Class ;
-    rdfs:subClassOf pplan:Step ;
-    rdfs:label "chain step" .
-
-kk:stepType a owl:DatatypeProperty ; rdfs:domain kk:ChainStep ; rdfs:range xsd:string ; rdfs:label "step type" ;
-    skos:definition "One of http, script, subchain, switch, filter, transform, mcp_tool, log." .
-kk:stepConfig a owl:DatatypeProperty ; rdfs:domain kk:ChainStep ; rdfs:label "step configuration" ;
-    skos:definition "JSON configuration of the step (rdf:JSON literal)." .
-kk:next a owl:ObjectProperty ; rdfs:domain kk:ChainStep ; rdfs:range kk:ChainStep ; rdfs:label "next" ;
-    skos:definition "Routing edge to the following step. Its routing label is the qualifier kk:onLabel." .
-kk:onLabel a owl:DatatypeProperty ; rdfs:subPropertyOf kk:qualifier ; rdfs:label "on label" ;
-    skos:definition "Routing label of a kk:next edge: success, failure, true, false, or a switch label." .
-kk:trigger a owl:DatatypeProperty ; rdfs:domain kk:Chain ; rdfs:label "trigger" .
-kk:deployedHash a owl:DatatypeProperty ; rdfs:label "deployed hash" ;
-    skos:definition "sha256 of the compiled chain file a runner is executing; compared with the approved chain to detect drift." .
-
-kk:observedHash a owl:DatatypeProperty ; rdfs:label "observed hash" ;
-    skos:definition "sha256 of a deployed file as last observed by a drift check. Drift is an observed hash that differs from kk:deployedHash." .
-kk:runnable a owl:DatatypeProperty ; rdfs:range xsd:boolean ; rdfs:label "runnable" ;
-    skos:definition "Result of the compile rule for a fulfillment: all requirements filled, node type mapped to a runner component, transports supported." .
-kk:notRunnableBecause a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:label "not runnable because" .
-
-# ------------------------------------------------------------------ evaluation
-kk:evalScore a owl:DatatypeProperty ; rdfs:range xsd:decimal ; rdfs:label "eval score" ;
-    skos:definition "Score of a module on an eval set; qualifiers kk:evalSet and kk:metric say which." .
-kk:evalSet a owl:ObjectProperty ; rdfs:subPropertyOf kk:qualifier ; rdfs:label "eval set" .
-kk:metric a owl:DatatypeProperty ; rdfs:subPropertyOf kk:qualifier ; rdfs:label "metric" .
+kk:runsAs a owl:ObjectProperty ; rdfs:range prov:Agent ; rdfs:label "runs as" ;
+    skos:definition "The kernel agent (database role) whose identity a module (or a chain) acts under." .
+kk:protected a owl:DatatypeProperty ; rdfs:domain kk:Module ; rdfs:range xsd:boolean ; rdfs:label "protected" ;
+    skos:definition "System component: changes need review and a passing eval." .
 
 # ------------------------------------------------------------------ single-valued properties
 # One value per subject at a time. Belief models treat claims with different values and overlapping
 # validity windows as conflicting; non-overlapping windows are changes over time.
 kk:moduleKind a owl:FunctionalProperty .
-kk:version a owl:FunctionalProperty .
 kk:runsAs a owl:FunctionalProperty .
 kk:protected a owl:FunctionalProperty .
 kk:slotContract a owl:FunctionalProperty .
 kk:cardinality a owl:FunctionalProperty .
-kk:stepType a owl:FunctionalProperty .
-kk:stepConfig a owl:FunctionalProperty .
-kk:trigger a owl:FunctionalProperty .
-kk:runnable a owl:FunctionalProperty .
-kk:notRunnableBecause a owl:FunctionalProperty .
-kk:deployedHash a owl:FunctionalProperty .
-kk:observedHash a owl:FunctionalProperty .

@@ -169,7 +169,7 @@ async def list_slots(ctx: Context) -> list[dict]:
 @mcp.tool()
 async def list_modules(ctx: Context) -> list[dict]:
     """Modules in the self-model: label, version, kind, the slots they fill and the agent they run as."""
-    return await _typed(ctx, "kk:Module", ["rdfs:label", "kk:version", "kk:moduleKind", "kk:fills", "kk:runsAs",
+    return await _typed(ctx, "kk:Module", ["rdfs:label", "owl:versionInfo", "kk:moduleKind", "kk:fills", "kk:runsAs",
                                            "kk:protected"])
 
 

@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/change-over-time-is-not-a-conflict
 description: Version 0.1 until a date, 0.2 from that date.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -16,7 +16,7 @@ input:
   - id: b
     key: v2
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v2
     agent: other
     sources:

@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/conflict-on-single-value-property
 description: Two independent sources disagree on a module's version.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -15,7 +15,7 @@ input:
   - id: b
     key: v2
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v2
     agent: other
     sources:

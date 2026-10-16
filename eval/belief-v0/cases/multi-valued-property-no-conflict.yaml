@@ -2,7 +2,7 @@ id: urn:kk:eval:belief-v0/multi-valued-property-no-conflict
 description: 'A module fills two slots: kk:fills is not single-valued.'
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: s1

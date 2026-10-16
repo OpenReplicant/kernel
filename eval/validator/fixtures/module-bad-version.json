@@ -37,7 +37,7 @@
     {
       "op": "add_claim",
       "subject": "urn:kk:module:validator-shacl",
-      "predicate": "kk:version",
+      "predicate": "owl:versionInfo",
       "object": {
         "value": {
           "@value": "v1"
