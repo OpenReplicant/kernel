@@ -26,10 +26,10 @@ begin
     and c.object_entity in (kernel.expand('rdf:Property'), kernel.expand('owl:ObjectProperty'),
                             kernel.expand('owl:DatatypeProperty'), kernel.expand('owl:AnnotationProperty'))
     and c.subject like 'https://w3id.org/knowledge-kernel/%';
-  if n <> 60 then
-    raise exception 'T3: expected 60 kk/kkt/kkp properties typed, found %', n;
+  if n <> 61 then
+    raise exception 'T3: expected 61 kk/kkt/kkp properties typed, found %', n;
   end if;
-  raise notice 'ok: 60 kk/kkt/kkp properties typed';
+  raise notice 'ok: 61 kk/kkt/kkp properties typed';
 
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = kernel.expand('kk:Slot');

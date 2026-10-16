@@ -1,0 +1,23 @@
+# Chain definition — schema: kernel/schemas/chain.schema.json
+chain: urn:kk:chain:check-rulego-drift
+name: Check deployed chains for drift
+description: Hashes the deployed RuleGo chain files and records an observed hash when one differs from what was deployed.
+protected: true
+runs_as: urn:kk:agent:chain-decoder-rulego
+trigger:
+  type: schedule
+  spec: every 10s
+steps:
+- id: drift
+  do: http
+  with:
+    method: POST
+    url: http://chain-decoder-rulego:8000/drift
+    body: {}
+  next:
+    success: submit_each
+- id: submit_each
+  do: subchain
+  with:
+    chain: urn:kk:chain:submit-decoder-claims
+    for_each: ${msg.change_sets}

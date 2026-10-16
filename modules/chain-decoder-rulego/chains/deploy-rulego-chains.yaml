@@ -1,0 +1,23 @@
+# Chain definition — schema: kernel/schemas/chain.schema.json
+chain: urn:kk:chain:deploy-rulego-chains
+name: Deploy approved chains to RuleGo
+description: Compiles approved chain claims to RuleGo rule chains and records runnable, reasons and deployed hashes.
+protected: true
+runs_as: urn:kk:agent:chain-decoder-rulego
+trigger:
+  type: schedule
+  spec: every 30s
+steps:
+- id: deploy
+  do: http
+  with:
+    method: POST
+    url: http://chain-decoder-rulego:8000/deploy
+    body: {}
+  next:
+    success: submit_each
+- id: submit_each
+  do: subchain
+  with:
+    chain: urn:kk:chain:submit-decoder-claims
+    for_each: ${msg.change_sets}

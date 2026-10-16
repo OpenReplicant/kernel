@@ -19,7 +19,7 @@
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;
     rdfs:label "Knowledge Kernel core vocabulary" ;
-    owl:versionInfo "0.2.0" ;
+    owl:versionInfo "0.3.0" ;
     dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
     owl:imports <http://www.w3.org/ns/prov-o>, <http://purl.org/net/p-plan> .
 
@@ -156,6 +156,8 @@ kk:trigger a owl:DatatypeProperty ; rdfs:domain kk:Chain ; rdfs:label "trigger" 
 kk:deployedHash a owl:DatatypeProperty ; rdfs:label "deployed hash" ;
     skos:definition "sha256 of the compiled chain file a runner is executing; compared with the approved chain to detect drift." .
 
+kk:observedHash a owl:DatatypeProperty ; rdfs:label "observed hash" ;
+    skos:definition "sha256 of a deployed file as last observed by a drift check. Drift is an observed hash that differs from kk:deployedHash." .
 kk:runnable a owl:DatatypeProperty ; rdfs:range xsd:boolean ; rdfs:label "runnable" ;
     skos:definition "Result of the compile rule for a fulfillment: all requirements filled, node type mapped to a runner component, transports supported." .
 kk:notRunnableBecause a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:label "not runnable because" .
@@ -181,3 +183,4 @@ kk:trigger a owl:FunctionalProperty .
 kk:runnable a owl:FunctionalProperty .
 kk:notRunnableBecause a owl:FunctionalProperty .
 kk:deployedHash a owl:FunctionalProperty .
+kk:observedHash a owl:FunctionalProperty .

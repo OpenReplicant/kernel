@@ -2,9 +2,9 @@
 belief changed. It reads through the API with its own token and never writes; the rescore chain
 submits under this module's identity.
 
-Each call looks at claims recorded since the last call (all claims on the first call and on every
-FULL_EVERY-th call, which also catches commits that landed out of order), widens to every claim on
-the same subjects, and scores them. Env: KK_API, KK_JWT, PORT (default 8000), FULL_EVERY (default 60).
+Each call looks at claims recorded since the last call and at claims that still have no belief (all
+claims on the first call and on every FULL_EVERY-th call, which also catches commits that landed out
+of order), widens to every claim on the same subjects, and scores them. Env: KK_API, KK_JWT, PORT (default 8000), FULL_EVERY (default 60).
 """
 import hashlib
 import json
@@ -55,9 +55,12 @@ def rescore() -> dict:
     full = state["watermark"] is None or state["calls"] % int(os.environ.get("FULL_EVERY", "60")) == 0
     new = get("claims", select="subject,recorded_at", order="recorded_at",
               **({} if full else {"recorded_at": f"gt.{state['watermark']}"}))
+    # Also anything still unscored: a change set that was lost or rejected must not leave claims
+    # without belief until the next full pass.
+    new += get("claims", select="subject,recorded_at", belief="is.null", status="neq.deprecated")
     if not new:
         return {"change_sets": []}
-    watermark = max(r["recorded_at"] for r in new)
+    watermark = max([r["recorded_at"] for r in new] + ([state["watermark"]] if state["watermark"] else []))
     rows = [r for part in chunks({r["subject"] for r in new}) for r in get("claims", select=COLUMNS, subject=in_list(part))]
     sources: dict[str, set] = {}
     for part in chunks({r["id"] for r in rows}):

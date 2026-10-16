@@ -43,7 +43,7 @@ def test_kinds_and_edges_carry_claims():
     kinds = {}
     for n in G["nodes"].values():
         kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
-    assert kinds["module"] == 12 and kinds["chain"] == 7 and kinds["node"] == 13, kinds
+    assert kinds["module"] == 12 and kinds["chain"] == 10 and kinds["node"] == 13, kinds
     assert all(e["id"] and e["belief"] == 0.5 for e in G["edges"])
     assert G["nodes"]["urn:kk:module:validator-shacl"]["label"] == "Change-set validator (JSON Schema + SHACL)"
 

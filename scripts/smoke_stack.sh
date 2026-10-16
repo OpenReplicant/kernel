@@ -14,6 +14,8 @@
 #       (scripts/e2e_mcp.py, in the kernel-mcp container), and /mcp answers through Caddy.
 #   T9/G3: the UI's Graph tab renders the self-model from live claims in headless Chromium
 #       (scripts/ui_graph_check.mjs; needs the playwright package for node, version 1.56.1).
+#   T10/G5: the chain decoder compiles approved chains for RuleGo, records runnable / reasons /
+#       deployed hashes, and a hand edit of a deployed file shows up as drift within one check interval.
 # PYTHON: interpreter with pyyaml, rdflib and pyshacl for check_g2.py (default python3).
 # Usage: sh scripts/smoke_stack.sh        (needs docker compose, python3, curl)
 #        KK_BUILD_CA=/path/to/ca.crt sh scripts/smoke_stack.sh   (behind a TLS-intercepting proxy)
@@ -25,7 +27,7 @@ cleanup() {
   status=$?
   if [ "$status" -ne 0 ]; then
     echo "--- smoke test failed ($status); module logs:"
-    $compose logs --tail 40 validator chain-runner-python belief kernel-mcp graph-decoder 2>/dev/null || true
+    $compose logs --tail 40 validator chain-runner-python belief kernel-mcp graph-decoder chain-decoder-rulego 2>/dev/null || true
   fi
   $compose down -v >/dev/null 2>&1; rm -f "$env_file"
 }
@@ -67,17 +69,18 @@ mint() { KK_JWT_SECRET=$KK_JWT_SECRET python3 "$root/scripts/mint_jwt.py" "$1" -
 sed -i -e "s/^KK_JWT_VALIDATOR=.*/KK_JWT_VALIDATOR=$token/" \
        -e "s/^KK_JWT_SELF_ENCODER=.*/KK_JWT_SELF_ENCODER=$(mint kkm_self_encoder)/" \
        -e "s/^KK_JWT_INGEST_FILTER=.*/KK_JWT_INGEST_FILTER=$(mint kkm_ingest_filter)/" \
-       -e "s/^KK_JWT_BELIEF=.*/KK_JWT_BELIEF=$(mint kkm_belief)/" "$env_file"
+       -e "s/^KK_JWT_BELIEF=.*/KK_JWT_BELIEF=$(mint kkm_belief)/" \
+       -e "s/^KK_JWT_DECODER_RULEGO=.*/KK_JWT_DECODER_RULEGO=$(mint kkm_decoder_rulego)/" "$env_file"
 # KK_BUILD_CA: optional CA bundle for pip inside the build (machines behind a TLS-intercepting proxy).
 if [ -n "${KK_BUILD_CA:-}" ]; then
   for m in validator:validator-shacl chain-runner-python:chain-runner-python \
            self-encoder:self-encoder ingest-filter:ingest-filter-gitleaks belief:belief-corroboration \
-           kernel-mcp:kernel-mcp graph-decoder:graph-decoder; do
+           kernel-mcp:kernel-mcp graph-decoder:graph-decoder chain-decoder-rulego:chain-decoder-rulego; do
     docker build -q --secret id=ca,src="$KK_BUILD_CA" -f "$root/modules/${m#*:}/Dockerfile" \
       -t "kk-smoke-${m%%:*}" "$root" >/dev/null
   done
 else
-  $compose build validator chain-runner-python self-encoder ingest-filter belief kernel-mcp graph-decoder
+  $compose build validator chain-runner-python self-encoder ingest-filter belief kernel-mcp graph-decoder chain-decoder-rulego
 fi
 $compose up -d --no-build --wait validator
 $compose exec -T \
@@ -85,7 +88,7 @@ $compose exec -T \
   -e VALIDATOR_JWT="$token" validator python - < "$root/scripts/e2e_validator.py"
 
 agent_token=$(KK_JWT_SECRET=$KK_JWT_SECRET python3 "$root/scripts/mint_jwt.py" kkm_self_encoder --days 0.01)
-$compose up -d --no-build --wait belief chain-runner-python
+$compose up -d --no-build --wait belief chain-decoder-rulego chain-runner-python
 AGENT_JWT=$agent_token python3 "$root/scripts/e2e_runner.py"
 runs=$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from kernel.run
   where plan_step = 'urn:kk:chain:validate-one/record' and agent = 'urn:kk:agent:validator'
@@ -145,6 +148,9 @@ i=0; until [ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*)
   || [ $i -ge 90 ]; do i=$((i+1)); sleep 1; done
 $compose exec -T db psql -U postgres -d kk -tAc "select 'claims ' || count(*) || ', without belief ' || count(*) filter (where belief is null)
   || ', belief runs ' || (select count(*) from kernel.run where plan_step = 'urn:kk:chain:submit-beliefs/submit') from api.claims"
+$compose exec -T db psql -U postgres -d kk -tAc "select 'belief change sets ' || status || ': ' || count(*)
+  || coalesce(' e.g. ' || left(min(validation_report::text), 300), '') from kernel.change_set
+  where attributed_to = 'urn:kk:agent:belief-corroboration' group by status"
 [ "$($compose exec -T db psql -U postgres -d kk -tAc "select count(*) from api.claims where belief is null")" = 0 ]
 AGENT_A_JWT=$agent_token AGENT_B_JWT=$(mint kkm_graph_decoder) python3 "$root/scripts/e2e_belief.py"
 echo "T7 smoke test passed"
@@ -167,3 +173,30 @@ $compose up -d --no-build --wait graph-decoder
 [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/graph)" = 401 ]   # no token, no graph
 KK_TOKEN=$agent_mcp node "$root/scripts/ui_graph_check.mjs"
 echo "T9 smoke test passed (G3)"
+
+# T10/G5: compiled chains, their claims, and drift detection.
+sql() { $compose exec -T db psql -U postgres -d kk -tAc "$1"; }
+live="from api.claims where status <> 'deprecated' and attributed_to = 'urn:kk:agent:chain-decoder-rulego'"
+i=0; until [ "$(sql "select count(*) $live and predicate like '%#deployedHash'")" -ge 8 ] || [ $i -ge 120 ]; do i=$((i+1)); sleep 1; done
+sql "select 'runnable ' || count(*) filter (where object_value->>'@value' = 'true') || ', not runnable '
+       || count(*) filter (where object_value->>'@value' = 'false') $live and predicate like '%#runnable'"
+sql "select 'not runnable: ' || split_part(subject, ':', 4) || ' -- ' || (object_value->>'@value') $live
+       and predicate like '%#notRunnableBecause' order by subject"
+[ "$(sql "select count(*) $live and predicate like '%#deployedHash'")" = 8 ]
+[ "$(sql "select count(*) $live and predicate like '%#runnable' and object_value->>'@value' = 'false'")" = 2 ]
+$compose exec -T chain-decoder-rulego sh -c 'ls /rulego/workflows/kk/rules | wc -l | sed "s/^/files in the RuleGo chain folder: /"'
+# Hand-edit a deployed file; the drift check (every 10s) must record it within one interval.
+$compose exec -T chain-decoder-rulego sh -c 'echo " " >> /rulego/workflows/kk/rules/validate-one.json'
+edited=$(date +%s)
+drift="$live and predicate like '%#observedHash' and subject = 'urn:kk:chain:validate-one'"
+i=0; until [ "$(sql "select count(*) $drift")" = 1 ] || [ $i -ge 60 ]; do i=$((i+1)); sleep 1; done
+seen=$(( $(date +%s) - edited ))
+sql "select 'drift on validate-one: deployed ' || left(d.object_value->>'@value', 12) || ', observed ' || left(o.object_value->>'@value', 12)
+     from api.claims d, api.claims o where d.subject = o.subject and d.subject = 'urn:kk:chain:validate-one'
+       and d.predicate like '%#deployedHash' and o.predicate like '%#observedHash'
+       and d.status <> 'deprecated' and o.status <> 'deprecated'"
+echo "drift recorded ${seen}s after the edit (check interval 10s + validation)"
+[ "$(sql "select count(*) $drift and object_value->>'@value' <> (select object_value->>'@value' $live
+        and predicate like '%#deployedHash' and subject = 'urn:kk:chain:validate-one')")" = 1 ]
+[ "$seen" -le 20 ]
+echo "T10 smoke test passed (G5)"

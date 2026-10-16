@@ -106,7 +106,8 @@ services:
         {"urn:kk:agent:validator": "${KK_JWT_VALIDATOR:-}",
          "urn:kk:agent:self-encoder": "${KK_JWT_SELF_ENCODER:-}",
          "urn:kk:agent:ingest-filter": "${KK_JWT_INGEST_FILTER:-}",
-         "urn:kk:agent:belief-corroboration": "${KK_JWT_BELIEF:-}"}
+         "urn:kk:agent:belief-corroboration": "${KK_JWT_BELIEF:-}",
+         "urn:kk:agent:chain-decoder-rulego": "${KK_JWT_DECODER_RULEGO:-}"}
     volumes:
       - ../modules:/modules:ro
     depends_on: [postgrest]
@@ -141,9 +142,10 @@ services:
     depends_on: [postgrest]
     restart: unless-stopped
 
+  # The only writer of the RuleGo chain folder; records runnable / deployedHash / observedHash claims.
   chain-decoder-rulego:
-    build: ../modules/chain-decoder-rulego
-    profiles: [rulego]
+    build: {context: .., dockerfile: modules/chain-decoder-rulego/Dockerfile}
+    profiles: [modules]
     environment:
       <<: *module-env
       KK_JWT: ${KK_JWT_DECODER_RULEGO:-}
