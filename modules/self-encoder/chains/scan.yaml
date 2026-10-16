@@ -1,7 +1,8 @@
 # Chain definition — schema: kernel/schemas/chain.schema.json
 chain: urn:kk:chain:scan-self
 name: Scan the repository
-description: Filter secrets, store artifacts, emit claims per file kind, submit one change set per file.
+description: List the self-model files, filter secrets, store artifacts and encode claims, submit one
+  change set per file.
 protected: false
 runs_as: urn:kk:agent:self-encoder
 trigger:
@@ -9,10 +10,11 @@ trigger:
   spec: /scan
 steps:
 - id: list_files
-  do: script
+  do: http
   with:
-    lang: python
-    path: scripts/list_files.py
+    method: POST
+    url: http://self-encoder:8000/list
+    body: {}
   next:
     success: filter
 - id: filter
@@ -21,18 +23,15 @@ steps:
     chain: urn:kk:chain:ingest-filter
   next:
     success: encode
-    failure: log_blocked
 - id: encode
-  do: script
-  with:
-    lang: python
-    path: scripts/encode.py
-  next:
-    success: submit
-- id: submit
   do: http
   with:
     method: POST
-    url: ${KK_API}/rpc/submit_change_set
-- id: log_blocked
-  do: log
+    url: http://self-encoder:8000/encode
+  next:
+    success: submit_each
+- id: submit_each
+  do: subchain
+  with:
+    chain: urn:kk:chain:submit-change-set
+    for_each: ${msg.change_sets}

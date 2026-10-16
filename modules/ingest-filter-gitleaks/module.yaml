@@ -15,8 +15,8 @@ agent:
   member_of:
   - kk_agent
 runtime:
-  type: container
-  image: ${GITLEAKS_IMAGE}
+  type: python-service
+  entrypoint: python -m ingest_filter
   chains:
   - chains/ingest-filter.yaml
 mcp:
