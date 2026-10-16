@@ -23,8 +23,6 @@ budget:
 runtime:
   type: python-service
   entrypoint: python -m example
-  chains:
-  - chains/example.yaml
 requires:
 - slot: recall-index
   optional: true

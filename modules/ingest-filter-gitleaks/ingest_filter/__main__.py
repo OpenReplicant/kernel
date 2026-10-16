@@ -1,25 +1,27 @@
-"""POST /filter {"paths": [relative paths under KK_REPO]} -> {"paths": [clean], "blocked": [...]}.
+"""Ingest filter: gitleaks over candidate files before anything is stored. A plain command (D-41):
 
-Blocked entries name the file, line and gitleaks rule, never the secret. Anything else in the request
-is passed through, so the filter can sit between a lister and an encoder in a chain.
-Env: KK_REPO (default /repo), PORT (default 8000).
+  python -m ingest_filter --repo DIR PATH...     (or the paths as a JSON list on stdin)
+  -> stdout {"paths": [clean], "blocked": [{"path", "line", "rule"}]}
+
+Blocked entries name the file, line and gitleaks rule, never the secret. Any encoder can run it
+before encoding (the self-encoder does, through KK_INGEST_FILTER). Needs the gitleaks binary on PATH
+(pinned: v8.30.1). Fails closed: if gitleaks cannot run, the command exits non-zero.
 """
+import argparse
 import json
-import os
 import shutil
 import subprocess
+import sys
 import tempfile
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-REPO = Path(os.environ.get("KK_REPO", "/repo")).resolve()
 
-
-def scan(paths: list[str]) -> dict:
+def scan(repo: Path, paths: list[str]) -> dict:
+    repo = repo.resolve()
     with tempfile.TemporaryDirectory() as tmp:
         for rel in paths:
-            src = (REPO / rel).resolve()
-            if REPO not in src.parents:
+            src = (repo / rel).resolve()
+            if repo not in src.parents:
                 raise ValueError(f"path outside the repository: {rel}")
             dst = Path(tmp) / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -36,27 +38,15 @@ def scan(paths: list[str]) -> dict:
             "blocked": [{"path": p, "line": line, "rule": rule} for p, line, rule in blocked]}
 
 
-class Handler(BaseHTTPRequestHandler):
-    def _reply(self, code, body):
-        data = json.dumps(body).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def do_GET(self):
-        self._reply(200, {"ok": True}) if self.path == "/health" else self._reply(404, {"error": "not found"})
-
-    def do_POST(self):
-        if self.path != "/filter":
-            return self._reply(404, {"error": "not found"})
-        try:
-            msg = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-            self._reply(200, {**msg, **scan(msg["paths"])})
-        except Exception as e:
-            self._reply(400, {"error": f"{type(e).__name__}: {e}"})
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--repo", default=".")
+    ap.add_argument("paths", nargs="*")
+    a = ap.parse_args()
+    paths = a.paths or json.load(sys.stdin)
+    print(json.dumps(scan(Path(a.repo), paths)))
+    return 0
 
 
 if __name__ == "__main__":
-    ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8000"))), Handler).serve_forever()
+    sys.exit(main())

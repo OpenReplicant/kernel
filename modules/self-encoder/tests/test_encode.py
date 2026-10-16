@@ -21,7 +21,7 @@ CONTEXT = [(s, "rdf:type", "kk:Slot") for s in SLOTS]
 
 def test_every_file_encodes_valid_and_referenced():
     files = list_files(ROOT)
-    kinds = {"module.yaml": 0, "chains": 0, "compose.yaml": 0, ".ttl": 0, ".sql": 0}
+    kinds = {"module.yaml": 0, "compose.yaml": 0, ".ttl": 0, ".sql": 0}
     with tempfile.TemporaryDirectory() as artifacts:
         for rel in files:
             cs = encode_file(ROOT, rel, Path(artifacts))

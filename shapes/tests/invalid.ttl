@@ -37,6 +37,3 @@ ex:noPremises a rdf:Statement ;
     rdfs:label "Orphan" ; owl:versionInfo "0.1.0" ; kk:moduleKind kk:Processor ;
     kk:runsAs <urn:kk:agent:orphan> ; dcterms:license <https://spdx.org/licenses/MIT> .
 
-# chain step with an unknown step type
-<urn:kk:chain:c> a kk:Chain ; kk:runsAs ex:agent ; kk:trigger "manual" .
-<urn:kk:chain:c/s> a kk:ChainStep ; pplan:isStepOfPlan <urn:kk:chain:c> ; kk:stepType "teleport" .

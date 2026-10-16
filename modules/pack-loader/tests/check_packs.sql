@@ -8,12 +8,11 @@ begin
   select string_agg(p, ', ') into missing
   from unnest(array[
     'kk:fills', 'kk:moduleKind', 'owl:versionInfo', 'kk:runsAs', 'kk:protected',
-    'kk:stepType', 'kk:stepConfig', 'kk:next', 'kk:onLabel', 'kk:trigger',
-    'kk:runnable', 'kk:notRunnableBecause', 'kk:deployedHash', 'kk:slotContract', 'kk:cardinality',
+    'kk:slotContract', 'kk:cardinality',
     'kkt:nodeType', 'kkt:propertyValue', 'kkt:propertyName', 'kkt:memberOf',
     'kkt:dependsOn', 'kkt:hostedOn', 'kkt:connectsTo', 'kkt:hasAffordance', 'kkt:hasRequirement',
     'kkt:substitutes', 'kkt:substitutedBy',
-    'dcterms:license', 'rdfs:label', 'pplan:isStepOfPlan']) p
+    'dcterms:license', 'rdfs:label']) p
   where not kernel.is_approved_property(kernel.expand(p));
   if missing is not null then
     raise exception 'T3: properties not approved: %', missing;
@@ -26,10 +25,10 @@ begin
     and c.object_entity in (kernel.expand('rdf:Property'), kernel.expand('owl:ObjectProperty'),
                             kernel.expand('owl:DatatypeProperty'), kernel.expand('owl:AnnotationProperty'))
     and c.subject like 'https://w3id.org/knowledge-kernel/%';
-  if n <> 41 then
-    raise exception 'T3: expected 41 kk/kkt/kkp properties typed, found %', n;
+  if n <> 32 then
+    raise exception 'T3: expected 32 kk/kkt/kkp properties typed, found %', n;
   end if;
-  raise notice 'ok: 41 kk/kkt/kkp properties typed';
+  raise notice 'ok: 32 kk/kkt/kkp properties typed';
 
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = kernel.expand('kk:Slot');

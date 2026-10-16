@@ -10,7 +10,7 @@
 @prefix oa:      <http://www.w3.org/ns/oa#> .
 @prefix ex:      <http://example.org/> .
 
-# A slice of the self-model: one module, its slot, one chain with two steps,
+# A slice of the self-model: one module, its slot,
 # one extracted claim with its quote, one inferred claim, one belief score.
 
 <urn:kk:slot:shape-validator> a kk:Slot ;
@@ -23,13 +23,6 @@
     kk:runsAs <urn:kk:agent:validator> ;
     dcterms:license <https://spdx.org/licenses/Apache-2.0> .
 
-<urn:kk:chain:validate-one> a kk:Chain ;
-    kk:runsAs <urn:kk:agent:validator> ; kk:trigger "chain" .
-<urn:kk:chain:validate-one/validate> a kk:ChainStep ;
-    pplan:isStepOfPlan <urn:kk:chain:validate-one> ; kk:stepType "http" ;
-    kk:next <urn:kk:chain:validate-one/record> .
-<urn:kk:chain:validate-one/record> a kk:ChainStep ;
-    pplan:isStepOfPlan <urn:kk:chain:validate-one> ; kk:stepType "http" .
 
 ex:c1 a rdf:Statement ;
     rdf:subject <urn:kk:module:validator-shacl> ; rdf:predicate rdfs:comment ; rdf:object "Validates change sets" ;

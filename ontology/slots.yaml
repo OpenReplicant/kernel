@@ -8,7 +8,7 @@
 # milestone:   1 = self-model milestone, 2 = build-and-deploy process loop, later = when needed
 # kind:        the module kind expected to fill it (kernel/schemas/module.schema.json)
 
-version: 0.1.0
+version: 0.2.0
 
 groups:
 
@@ -170,7 +170,7 @@ groups:
       contract: shaped claims (+ mappings) -> artifact in a target standard; reports what it could not represent
       kind: decoder
       cardinality: many
-      default: chain profile -> RuleGo DSL; claims -> graph view; BPMN XML in milestone 2
+      default: claims -> graph view (parked); BPMN XML later
       milestone: 1
     - id: actuator
       contract: artifact -> effect in an external runtime; observations come back through an encoder
@@ -237,11 +237,11 @@ groups:
       default: runner schedules; pg_cron and a NOTIFY bridge later
       milestone: 1
     - id: chain-runner
-      contract: chain definition -> executions, one run per execution, plan_step per step
+      contract: automation in the runner's native format -> executions, one kernel run per kernel-writing step, plan_step per step
       kind: control
       cardinality: one
-      default: Python bootstrap runner, then RuleGo-Server (evaluator decides)
-      milestone: 1
+      default: none in the kernel (D-36, D-41); RuleGo-Server and the Python runner are parked modules
+      milestone: later
     - id: evaluator
       contract: module or slot + eval set -> scores recorded as claims
       kind: control

@@ -4,93 +4,288 @@
   "title": "Module manifest (module.yaml)",
   "description": "Describes one module. The module manager turns an approved manifest into entities and claims (kk:Module filling one or more slots; a TOSCA node type in the kk-tosca profile), a database role, a compose entry and MCP exposure. Installing or changing a manifest always goes through the review lane.",
   "type": "object",
-  "required": ["id", "name", "version", "kind", "slots", "license", "runtime", "agent"],
+  "required": [
+    "id",
+    "name",
+    "version",
+    "kind",
+    "slots",
+    "license",
+    "runtime",
+    "agent"
+  ],
   "additionalProperties": false,
   "properties": {
-    "id": {"type": "string", "pattern": "^urn:kk:module:[a-z0-9][a-z0-9-]*$"},
-    "name": {"type": "string"},
-    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"},
-    "description": {"type": "string"},
-    "license": {"type": "string", "description": "SPDX id. The default distribution accepts permissive licenses and LGPL libraries only (docs/decisions.md D-11)."},
-    "kind": {"enum": ["encoder", "processor", "decoder", "actuator", "interface", "agent", "control", "pack"]},
-    "slots": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Slot ids from ontology/slots.yaml this module fills."},
-    "protected": {"type": "boolean", "default": false, "description": "System module: its chains are never exposed for editing; changes need review plus a passing eval."},
+    "id": {
+      "type": "string",
+      "pattern": "^urn:kk:module:[a-z0-9][a-z0-9-]*$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX id. The default distribution accepts permissive licenses and LGPL libraries only (docs/decisions.md D-11)."
+    },
+    "kind": {
+      "enum": [
+        "encoder",
+        "processor",
+        "decoder",
+        "actuator",
+        "interface",
+        "agent",
+        "control",
+        "pack"
+      ]
+    },
+    "slots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "Slot ids from ontology/slots.yaml this module fills."
+    },
+    "protected": {
+      "type": "boolean",
+      "default": false,
+      "description": "System module: its chains are never exposed for editing; changes need review plus a passing eval."
+    },
     "agent": {
-      "type": "object", "required": ["iri"], "additionalProperties": false,
-      "description": "The identity the module acts as. One database role per module (docs/spec.md §4); omit db_role for a module that only ever acts with its callers' own tokens (kernel-mcp, D-20, D-34).",
+      "type": "object",
+      "required": [
+        "iri"
+      ],
+      "additionalProperties": false,
+      "description": "The identity the module acts as. One database role per module (docs/spec.md \u00a74); omit db_role for a module that only ever acts with its callers' own tokens (kernel-mcp, D-20, D-34).",
       "properties": {
-        "iri": {"type": "string", "pattern": "^urn:kk:agent:"},
-        "db_role": {"type": "string", "pattern": "^kkm_[a-z0-9_]+$"},
-        "member_of": {"type": "array", "items": {"enum": ["kk_agent", "kk_validator", "kk_reviewer", "kk_steward"]}, "default": ["kk_agent"]}
+        "iri": {
+          "type": "string",
+          "pattern": "^urn:kk:agent:"
+        },
+        "db_role": {
+          "type": "string",
+          "pattern": "^kkm_[a-z0-9_]+$"
+        },
+        "member_of": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "kk_agent",
+              "kk_validator",
+              "kk_reviewer",
+              "kk_steward"
+            ]
+          },
+          "default": [
+            "kk_agent"
+          ]
+        }
       }
     },
     "clearance": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "description": "Requested, not granted. A person grants it by approving the install.",
       "properties": {
-        "read": {"type": "array", "items": {"type": "string"}},
-        "write": {"type": "array", "items": {"type": "string"}}
+        "read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "write": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "budget": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "max_cost_usd_per_day": {"type": "number", "minimum": 0},
-        "max_runs_per_hour": {"type": "integer", "minimum": 0}
+        "max_cost_usd_per_day": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_runs_per_hour": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "runtime": {
-      "type": "object", "required": ["type"], "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
       "properties": {
-        "type": {"enum": ["rulego-chain", "python-service", "container", "sql", "skill-only"]},
-        "image": {"type": "string", "description": "OCI image, pinned by digest or exact tag."},
-        "entrypoint": {"type": "string"},
-        "chains": {"type": "array", "items": {"type": "string"}, "description": "Paths to chain definitions (chain profile YAML), compiled to RuleGo DSL by the chain decoder."},
-        "env": {"type": "object", "additionalProperties": {"type": "string"}}
+        "type": {
+          "enum": [
+            "command",
+            "python-service",
+            "container",
+            "sql",
+            "skill-only"
+          ],
+          "description": "command: a program run on demand or on a schedule (stdin/stdout or arguments); python-service: a long-running worker; container: an OCI image; sql: database objects only; skill-only: instructions for agents."
+        },
+        "image": {
+          "type": "string",
+          "description": "OCI image, pinned by digest or exact tag."
+        },
+        "entrypoint": {
+          "type": "string"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
       }
     },
     "requires": {
-      "type": "array", "description": "TOSCA-style requirements: slots or capabilities this module needs filled.",
+      "type": "array",
+      "description": "TOSCA-style requirements: slots or capabilities this module needs filled.",
       "items": {
-        "type": "object", "required": ["slot"], "additionalProperties": false,
-        "properties": {"slot": {"type": "string"}, "optional": {"type": "boolean", "default": false}}
+        "type": "object",
+        "required": [
+          "slot"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "type": "string"
+          },
+          "optional": {
+            "type": "boolean",
+            "default": false
+          }
+        }
       }
     },
-    "accepts": {"type": "array", "items": {"type": "string"}, "description": "Media types, shape IRIs or term IRIs it consumes."},
-    "produces": {"type": "array", "items": {"type": "string"}, "description": "Media types, shape IRIs, term IRIs or change-set op kinds it emits."},
+    "accepts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Media types, shape IRIs or term IRIs it consumes."
+    },
+    "produces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Media types, shape IRIs, term IRIs or change-set op kinds it emits."
+    },
     "triggers": {
       "type": "array",
       "items": {
-        "type": "object", "required": ["type"], "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
         "properties": {
-          "type": {"enum": ["schedule", "notify", "http", "mcp", "manual", "chain"]},
-          "spec": {"type": "string", "description": "Cron or interval for schedule; channel for notify; path for http; tool name for mcp."}
+          "type": {
+            "enum": [
+              "schedule",
+              "notify",
+              "http",
+              "mcp",
+              "manual"
+            ]
+          },
+          "spec": {
+            "type": "string",
+            "description": "Cron or interval for schedule; channel for notify; path for http; tool name for mcp."
+          }
         }
       }
     },
     "interfaces": {
-      "type": "array", "description": "WoT-style affordances with transport bindings.",
+      "type": "array",
+      "description": "WoT-style affordances with transport bindings.",
       "items": {
-        "type": "object", "required": ["name", "affordance", "transport"], "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "affordance",
+          "transport"
+        ],
+        "additionalProperties": false,
         "properties": {
-          "name": {"type": "string"},
-          "affordance": {"enum": ["action", "property", "event"]},
-          "transport": {"enum": ["http", "mcp", "websocket", "notify", "cli"]},
-          "href": {"type": "string"},
-          "input_schema": {"type": "string"},
-          "output_schema": {"type": "string"}
+          "name": {
+            "type": "string"
+          },
+          "affordance": {
+            "enum": [
+              "action",
+              "property",
+              "event"
+            ]
+          },
+          "transport": {
+            "enum": [
+              "http",
+              "mcp",
+              "websocket",
+              "notify",
+              "cli"
+            ]
+          },
+          "href": {
+            "type": "string"
+          },
+          "input_schema": {
+            "type": "string"
+          },
+          "output_schema": {
+            "type": "string"
+          }
         }
       }
     },
     "mcp": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "expose": {"type": "array", "items": {"type": "string"}, "description": "Allow-list of chain or tool names exposed as MCP tools. Empty means none."},
-        "read_only": {"type": "boolean", "default": true}
+        "expose": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allow-list of chain or tool names exposed as MCP tools. Empty means none."
+        },
+        "read_only": {
+          "type": "boolean",
+          "default": true
+        }
       }
     },
-    "migration": {"type": "string", "description": "SQL file run as kk_owner at install (views, functions, terms via kernel.install_ops)."},
-    "skill": {"type": "string", "description": "Path to the module's SKILL.md (Agent Skills format)."},
-    "eval": {"type": "string", "description": "Path to the module's eval cases."}
+    "migration": {
+      "type": "string",
+      "description": "SQL file run as kk_owner at install (views, functions, terms via kernel.install_ops)."
+    },
+    "skill": {
+      "type": "string",
+      "description": "Path to the module's SKILL.md (Agent Skills format)."
+    },
+    "eval": {
+      "type": "string",
+      "description": "Path to the module's eval cases."
+    }
   }
 }

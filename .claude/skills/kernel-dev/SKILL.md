@@ -16,7 +16,7 @@ rm -f /var/run/docker.pid /var/run/docker/containerd/containerd.pid
 service postgresql start
 python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -r requirements-ci.txt \
   -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt \
-  -r modules/belief-corroboration/requirements.txt   # if gone
+  -r modules/belief-corroboration/requirements.txt -r modules/self-encoder/requirements.txt   # if gone
 ```
 
 Proxy CA: `/root/.ccr/ca-bundle.crt`.
@@ -29,13 +29,14 @@ su postgres -c "sh kernel/schema/tests/run.sh"            # 30 kernel checks (pe
 python shapes/tests/test_shapes.py && python scripts/check_manifests.py
 python modules/<module>/tests/<test>.py                    # each module's tests and evals
 PYTHONPATH=modules/pack-loader python -m pack_loader | diff -q - modules/pack-loader/packs.sql
-PGDATABASE=postgres PYTHON=/tmp/venv/bin/python sh scripts/smoke_kernel.sh   # G4: kernel alone, ~10 s
+PATH=/tmp/claude-0/bin:$PATH PGDATABASE=postgres PYTHON=/tmp/venv/bin/python sh scripts/smoke_kernel.sh   # G4 + T13, ~40 s
 ```
 
 The venv also needs `modules/kernel-mcp/requirements.txt` and `modules/validator-shacl/requirements.txt`.
 Run the smoke test as root, not as postgres: the postgres user cannot read the proxy CA that
-`SSL_CERT_FILE` points to. Regenerate `modules/pack-loader/packs.sql` after changing `ontology/*.ttl`,
-`slots.yaml` or any chain file. Docker image builds behind the proxy:
+`SSL_CERT_FILE` points to. The ingestion part needs gitleaks v8.30.1 on PATH; copy it out of its image:
+`docker create --name gl zricethezav/gitleaks:v8.30.1 && docker cp gl:/usr/bin/gitleaks /tmp/claude-0/bin/ && docker rm gl`.
+Regenerate `modules/pack-loader/packs.sql` after changing `ontology/*.ttl` or `slots.yaml`. Docker image builds behind the proxy:
 `docker build --secret id=ca,src=/root/.ccr/ca-bundle.crt -f modules/<m>/Dockerfile .`. Scan for secrets
 before pushing: `docker run --rm -v "$PWD":/repo:ro zricethezav/gitleaks:v8.30.1 dir /repo --redact --exit-code 0`.
 

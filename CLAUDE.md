@@ -54,9 +54,9 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
 PGHOST=<socket or host> PGUSER=<superuser> sh kernel/schema/tests/run.sh   # 30 kernel checks
 pip install -r requirements-ci.txt
 python shapes/tests/test_shapes.py                                         # SHACL fixtures
-python scripts/check_manifests.py                                          # manifests, chains, slots
+python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
-sh scripts/smoke_kernel.sh                                                 # the kernel alone (G4): Postgres + validator + kernel-mcp
+sh scripts/smoke_kernel.sh                                                 # the kernel alone (G4) and ingestion (T13); needs gitleaks
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these. The kernel smoke test needs no Docker: a Postgres
@@ -69,14 +69,14 @@ secret (`--secret id=ca,src=/path/ca.crt`).
 ```
 kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
-  schemas/       change_set, module, chain JSON Schemas         ← ABI
+  schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
-ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-chain/kk-profile, packs.yaml, slots.yaml
+ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile, packs.yaml, slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader; _template/
 deploy/          compose.yaml (db, validator, kernel-mcp, caddy; PostgREST optional), postgres/, mcp/
-scripts/         smoke_kernel.sh + e2e_kernel.py, check_manifests.py, review.py, mint_jwt.py
+scripts/         smoke_kernel.sh + e2e_kernel.py + e2e_ingest.py, check_manifests.py, review.py, mint_jwt.py
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/
@@ -85,5 +85,5 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T12, T14 and T15 are done; G1 and G4 pass (`scripts/smoke_kernel.sh`). Next: T13 (ingestion
-without a runner; retires the chain format and `kk-chain.ttl`), T16 (self-questions eval). Work one task at a time; each ends with its check passing.
+T0–T15 are done; G1, G2 and G4 pass (`scripts/smoke_kernel.sh`). Next: the module library and one
+`kk` command, `kk module install`, export/import, then T16 (self-questions eval). Work one task at a time; each ends with its check passing.

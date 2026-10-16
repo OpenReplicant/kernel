@@ -10,7 +10,7 @@
 # pin: the pack loader fetches the upstream file once, stores it as an artifact (sha256), and
 # records the pinned version. "pin at install" = choose and record the version when first loaded.
 
-version: 0.2.0
+version: 0.3.0
 
 core:
   - id: rdf-rdfs
@@ -81,12 +81,6 @@ profile:
     license: W3C Software and Document License
     pin: TD 1.1 Recommendation; track TD 2.0 drafts
     load_when: runtime interfaces are modeled (kk-tosca affordances)
-  - id: kk-chain
-    owns: the home-grown chain format and runner results (chain, step, routing, trigger, deployed/observed hash)
-    iri: https://w3id.org/knowledge-kernel/chain
-    file: kk-chain.ttl
-    license: Apache-2.0
-    load_when: until T13 retires the chain format (D-40)
   - id: kk-profile
     owns: agent profiles and skills
     iri: https://w3id.org/knowledge-kernel/profile#
@@ -109,7 +103,6 @@ profile:
 
 format:
   - {id: tosca-yaml,       direction: both,   note: TOSCA 2.0 service templates}
-  - {id: rulego-dsl,       direction: decode, note: chain runner target}
   - {id: bpmn-xml,         direction: both,   note: milestone 2; SpiffWorkflow actuator}
   - {id: ocel-2,           direction: encode, note: object-centric event logs from runs and CI}
   - {id: openapi,          direction: both}
@@ -124,6 +117,7 @@ format:
   - {id: n-quads,          direction: both,   note: canonical export, scopes as named graphs}
 
 rejected_or_deferred:
+  - {id: kk-chain,         decision: retired (D-41); automations stay in their runners' native formats, read into P-Plan by encoders when needed}
   - {id: wikidata-pids,      decision: link target only (skos:exactMatch to Wikidata items); never our own identifiers}
   - {id: legacy-software-properties, decision: replaced by kk-tosca relationship types (dependsOn, hostedOn, connectsTo)}
   - {id: sosa-in-core,       decision: rejected; profile only}
