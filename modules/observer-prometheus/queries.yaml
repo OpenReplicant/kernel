@@ -1,0 +1,9 @@
+# What the observer asks Prometheus each window (D-52). Each query must return one series per service,
+# labelled `job` (the compose service; see deploy/demo/prometheus.yml). {w} is the window in seconds.
+# The property is a sosa:ObservableProperty in ontology/observables.ttl.
+- property: urn:kk:property:replicas-up
+  query: sum by (job) (up)
+- property: urn:kk:property:request-rate
+  query: sum by (job) (rate(demo_requests_total[{w}s]))
+- property: urn:kk:property:latency-seconds-mean
+  query: sum by (job) (rate(demo_request_seconds_sum[{w}s])) / sum by (job) (rate(demo_request_seconds_count[{w}s]))

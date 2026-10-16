@@ -11,7 +11,7 @@
 <https://w3id.org/knowledge-kernel/observables>
     a owl:Ontology ;
     rdfs:label "Observable properties" ;
-    owl:versionInfo "0.2.0" .
+    owl:versionInfo "0.3.0" .
 
 <urn:kk:property:case-count> a sosa:ObservableProperty ;
     rdfs:label "case count" ;
@@ -37,3 +37,12 @@
 <urn:kk:property:wait-seconds> a sosa:ObservableProperty ;
     rdfs:label "wait (seconds)" ;
     skos:definition "Time in seconds between the step named in the qualifier bbo:has_previousFlowNode and this step in one case. Documented limits use it: <step> bbo:maxValue n with this property and the preceding step as qualifiers." .
+<urn:kk:property:replicas-up> a sosa:ObservableProperty ;
+    rdfs:label "replicas up" ;
+    skos:definition "Number of a service's replicas (Prometheus targets) that answered the last scrape in the window." .
+<urn:kk:property:request-rate> a sosa:ObservableProperty ;
+    rdfs:label "request rate (per second)" ;
+    skos:definition "Requests a service answered per second, averaged over the window, all replicas together." .
+<urn:kk:property:latency-seconds-mean> a sosa:ObservableProperty ;
+    rdfs:label "mean latency (seconds)" ;
+    skos:definition "Mean time in seconds a service took to answer a request in the window, all replicas together." .

@@ -1,0 +1,58 @@
+# Devops demo (milestone 2, D-47 e): a service to observe, load for it, and Prometheus, next to the kernel.
+#
+#   docker compose -f deploy/compose.yaml -f deploy/demo/compose.yaml --env-file deploy/.env up -d
+#   kk module install modules/observer-prometheus          # joins kk-reach-prometheus (D-52)
+#   docker compose -f deploy/compose.yaml -f deploy/demo/compose.yaml \
+#     -f deploy/modules/observer-prometheus.yaml --env-file deploy/.env up -d
+#   DEMO_RATE=60 docker compose ... up -d loadgen          # stress the shop
+#
+# Paths are relative to deploy/ (the first compose file). The demo services have no route out and do not reach Postgres: `demo` is internal; Prometheus also
+# joins kk-reach-prometheus, where the observer module reaches it.
+
+name: knowledge-kernel          # an overlay of the same stack (deploy/compose.yaml)
+
+x-demo: &demo
+  image: ${DEMO_PYTHON_IMAGE:-python:3.13.16-alpine@sha256:2d9aefe2fef018a7eb2c13064c89c71929800fd2e5dccdbf52ea5da5bb8d929a}
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  user: nobody
+  networks: [demo]
+  restart: unless-stopped
+
+services:
+  shop:
+    <<: *demo
+    command: ["python", "/demo/shop.py"]
+    volumes: [./demo/shop.py:/demo/shop.py:ro]
+
+  loadgen:
+    <<: *demo
+    command: ["python", "/demo/loadgen.py"]
+    environment:
+      DEMO_RATE: ${DEMO_RATE:-5}
+    volumes: [./demo/loadgen.py:/demo/loadgen.py:ro]
+    depends_on: [shop]
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-quay.io/prometheus/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: nobody
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus",
+              "--storage.tsdb.retention.time=1d"]
+    volumes:
+      - ./demo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [demo, kk-reach-prometheus]
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+
+networks:
+  demo:
+    internal: true
+  kk-reach-prometheus:
+    internal: true

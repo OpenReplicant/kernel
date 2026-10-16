@@ -6,7 +6,9 @@
 4. For a worker (runtime python-service or container) or a command, write a compose service to
    OUT/<name>.yaml and its login to OUT/<name>.env (never committed). The service runs locked down:
    read-only filesystem, no capabilities, no new privileges, nobody, memory and process limits, and only
-   the internal network that reaches Postgres (no internet). A command's service is in the `run`
+   the internal network that reaches Postgres (no internet), plus, for each service named in the
+   manifest's `network.reach`, an internal network `kk-reach-<name>` that only that service also joins
+   (D-52). A command's service is in the `run`
    profile: it reads its input from KK_INPUT (mounted read-only at /input) and keeps artifacts in the
    kk-artifacts volume.
 
@@ -69,8 +71,15 @@ def service(name: str, manifest: dict, env_file: str, image: str) -> dict:
                    entrypoint=words[:next((i for i, w in enumerate(words) if w[:2] == "--" or w[:1] == "<"), len(words))],
                    environment={"KK_ARTIFACTS": "/artifacts"},
                    volumes=["${KK_INPUT:?set KK_INPUT to the input folder}:/input:ro", "kk-artifacts:/artifacts"])
-        return {"services": {f"module-{name}": svc}, "volumes": {"kk-artifacts": {}}}
-    return {"services": {f"module-{name}": svc}}
+        return {"services": {f"module-{name}": svc}, "volumes": {"kk-artifacts": {}}, **reach(manifest, svc)}
+    return {"services": {f"module-{name}": svc}, **reach(manifest, svc)}
+
+
+def reach(manifest: dict, svc: dict) -> dict:
+    """D-52: one internal network per declared service name, which only that service also joins."""
+    names = [f"kk-reach-{n}" for n in manifest.get("network", {}).get("reach", [])]
+    svc["networks"] += names
+    return {"networks": {n: {"internal": True} for n in names}} if names else {}
 
 
 def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str, allow_license: bool) -> dict:

@@ -23,7 +23,7 @@ kernel-mcp-hook = "kernel_mcp.hooks:main"
 
 [tool.setuptools]
 packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter",
-            "eventlog_encoder", "bpmn_encoder", "conformance"]
+            "eventlog_encoder", "bpmn_encoder", "conformance", "observer_prometheus"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -34,3 +34,4 @@ ingest_filter = "modules/ingest-filter-gitleaks/ingest_filter"
 eventlog_encoder = "modules/encoder-eventlog/eventlog_encoder"
 bpmn_encoder = "modules/encoder-bpmn/bpmn_encoder"
 conformance = "modules/conformance/conformance"
+observer_prometheus = "modules/observer-prometheus/observer_prometheus"
