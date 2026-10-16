@@ -1,0 +1,35 @@
+id: urn:kk:eval:belief-v0/deprecated-claims-do-not-count
+description: A superseded rival and a superseded supporter are ignored.
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: enc
+    sources:
+    - file:a
+  - id: b
+    key: v2
+    subject: urn:x:m
+    predicate: kk:version
+    object: v2
+    agent: other
+    sources:
+    - file:b
+    deprecated: true
+  - id: d
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: third
+    sources:
+    - file:d
+    deprecated: true
+expect:
+  beliefs:
+    a: 0.5

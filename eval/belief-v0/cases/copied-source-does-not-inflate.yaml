@@ -1,0 +1,26 @@
+id: urn:kk:eval:belief-v0/copied-source-does-not-inflate
+description: 'Two agents cite the same artifact: one independent source.'
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: enc
+    sources:
+    - sha:1
+  - id: b
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: other
+    sources:
+    - sha:1
+expect:
+  beliefs:
+    a: 0.5
+    b: 0.5

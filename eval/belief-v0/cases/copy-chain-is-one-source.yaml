@@ -1,0 +1,36 @@
+id: urn:kk:eval:belief-v0/copy-chain-is-one-source
+description: 'A cites X, B cites X and Y, C cites Y: all connected, one group.'
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: p
+    sources:
+    - x
+  - id: b
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: q
+    sources:
+    - x
+    - y
+  - id: d
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: r
+    sources:
+    - y
+expect:
+  beliefs:
+    a: 0.5
+    b: 0.5
+    d: 0.5

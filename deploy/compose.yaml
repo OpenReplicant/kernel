@@ -85,8 +85,9 @@ services:
     depends_on: [postgrest]
     restart: unless-stopped
 
+  # belief-model slot: scores claims; its rescore chain (run by the chain runner) submits.
   belief:
-    build: ../modules/belief-corroboration
+    build: {context: .., dockerfile: modules/belief-corroboration/Dockerfile}
     profiles: [modules]
     environment:
       <<: *module-env
@@ -103,7 +104,8 @@ services:
       KK_AGENT_TOKENS: >-
         {"urn:kk:agent:validator": "${KK_JWT_VALIDATOR:-}",
          "urn:kk:agent:self-encoder": "${KK_JWT_SELF_ENCODER:-}",
-         "urn:kk:agent:ingest-filter": "${KK_JWT_INGEST_FILTER:-}"}
+         "urn:kk:agent:ingest-filter": "${KK_JWT_INGEST_FILTER:-}",
+         "urn:kk:agent:belief-corroboration": "${KK_JWT_BELIEF:-}"}
     volumes:
       - ../modules:/modules:ro
     depends_on: [postgrest]

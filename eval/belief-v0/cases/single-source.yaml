@@ -1,0 +1,17 @@
+id: urn:kk:eval:belief-v0/single-source
+description: One claim, one source.
+input:
+  functional:
+  - kk:version
+  claims:
+  - id: a
+    key: v1
+    subject: urn:x:m
+    predicate: kk:version
+    object: v1
+    agent: enc
+    sources:
+    - file:a
+expect:
+  beliefs:
+    a: 0.5
