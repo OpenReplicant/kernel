@@ -1,6 +1,6 @@
 """Run kernel-mcp.
 
-  python -m kernel_mcp            stdio, one agent: DATABASE_URL = the agent's own login (any MCP harness)
+  python -m kernel_mcp            stdio, one agent: KK_DATABASE_URL = the agent's own login (any MCP harness)
   python -m kernel_mcp --http     streamable HTTP at /mcp (stateless, JSON responses), many agents:
                                   DATABASE_URL (kk_authenticator) + KK_JWT_SECRET; each request carries its own bearer JWT
 
@@ -26,8 +26,12 @@ def http() -> None:
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8000")), log_level="info")
 
 
-if __name__ == "__main__":
+def main() -> None:
     if "--http" in sys.argv[1:]:
         http()
     else:
         server.mcp.run("stdio")
+
+
+if __name__ == "__main__":
+    main()

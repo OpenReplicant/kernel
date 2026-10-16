@@ -7,7 +7,7 @@ can use it; how deeply depends on what you add (D-36):
 | --- | --- | --- |
 | 1 | the MCP server | the agent reads, cites and submits claims under its own identity |
 | 2 | + the skill file | the agent knows the conventions: attribution, references, evidence types, citing belief |
-| 3 | + hooks (T15) | the harness recalls and records on its own: context at session start, the session's run and claims at the end |
+| 3 | + hooks | the harness recalls on its own: identity and a session run at start, related claims with every prompt, the run finished at the end |
 | 4 | + modules | encoders, belief, further processors and decoders, a UI |
 
 ## 1. A database with the kernel
@@ -43,29 +43,48 @@ in a throwaway database and checks it end to end.
 
 ## 2. The MCP server
 
+Install once (any Python 3.12+ environment): `pip install ./modules/kernel-mcp`, or without a checkout
+`uvx --from "git+https://github.com/OpenReplicant/kernel#subdirectory=modules/kernel-mcp" kernel-mcp`.
+This gives two commands: `kernel-mcp` (the MCP server) and `kernel-mcp-hook` (the hooks).
+
 stdio, one agent per harness. For Claude Code (`.mcp.json`; the same entry is in
 `deploy/mcp/agents.mcp.json`):
 
 ```json
 {"mcpServers": {"kernel": {
-  "command": "python", "args": ["-m", "kernel_mcp"],
-  "env": {"PYTHONPATH": "/path/to/kernel/modules/kernel-mcp",
-          "DATABASE_URL": "postgresql://agent_claude_code:<agent secret>@localhost/kk"}}}}
+  "command": "kernel-mcp",
+  "env": {"KK_DATABASE_URL": "postgresql://agent_claude_code:<agent secret>@localhost/kk"}}}}
 ```
 
-Install its dependencies once: `pip install -r modules/kernel-mcp/requirements.txt`. Each agent gets
-its own login and agent IRI (pattern: `deploy/postgres/050_agents.sql`); stdio refuses a login that
-can switch roles. With the compose stack, Postgres is on `localhost:5432` and the agent's password is
-`KK_AGENT_CLAUDE_CODE_PASSWORD` in `deploy/.env`.
+Each agent gets its own login and agent IRI (pattern: `deploy/postgres/050_agents.sql`); stdio refuses
+a login that can switch roles. `KK_DATABASE_URL` (or `DATABASE_URL`) names it; the `KK_` name wins so
+a project's own `DATABASE_URL` does not collide. With the compose stack, Postgres is on
+`localhost:5432` and the agent's password is `KK_AGENT_CLAUDE_CODE_PASSWORD` in `deploy/.env`.
 
-Shared server for several agents: `python -m kernel_mcp --http` with `KK_JWT_SECRET`; each request
-sends `Authorization: Bearer <JWT>` whose `role` claim is the agent's role
+Shared server for several agents: `kernel-mcp --http` with `KK_JWT_SECRET`; each request sends
+`Authorization: Bearer <JWT>` whose `role` claim is the agent's role
 (`python scripts/mint_jwt.py agent_claude_code`).
 
 ## 3. The skill file
 
 Copy `modules/kernel-mcp/SKILL.md` into the harness's skills folder (Claude Code:
-`.claude/skills/knowledge-kernel/SKILL.md`).
+`.claude/skills/knowledge-kernel/SKILL.md`). It tells the agent how to cite, what to record and how.
+
+## 4. Hooks: recall and recording without asking
+
+`kernel-mcp-hook` implements three hooks; the Claude Code configuration is
+`modules/kernel-mcp/hooks/claude-code.json` (merge its `hooks` into `.claude/settings.json`).
+
+| Hook | Does |
+| --- | --- |
+| `session-start` | starts a kernel run for the session and tells the agent its identity and run id |
+| `prompt` | recalls up to `KK_RECALL_LIMIT` (8) claims ranked by relevance to the prompt, with ids and belief |
+| `session-end` | finishes the session's run |
+
+Hooks inherit the harness's environment, so export `KK_DATABASE_URL` (the agent's own login) before
+starting the harness. A hook never blocks the session: on any error it writes to stderr and exits 0.
+Session runs are remembered in `KK_STATE_DIR` (default `~/.local/state/knowledge-kernel`). Other
+harnesses call the same commands with their own hook JSON (`session_id`, `prompt`, `reason`).
 
 ## Reviewing
 

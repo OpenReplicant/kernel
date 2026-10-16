@@ -1,11 +1,12 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:kernel-mcp
 name: Kernel MCP server
-version: 0.2.0
+version: 0.3.0
 description: 'Agent-facing MCP tools over the api schema: search, get entity, query claims, explain, submit
   change set, start/finish run, list slots and modules. Talks to Postgres directly and runs every call as
   the caller''s own role (stdio: the agent''s own login; http: the role in the caller''s JWT), so row-level security
-  and attribution apply per agent.'
+  and attribution apply per agent. Ships harness hooks (kernel-mcp-hook: session run, recall on every
+  prompt) and the knowledge-kernel skill.'
 license: Apache-2.0
 kind: interface
 slots:

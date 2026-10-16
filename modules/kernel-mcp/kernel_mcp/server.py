@@ -3,7 +3,7 @@
 Talks to Postgres directly. Every tool call runs in its own transaction as the caller's database
 role, so row-level security, write clearance and attribution are enforced by Postgres per agent;
 this server decides nothing. Who the caller is:
-  - stdio (one harness, one agent): DATABASE_URL is the agent's own login (e.g. agent_claude_code).
+  - stdio (one harness, one agent): KK_DATABASE_URL (or DATABASE_URL) is the agent's own login (e.g. agent_claude_code).
     The server never switches roles in this mode, and refuses a login that could (kk_authenticator,
     superusers): whoever holds such a password could act as anyone, the owner included.
   - http (shared server): DATABASE_URL is kk_authenticator, which only this server holds; each
@@ -23,6 +23,8 @@ from mcp.server.mcpserver.exceptions import ToolError
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
+from . import recall
+
 PREFIXES = {  # same as kernel.prefix (kernel/schema/002_bootstrap.sql)
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "owl": "http://www.w3.org/2002/07/owl#", "xsd": "http://www.w3.org/2001/XMLSchema#",
@@ -35,7 +37,6 @@ PREFIXES = {  # same as kernel.prefix (kernel/schema/002_bootstrap.sql)
 CLAIM_COLUMNS = ("id, subject, predicate, object_entity, object_value, qualifiers, scope, evidence_type, "
                  "attributed_to, status, belief, valid_from, valid_to")
 RDF_TYPE = PREFIXES["rdf"] + "type"
-LABEL = PREFIXES["rdfs"] + "label"
 REQUIRE_TOKEN = False  # set by the http entrypoint
 
 mcp = MCPServer(
@@ -75,6 +76,14 @@ def caller_role(ctx: Context) -> str | None:
     return claims["role"]
 
 
+def database_url() -> str:
+    """KK_DATABASE_URL, or DATABASE_URL (KK_ first, so a harness's own DATABASE_URL does not collide)."""
+    url = os.environ.get("KK_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not url:
+        raise KernelError("set KK_DATABASE_URL (or DATABASE_URL) to the agent's own login")
+    return url
+
+
 SWITCHING_LOGIN = """select rolsuper or rolname = 'kk_authenticator' from pg_roles where rolname = current_user"""
 
 
@@ -82,7 +91,7 @@ async def query(ctx: Context, statement: str, params: tuple | dict = ()) -> Any:
     """Run one statement as the caller; returns the first column of the first row."""
     role = caller_role(ctx)
     try:
-        async with await psycopg.AsyncConnection.connect(os.environ["DATABASE_URL"]) as conn:
+        async with await psycopg.AsyncConnection.connect(database_url()) as conn:
             async with conn.transaction():
                 if role:
                     await conn.execute(sql.SQL("set local role {}").format(sql.Identifier(role)))
@@ -129,15 +138,10 @@ async def get_entity(ctx: Context, iri: str) -> dict:
 
 @mcp.tool()
 async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
-    """Claims whose subject IRI or label contains the text (case-insensitive): labels and types first."""
-    return await query(ctx, rows(
-        f"select {CLAIM_COLUMNS} from api.claims"
-        " where status <> 'deprecated' and ("
-        "   (predicate = %(label)s and object_value->>'@value' ilike %(pat)s)"
-        "   or (predicate in (%(label)s, %(type)s) and subject ilike %(pat)s))"
-        " order by (predicate = %(label)s) desc, subject limit %(n)s"),
-        {"label": LABEL, "type": RDF_TYPE, "pat": "%" + text.replace("%", "").replace("_", r"\_") + "%",
-         "n": max(1, min(limit, 200))})
+    """Claims ranked by relevance to the text (any words; full-text over values and subject IRIs, then
+    belief), or by substring on labels and IRIs when no word matches. Each has id, status, belief, rank."""
+    args = recall.params(text, limit)
+    return await query(ctx, recall.RANKED, args) or await query(ctx, recall.SUBSTRING, args)
 
 
 @mcp.tool()

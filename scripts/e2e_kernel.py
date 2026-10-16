@@ -9,9 +9,11 @@ import asyncio
 import json
 import os
 import secrets
+import re
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -65,6 +67,37 @@ async def settle(s, cs_id):
     return row
 
 
+def hook(name, payload, state):
+    """Run one harness hook as Claude Code would: hook JSON on stdin, the agent's own login."""
+    out = subprocess.run([sys.executable, "-m", "kernel_mcp.hooks", name], input=json.dumps(payload),
+                         capture_output=True, text=True,
+                         env={**os.environ, "KK_DATABASE_URL": os.environ["AGENT_DATABASE_URL"],
+                              "DATABASE_URL": "", "KK_STATE_DIR": state})
+    ctx = json.loads(out.stdout)["hookSpecificOutput"]["additionalContext"] if out.stdout.strip() else ""
+    return out.returncode, ctx, out.stderr
+
+
+def hooks(claim):
+    with tempfile.TemporaryDirectory() as state:
+        session = {"session_id": "smoke-session", "cwd": str(ROOT), "source": "startup"}
+        rc, ctx, err = hook("session-start", session, state)
+        run = re.search(r"kernel run is ([0-9a-f-]{36})", ctx)
+        check("hook session-start: the agent learns its identity and its session run",
+              rc == 0 and ME in ctx and run, err or ctx[:80])
+        rc, ctx, err = hook("prompt", {**session, "prompt": "What do we know about the smoke test entity?"}, state)
+        check("hook prompt: recalls the claim with id and belief",
+              rc == 0 and claim["id"] in ctx and "belief 0.50" in ctx, err or ctx.splitlines()[1][:100])
+        rc, ctx, err = hook("session-end", {**session, "reason": "other"}, state)
+        with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as conn:
+            try:
+                conn.execute("select api.finish_run(%s::uuid, 'succeeded')", (run.group(1),))
+                finished = False
+            except psycopg.Error:
+                finished = True  # no longer among the agent's running runs
+        check("hook session-end: the session's run is finished", rc == 0 and finished and not os.listdir(state),
+              err)
+
+
 async def agent_session():
     async with stdio(os.environ["AGENT_DATABASE_URL"]) as (r, w), ClientSession(r, w) as s:
         await s.initialize()
@@ -98,6 +131,7 @@ async def agent_session():
         check("explain gives the source", why["references"][0]["source_uri"] == "file:scripts/e2e_kernel.py")
         card, _ = await tool(s, "get_entity", {"iri": subject})
         check("entity card", [c["id"] for c in card["claims"]] == [claim["id"]])
+        hooks(claim)
 
         bad = change_set(run, subject + ":bad", {"evidence_type": "extracted"})
         sub, _ = await tool(s, "submit_change_set", {"change_set": bad})
