@@ -29,7 +29,7 @@ requires:
 - slot: recall-index
   optional: true
 accepts:
-- https://w3id.org/knowledge-kernel/ns#Claim
+- http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement
 produces:
 - add_claim
 triggers:

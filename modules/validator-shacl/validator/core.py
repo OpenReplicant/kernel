@@ -1,8 +1,9 @@
 """Validation logic, no I/O: a change set (+ context type triples) -> (ok, report).
 
 1. JSON Schema: kernel/schemas/change_set.schema.json.
-2. RDF form: each add_claim becomes a kk:Claim node (as described in shapes/kernel.shacl.ttl) plus its
-   content triple, so both the claim shapes and the content shapes (module, slot, chain, ...) apply.
+2. RDF form: each add_claim becomes an rdf:Statement node in standard terms (PROV, DCTerms, Web
+   Annotation; shapes/kernel.shacl.ttl) plus its content triple, so both the claim shapes and the
+   content shapes (module, slot, and pack shapes in shapes/*.shacl.ttl) apply.
 3. pySHACL with the kernel shapes. Only violations whose focus node is in the change set count;
    context triples (types of entities the change set points at) are there to satisfy sh:class.
 """
@@ -18,10 +19,12 @@ from pyshacl import validate as shacl_validate
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, PROV, RDF, SH, XSD
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[3])
 SCHEMA = json.loads((ROOT / "kernel/schemas/change_set.schema.json").read_text())
-SHAPES = Graph().parse(ROOT / "shapes/kernel.shacl.ttl")
+SHAPES = Graph()
+for _f in sorted((ROOT / "shapes").glob("*.shacl.ttl")):
+    SHAPES.parse(_f)
 KK = Namespace("https://w3id.org/knowledge-kernel/ns#")
 OA = Namespace("http://www.w3.org/ns/oa#")
 
@@ -42,8 +45,8 @@ PREFIXES = {
     "kkt": "https://w3id.org/knowledge-kernel/tosca#",
     "kkp": "https://w3id.org/knowledge-kernel/profile#",
 }
-EVIDENCE = {"deterministic": KK.Deterministic, "extracted": KK.Extracted, "inferred": KK.Inferred,
-            "observed": KK.Observed, "testimony": KK.Testimony}
+EVIDENCE = {name: URIRef(f"urn:kk:evidence:{name}")
+            for name in ("deterministic", "extracted", "inferred", "observed", "testimony")}
 
 
 def expand(term: str) -> str:
@@ -79,12 +82,12 @@ def to_rdf(cs: dict) -> tuple[Graph, set]:
                         datatype=URIRef(expand(v["@type"])) if "@type" in v else None)
         g.add((s, p, o))
         focus |= {c, s}
-        for t in [(c, RDF.type, KK.Claim), (c, RDF.subject, s), (c, RDF.predicate, p), (c, RDF.object, o),
+        for t in [(c, RDF.type, RDF.Statement), (c, RDF.subject, s), (c, RDF.predicate, p), (c, RDF.object, o),
                   (c, PROV.wasAttributedTo, URIRef(expand(cs["attributed_to"]))),
                   (c, PROV.wasGeneratedBy, URIRef(f"urn:kk:run:{cs['generated_by']}")),
-                  (c, KK.scope, URIRef(expand(cs["target_scope"]))),
-                  (c, KK.evidenceType, EVIDENCE[op["evidence_type"]]),
-                  (c, KK.recordedAt, now)]:
+                  (c, DCTERMS.accessRights, URIRef(expand(cs["target_scope"]))),
+                  (c, DCTERMS.type, EVIDENCE[op["evidence_type"]]),
+                  (c, PROV.generatedAtTime, now)]:
             g.add(t)
         for r in op.get("references", []):
             src = BNode()

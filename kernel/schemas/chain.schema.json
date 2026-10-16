@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://w3id.org/knowledge-kernel/schemas/chain.schema.json",
   "title": "Chain definition (chain profile)",
-  "description": "A short, event-driven automation in the chain profile (kk:Chain and kk:ChainStep in ontology/kk-core.ttl, built on P-Plan). Stored as claims; this YAML/JSON form is how modules ship them. The chain decoder compiles it to RuleGo DSL (or another runner). Step types are deliberately few; each maps to a runner component chosen by the decoder.",
+  "description": "A short, event-driven automation in the chain profile (kk:Chain and kk:ChainStep in the profile pack ontology/kk-chain.ttl, built on P-Plan; retired by T13). Stored as claims; this YAML/JSON form is how modules ship them. The chain decoder compiles it to RuleGo DSL (or another runner). Step types are deliberately few; each maps to a runner component chosen by the decoder.",
   "type": "object",
   "required": ["chain", "name", "runs_as", "trigger", "steps"],
   "additionalProperties": false,

@@ -1,0 +1,19 @@
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix kk:      <https://w3id.org/knowledge-kernel/ns#> .
+@prefix pplan:   <http://purl.org/net/p-plan#> .
+
+# Shapes of the chain profile (ontology/kk-chain.ttl). Go with that pack when T13 retires the format.
+
+kk:ChainShape a sh:NodeShape ;
+    sh:targetClass kk:Chain ;
+    sh:property [ sh:path kk:runsAs ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path kk:trigger ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path [ sh:inversePath pplan:isStepOfPlan ] ; sh:minCount 1 ;
+                  sh:message "A chain has at least one step." ] .
+
+kk:ChainStepShape a sh:NodeShape ;
+    sh:targetClass kk:ChainStep ;
+    sh:property [ sh:path pplan:isStepOfPlan ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kk:Chain ] ;
+    sh:property [ sh:path kk:stepType ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:in ( "http" "script" "subchain" "switch" "filter" "transform" "mcp_tool" "log" ) ] ;
+    sh:property [ sh:path kk:next ; sh:class kk:ChainStep ] .

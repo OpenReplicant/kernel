@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/single-source
 description: One claim, one source.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:

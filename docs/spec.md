@@ -288,11 +288,13 @@ that concept, the newcomer is a format or is rejected.
 | Provenance | PROV-O | wfprov via mappings |
 | Plans and steps | P-Plan | TOSCA workflows unused; BPMN is a profile; wfdesc via mappings |
 | Quotes and spans | Web Annotation (`oa:`) | — |
-| System structure (components, slots, fulfillment, dependencies, sub-topologies) | TOSCA 2.0 metamodel mirror `kk-tosca.ttl` | Replaces the earlier hand-made software properties; SOSA/SSN only in an IoT profile |
-| Runtime interfaces and transports | WoT Thing Description | TOSCA interfaces only for lifecycle operations; OpenAPI, AsyncAPI, MCP schemas, A2A cards are formats |
+| System structure (components, slots, fulfillment, dependencies, sub-topologies) | TOSCA 2.0 metamodel mirror `kk-tosca.ttl` (profile, D-40) | Replaces the earlier hand-made software properties; SOSA/SSN only in an IoT profile |
+| Runtime interfaces and transports | WoT Thing Description (profile, D-40) | TOSCA interfaces only for lifecycle operations; OpenAPI, AsyncAPI, MCP schemas, A2A cards are formats |
 | Constraints | SHACL | ShEx unused; UVL deferred |
 | Mappings | SSSOM semantics stored as `skos:*Match` claims; confidence feeds belief | — |
-| Claims, scope, evidence, status, belief, verification, modules, slots, chains, eval | `kk-core.ttl` — the only invented terms | — |
+| The module contract: module, slot, fills, slot contract, cardinality, module kind, runs-as, protected | `kk-core.ttl` — the only invented terms (D-40) | — |
+| Claims and the kernel's bookkeeping (scope, evidence type, status, statement key, belief, redaction) | Kernel columns, not vocabulary. Expressed in standard terms when validated or exported: `rdf:Statement`, PROV (attribution, run, generation time, derivation), `dcterms:accessRights` (scope), `dcterms:type` (evidence), DQV (belief, eval scores), EARL (verifications), `skos:closeMatch` (possible same-as) | — |
+| Chains (the home-grown chain format) | `kk-chain.ttl` (profile) until T13 retires the format | P-Plan for plans |
 | Agent profiles and skills | `kk-profile.ttl` (profile) | A2A Agent Card, Agent Skills, harness files are formats |
 
 TOSCA is YAML-native with no official RDF vocabulary, so `kk-tosca.ttl` mirrors its metamodel one to
@@ -317,7 +319,7 @@ The same profile models any system — and first of all this one.
 
 | Thing | Modeled as |
 | --- | --- |
-| A kind of component (a module) | `kk:Module` ⊂ `kkt:NodeType`, with `kk:moduleKind`, `kk:version`, `kk:runsAs`, `dcterms:license` |
+| A kind of component (a module) | `kk:Module` ⊂ `kkt:NodeType`, with `kk:moduleKind`, `owl:versionInfo`, `kk:runsAs`, `dcterms:license` |
 | A slot | `kk:Slot` ⊂ `kkt:RequirementDefinition`, with `kk:slotContract`, `kk:cardinality` |
 | Filling a slot | `kk:fills` ⊂ `kkt:fulfills`; configuration chosen for the fulfillment goes in qualifiers |
 | A running instance (a compose service) | `kkt:NodeTemplate` with `kkt:nodeType`, `kkt:propertyValue` (qualifier `kkt:propertyName`), `kkt:memberOf` the distribution's `kkt:ServiceTemplate` |
@@ -433,8 +435,9 @@ entities and claims, not a new primitive.
 
 - Eval sets are data (`eval/`), versioned and reviewable. Each case gives an input fixture and the
   expected outcome (change-set ops, a rejection with its code, or an answer with required claim ids).
-- The evaluator records results as observed claims about the module: `kk:evalScore` with qualifiers
-  `kk:evalSet` and `kk:metric`.
+- The evaluator records results as observed claims in the W3C Data Quality Vocabulary
+  (`dqv:QualityMeasurement`: computed on the module, measurement of a metric, value; the eval set as
+  `prov:used`), D-40.
 - **Slot competitions:** two modules for the same slot run on the same eval set; single-active slots
   promote the winner. The first competitions are expected in the belief-model and entity-resolver
   slots; the chain runner is chosen by decision (D-31) and checked by its own eval (G4).

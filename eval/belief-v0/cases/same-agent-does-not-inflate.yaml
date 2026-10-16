@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/same-agent-does-not-inflate
 description: One agent asserts the same statement from two files.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -15,7 +15,7 @@ input:
   - id: b
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:

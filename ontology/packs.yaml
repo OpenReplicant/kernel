@@ -10,7 +10,7 @@
 # pin: the pack loader fetches the upstream file once, stores it as an artifact (sha256), and
 # records the pinned version. "pin at install" = choose and record the version when first loaded.
 
-version: 0.1.0
+version: 0.2.0
 
 core:
   - id: rdf-rdfs
@@ -30,12 +30,12 @@ core:
     license: W3C Software and Document License
     pin: pin at install
   - id: dcterms
-    owns: source, part-of, replaced-by, license, version links
+    owns: source, part-of, replaced-by, license, version links, access rights (scopes), type
     iri: http://purl.org/dc/terms/
     license: CC BY 4.0 (DCMI)
     pin: pin at install
   - id: prov-o
-    owns: provenance — agents, activities (runs), derivation, attribution, invalidation
+    owns: provenance — agents, activities (runs), derivation, attribution, generation time, invalidation
     iri: http://www.w3.org/ns/prov#
     license: W3C Software and Document License
     pin: pin at install
@@ -59,24 +59,34 @@ core:
     iri: https://w3id.org/sssom/
     license: CC0 / BSD-3 (check at install)
     pin: pin at install
-  - id: wot-td
-    owns: runtime interfaces (properties, actions, events) and transport bindings (forms), security schemes
-    iri: https://www.w3.org/2019/wot/td#
-    license: W3C Software and Document License
-    pin: TD 1.1 Recommendation; track TD 2.0 drafts
-  - id: kk-tosca
-    owns: system structure — node types/templates, requirements (slots), capabilities, fulfillment, relationships, substitution
-    iri: https://w3id.org/knowledge-kernel/tosca#
-    file: kk-tosca.ttl
-    license: Apache-2.0
-    note: RDF mirror of the OASIS TOSCA 2.0 metamodel; TOSCA YAML itself is a format
   - id: kk-core
-    owns: claim, scope, statement key, evidence type, status, belief, verification, module, slot, chain, eval score
+    owns: the module contract only — module, slot, fills, slot contract, cardinality, module kind, runs-as, protected (D-40)
+    note: claim status, statement key, belief, evidence type and redaction are kernel columns, not terms
     iri: https://w3id.org/knowledge-kernel/ns#
     file: kk-core.ttl
     license: Apache-2.0
 
 profile:
+  - id: kk-tosca
+    owns: system structure — node types/templates, requirements (slots), capabilities, fulfillment, relationships, substitution
+    iri: https://w3id.org/knowledge-kernel/tosca#
+    file: kk-tosca.ttl
+    license: Apache-2.0
+    note: RDF mirror of the OASIS TOSCA 2.0 metamodel; TOSCA YAML itself is a format. Carries the
+      alignment of the module contract (kk:Module ⊂ kkt:NodeType, kk:Slot ⊂ kkt:RequirementDefinition)
+    load_when: systems are modeled (the self-encoder's self-model uses it)
+  - id: wot-td
+    owns: runtime interfaces (properties, actions, events) and transport bindings (forms), security schemes
+    iri: https://www.w3.org/2019/wot/td#
+    license: W3C Software and Document License
+    pin: TD 1.1 Recommendation; track TD 2.0 drafts
+    load_when: runtime interfaces are modeled (kk-tosca affordances)
+  - id: kk-chain
+    owns: the home-grown chain format and runner results (chain, step, routing, trigger, deployed/observed hash)
+    iri: https://w3id.org/knowledge-kernel/chain
+    file: kk-chain.ttl
+    license: Apache-2.0
+    load_when: until T13 retires the chain format (D-40)
   - id: kk-profile
     owns: agent profiles and skills
     iri: https://w3id.org/knowledge-kernel/profile#

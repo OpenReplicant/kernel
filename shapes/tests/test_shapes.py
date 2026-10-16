@@ -10,14 +10,13 @@ from rdflib import Graph, Namespace
 from rdflib.namespace import SH
 
 HERE = Path(__file__).parent
-SHAPES = HERE.parent / "kernel.shacl.ttl"
+SHAPES = sorted(HERE.parent.glob("*.shacl.ttl"))   # kernel shapes + pack shapes
 EX = Namespace("http://example.org/")
 
 EXPECTED_VIOLATIONS = {
     EX.noQuote,
     EX.unattributed,
     EX.noPremises,
-    EX.badBelief,
     "urn:kk:module:orphan",
     "urn:kk:chain:c/s",
 }
@@ -25,7 +24,9 @@ EXPECTED_VIOLATIONS = {
 
 def _run(fixture: str):
     data = Graph().parse(HERE / fixture)
-    shapes = Graph().parse(SHAPES)
+    shapes = Graph()
+    for f in SHAPES:
+        shapes.parse(f)
     conforms, report, text = validate(data, shacl_graph=shapes, advanced=True, allow_warnings=False)
     focus = {str(o) for o in report.objects(None, SH.focusNode)}
     return conforms, focus, text

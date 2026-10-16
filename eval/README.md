@@ -2,7 +2,7 @@
 
 Eval sets are data, versioned with the code and reviewable like anything else. The evaluator module
 runs them and records results as observed claims about the module under test:
-`<module> kk:evalScore <value>` with qualifiers `kk:evalSet <set IRI>` and `kk:metric "<name>"`.
+a DQV quality measurement (`dqv:QualityMeasurement` with `dqv:computedOn` the module, `dqv:isMeasurementOf` the metric, `dqv:value`, and the eval set as `prov:used`); the evaluator is parked (D-36, D-40).
 
 ## Layout
 

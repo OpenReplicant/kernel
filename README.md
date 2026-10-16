@@ -35,7 +35,7 @@ To check the kernel end to end in a throwaway database (no Docker): `sh scripts/
 
 ```
 kernel/    schema (frozen v0), JSON Schemas for change sets, manifests and chains, Python contracts
-ontology/  vocabularies (being reduced to standards), packs.yaml, slots.yaml (42 slots)
+ontology/  kk-core (the module contract), profile packs, packs.yaml, slots.yaml (42 slots)
 shapes/    SHACL shapes and fixtures
 modules/   default modules: manifest, migration, code, tests, Dockerfile each
 deploy/    compose stack, Postgres image and init scripts, Caddyfile, MCP client config

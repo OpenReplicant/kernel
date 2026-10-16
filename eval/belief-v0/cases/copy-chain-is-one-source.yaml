@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/copy-chain-is-one-source
 description: 'A cites X, B cites X and Y, C cites Y: all connected, one group.'
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: p
     sources:
@@ -15,7 +15,7 @@ input:
   - id: b
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: q
     sources:
@@ -24,7 +24,7 @@ input:
   - id: d
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: r
     sources:

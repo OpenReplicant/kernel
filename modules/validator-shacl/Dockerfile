@@ -7,7 +7,7 @@ RUN --mount=type=secret,id=ca,required=false \
     if [ -f /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi; \
     pip install --no-cache-dir -r requirements.txt
 COPY kernel/schemas /kk/kernel/schemas
-COPY shapes/kernel.shacl.ttl /kk/shapes/kernel.shacl.ttl
+COPY shapes/*.shacl.ttl /kk/shapes/
 COPY modules/validator-shacl/validator /app/validator
 ENV KK_ROOT=/kk PYTHONUNBUFFERED=1
 EXPOSE 8000

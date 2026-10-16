@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/copied-conflict-counts-once
 description: Two agents copy the same wrong value from one artifact.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -15,7 +15,7 @@ input:
   - id: b
     key: v2
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v2
     agent: p
     sources:
@@ -23,7 +23,7 @@ input:
   - id: d
     key: v2
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v2
     agent: q
     sources:

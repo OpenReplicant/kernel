@@ -1,0 +1,53 @@
+@prefix kk:      <https://w3id.org/knowledge-kernel/ns#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix pplan:   <http://purl.org/net/p-plan#> .
+
+# Chain profile (tier: profile). Terms of the home-grown chain format (kernel/schemas/chain.schema.json)
+# and of the parked runners and chain decoder (parked/). Moved out of core by D-40; T13 replaces the
+# format with encoders that read runners' native formats into plain P-Plan claims, and this pack goes.
+
+<https://w3id.org/knowledge-kernel/chain>
+    a owl:Ontology ;
+    rdfs:label "Knowledge Kernel chain profile" ;
+    owl:versionInfo "0.1.0" ;
+    dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
+    owl:imports <http://purl.org/net/p-plan> .
+
+kk:Chain a owl:Class ;
+    rdfs:subClassOf pplan:Plan ;
+    rdfs:label "chain" ;
+    skos:definition "A short, event-driven automation in the chain format." .
+
+kk:ChainStep a owl:Class ;
+    rdfs:subClassOf pplan:Step ;
+    rdfs:label "chain step" .
+
+kk:stepType a owl:DatatypeProperty ; rdfs:domain kk:ChainStep ; rdfs:range xsd:string ; rdfs:label "step type" ;
+    skos:definition "One of http, script, subchain, switch, filter, transform, mcp_tool, log." .
+kk:stepConfig a owl:DatatypeProperty ; rdfs:domain kk:ChainStep ; rdfs:label "step configuration" ;
+    skos:definition "JSON configuration of the step (rdf:JSON literal)." .
+kk:next a owl:ObjectProperty ; rdfs:domain kk:ChainStep ; rdfs:range kk:ChainStep ; rdfs:label "next" ;
+    skos:definition "Routing edge to the following step. Its routing label is the qualifier kk:onLabel." .
+kk:onLabel a owl:DatatypeProperty ; rdfs:label "on label" ;
+    skos:definition "Qualifier on a kk:next edge: success, failure, true, false, or a switch label." .
+kk:trigger a owl:DatatypeProperty ; rdfs:domain kk:Chain ; rdfs:label "trigger" .
+
+kk:deployedHash a owl:DatatypeProperty ; rdfs:label "deployed hash" ;
+    skos:definition "sha256 of the compiled chain file a runner is executing (parked chain decoder)." .
+kk:observedHash a owl:DatatypeProperty ; rdfs:label "observed hash" ;
+    skos:definition "sha256 of a deployed file as last observed by a drift check (parked chain decoder)." .
+kk:runnable a owl:DatatypeProperty ; rdfs:range xsd:boolean ; rdfs:label "runnable" .
+kk:notRunnableBecause a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:label "not runnable because" .
+
+kk:stepType a owl:FunctionalProperty .
+kk:stepConfig a owl:FunctionalProperty .
+kk:trigger a owl:FunctionalProperty .
+kk:runnable a owl:FunctionalProperty .
+kk:notRunnableBecause a owl:FunctionalProperty .
+kk:deployedHash a owl:FunctionalProperty .
+kk:observedHash a owl:FunctionalProperty .

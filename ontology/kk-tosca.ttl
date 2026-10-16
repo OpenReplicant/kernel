@@ -1,4 +1,5 @@
 @prefix kkt:     <https://w3id.org/knowledge-kernel/tosca#> .
+@prefix kk:      <https://w3id.org/knowledge-kernel/ns#> .
 @prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:     <http://www.w3.org/2002/07/owl#> .
@@ -7,7 +8,7 @@
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix td:      <https://www.w3.org/2019/wot/td#> .
 
-# RDF mirror of the TOSCA 2.0 metamodel (tier: core) — the system-structure layer.
+# RDF mirror of the TOSCA 2.0 metamodel (tier: profile, D-40) — the system-modeling layer.
 # TOSCA is YAML-native and has no official RDF vocabulary, so these terms mirror its
 # metamodel one to one and nothing more. TOSCA YAML is an encoder source and decoder target.
 # Spec: OASIS TOSCA Version 2.0 (OASIS Standard, September 2025).
@@ -17,7 +18,7 @@
 <https://w3id.org/knowledge-kernel/tosca>
     a owl:Ontology ;
     rdfs:label "TOSCA 2.0 metamodel mirror" ;
-    owl:versionInfo "0.2.0" ;
+    owl:versionInfo "0.3.0" ;
     rdfs:seeAlso <https://docs.oasis-open.org/tosca/TOSCA/v2.0/TOSCA-v2.0.html> .
 
 # ------------------------------------------------------------------ types and templates
@@ -98,3 +99,10 @@ kkt:hasAffordance a owl:ObjectProperty ; rdfs:range td:InteractionAffordance ; r
 
 # ------------------------------------------------------------------ single-valued properties
 kkt:nodeType a owl:FunctionalProperty .
+
+# ------------------------------------------------------------------ alignment of the module contract
+# Moved here from kk-core by D-40: the core does not depend on this profile; this profile reads the
+# module contract as TOSCA (a module kind is a node type, a slot a requirement, filling one a fulfillment).
+kk:Module rdfs:subClassOf kkt:NodeType .
+kk:Slot rdfs:subClassOf kkt:RequirementDefinition .
+kk:fills rdfs:subPropertyOf kkt:fulfills .

@@ -1,28 +1,30 @@
 @prefix sh:      <http://www.w3.org/ns/shacl#> .
 @prefix kk:      <https://w3id.org/knowledge-kernel/ns#> .
-@prefix kkt:     <https://w3id.org/knowledge-kernel/tosca#> .
 @prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
 @prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
-@prefix pplan:   <http://purl.org/net/p-plan#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix oa:      <http://www.w3.org/ns/oa#> .
 
 # Kernel shapes. Two uses:
-#  1. The validator module runs them on the RDF form of each change set's claims (plus pack shapes).
-#  2. The N-Quads export is checked against them, so exported data carries the same guarantees
-#     the database enforces (kernel/schema/001_kernel.sql).
+#  1. The validator module runs them on the RDF form of each change set's claims (plus pack shapes,
+#     shapes/*.shacl.ttl).
+#  2. An export can be checked against them, so exported data carries the same guarantees the
+#     database enforces (kernel/schema/001_kernel.sql).
 #
-# RDF form of a claim:
-#   _:c a kk:Claim ; rdf:subject S ; rdf:predicate P ; rdf:object O ;
-#       prov:wasAttributedTo <agent> ; prov:wasGeneratedBy <run> ; kk:scope <scope> ;
-#       kk:evidenceType kk:Extracted ; kk:recordedAt "..."^^xsd:dateTime ;
+# RDF form of a claim, in standard terms only (D-40):
+#   _:c a rdf:Statement ; rdf:subject S ; rdf:predicate P ; rdf:object O ;
+#       prov:wasAttributedTo <agent> ; prov:wasGeneratedBy <run> ; prov:generatedAtTime "..."^^xsd:dateTime ;
+#       dcterms:accessRights <scope> ; dcterms:type <urn:kk:evidence:extracted> ;
 #       dcterms:source [ a oa:SpecificResource ; oa:hasSource <doc> ;
-#                        oa:hasSelector [ a oa:TextQuoteSelector ; oa:exact "..." ] ] .
+#                        oa:hasSelector [ a oa:TextQuoteSelector ; oa:exact "..." ] ] ;
+#       prov:wasDerivedFrom <premise> .
+# Evidence types are the kernel's own values (column claim.evidence_type), named urn:kk:evidence:<value>.
 
 kk:ClaimShape a sh:NodeShape ;
-    sh:targetClass kk:Claim ;
+    sh:targetClass rdf:Statement ;
     sh:property [ sh:path rdf:subject ;   sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
     sh:property [ sh:path rdf:predicate ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
     sh:property [ sh:path rdf:object ;    sh:maxCount 1 ] ;
@@ -30,10 +32,11 @@ kk:ClaimShape a sh:NodeShape ;
                   sh:message "Invariant 1: every claim is attributed to exactly one agent." ] ;
     sh:property [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
                   sh:message "Invariant 1: every claim records the run that produced it." ] ;
-    sh:property [ sh:path kk:scope ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
-    sh:property [ sh:path kk:recordedAt ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
-    sh:property [ sh:path kk:evidenceType ; sh:minCount 1 ; sh:maxCount 1 ;
-                  sh:in ( kk:Deterministic kk:Extracted kk:Inferred kk:Observed kk:Testimony ) ] ;
+    sh:property [ sh:path dcterms:accessRights ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path prov:generatedAtTime ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ] ;
+    sh:property [ sh:path dcterms:type ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:in ( <urn:kk:evidence:deterministic> <urn:kk:evidence:extracted> <urn:kk:evidence:inferred>
+                          <urn:kk:evidence:observed> <urn:kk:evidence:testimony> ) ] ;
     sh:or (
         [ sh:path dcterms:source ; sh:minCount 1 ]
         [ sh:path prov:wasDerivedFrom ; sh:minCount 1 ]
@@ -44,9 +47,8 @@ kk:ClaimShape a sh:NodeShape ;
         sh:prefixes kk:prefixes ;
         sh:select """
             SELECT $this WHERE {
-              $this kk:evidenceType kk:Extracted .
+              $this dcterms:type <urn:kk:evidence:extracted> .
               FILTER NOT EXISTS { $this dcterms:source/oa:hasSelector/oa:exact ?q . FILTER(STRLEN(STR(?q)) > 0) }
-              FILTER NOT EXISTS { $this kk:redactedAt ?r }
             }""" ;
     ] ;
     sh:sparql [
@@ -55,23 +57,15 @@ kk:ClaimShape a sh:NodeShape ;
         sh:prefixes kk:prefixes ;
         sh:select """
             SELECT $this WHERE {
-              $this kk:evidenceType kk:Inferred .
+              $this dcterms:type <urn:kk:evidence:inferred> .
               FILTER NOT EXISTS { $this prov:wasDerivedFrom ?p }
             }""" ;
     ] .
 
-kk:BeliefScoreShape a sh:NodeShape ;
-    sh:targetClass kk:BeliefScore ;
-    sh:property [ sh:path kk:beliefOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kk:Claim ] ;
-    sh:property [ sh:path kk:beliefModel ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
-    sh:property [ sh:path kk:beliefValue ; sh:minCount 1 ; sh:maxCount 1 ;
-                  sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
-    sh:property [ sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:maxCount 1 ] .
-
 kk:ModuleShape a sh:NodeShape ;
     sh:targetClass kk:Module ;
     sh:property [ sh:path rdfs:label ; sh:minCount 1 ] ;
-    sh:property [ sh:path kk:version ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:property [ sh:path owl:versionInfo ; sh:minCount 1 ; sh:maxCount 1 ;
                   sh:pattern "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" ] ;
     sh:property [ sh:path kk:moduleKind ; sh:minCount 1 ; sh:maxCount 1 ;
                   sh:in ( kk:Encoder kk:Processor kk:Decoder kk:Actuator kk:Interface kk:AgentKind kk:Control kk:Pack ) ] ;
@@ -85,22 +79,7 @@ kk:SlotShape a sh:NodeShape ;
     sh:property [ sh:path kk:slotContract ; sh:minCount 1 ; sh:maxCount 1 ] ;
     sh:property [ sh:path kk:cardinality ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "one" "many" ) ] .
 
-kk:ChainShape a sh:NodeShape ;
-    sh:targetClass kk:Chain ;
-    sh:property [ sh:path kk:runsAs ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
-    sh:property [ sh:path kk:trigger ; sh:minCount 1 ; sh:maxCount 1 ] ;
-    sh:property [ sh:path [ sh:inversePath pplan:isStepOfPlan ] ; sh:minCount 1 ;
-                  sh:message "A chain has at least one step." ] .
-
-kk:ChainStepShape a sh:NodeShape ;
-    sh:targetClass kk:ChainStep ;
-    sh:property [ sh:path pplan:isStepOfPlan ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kk:Chain ] ;
-    sh:property [ sh:path kk:stepType ; sh:minCount 1 ; sh:maxCount 1 ;
-                  sh:in ( "http" "script" "subchain" "switch" "filter" "transform" "mcp_tool" "log" ) ] ;
-    sh:property [ sh:path kk:next ; sh:class kk:ChainStep ] .
-
-kk:prefixes a <http://www.w3.org/2002/07/owl#Ontology> ;
-    sh:declare [ sh:prefix "kk" ;      sh:namespace "https://w3id.org/knowledge-kernel/ns#"^^xsd:anyURI ] ;
+kk:prefixes a owl:Ontology ;
     sh:declare [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "oa" ;      sh:namespace "http://www.w3.org/ns/oa#"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "prov" ;    sh:namespace "http://www.w3.org/ns/prov#"^^xsd:anyURI ] .

@@ -37,15 +37,15 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
 - **Keep the kernel small (D-36).** No required middleware or runner: anything that needs one is a
   module. Prefer compatibility with existing tools over building our own. Work outside the kernel is
   parked under `parked/` until revived.
-- **One concept, one home** (`ontology/packs.yaml`). Before adding a term, check whether a core
-  vocabulary owns the concept. New terms go through the review lane (vocabulary typing claims are
+- **One concept, one home** (`ontology/packs.yaml`). Before adding a term, check whether a standard
+  vocabulary owns the concept; `kk:` is only for the module contract (D-40). New terms go through the review lane (vocabulary typing claims are
   forced there) or a pack migration.
 - **Look things up; don't rely on memory** for external tools (MCP SDK v2, psycopg, pySHACL,
   PostgREST, image tags). Pin exact versions and record what you pinned.
 - **Every module** has a `module.yaml` valid against `kernel/schemas/module.schema.json`, fills slots
   from `ontology/slots.yaml` and runs as its own `kkm_*` role.
 - Conditions go in qualifiers, never inside values. Ambiguous entity matches stay separate with
-  `kk:possiblySameAs` for review. Telemetry is aggregated into observed claims per time window.
+  `skos:closeMatch` for review. Telemetry is aggregated into observed claims per time window.
 - Licenses: permissive or LGPL-library only in the default distribution (D-11).
 
 ## Tests
@@ -71,7 +71,7 @@ kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
   schemas/       change_set, module, chain JSON Schemas         ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
-ontology/        kk-core.ttl, kk-tosca.ttl, kk-profile.ttl, packs.yaml, slots.yaml   ← being reduced to standards (T12)
+ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-chain/kk-profile, packs.yaml, slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader; _template/
@@ -85,5 +85,5 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T11, T14 and T15 are done; G1 and G4 pass (`scripts/smoke_kernel.sh`). Next: T12 (standard
-vocabularies instead of `kk:` terms), T13 (ingestion without a runner), T16 (self-questions eval). Work one task at a time; each ends with its check passing.
+T0–T12, T14 and T15 are done; G1 and G4 pass (`scripts/smoke_kernel.sh`). Next: T13 (ingestion
+without a runner; retires the chain format and `kk-chain.ttl`), T16 (self-questions eval). Work one task at a time; each ends with its check passing.

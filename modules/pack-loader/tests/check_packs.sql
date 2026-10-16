@@ -7,7 +7,7 @@ begin
   -- Every property the self-encoder (T6) writes is approved.
   select string_agg(p, ', ') into missing
   from unnest(array[
-    'kk:fills', 'kk:moduleKind', 'kk:version', 'kk:runsAs', 'kk:protected',
+    'kk:fills', 'kk:moduleKind', 'owl:versionInfo', 'kk:runsAs', 'kk:protected',
     'kk:stepType', 'kk:stepConfig', 'kk:next', 'kk:onLabel', 'kk:trigger',
     'kk:runnable', 'kk:notRunnableBecause', 'kk:deployedHash', 'kk:slotContract', 'kk:cardinality',
     'kkt:nodeType', 'kkt:propertyValue', 'kkt:propertyName', 'kkt:memberOf',
@@ -26,10 +26,10 @@ begin
     and c.object_entity in (kernel.expand('rdf:Property'), kernel.expand('owl:ObjectProperty'),
                             kernel.expand('owl:DatatypeProperty'), kernel.expand('owl:AnnotationProperty'))
     and c.subject like 'https://w3id.org/knowledge-kernel/%';
-  if n <> 61 then
-    raise exception 'T3: expected 61 kk/kkt/kkp properties typed, found %', n;
+  if n <> 41 then
+    raise exception 'T3: expected 41 kk/kkt/kkp properties typed, found %', n;
   end if;
-  raise notice 'ok: 61 kk/kkt/kkp properties typed';
+  raise notice 'ok: 41 kk/kkt/kkp properties typed';
 
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = kernel.expand('kk:Slot');

@@ -2,12 +2,12 @@ id: urn:kk:eval:belief-v0/independent-sources-corroborate
 description: Two agents, two different sources, same statement.
 input:
   functional:
-  - kk:version
+  - owl:versionInfo
   claims:
   - id: a
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: enc
     sources:
@@ -15,7 +15,7 @@ input:
   - id: b
     key: v1
     subject: urn:x:m
-    predicate: kk:version
+    predicate: owl:versionInfo
     object: v1
     agent: other
     sources:

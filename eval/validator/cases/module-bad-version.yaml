@@ -5,4 +5,4 @@ input:
     - [urn:kk:slot:shape-validator, rdf:type, kk:Slot]
 expect:
   outcome: invalid
-  reason: "shape: https://w3id.org/knowledge-kernel/ns#version"
+  reason: "shape: http://www.w3.org/2002/07/owl#versionInfo"
