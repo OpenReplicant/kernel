@@ -12,6 +12,8 @@
 #       time aren't conflicts (scripts/e2e_belief.py).
 #   T8: an agent reads, explains and submits through kernel-mcp under its own identity
 #       (scripts/e2e_mcp.py, in the kernel-mcp container), and /mcp answers through Caddy.
+#   T9/G3: the UI's Graph tab renders the self-model from live claims in headless Chromium
+#       (scripts/ui_graph_check.mjs; needs the playwright package for node, version 1.56.1).
 # PYTHON: interpreter with pyyaml, rdflib and pyshacl for check_g2.py (default python3).
 # Usage: sh scripts/smoke_stack.sh        (needs docker compose, python3, curl)
 #        KK_BUILD_CA=/path/to/ca.crt sh scripts/smoke_stack.sh   (behind a TLS-intercepting proxy)
@@ -23,7 +25,7 @@ cleanup() {
   status=$?
   if [ "$status" -ne 0 ]; then
     echo "--- smoke test failed ($status); module logs:"
-    $compose logs --tail 40 validator chain-runner-python belief kernel-mcp 2>/dev/null || true
+    $compose logs --tail 40 validator chain-runner-python belief kernel-mcp graph-decoder 2>/dev/null || true
   fi
   $compose down -v >/dev/null 2>&1; rm -f "$env_file"
 }
@@ -70,12 +72,12 @@ sed -i -e "s/^KK_JWT_VALIDATOR=.*/KK_JWT_VALIDATOR=$token/" \
 if [ -n "${KK_BUILD_CA:-}" ]; then
   for m in validator:validator-shacl chain-runner-python:chain-runner-python \
            self-encoder:self-encoder ingest-filter:ingest-filter-gitleaks belief:belief-corroboration \
-           kernel-mcp:kernel-mcp; do
+           kernel-mcp:kernel-mcp graph-decoder:graph-decoder; do
     docker build -q --secret id=ca,src="$KK_BUILD_CA" -f "$root/modules/${m#*:}/Dockerfile" \
       -t "kk-smoke-${m%%:*}" "$root" >/dev/null
   done
 else
-  $compose build validator chain-runner-python self-encoder ingest-filter belief kernel-mcp
+  $compose build validator chain-runner-python self-encoder ingest-filter belief kernel-mcp graph-decoder
 fi
 $compose up -d --no-build --wait validator
 $compose exec -T \
@@ -159,3 +161,9 @@ via_caddy=$(curl -s -X POST http://127.0.0.1:8080/mcp -H "Authorization: Bearer 
 echo "tools listed through Caddy at /mcp: $via_caddy"
 [ "$via_caddy" -ge 9 ]
 echo "T8 smoke test passed"
+
+# T9/G3: the self-model as a graph in the UI, read with the viewer's own token.
+$compose up -d --no-build --wait graph-decoder
+[ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/graph)" = 401 ]   # no token, no graph
+KK_TOKEN=$agent_mcp node "$root/scripts/ui_graph_check.mjs"
+echo "T9 smoke test passed (G3)"

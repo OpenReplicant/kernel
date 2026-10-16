@@ -4,12 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Knowledge Kernel</title>
-<!-- Starting point for the UI module. Milestone 1 adds sign-in (identity slot), the module/slot
-     catalog and the self-model graph from graph-decoder. Pin and self-host Alpine before production. -->
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<!-- Libraries are vendored and pinned (vendor/README.md). Sign-in for people (identity slot) comes later;
+     until then a person pastes their own token, and every request runs as their role. -->
+<script src="vendor/cytoscape-3.34.3.min.js"></script>
+<script defer src="vendor/alpinejs-3.17.4.min.js"></script>
 <style>
-  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --line:#e7e5e4; --accent:#0f766e; --bad:#b91c1c; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --line:#44403c; --accent:#2dd4bf; --bad:#f87171; } }
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#78716c; --line:#e7e5e4; --accent:#0f766e; --bad:#b91c1c;
+          --k-module:#0f766e; --k-slot:#b45309; --k-chain:#7c3aed; --k-step:#a78bfa; --k-node:#2563eb;
+          --k-service:#1e3a8a; --k-entity:#a8a29e; --edge:#57534e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --line:#44403c; --accent:#2dd4bf; --bad:#f87171;
+          --k-module:#2dd4bf; --k-slot:#fbbf24; --k-chain:#c4b5fd; --k-step:#8b5cf6; --k-node:#60a5fa;
+          --k-service:#93c5fd; --k-entity:#78716c; --edge:#d6d3d1; } }
   body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
   header, main { max-width:1100px; margin:0 auto; padding:16px; }
   header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); }
@@ -21,6 +26,11 @@
   td, th { text-align:left; padding:6px; border-bottom:1px solid var(--line); vertical-align:top; word-break:break-word; }
   .muted { color:var(--muted); } .bad { color:var(--bad); }
   pre { white-space:pre-wrap; font-size:12px; background:rgba(127,127,127,.08); padding:12px; border-radius:6px; }
+  #cy { height:620px; border:1px solid var(--line); border-radius:8px; margin-top:12px; }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  select { padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); max-width:100%; }
+  .legend span { display:inline-block; margin-right:12px; font-size:12px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle; }
 </style>
 </head>
 <body x-data="kk()" x-init="init()">
@@ -30,6 +40,7 @@
     <button :class="{on: tab==='claims'}" @click="tab='claims'; load()">Claims</button>
     <button :class="{on: tab==='review'}" @click="tab='review'; load()">Review queue</button>
     <button :class="{on: tab==='changes'}" @click="tab='changes'; load()">My change sets</button>
+    <button :class="{on: tab==='graph'}" @click="tab='graph'; load()">Graph</button>
   </nav>
   <input type="password" placeholder="Paste your access token (JWT)" x-model="token" @change="save(); load()">
 </header>
@@ -75,12 +86,36 @@
     </table>
   </template>
 
+  <div x-show="tab==='graph'">
+    <div class="controls">
+      <select x-model="graphBy" @change="graphOn=''; drawGraph()" aria-label="Show">
+        <option value="">Whole self-model</option><option value="module">One module</option>
+        <option value="slot">One slot</option><option value="chain">One chain</option>
+      </select>
+      <select x-show="graphBy" x-model="graphOn" @change="drawGraph()" aria-label="Which">
+        <option value="">Choose…</option>
+        <template x-for="o in graphChoices()" :key="o.id"><option :value="o.id" x-text="o.label"></option></template>
+      </select>
+      <span class="muted" x-text="graphInfo"></span>
+    </div>
+    <p class="legend muted">
+      <span><i style="background:var(--k-module)"></i>module</span><span><i style="background:var(--k-slot)"></i>slot</span>
+      <span><i style="background:var(--k-chain)"></i>chain</span><span><i style="background:var(--k-step)"></i>step</span>
+      <span><i style="background:var(--k-node)"></i>service</span>
+      <span>edge width and opacity = belief · click an edge to explain its claim</span>
+    </p>
+    <div id="cy" data-nodes="0" data-edges="0"></div>
+  </div>
+
   <template x-if="detail"><pre x-text="JSON.stringify(detail, null, 2)"></pre></template>
 </main>
 <script>
+let cy = null;            // the Cytoscape instance stays outside Alpine's reactive state
+
 function kk() {
   return {
     tab: 'claims', token: '', rows: [], detail: null, error: '',
+    graphBy: '', graphOn: '', graphAll: [], graphInfo: '',
     init() { try { this.token = sessionStorage.getItem('kk_token') || ''; } catch (e) {} this.load(); },
     save() { try { sessionStorage.setItem('kk_token', this.token); } catch (e) {} },
     async api(path, opts = {}) {
@@ -91,12 +126,51 @@ function kk() {
     },
     async load() {
       this.error = ''; this.detail = null;
+      if (this.tab === 'graph') return this.drawGraph();
       const paths = { claims: '/claims?order=recorded_at.desc&limit=100',
                       review: '/review_queue?order=submitted_at', changes: '/change_sets?order=submitted_at.desc&limit=100' };
       try { this.rows = await this.api(paths[this.tab]); } catch (e) { this.rows = []; this.error = e.message; }
     },
     async explain(id) {
       try { this.detail = await this.api('/rpc/explain?claim_id=' + id); } catch (e) { this.error = e.message; }
+    },
+    graphChoices() {
+      const kind = { module: 'module', slot: 'slot', chain: 'chain' }[this.graphBy];
+      return this.graphAll.filter(n => n.kind === kind).sort((a, b) => a.label.localeCompare(b.label));
+    },
+    async drawGraph() {
+      if (this.graphBy && !this.graphOn && this.graphAll.length) return;   // wait for a choice
+      const q = this.graphBy && this.graphOn ? `?${this.graphBy}=${encodeURIComponent(this.graphOn)}` : '';
+      let data;
+      try {
+        const r = await fetch('/graph' + q, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        if (!r.ok) throw new Error((await r.text()) || r.statusText);
+        data = await r.json();
+      } catch (e) { this.error = e.message; return; }
+      if (!q) this.graphAll = data.elements.nodes.map(n => n.data);
+      const css = getComputedStyle(document.documentElement), v = name => css.getPropertyValue(name).trim();
+      if (cy) cy.destroy();
+      cy = cytoscape({
+        container: document.getElementById('cy'), elements: data.elements, wheelSensitivity: 0.3,
+        layout: { name: q ? 'breadthfirst' : 'cose', directed: true, padding: 20, animate: false },
+        style: [
+          { selector: 'node', style: { 'background-color': n => v('--k-' + n.data('kind')) || v('--k-entity'),
+              label: 'data(label)', 'font-size': 9, color: v('--fg'), 'text-wrap': 'ellipsis', 'text-max-width': 120,
+              width: 14, height: 14 } },
+          { selector: 'node[kind = "module"], node[kind = "chain"]', style: { width: 22, height: 22, 'font-size': 11 } },
+          { selector: 'edge', style: { 'curve-style': 'bezier', 'target-arrow-shape': 'triangle',
+              'line-color': v('--edge'), 'target-arrow-color': v('--edge'),
+              width: e => 0.5 + 3 * (e.data('belief') ?? 0), opacity: e => 0.3 + 0.7 * (e.data('belief') ?? 0),
+              label: 'data(label)', 'font-size': 8, color: v('--muted'), 'text-rotation': 'autorotate',
+              'text-background-color': v('--bg'), 'text-background-opacity': 0.85, 'text-background-padding': 1 } },
+          { selector: 'edge[status = "preferred"]', style: { 'line-style': 'solid', width: 4 } },
+          { selector: 'edge[belief < 0.5]', style: { 'line-style': 'dashed' } },
+        ],
+      });
+      cy.on('tap', 'edge', ev => this.explain(ev.target.id()));
+      const el = document.getElementById('cy');
+      el.dataset.nodes = cy.nodes().length; el.dataset.edges = cy.edges().length;
+      this.graphInfo = `${cy.nodes().length} entities, ${cy.edges().length} claims`;
     },
     async decide(id, approve) {
       try { await this.api('/rpc/review', { method: 'POST', body: JSON.stringify({ change_set_id: id, approve }) }); this.load(); }
