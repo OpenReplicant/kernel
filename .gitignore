@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 deploy/.env
 node_modules/
+build/
+*.egg-info/

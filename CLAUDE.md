@@ -85,6 +85,5 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 ## Current milestone
 
 Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-T0–T11 and T14 are done; G1 and G4 pass (`scripts/smoke_kernel.sh`). Next: T15 (harness kit: skill,
-hooks, ranked recall), T12 (standard vocabularies instead of `kk:` terms), T13 (ingestion without a
-runner), T16 (self-questions eval). Work one task at a time; each ends with its check passing.
+T0–T11, T14 and T15 are done; G1 and G4 pass (`scripts/smoke_kernel.sh`). Next: T12 (standard
+vocabularies instead of `kk:` terms), T13 (ingestion without a runner), T16 (self-questions eval). Work one task at a time; each ends with its check passing.

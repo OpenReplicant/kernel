@@ -81,6 +81,11 @@ jobs:
       - run: pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt -r modules/belief-corroboration/requirements.txt
       - name: Postgres + validator + belief + kernel-mcp over stdio, nothing else
         run: sh scripts/smoke_kernel.sh
+      - name: kernel-mcp installs as a package with its two commands
+        run: |
+          pip install ./modules/kernel-mcp
+          command -v kernel-mcp
+          kernel-mcp-hook < /dev/null || test $? = 2
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env

@@ -11,19 +11,26 @@ and the kernel validates and applies it (or sends it to a person for review).
 
 ## Reading
 
-- `search(text)` → candidate entities and claims.
+- `search(text)` → claims ranked by relevance to your words (full text over values and IRIs, then
+  belief); substring match on labels and IRIs when no word matches.
 - `get_entity(iri)` → the entity card: current claims with status and belief.
 - `query_claims(filters)` → claims by subject, predicate, object or scope (IRIs or CURIEs); deprecated claims only on request.
 - `explain(claim_id)` → sources and quotes, what it was derived from, what uses it, status history,
   beliefs and verifications. Use this before relying on a claim you didn't make.
 - `list_slots()`, `list_modules()` → the platform's own self-model.
 
+If the harness runs the kernel hooks, claims related to each prompt arrive in your context as lines
+`subject predicate object [claim <id>, belief <b>]`. They are recall, not proof: cite them by id with
+their belief, and `explain` the ones you rely on.
+
 When you answer a question from the kernel, **cite claim ids and show their belief** (invariant 6).
 Deprecated claims are history, not current fact; say so if you mention them.
 
 ## Writing
 
-1. `start_run(module, plan_step?)` → run id. Every change set names the run that produced it.
+1. `start_run(module, plan_step?)` → run id. Every change set names the run that produced it. If the
+   session-start hook gave you a session run, use that one instead (it is finished when the session
+   ends).
 2. Build the change set (schema: `kernel/schemas/change_set.schema.json`):
    - `idempotency_key`: stable, e.g. `<your module>:<source sha256>:<n>`; resubmitting is safe.
    - `attributed_to`: your own agent IRI. Attribution to anyone else is rejected.
@@ -31,7 +38,12 @@ Deprecated claims are history, not current fact; say so if you mention them.
    - `ops`: `add_claim`, `set_status`, `add_belief`, `add_verification`, `add_entity`, `add_artifact`.
 3. `submit_change_set(cs)` → `{id, status, lane}`; `get_change_set(id)` shows its status (and the
    validation report if it was found invalid).
-4. `finish_run(run_id, status, cost)`.
+4. `finish_run(run_id, status, cost)` for runs you started yourself.
+
+**What to record:** facts you established in this session that someone would want later (decisions,
+findings about code or systems, what a person told you), each with its source: the file and lines
+(`deterministic` or `extracted` with the quote), the person (`testimony`), or the claims you reasoned
+from (`inferred`). Not your plans, guesses or restatements of claims already in the kernel.
 
 Rules the kernel enforces (your change set is marked invalid otherwise):
 - Every claim has a reference (`source_uri` or `artifact`) or `derived_from` claims.

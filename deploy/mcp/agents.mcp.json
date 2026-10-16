@@ -1,14 +1,9 @@
 {
   "mcpServers": {
     "kernel": {
-      "command": "python",
-      "args": [
-        "-m",
-        "kernel_mcp"
-      ],
+      "command": "kernel-mcp",
       "env": {
-        "PYTHONPATH": "${KK_REPO_PATH}/modules/kernel-mcp",
-        "DATABASE_URL": "${KK_AGENT_DATABASE_URL}"
+        "KK_DATABASE_URL": "${KK_AGENT_DATABASE_URL}"
       }
     },
     "git": {
