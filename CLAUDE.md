@@ -74,12 +74,12 @@ kernel/
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile/bbo/sosa,
-                 observables.ttl, mappings.ttl,
+                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl,
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
-                 encoder-eventlog, encoder-bpmn, skill-process-extraction; _template/
+                 encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance; _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/

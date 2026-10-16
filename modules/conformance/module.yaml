@@ -1,0 +1,41 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:conformance
+name: Conformance processor
+version: 0.1.0
+description: 'Compares each documented process (BPMN encoder, process-extraction skill) with what was
+  observed (event-log encoder) and claims every discrepancy — skipped step, swapped order, rework,
+  unexpected path, path never taken, time limit exceeded — as an oa:Annotation targeting the steps,
+  inferred and derived from the claims compared. Each discrepancy waits in the review lane (D-50).'
+license: Apache-2.0
+kind: processor
+slots:
+- reasoner
+protected: false
+agent:
+  iri: urn:kk:agent:conformance
+  db_role: kkm_conformance
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m conformance
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_conformance
+    KK_SWEEP_SECONDS: sweep interval (default 30)
+accepts:
+- http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement
+produces:
+- add_claim
+- set_status
+triggers:
+- type: notify
+  spec: kernel_change_set (applied)
+mcp:
+  expose: []
+migration: migration.sql

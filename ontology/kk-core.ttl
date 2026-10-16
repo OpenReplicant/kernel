@@ -24,7 +24,7 @@
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;
     rdfs:label "Knowledge Kernel core vocabulary" ;
-    owl:versionInfo "0.4.1" ;
+    owl:versionInfo "0.4.2" ;
     dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
     owl:imports <http://www.w3.org/ns/prov-o> .
 
@@ -32,6 +32,7 @@
 # Typing them here makes them approved predicates (kernel.is_approved_property).
 owl:versionInfo a owl:AnnotationProperty ; rdfs:label "version" .
 rdfs:isDefinedBy a owl:AnnotationProperty ; rdfs:label "is defined by" .   # profile packs cut from upstream (D-47)
+<http://purl.org/dc/terms/type> a owl:ObjectProperty ; rdfs:label "type" .   # a kind from a SKOS scheme, e.g. a discrepancy kind (D-50)
 
 # ------------------------------------------------------------------ the module contract
 kk:Module a owl:Class ;

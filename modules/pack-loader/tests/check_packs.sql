@@ -41,12 +41,13 @@ begin
     'http://www.w3.org/ns/sosa/hasSimpleResult', 'http://www.w3.org/ns/sosa/observedProperty',
     'http://www.w3.org/ns/sosa/hasFeatureOfInterest', 'http://www.w3.org/ns/sosa/madeBySensor',
     'http://www.w3.org/ns/sosa/madeByActuator', 'http://www.w3.org/ns/sosa/actsOnProperty',
-    'rdfs:isDefinedBy']) p
+    'rdfs:isDefinedBy', 'dcterms:type', 'oa:hasTarget', 'oa:bodyValue',
+    'https://www.irit.fr/recherches/MELODI/ontologies/BBO#maxValue']) p
   where not kernel.is_approved_property(kernel.expand(p));
   if missing is not null then
     raise exception 'M2-T0: properties not approved: %', missing;
   end if;
-  raise notice 'ok: BBO and SOSA properties approved';
+  raise notice 'ok: BBO, SOSA and Web Annotation properties approved';
 
   select count(*) into n from kernel.claim
   where predicate = kernel.expand('skos:closeMatch')
