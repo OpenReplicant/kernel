@@ -157,7 +157,7 @@ services:
   # chain-runner slot, alternative: RuleGo-Server. Its editor/API is never exposed to agents;
   # its MCP mode exposes allow-listed chains only. See deploy/rulego/README.md.
   rulego:
-    image: ${RULEGO_SERVER_IMAGE:-replace-with-pinned-rulego-server-image}
+    build: ../modules/chain-runner-rulego      # kk-rulego: RuleGo-Server v0.38.0 + our components
     profiles: [rulego]
     volumes:
       - rulego-chains:/data/workflows:ro

@@ -39,3 +39,4 @@ triggers:
 mcp:
   expose: []
 migration: migration.sql
+skill: SKILL.md

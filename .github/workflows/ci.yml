@@ -77,3 +77,32 @@ jobs:
         run: npm install --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: Stack up, API auth, packs and slots
         run: sh scripts/smoke_stack.sh
+
+  rulego:
+    name: kk-rulego (RuleGo-Server build and components)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.11-bookworm
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: modules/chain-runner-rulego
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version: "1.25.14"
+          cache-dependency-path: modules/chain-runner-rulego/go.sum
+      - name: gofmt and vet
+        run: test -z "$(gofmt -l .)" && go vet ./...
+      - name: Component tests (against Postgres)
+        env:
+          KK_TEST_PG_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+        run: go test -v ./...
+      - name: Image builds
+        run: docker build -t kk-rulego . && docker run --rm --entrypoint kk-rulego kk-rulego -v
