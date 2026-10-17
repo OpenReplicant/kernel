@@ -58,6 +58,16 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - Claude Code expands `${VAR}` in `.mcp.json` (command, args, env), but its docs do not say a settings
   file's `env` reaches MCP servers; keep secrets in a file the server reads (`KK_LOGIN_FILE`).
 
+- A claim in a scope the validator cannot read is never applied: services need clearance on every scope
+  they serve (validator, belief, recall index), granted like anyone's.
+- BM25 statistics kept per scope make a small scope's rare words worthless: sum them over the scopes
+  the reader may read (row-level security does the filtering).
+- Recall quality decides whether the kernel helps at all: with plain full-text search a good model did
+  worse with the kernel than alone (SciFact, D-59); with BM25 it did much better (D-60). Measure recall
+  before building on it.
+- Free model endpoints are rate-limited upstream per model (429 from a shared pool even with quota
+  left); probe a few and record which model answered.
+
 ## Tests
 
 - Gate checks that read a live system must tolerate other modules writing meanwhile: assert "every

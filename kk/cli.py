@@ -4,7 +4,7 @@
   kk init                      install the kernel, the default modules and the vocabulary packs
   kk person add NAME           a person's own login (reviews; --steward may also redact)
   kk agent add NAME            a harness agent's own login (MCP stdio, hooks)
-  kk serve                     MCP over HTTP (+ the UI at /ui) + the validator + the belief model, in one process
+  kk serve                     MCP over HTTP (+ the UI at /ui) + the validator + the belief model + the recall index
   kk status                    who you are, what you can see, what is waiting
   kk review list|show|approve|reject
   kk scan --repo DIR           ingest a repository (self-encoder, ingest filter first)
@@ -39,7 +39,7 @@ from psycopg import sql
 
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[1])
 NAME = re.compile(r"^[a-z][a-z0-9-]{0,40}$")
-WORKERS = ("validator", "belief")
+WORKERS = ("validator", "belief", "recall")
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 KK_MODULE = "https://w3id.org/knowledge-kernel/ns#Module"
 OWL_VERSION = "http://www.w3.org/2002/07/owl#versionInfo"
@@ -143,6 +143,8 @@ def cmd_init(a) -> None:
 def worker(name: str):
     if name == "validator":
         from validator.__main__ import main
+    elif name == "recall":
+        from recall_index.__main__ import main
     else:
         from belief_corroboration.__main__ import main
     return main
@@ -262,7 +264,7 @@ def main(argv=None) -> None:
             p.add_argument("--steward", action="store_true", help="may also redact")
         p.set_defaults(fn=fn)
     p = sub.add_parser("serve", help="MCP over HTTP + validator + belief")
-    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief (default: all)")
+    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall (default: all)")
     p.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     p.set_defaults(fn=cmd_serve)

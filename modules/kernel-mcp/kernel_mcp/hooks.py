@@ -64,7 +64,8 @@ def prompt(data: dict) -> None:
         return
     limit = int(os.environ.get("KK_RECALL_LIMIT", "8"))
     with connect() as conn:
-        claims = conn.execute(recall.RANKED, recall.params(text, limit)).fetchone()[0]
+        ranked = recall.ranked(recall.indexed(conn))
+        claims = conn.execute(ranked, recall.params(text, limit)).fetchone()[0]
     context("UserPromptSubmit", recall.render(
         claims, PREFIXES, "Knowledge kernel: claims related to this prompt (cite ids and belief; "
                           "explain(claim_id) gives sources):"))

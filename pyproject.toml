@@ -24,7 +24,7 @@ kernel-mcp-hook = "kernel_mcp.hooks:main"
 [tool.setuptools]
 packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter",
             "eventlog_encoder", "bpmn_encoder", "conformance", "observer_prometheus", "anomaly",
-            "actuator_compose", "paper_encoder"]
+            "actuator_compose", "paper_encoder", "recall_index"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -39,3 +39,4 @@ observer_prometheus = "modules/observer-prometheus/observer_prometheus"
 anomaly = "modules/anomaly/anomaly"
 actuator_compose = "modules/actuator-compose/actuator_compose"
 paper_encoder = "modules/encoder-papers/paper_encoder"
+recall_index = "modules/recall-index/recall_index"

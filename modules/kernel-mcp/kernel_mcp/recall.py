@@ -1,6 +1,7 @@
 """Ranked recall over claims, shared by the MCP `search` tool and the harness hooks.
 
-Postgres full-text search, no extension: each claim's text is its literal value plus the words of its
+With a recall-index module installed (it adds `api.recall(text, int)`, D-60), ranking is that module's
+(BM25 over its index); otherwise Postgres full-text search, no extension: each claim's text is its literal value plus the words of its
 subject IRI; the query is any word of the input (OR of its lexemes), ranked by ts_rank_cd, then
 belief. When nothing matches, a case-insensitive substring match on labels and subject IRIs is the
 fallback (short inputs, partial words, identifiers). Runs under the caller's role, so RLS applies.
@@ -30,6 +31,21 @@ select coalesce(jsonb_agg(to_jsonb(r)), '[]'::jsonb) from (
     (predicate = '{LABEL}' and object_value->>'@value' ilike %(pat)s)
     or (predicate in ('{LABEL}', '{TYPE}') and subject ilike %(pat)s))
   order by (predicate = '{LABEL}') desc, subject limit %(n)s) r"""
+
+
+INSTALLED = "select to_regprocedure('api.recall(text,integer)') is not null"
+READY = "select exists (select 1 from recall.corpus where n > 0)"   # only once INSTALLED: the index has rows
+VIA_INDEX = "select api.recall(%(text)s, %(n)s)"
+
+
+def indexed(conn) -> bool:
+    """Whether the recall index is installed and has rows (a synchronous connection)."""
+    return bool(conn.execute(INSTALLED).fetchone()[0] and conn.execute(READY).fetchone()[0])
+
+
+def ranked(indexed: bool) -> str:
+    """The ranked-recall statement: the recall-index module's when installed."""
+    return VIA_INDEX if indexed else RANKED
 
 
 def params(text: str, limit: int) -> dict:

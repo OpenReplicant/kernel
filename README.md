@@ -41,7 +41,7 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | `kk up [PROJECT]` | all of the below for one project: the stack, the logins, the MCP entry, skill and hooks |
 | `kk init` | installs kernel v0, every default module's migration and the vocabulary packs (once) |
 | `kk person add NAME` / `kk agent add NAME` | an own login that can act only as itself (D-37) |
-| `kk serve [--only mcp,validator,belief]` | the running kernel: one process, or one container per part; the UI at `/ui` |
+| `kk serve [--only mcp,validator,belief,recall]` | the running kernel: one process, or one container per part; the UI at `/ui` |
 | `kk status` | who you are, what you can see, what is waiting for review |
 | `kk review list \| show \| approve \| reject` | the review lane, as yourself |
 | `kk scan --repo DIR` | ingest a repository (ingest filter first; needs gitleaks) |
