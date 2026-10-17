@@ -27,7 +27,6 @@ import sys
 from pathlib import Path
 
 import yaml
-from psycopg import sql
 
 PERMISSIVE = {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "PSF-2.0", "0BSD", "Unlicense",
               "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later"}
@@ -122,6 +121,7 @@ def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str,
     result["migration"] = "applied" if not exists and migration.exists() else "skipped (role exists)" if exists else "none"
 
     if manifest["runtime"]["type"] in SANDBOXED:
+        from psycopg import sql
         pw = secrets.token_urlsafe(24)
         conn.execute(sql.SQL("alter role {} login password {}").format(sql.Identifier(role), sql.Literal(pw)))
         out.mkdir(parents=True, exist_ok=True)
