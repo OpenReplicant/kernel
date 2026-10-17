@@ -286,7 +286,9 @@ def save(result: dict) -> None:
     runs = HERE / "runs"
     runs.mkdir(exist_ok=True)
     model = "-" + re.sub(r"[^a-z0-9]+", "-", "-".join(result["models"]).lower()).strip("-") if result.get("models") else ""
-    method = "-bm25" if "BM25" in str(result.get("recall", "")) else "-fts" if result["stage"] == "retrieval" else ""
+    recall = str(result.get("recall", ""))
+    method = ("-hybrid" if "recall_hybrid" in recall else "-bm25" if "BM25" in recall
+              else "-fts" if result["stage"] == "retrieval" else "")
     path = runs / f"{date.today().isoformat()}-{result['stage']}{method}{model[:60]}.json"
     path.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

@@ -54,7 +54,7 @@ Our first SciFact run used `ts_rank_cd` over an OR of lexemes and scored nDCG@10
    - For multilingual text or long (32K-token) context: Qwen3-Embedding-0.6B (Apache-2.0) scores 61.83 on MTEB English v2 retrieval [5b].
    - Recommendation: bge-base-en-v1.5 or gte-base-en-v1.5 as the default (CPU-friendly), with Qwen3-Embedding-0.6B as an optional upgrade.
    - Fusion: start with RRF (Cormack et al. 2009 [7]), which needs no tuning. Bruch et al. found a tuned convex combination beats RRF in and out of domain, needs few labels, and that RRF is sensitive to its parameter [8]. Expose both.
-   - ⚠ I found no published BM25+dense hybrid number for SciFact itself, so we must measure it.
+   - ⚠ I found no published BM25+dense hybrid number for SciFact itself, so we must measure it. Measured (D-61): bge-small + BM25, min-max averaged, 0.730 offline and 0.723 through the kernel, against BM25 0.659.
 
 ### Optional modules (ranked by expected gain per cost)
 
