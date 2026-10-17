@@ -20,6 +20,7 @@ import json
 import os
 import re
 import runpy
+import shutil
 import sys
 from datetime import date
 from pathlib import Path
@@ -29,28 +30,34 @@ SRC = Path(os.environ.get("RCAEVAL_DIR") or Path.home() / ".cache/knowledge-kern
 
 
 def windowed(window: int):
-    """The kernel's Analyse view of a case: window means, robust z after the injection."""
-    import numpy as np
-    from sklearn.preprocessing import RobustScaler
-
-    from RCAEval.io.time_series import preprocess
+    """The kernel's Analyse view of a case: window means, robust z after the injection (packs.zscores,
+    the same scoring as the evidence packs). Columns are not dropped for being flat before the fault:
+    RCAEval's preprocess, applied to the windows before and after separately as its baselines do, drops
+    exactly the counters that switch on with it (D-65)."""
+    sys.path.insert(0, str(HERE))
+    import packs
 
     def method(data, inject_time=None, dataset=None, **kwargs):
-        data = data.copy()
-        data["window"] = (data["time"] - inject_time) // window   # windows aligned to the injection
-        means = data.groupby("window").mean(numeric_only=True)
-        normal = preprocess(data=means[means.index < 0].reset_index(drop=True), dataset=dataset)
-        anomal = preprocess(data=means[means.index >= 0].reset_index(drop=True), dataset=dataset)
-        cols = [c for c in normal.columns if c in anomal.columns]
-        ranks = []
-        for col in cols:
-            a, b = normal[col].to_numpy(), anomal[col].to_numpy()
-            if len(a) < 2 or len(b) < 1:
-                continue
-            z = RobustScaler().fit(a.reshape(-1, 1)).transform(b.reshape(-1, 1))[:, 0]
-            ranks.append((col, float(np.nanmax(z)) if np.isfinite(z).any() else 0.0))
-        ranks.sort(key=lambda x: x[1], reverse=True)
-        return {"node_names": cols, "ranks": [c for c, _ in ranks]}
+        packs.WINDOW = window
+        obs = packs.zscores(data, inject_time, "metric")
+        obs.sort(key=lambda o: -abs(o["z"]))
+        cols = [o["signal"].split(" ", 1)[1] for o in obs]
+        return {"node_names": cols, "ranks": cols}
+    return method
+
+
+def replay(path: str, keymap: str | None = None):
+    """A model's rankings (JSON lines {"key": "<suite>/<service_fault>/<n>", "answer": {"ranks": [...]}}, as
+    from packs.py build), scored by RCAEval's own evaluator like any method."""
+    got, keys = {}, json.loads(Path(keymap).read_text()) if keymap else {}
+    for line in Path(path).read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            got[keys.get(r["key"], r["key"])] = list((r["answer"] if isinstance(r["answer"], dict) else {}).get("ranks", []))
+
+    def method(data, inject_time=None, dataset=None, args=None, **kwargs):
+        case = Path(args.data_path).parent
+        return {"ranks": got.get(f"{case.parent.parent.name}/{case.parent.name}/{case.name}", [])}
     return method
 
 
@@ -59,13 +66,19 @@ def main() -> int:
     ap.add_argument("--dataset", required=True)
     ap.add_argument("--method", default="kernel")
     ap.add_argument("--window", type=int, default=60)
+    ap.add_argument("--answers", help="for --method answers: a model's rankings (JSON lines)")
+    ap.add_argument("--keys", help="for --method answers: the key map packs.py build wrote")
+    ap.add_argument("--label", default="", help="a name for the run, e.g. the model")
     a = ap.parse_args()
     os.chdir(SRC)
     sys.path.insert(0, str(SRC))
+    # RCAEval's main.py writes each case's result to output/results and scores every file there: clear
+    # it, or one run's results are scored again with the next (D-65).
+    shutil.rmtree(SRC / "output" / "results", ignore_errors=True)
     method = a.method
-    if a.method == "kernel":
+    if a.method in ("kernel", "answers"):
         import RCAEval.e2e as e2e
-        e2e.dummy = windowed(a.window)
+        e2e.dummy = windowed(a.window) if a.method == "kernel" else replay(a.answers, a.keys)
         method = "dummy"
     sys.argv = ["main.py", "--method", method, "--dataset", a.dataset, "--report-chance"]
     out = io.StringIO()
@@ -77,7 +90,7 @@ def main() -> int:
     if not scores:
         print(text)
         return 1
-    name = a.method + (f"-w{a.window}" if a.method == "kernel" else "")
+    name = a.method + (f"-w{a.window}" if a.method == "kernel" else "") + (f"-{a.label}" if a.label else "")
     result = {"benchmark": "RCAEval", "dataset": a.dataset, "method": name, "avg@5": scores,
               "avg@5_mean": round(sum(scores.values()) / len(scores), 4), "chance@5": chance,
               "rcaeval_commit": os.popen(f"git -C {SRC} rev-parse HEAD").read().strip()}

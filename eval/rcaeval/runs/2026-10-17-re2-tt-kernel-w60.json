@@ -1,0 +1,23 @@
+{
+  "benchmark": "RCAEval",
+  "dataset": "re2-tt",
+  "method": "kernel-w60",
+  "avg@5": {
+    "CPU": 0.75,
+    "MEM": 0.93,
+    "DISK": 0.93,
+    "SOCKET": 0.58,
+    "DELAY": 0.24,
+    "LOSS": 0.43
+  },
+  "avg@5_mean": 0.6433,
+  "chance@5": {
+    "CPU": 0.04,
+    "MEM": 0.04,
+    "DISK": 0.04,
+    "SOCKET": 0.04,
+    "DELAY": 0.04,
+    "LOSS": 0.04
+  },
+  "rcaeval_commit": "259ea4167160256a74ad30004aa3d96a998c846e"
+}

@@ -75,7 +75,7 @@ No benchmark runs an LLM-driven MAPE-K loop on docker-compose end to end. By sta
 
 | Stage | Benchmark | Published to compare with |
 | --- | --- | --- |
-| Analyse (metrics) | [RCAEval](https://github.com/phamquiluan/RCAEval) RE1, MIT ([arXiv 2412.17015](https://arxiv.org/abs/2412.17015)) | ~15 baselines (BARO, N-Sigma, CIRCA, RCD …), Avg@5. **The kernel's 60 s windows: 0.817 mean, against BARO 0.761 and N-Sigma 0.837** (`eval/rcaeval/`, D-63) |
+| Analyse (metrics) | [RCAEval](https://github.com/phamquiluan/RCAEval) RE1, MIT ([arXiv 2412.17015](https://arxiv.org/abs/2412.17015)) | ~15 baselines (BARO, N-Sigma, CIRCA, RCD …), Avg@5. The kernel's 60 s windows: RE1 mean 0.872 (BARO 0.578, N-Sigma 0.809); RE2-OB 0.935 (N-Sigma 0.913). **Haiku over the kernel's observations: RE2-OB 0.982, RE2-TT 0.960** (N-Sigma 0.913 / 0.790) (`eval/rcaeval/`, D-65; D-63's first numbers are superseded) |
 | Analyse (logs, traces), knowledge value | RCAEval RE2/RE3; [ITBench-AA](https://huggingface.co/datasets/ArtificialAnalysis/ITBench-AA) (CC BY 4.0) | ITBench-AA: Gemma 4 31B 37%, Opus 4.7 47% |
 | Plan | [SWIM](https://github.com/cps-sei/swim) (SEAMS 2018) | an LLM manager at ~71% of the reactive baseline's utility ([arXiv 2404.09866](https://arxiv.org/abs/2404.09866)) |
 | Full loop | [SREGym](https://github.com/SREGym/SREGym) (MIT, NeurIPS 2026), [AIOpsLab](https://github.com/microsoft/AIOpsLab) (MIT) | AIOpsLab ReAct: detection 77%, RCA 45%, mitigation 36% |

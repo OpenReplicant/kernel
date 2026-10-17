@@ -1,0 +1,23 @@
+{
+  "benchmark": "RCAEval",
+  "dataset": "re2-ob",
+  "method": "mmbaro",
+  "avg@5": {
+    "CPU": 0.65,
+    "MEM": 0.89,
+    "DISK": 0.8,
+    "SOCKET": 0.71,
+    "DELAY": 0.67,
+    "LOSS": 0.81
+  },
+  "avg@5_mean": 0.755,
+  "chance@5": {
+    "CPU": 0.25,
+    "MEM": 0.25,
+    "DISK": 0.25,
+    "SOCKET": 0.25,
+    "DELAY": 0.25,
+    "LOSS": 0.25
+  },
+  "rcaeval_commit": "259ea4167160256a74ad30004aa3d96a998c846e"
+}

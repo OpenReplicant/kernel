@@ -3,13 +3,13 @@
   "dataset": "re1-ob",
   "method": "kernel-w60",
   "avg@5": {
-    "CPU": 0.98,
+    "CPU": 0.95,
     "MEM": 0.99,
     "DISK": 0.93,
     "DELAY": 0.96,
-    "LOSS": 0.68
+    "LOSS": 0.64
   },
-  "avg@5_mean": 0.908,
+  "avg@5_mean": 0.894,
   "chance@5": {
     "CPU": 0.23,
     "MEM": 0.23,
