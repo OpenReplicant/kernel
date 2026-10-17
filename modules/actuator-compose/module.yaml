@@ -1,0 +1,43 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:actuator-compose
+name: 'Actuator: compose services'
+version: 0.1.0
+description: 'The Execute step of the MAPE-K loop: carries out plan steps that a person approved in the
+  review lane, from a fixed action list (scale a service to n replicas, restart it), on an allow list of
+  compose services, through a Docker socket proxy that allows only container endpoints. Never writes
+  claims: what it did is a run with plan_step and used; the metrics observer records the effect (D-53).'
+license: Apache-2.0
+kind: actuator
+slots:
+- actuator
+- orchestrator-driver
+protected: true
+agent:
+  iri: urn:kk:agent:actuator-compose
+  db_role: kkm_actuator_compose
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+network:
+  reach:
+  - docker-proxy
+runtime:
+  type: python-service
+  entrypoint: python -m actuator_compose
+  env:
+    DATABASE_URL: the module's own login
+    KK_COMPOSE_PROJECT: the compose project whose services it acts on
+    KK_ACTUATOR_SERVICES: comma-separated allow list of services
+    KK_MAX_REPLICAS: upper bound for scale (default 5)
+    DOCKER_HOST: the socket proxy (default tcp://docker-proxy:2375)
+accepts:
+- http://www.w3.org/ns/sosa/Actuation
+produces: []
+triggers:
+- type: notify
+  spec: kernel_change_set (applied)
+mcp:
+  expose: []
+migration: migration.sql

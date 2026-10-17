@@ -1,0 +1,39 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:anomaly
+name: Anomaly processor
+version: 0.1.0
+description: 'The Analyse step of the MAPE-K loop: reads the services'' observations (metrics observer)
+  and documented limits and claims each anomaly — over the limit, or more than three standard deviations
+  from recent windows — as an oa:Annotation on the service''s node, valid for the window, inferred and
+  derived from the observation and what it was compared with (D-53).'
+license: Apache-2.0
+kind: processor
+slots:
+- reasoner
+protected: false
+agent:
+  iri: urn:kk:agent:anomaly
+  db_role: kkm_anomaly
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m anomaly
+  env:
+    DATABASE_URL: the module's own login
+    KK_SWEEP_SECONDS: sweep interval (default 30)
+accepts:
+- http://www.w3.org/ns/sosa/Observation
+produces:
+- add_claim
+triggers:
+- type: notify
+  spec: kernel_change_set (applied)
+mcp:
+  expose: []
+migration: migration.sql

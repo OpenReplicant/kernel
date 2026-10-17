@@ -59,6 +59,10 @@ jobs:
         run: python modules/conformance/tests/test_compare.py
       - name: Metrics observer tests (M2-T5)
         run: python modules/observer-prometheus/tests/test_observe.py
+      - name: Anomaly and actuator tests (M2-T6)
+        run: |
+          python modules/anomaly/tests/test_detect.py
+          python modules/actuator-compose/tests/test_plan.py
       - name: Belief eval (T7)
         run: python modules/belief-corroboration/tests/test_eval.py
       - name: Generated pack migration is up to date
@@ -116,7 +120,7 @@ jobs:
           docker run --rm knowledge-kernel:local gitleaks version
       - name: A module installs into its own sandboxed container (T18)
         run: sh scripts/e2e_module.sh
-      - name: Devops demo stack and the metrics observer, sandboxed (M2-T5)
+      - name: Devops demo stack, metrics observer and the MAPE-K loop, sandboxed (M2-T5, M2-T6)
         run: sh scripts/e2e_devops.sh
       - name: Compose file is valid
         run: |
