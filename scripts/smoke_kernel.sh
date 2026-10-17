@@ -68,5 +68,7 @@ elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
 else
   echo "skip the UI check (no playwright; npm install --no-save playwright to run it)"
 fi
+# D-60: the recall index (BM25) that kk serve keeps; scopes and redaction respected.
+KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_recall.py"
 # M3-T1: kk up connects a project folder (last: it gives the owner a new login).
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_up.py"

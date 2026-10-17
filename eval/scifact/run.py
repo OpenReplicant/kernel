@@ -108,9 +108,11 @@ def retrieval(limit: int = 200) -> dict:
     prefix = f"urn:kk:paper:{SOURCE}:"
     scores, recalls, ms = [], [], []
     with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
+        indexed = recall.indexed(db)
+        statement = recall.ranked(indexed)
         for q, rel in sorted(qrels.items(), key=lambda kv: int(kv[0])):
             t0 = time.perf_counter()
-            rows = db.execute(recall.RANKED, recall.params(claims[int(q)], limit)).fetchone()[0]
+            rows = db.execute(statement, recall.params(claims[int(q)], limit)).fetchone()[0]
             ms.append((time.perf_counter() - t0) * 1000)
             ranked = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))
             scores.append(ndcg10(ranked, rel))
@@ -120,7 +122,8 @@ def retrieval(limit: int = 200) -> dict:
            f"recall@{limit}claims": round(statistics.mean(recalls), 4),
            "latency_ms": {"p50": round(ms[len(ms) // 2]), "p95": round(ms[int(len(ms) * 0.95)]), "max": round(ms[-1])},
            "baseline": {"bm25_ndcg@10": 0.665, "source": "BEIR (Thakur et al. 2021)"},
-           "recall": "kernel_mcp.recall.RANKED (Postgres full-text search, OR of lexemes, ts_rank_cd, no index)"}
+           "recall": "api.recall: BM25 over the recall-index module (k1 1.2, b 0.75)" if indexed else
+                     "kernel_mcp.recall.RANKED (Postgres full-text search, OR of lexemes, ts_rank_cd, no index)"}
     return out
 
 
@@ -156,7 +159,8 @@ def prompts(n: int, k: int) -> list[dict]:
     abstracts, prefix, items = corpus(), f"urn:kk:paper:{SOURCE}:", []
     with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
         for c in sample(n):
-            rows = db.execute(recall.RANKED, recall.params(c["claim"], 60)).fetchone()[0]
+            rows = db.execute(recall.ranked(recall.indexed(db)),
+                              recall.params(c["claim"], 60)).fetchone()[0]
             docs = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))[:k]
             for d in docs:
                 text = "\n".join(f"[{i}] {s}" for i, s in enumerate(abstracts[d]))
@@ -176,13 +180,16 @@ def ask(prompt: str) -> tuple[str, str]:
     for attempt in range(6):
         req = urllib.request.Request(url, body, {"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with urllib.request.urlopen(req, timeout=180) as r:
                 out = json.load(r)
-            return out["choices"][0]["message"]["content"] or "", out.get("model", "")
-        except urllib.error.HTTPError as e:
-            if e.code not in (429, 500, 502, 503) or attempt == 5:
-                raise
-            time.sleep(2 ** attempt * 5)
+            if out.get("choices"):
+                return out["choices"][0]["message"]["content"] or "", out.get("model", "")
+            if attempt == 5:                    # an error inside a 200 answer (upstream limits): no verdict
+                return "", f"error: {str(out.get('error', out))[:80]}"
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as e:
+            if getattr(e, "code", 429) not in (429, 500, 502, 503) or attempt == 5:
+                return "", f"error: {e}"
+        time.sleep(2 ** attempt * 5)
     raise RuntimeError("unreachable")
 
 
@@ -279,7 +286,8 @@ def save(result: dict) -> None:
     runs = HERE / "runs"
     runs.mkdir(exist_ok=True)
     model = "-" + re.sub(r"[^a-z0-9]+", "-", "-".join(result["models"]).lower()).strip("-") if result.get("models") else ""
-    path = runs / f"{date.today().isoformat()}-{result['stage']}{model[:60]}.json"
+    method = "-bm25" if "BM25" in str(result.get("recall", "")) else "-fts" if result["stage"] == "retrieval" else ""
+    path = runs / f"{date.today().isoformat()}-{result['stage']}{method}{model[:60]}.json"
     path.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
 

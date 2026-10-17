@@ -147,10 +147,11 @@ async def get_entity(ctx: Context, iri: str) -> dict:
 
 @mcp.tool()
 async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
-    """Claims ranked by relevance to the text (any words; full-text over values and subject IRIs, then
-    belief), or by substring on labels and IRIs when no word matches. Each has id, status, belief, rank."""
+    """Claims ranked by relevance to the text (any words; BM25, or full-text search without the recall
+    index, over values and subject IRIs, then belief), or by substring on labels and IRIs when no word matches. Each has id, status, belief, rank."""
     args = recall.params(text, limit)
-    return await query(ctx, recall.RANKED, args) or await query(ctx, recall.SUBSTRING, args)
+    ranked = recall.ranked(await query(ctx, recall.INSTALLED) and await query(ctx, recall.READY))
+    return await query(ctx, ranked, args) or await query(ctx, recall.SUBSTRING, args)
 
 
 @mcp.tool()
