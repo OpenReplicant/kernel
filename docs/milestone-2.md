@@ -34,15 +34,17 @@ agent work guided by skill files, recorded under the agent's own identity.
 | M2-T4 | **BPM view** (view module): the process map (documented vs observed, frequencies, discrepancies highlighted), each edge explaining its claims | Playwright: map renders; a discrepancy explains | done (D-51; `scripts/e2e_ui.mjs`) |
 | M2-T5 | **Metrics observer** (worker, devops): queries Prometheus's HTTP API on a schedule and records observed claims per service and window (SOSA observations), linked to the compose self-model's nodes. Needs network beyond Postgres: the manifest declares the hosts and `kk module install` adds exactly that network (decision) | a demo stack with Prometheus gives windowed observations for each service | done (D-52; `scripts/e2e_devops.sh`) |
 | M2-T6 | **MAPE-K loop**: an anomaly processor (thresholds and z-scores per window → anomaly claims derived from observations); a skill for the harness agent to plan adaptations as change sets (review lane); an actuator (orchestrator-driver slot) that carries out approved plans with a fixed action list (restart, scale) and records what it did; it never writes claims about its own success (the observer does) | demo: a stressed service → anomaly → proposed plan → approved → scaled → recovery observed; every step cites claims | done (D-53; `scripts/e2e_devops.sh`) |
-| M2-T7 | **Devops view** (view module): service topology with current observations and anomalies, and the MAPE-K timeline (observed → analysed → planned → approved → executed → observed) | Playwright: the timeline of the demo run renders and explains | next |
+| M2-T7 | **Devops view** (view module): service topology with current observations and anomalies, and the MAPE-K timeline (observed → analysed → planned → approved → executed → observed) | Playwright: the timeline of the demo run renders and explains | done (D-54; `scripts/e2e_devops_ui.mjs`) |
 
 ## Gates
 
-| Gate | Check |
-| --- | --- |
-| M2-G1 | **BPM demo**: from a sample event log and BPMN file, a person sees the observed and documented process in the UI and reviews every planted discrepancy, each citing its evidence with belief |
-| M2-G2 | **Devops demo**: the MAPE-K run above end to end on the compose stack, with a person's approval as the only manual step, and every claim in the timeline cited |
-| M2-G3 | Every new module installs with `kk module install` and runs sandboxed; the kernel tests, G4 and G7 still pass |
+| Gate | Check | Status |
+| --- | --- | --- |
+| M2-G1 | **BPM demo**: from a sample event log and BPMN file, a person sees the observed and documented process in the UI and reviews every planted discrepancy, each citing its evidence with belief | passes (`scripts/smoke_kernel.sh`: e2e_bpm.py, e2e_ui.mjs) |
+| M2-G2 | **Devops demo**: the MAPE-K run above end to end on the compose stack, with a person's approval as the only manual step, and every claim in the timeline cited | passes (`scripts/e2e_devops.sh`) |
+| M2-G3 | Every new module installs with `kk module install` and runs sandboxed; the kernel tests, G4 and G7 still pass | passes (`e2e_module.sh`, `e2e_devops.sh`, smoke; D-54 d) |
+
+**Milestone 2 is done** (Oct 2026): M2-T0–T7, M2-G1–G3.
 
 ## Decided by default (D-47 e)
 

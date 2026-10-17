@@ -199,6 +199,20 @@ async def get_change_set(ctx: Context, change_set_id: str) -> dict:
 
 
 @mcp.tool()
+async def list_runs(ctx: Context, plan_step: str | None = None, used: str | None = None, module: str | None = None,
+                    limit: int = 50) -> list[dict]:
+    """Runs (prov:Activity), newest first: who ran what, for which plan step, using which claims, with
+    status, times and outputs. Filter by plan step IRI, a claim id or IRI the run used, or module IRI.
+    An actuator's runs are how it records what it did (it never writes claims)."""
+    return await query(ctx, rows(
+        "select id, agent, module, plan_step, status, started_at, ended_at, used, cost as outputs, info from kernel.run"
+        " where (%(ps)s::text is null or plan_step = %(ps)s) and (%(m)s::text is null or module = %(m)s)"
+        "   and (%(u)s::text is null or used ? %(u)s)"
+        " order by started_at desc limit %(n)s"),
+        {"ps": expand(plan_step), "m": expand(module), "u": used, "n": max(1, min(limit, 500))})
+
+
+@mcp.tool()
 async def finish_run(ctx: Context, run_id: str, status: str = "succeeded", cost: dict | None = None) -> str:
     """Finish one of your runs: status succeeded or failed, cost e.g. {"tokens": 1200, "ms": 5300}."""
     await query(ctx, "select api.finish_run(%s::uuid, %s, %s)", (run_id, status, Jsonb(cost or {})))
