@@ -320,7 +320,11 @@ def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = 
     if policy == "first":
         if not prompts_file:
             sys.exit("--policy first needs --prompts (the recall ranks)")
-        rank = {it["key"]: it.get("rank", 99) for it in map(json.loads, open(prompts_file))}
+        rank, seen = {}, {}
+        for it in map(json.loads, open(prompts_file)):   # recall order, also for prompt files without "rank"
+            cid = it["key"].split("|")[0]
+            seen[cid] = seen.get(cid, 0) + 1
+            rank[it["key"]] = it.get("rank", seen[cid])
         answers = first_verdict(answers, rank)
     return {"stage": "verify", "k": k, "split": SPLIT, "prompt": os.environ.get("KK_EVAL_PROMPT", "default"),
             "policy": policy, "models": models, "missing_answers": len(missing), **score(sample(n), corpus(), answers),

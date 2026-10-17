@@ -1,0 +1,34 @@
+{
+  "stage": "verify",
+  "k": 3,
+  "split": "train",
+  "prompt": "strict",
+  "policy": "first",
+  "models": {
+    "claude-haiku-sub-agent-hybrid-200": 800
+  },
+  "missing_answers": 0,
+  "claims": 200,
+  "claims_with_evidence": 120,
+  "pairs_gold": 130,
+  "pairs_predicted": 115,
+  "abstract_label_only": {
+    "precision": 0.7913,
+    "recall": 0.7,
+    "f1": 0.7429
+  },
+  "abstract_rationalized": {
+    "precision": 0.7304,
+    "recall": 0.6462,
+    "f1": 0.6857
+  },
+  "claim_accuracy_with_kernel": 0.775,
+  "claim_accuracy_closed_book": 0.7417,
+  "quote_fidelity": {
+    "quotes": 138,
+    "found_verbatim": 138,
+    "rate": 1.0
+  },
+  "unparsed": 0,
+  "baselines": "compare with the SciFact leaderboard's abstract-level metrics on the dev set; open retrieval"
+}
