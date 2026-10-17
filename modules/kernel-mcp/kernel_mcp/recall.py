@@ -1,12 +1,16 @@
 """Ranked recall over claims, shared by the MCP `search` tool and the harness hooks.
 
 With a recall-index module installed (it adds `api.recall(text, int)`, D-60), ranking is that module's
-(BM25 over its index); otherwise Postgres full-text search, no extension: each claim's text is its literal value plus the words of its
+(BM25 over its index), fused with dense embeddings when the recall-dense module has an index and
+fastembed is installed here (`api.recall_hybrid`, D-61); otherwise Postgres full-text search, no extension: each claim's text is its literal value plus the words of its
 subject IRI; the query is any word of the input (OR of its lexemes), ranked by ts_rank_cd, then
 belief. When nothing matches, a case-insensitive substring match on labels and subject IRIs is the
 fallback (short inputs, partial words, identifiers). Runs under the caller's role, so RLS applies.
 """
 from __future__ import annotations
+
+import os
+import sys
 
 COLUMNS = ("id, subject, predicate, object_entity, object_value, qualifiers, scope, evidence_type, "
            "attributed_to, status, belief, valid_from, valid_to")
@@ -38,19 +42,67 @@ READY = "select exists (select 1 from recall.corpus where n > 0)"   # only once 
 VIA_INDEX = "select api.recall(%(text)s, %(n)s)"
 
 
+DENSE = ("select case when to_regclass('recall_dense.vec') is not null then "
+         "(select model from recall_dense.state where exists (select 1 from recall_dense.vec)) end")
+VIA_HYBRID = "select api.recall_hybrid(%(text)s, %(vec)s::vector, %(n)s)"
+MODEL = "BAAI/bge-small-en-v1.5"   # 384 dimensions, MIT; the recall-dense module's index is built with it
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "   # bge's query instruction
+_models: dict = {}
+
+
+def embedder(model: str = MODEL, download: bool = False):
+    """The embedding model (fastembed, ONNX on CPU), loaded once from KK_EMBED_CACHE (default
+    ~/.cache/knowledge-kernel/fastembed). Only the recall-dense worker downloads it (download=True): a
+    search never waits on the network. None when fastembed is not installed or the model is not there."""
+    if _models.get(model) is None:
+        try:
+            from fastembed import TextEmbedding
+            cache = os.environ.get("KK_EMBED_CACHE") or os.path.expanduser("~/.cache/knowledge-kernel/fastembed")
+            _models[model] = TextEmbedding(model_name=model, cache_dir=cache, local_files_only=not download)
+        except Exception as e:  # recall falls back to BM25; say why
+            print(f"dense recall off: {model}: {str(e)[:200]}", file=sys.stderr)
+            return None
+    return _models[model]
+
+
+def vector(text: str, model: str = MODEL) -> str | None:
+    """The query's embedding as a pgvector literal, or None when there is no embedder."""
+    m = embedder(model)
+    if m is None:
+        return None
+    v = next(iter(m.embed([QUERY_PREFIX + text])))
+    return "[" + ",".join(f"{x:.6f}" for x in v) + "]"
+
+
 def indexed(conn) -> bool:
     """Whether the recall index is installed and has rows (a synchronous connection)."""
     return bool(conn.execute(INSTALLED).fetchone()[0] and conn.execute(READY).fetchone()[0])
 
 
-def ranked(indexed: bool) -> str:
-    """The ranked-recall statement: the recall-index module's when installed."""
+def dense(conn) -> str | None:
+    """The dense index's model when the recall-dense module is installed and has rows."""
+    return conn.execute(DENSE).fetchone()[0]
+
+
+def ranked(indexed: bool, vec: str | None = None) -> str:
+    """The ranked-recall statement: BM25 fused with dense recall when there is a query vector, BM25 when
+    the recall index is installed, else full-text search."""
+    if indexed and vec:
+        return VIA_HYBRID
     return VIA_INDEX if indexed else RANKED
 
 
-def params(text: str, limit: int) -> dict:
-    return {"text": text, "n": max(1, min(limit, 200)),
+def params(text: str, limit: int, vec: str | None = None) -> dict:
+    return {"text": text, "n": max(1, min(limit, 200)), "vec": vec,
             "pat": "%" + text.replace("\\", "").replace("%", "").replace("_", r"\_") + "%"}
+
+
+def plan(conn, text: str, limit: int) -> tuple[str, dict]:
+    """The statement and parameters for ranked recall of `text` on a synchronous connection."""
+    on = indexed(conn)
+    model = dense(conn) if on else None
+    vec = vector(text, model) if model else None
+    return ranked(on, vec), params(text, limit, vec)
 
 
 def short(iri: str, prefixes: dict[str, str]) -> str:

@@ -65,6 +65,9 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - Recall quality decides whether the kernel helps at all: with plain full-text search a good model did
   worse with the kernel than alone (SciFact, D-59); with BM25 it did much better (D-60). Measure recall
   before building on it.
+- A search path must never wait on a model download: harness subprocesses get a stripped environment
+  (no proxy CA), and fastembed retries for ~40 s before failing. Queries load the model from the local
+  cache only; the worker downloads it (D-61).
 - Free model endpoints are rate-limited upstream per model (429 from a shared pool even with quota
   left); probe a few and record which model answered.
 

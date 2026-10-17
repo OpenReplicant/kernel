@@ -1,0 +1,25 @@
+# Dense recall (D-61): fastembed==0.7.3 and what it pulls in, from a clean install (python 3.13).
+# All permissive (Apache-2.0, MIT, BSD, HPND). Regenerate: pip install fastembed==0.7.3 && pip freeze
+certifi==2026.7.22
+charset-normalizer==3.5.2
+fastembed==0.7.3
+filelock==4.2.1
+flatbuffers==25.12.19
+fsspec==2026.9.0
+hf-xet==1.7.0
+huggingface_hub==0.36.2
+idna==3.20
+loguru==0.7.3
+mmh3==5.3.1
+numpy==2.5.4
+onnxruntime==1.31.0
+packaging==26.3
+pillow==11.3.0
+protobuf==7.36.2
+py_rust_stemmers==0.1.8
+PyYAML==6.0.3
+requests==2.34.2
+tokenizers==0.23.3
+tqdm==4.70.1
+typing_extensions==4.16.0
+urllib3==2.8.0

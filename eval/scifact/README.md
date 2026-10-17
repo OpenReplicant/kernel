@@ -30,7 +30,17 @@ python eval/scifact/run.py verify --n 60 --answers answers.jsonl                
 Runs are kept in `runs/` (results only, no data). `test_score.py` checks the scorer on a fixture,
 including that broken answers score worse.
 
-## Results so far (2026-10-17, 60 dev claims, top 3 abstracts from BM25 recall)
+## Retrieval (2026-10-17, all 300 dev claims)
+
+| Recall | nDCG@10 | Recall, top 200 claims | Query p50 |
+| --- | --- | --- | --- |
+| Postgres full-text search (no index) | 0.296 | | 1,971 ms |
+| BM25, recall-index (D-60) | 0.659 | 0.93 | 274 ms |
+| BM25 + bge-small-en-v1.5, recall-dense (D-61) | 0.723 | 0.97 | 476 ms |
+
+BEIR's BM25 baseline is 0.665.
+
+## Verification so far (2026-10-17, 60 dev claims, top 3 abstracts from BM25 recall)
 
 | Model | Abstract F1 (label) | F1 (rationale) | Claim accuracy, with kernel | Closed book | Quotes verbatim |
 | --- | --- | --- | --- | --- | --- |
