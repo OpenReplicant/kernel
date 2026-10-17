@@ -5,10 +5,11 @@
 3. Give its role its own login: the module acts only as itself and cannot switch roles (D-37).
 4. For a worker (runtime python-service or container) or a command, write a compose service to
    OUT/<name>.yaml and its login to OUT/<name>.env (never committed). The service runs locked down:
-   read-only filesystem, no capabilities, no new privileges, nobody, memory and process limits, and only
-   the internal network that reaches Postgres (no internet), plus, for each service named in the
-   manifest's `network.reach`, an internal network `kk-reach-<name>` that only that service also joins
-   (D-52). A command's service is in the `run`
+   read-only filesystem, no capabilities, no new privileges, nobody, and only the internal network that
+   reaches Postgres (no internet). The sandbox policy (deploy/policy.yaml, D-55) grants the rest: memory
+   and process limits, an internal network `kk-reach-<name>` for each service the module may reach, which
+   only that service also joins (D-52), and a route out if granted. A module that requests network the
+   policy does not grant is refused. A command's service is in the `run`
    profile: it reads its input from KK_INPUT (mounted read-only at /input) and keeps artifacts in the
    kk-artifacts volume.
 
@@ -26,12 +27,12 @@ import sys
 from pathlib import Path
 
 import yaml
-from psycopg import sql
 
 PERMISSIVE = {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "PSF-2.0", "0BSD", "Unlicense",
               "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later"}
 WORKERS = {"python-service", "container"}
 SANDBOXED = WORKERS | {"command"}
+GRANTS = {"reach", "egress", "memory", "pids"}
 
 
 def check(manifest: dict, root: Path, allow_license: bool) -> list[str]:
@@ -46,7 +47,17 @@ def check(manifest: dict, root: Path, allow_license: bool) -> list[str]:
     return errors
 
 
-def service(name: str, manifest: dict, env_file: str, image: str) -> dict:
+def grant(policy: dict, name: str, manifest: dict) -> tuple[dict, list[str]]:
+    """D-55: the policy's grant for one module, and the manifest's requests it leaves out."""
+    own = (policy.get("modules") or {}).get(name) or {}
+    unknown = sorted(set(policy.get("defaults") or {}) - GRANTS) + sorted(set(own) - GRANTS)
+    g = {"reach": [], "egress": False, "memory": "256m", "pids": 64, **(policy.get("defaults") or {}), **own}
+    missing = [f"reach {n}" for n in manifest.get("network", {}).get("reach", []) if n not in g["reach"]]
+    return g, [f"unknown policy key {k!r}" for k in unknown] + missing
+
+
+def service(name: str, manifest: dict, env_file: str, image: str, g: dict | None = None) -> dict:
+    g = g or grant({}, name, {})[0]
     rt = manifest["runtime"]
     svc = {
         "image": rt.get("image") if rt["type"] == "container" else image,
@@ -56,8 +67,8 @@ def service(name: str, manifest: dict, env_file: str, image: str) -> dict:
         "security_opt": ["no-new-privileges:true"],
         "user": "nobody",
         "tmpfs": ["/tmp"],
-        "mem_limit": "256m",
-        "pids_limit": 64,
+        "mem_limit": str(g["memory"]),
+        "pids_limit": int(g["pids"]),
         "networks": ["kernel-db"],
         "depends_on": {"db": {"condition": "service_healthy"}},
         "restart": "unless-stopped",
@@ -71,24 +82,34 @@ def service(name: str, manifest: dict, env_file: str, image: str) -> dict:
                    entrypoint=words[:next((i for i, w in enumerate(words) if w[:2] == "--" or w[:1] == "<"), len(words))],
                    environment={"KK_ARTIFACTS": "/artifacts"},
                    volumes=["${KK_INPUT:?set KK_INPUT to the input folder}:/input:ro", "kk-artifacts:/artifacts"])
-        return {"services": {f"module-{name}": svc}, "volumes": {"kk-artifacts": {}}, **reach(manifest, svc)}
-    return {"services": {f"module-{name}": svc}, **reach(manifest, svc)}
+        return {"services": {f"module-{name}": svc}, "volumes": {"kk-artifacts": {}}, **networks(g, svc)}
+    return {"services": {f"module-{name}": svc}, **networks(g, svc)}
 
 
-def reach(manifest: dict, svc: dict) -> dict:
-    """D-52: one internal network per declared service name, which only that service also joins."""
-    names = [f"kk-reach-{n}" for n in manifest.get("network", {}).get("reach", [])]
-    svc["networks"] += names
-    return {"networks": {n: {"internal": True} for n in names}} if names else {}
+def networks(g: dict, svc: dict) -> dict:
+    """D-52, D-55: one internal network per granted service, which only that service also joins; and
+    kk-egress, the one network with a route out, if granted."""
+    nets = {f"kk-reach-{n}": {"internal": True} for n in g["reach"]}
+    if g["egress"]:
+        nets["kk-egress"] = {}
+    svc["networks"] += list(nets)
+    return {"networks": nets} if nets else {}
 
 
-def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str, allow_license: bool) -> dict:
+def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str, allow_license: bool,
+            policy: Path | None = None) -> dict:
     folder = folder.resolve()
     manifest = yaml.safe_load((folder / "module.yaml").read_text())
+    name = folder.name
+    policy = policy or root / "deploy/policy.yaml"
+    g, denied = grant(yaml.safe_load(policy.read_text()) if policy.exists() else {}, name, manifest)
     errors = check(manifest, root, allow_license)
+    if denied and manifest.get("runtime", {}).get("type") in SANDBOXED:
+        errors.append(f"not granted by the sandbox policy {policy} (D-55): {', '.join(denied)};"
+                      f" an operator grants it under modules.{name} there")
     if errors:
         sys.exit("refused: " + "; ".join(errors))
-    name, role = folder.name, manifest["agent"].get("db_role")
+    role = manifest["agent"].get("db_role")
     result = {"module": manifest["id"], "version": str(manifest["version"]), "role": role}
 
     exists = role and conn.execute("select 1 from pg_roles where rolname = %s", (role,)).fetchone()
@@ -100,6 +121,7 @@ def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str,
     result["migration"] = "applied" if not exists and migration.exists() else "skipped (role exists)" if exists else "none"
 
     if manifest["runtime"]["type"] in SANDBOXED:
+        from psycopg import sql
         pw = secrets.token_urlsafe(24)
         conn.execute(sql.SQL("alter role {} login password {}").format(sql.Identifier(role), sql.Literal(pw)))
         out.mkdir(parents=True, exist_ok=True)
@@ -109,9 +131,9 @@ def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str,
         compose = out / f"{name}.yaml"
         header = (f"# Generated by kk module install from modules/{name} ({manifest['id']} {manifest['version']}).\n"
                   f"# docker compose -f deploy/compose.yaml -f {compose} up -d\n")
-        compose.write_text(header + yaml.safe_dump(service(name, manifest, str(env.resolve()), image),
+        compose.write_text(header + yaml.safe_dump(service(name, manifest, str(env.resolve()), image, g),
                                                    sort_keys=False))
-        result.update(compose=str(compose), env=str(env), service=f"module-{name}")
+        result.update(compose=str(compose), env=str(env), service=f"module-{name}", granted=g)
     return result
 
 
@@ -131,6 +153,8 @@ def main(argv: list[str]) -> None:
                    help="Postgres host:port as the module's container sees it (default db:5432)")
     p.add_argument("--image", default=os.environ.get("KK_IMAGE", "knowledge-kernel:local"))
     p.add_argument("--allow-license", action="store_true")
+    p.add_argument("--policy", type=Path, default=os.environ.get("KK_POLICY"),
+                   help="the sandbox policy (default deploy/policy.yaml, D-55)")
     a = ap.parse_args(argv)
     with admin() as conn:
-        print(json.dumps(install(conn, a.folder, ROOT, a.out, a.db_host, a.image, a.allow_license)))
+        print(json.dumps(install(conn, a.folder, ROOT, a.out, a.db_host, a.image, a.allow_license, a.policy)))

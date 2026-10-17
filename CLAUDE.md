@@ -9,7 +9,7 @@ existing open tooling — what this repo builds is the kernel, its conventions a
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
-2. `docs/milestone-2.md` — current work (BPM and devops); `docs/milestone-1.md` — the kernel (done).
+2. `docs/milestone-3.md` — current work; `docs/milestone-2.md` (BPM and devops) and `docs/milestone-1.md` (the kernel) are done.
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
 5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
@@ -86,7 +86,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
-deploy/          compose.yaml (db, init, kernel = kk serve, caddy), demo/ (devops demo overlay), postgres/ (image),
+deploy/          compose.yaml (db, init, kernel = kk serve, caddy), policy.yaml (sandbox grants), demo/ (devops demo overlay), postgres/ (image),
                  modules/ (installed), mcp/
 scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py,
                  e2e_devops.sh/.py + e2e_devops_ui.mjs, eval_self.py,
@@ -99,7 +99,6 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 
 ## Current milestone
 
-Milestone 1 (the kernel, `docs/milestone-1.md`) and milestone 2 (BPM and devops as modules and views,
-`docs/milestone-2.md`) are done: T0–T20 and M2-T0–T7; G1–G4, G7 and M2-G1–G3 pass (G5 and G6 parked with
-the chain format). The next milestone is the owner's to set. Work one task at a time; each ends with its
-check passing.
+Milestone 3 (`docs/milestone-3.md`): your own data, cited, in minutes — `kk up PROJECT`, a repository
+encoder for any repository, a recall eval, a public event log at scale. Milestones 1 (the kernel) and 2
+(BPM and devops) are done. Work one task at a time; each ends with its check passing.

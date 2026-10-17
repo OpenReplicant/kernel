@@ -1,0 +1,22 @@
+# Sandbox policy (D-55): what each sandboxed module may use. A module's manifest requests network
+# (`network.reach`); this file, kept by the operator, grants it. `kk module install` refuses a module
+# whose requests are not granted here, and builds its container from the grant, so the operator can give
+# a module more than it asks for (a larger memory limit, a route out) or less (it is then refused).
+# Another file: kk module install --policy FILE, or KK_POLICY.
+#
+#   reach    compose services the module reaches, each over its own internal network kk-reach-<name>
+#   egress   true: a route to the internet as well (the network kk-egress); Docker cannot limit it by host
+#   memory   memory limit (Docker units: 256m, 1g)
+#   pids     process limit
+
+defaults:                 # every sandboxed module, before its own entry
+  reach: []
+  egress: false
+  memory: 256m
+  pids: 64
+
+modules:                  # by module folder name; each key replaces the default
+  observer-prometheus:
+    reach: [prometheus]
+  actuator-compose:
+    reach: [docker-proxy]
