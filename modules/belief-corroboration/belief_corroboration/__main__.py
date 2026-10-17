@@ -20,26 +20,32 @@ import psycopg
 from kk.lib import connect, listen, run
 from kk.lib import submit as kernel_submit
 
-from .model import MODEL, Claim, score
+from .model import AGAINST, FOR, MODEL, Claim, score
 
 AGENT = "urn:kk:agent:belief-corroboration"
 MODULE = "urn:kk:module:belief-corroboration-v0"
 FUNCTIONAL_TYPE = "http://www.w3.org/2002/07/owl#FunctionalProperty"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+EVIDENCE = FOR | AGAINST
 COLUMNS = ("id, subject, predicate, object_entity, object_value, statement_key, scope, attributed_to, "
            "valid_from, valid_to, status, belief")
 
 
 def change_sets(cur, watermark) -> tuple[list[dict], object]:
     """The belief change sets one pass would submit, and the new watermark."""
-    cur.execute("""select subject, recorded_at from api.claims
+    cur.execute("""select subject, recorded_at, predicate, object_entity from api.claims
                    where %(w)s::timestamptz is null or recorded_at > %(w)s
                       or (belief is null and status <> 'deprecated')""", {"w": watermark})
     new = cur.fetchall()
     if not new:
         return [], watermark
     watermark = max([r[1] for r in new] + ([watermark] if watermark else []))
-    cur.execute(f"select {COLUMNS} from api.claims where subject = any(%s)", (sorted({r[0] for r in new}),))
+    # The subjects of new claims, and the entities new evidence bears on (D-62), with the evidence
+    # claims that point at them.
+    subjects = sorted({r[0] for r in new} | {r[3] for r in new if r[3] and r[2] in EVIDENCE})
+    cur.execute(f"""select {COLUMNS} from api.claims
+                    where subject = any(%(s)s) or (object_entity = any(%(s)s) and predicate = any(%(e)s))""",
+                {"s": subjects, "e": sorted(EVIDENCE)})
     cols = [d.name for d in cur.description]
     rows = [dict(zip(cols, r)) for r in cur.fetchall()]
     cur.execute("select claim_id, coalesce(artifact, source_uri) from api.claim_references where claim_id = any(%s)",
@@ -53,7 +59,7 @@ def change_sets(cur, watermark) -> tuple[list[dict], object]:
     claims = [Claim(str(r["id"]), r["statement_key"], r["subject"], r["predicate"],
                     json.dumps(r["object_entity"] or r["object_value"], sort_keys=True), r["attributed_to"],
                     frozenset(sources.get(r["id"], ())), r["valid_from"], r["valid_to"],
-                    r["status"] == "deprecated") for r in rows]
+                    r["status"] == "deprecated", r["object_entity"]) for r in rows]
     beliefs = score(claims, functional)
     ops_by_scope: dict[str, list] = {}
     for r in rows:

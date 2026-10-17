@@ -16,7 +16,7 @@ it is never committed or shipped.
 | --- | --- | --- | --- |
 | 1 retrieval | the paper encoder puts the abstracts in the kernel; each claim goes through the kernel's recall (the MCP `search` tool's query) | nDCG@10 and recall against BEIR's BM25 (0.665); query latency; ingest time | nothing but the kernel |
 | 2 verification | for each claim, the top 3 abstracts the kernel recalls go to a model, which labels each and quotes the sentences; the same claim goes to the model alone (closed book) | SciFact abstract-level F1 (label only, and with rationale); claim accuracy with and without the kernel; how many quotes are found verbatim | a model: any OpenAI-compatible endpoint (OpenRouter, Ollama, llama.cpp), or answers from a harness sub-agent (`--answers`) |
-| 3 belief | the stage-2 verdicts recorded as claims (`<paper> cito:supports|cito:refutes <proposition>`, extracted, with the quotes), then the belief model | whether belief in each proposition separates supported from contradicted claims | stage 2; a belief model that reads supports and refutes (not yet) |
+| 3 belief | the stage-2 verdicts recorded as claims (`<paper> cito:supports|cito:refutes <proposition>`, extracted, with the quotes), then the belief model | whether belief in each proposition separates supported from contradicted claims | stage 2 (answers file); the default belief model reads supports and refutes (D-62) |
 
 ```sh
 python eval/scifact/run.py fetch
@@ -25,6 +25,7 @@ AGENT_DATABASE_URL=<an agent's login> python eval/scifact/run.py retrieval
 AGENT_DATABASE_URL=... OPENROUTER_API_KEY=... python eval/scifact/run.py verify --n 100
 AGENT_DATABASE_URL=... python eval/scifact/run.py prompts --n 60 > prompts.jsonl   # for a sub-agent;
 python eval/scifact/run.py verify --n 60 --answers answers.jsonl                   # then score its answers
+AGENT_DATABASE_URL=... python eval/scifact/run.py belief --n 60 --answers answers.jsonl   # stage 3
 ```
 
 Runs are kept in `runs/` (results only, no data). `test_score.py` checks the scorer on a fixture,
@@ -52,3 +53,12 @@ With the kernel's recall a 2.6B model comes within 7 points of Haiku's claim acc
 over its own closed-book accuracy. Small models misquote a few sentences (2–3%), which is the case for
 the quote verifier (M3-T6). With the earlier full-text search instead of BM25, Haiku scored 0.51: recall,
 not the model, was the gap.
+
+## Belief (stage 3, 2026-10-17, Haiku's verdicts on the same 60 claims)
+
+| Supported claims | Contradicted | No evidence | AUC, supported vs contradicted | Sign right | Mean belief (supported / contradicted / none) |
+| --- | --- | --- | --- | --- | --- |
+| 28 | 17 | 15 | 0.97 | 91% | 0.67 / 0.36 / 0.50 |
+
+Most claims have one evidence abstract, so stage 3 mostly carries stage 2's verdicts through. How belief
+accumulates over many works is tested by `eval/belief-v0` and the smoke test (D-62).

@@ -79,6 +79,8 @@ else
 fi
 # D-60: the recall index (BM25) that kk serve keeps; scopes and redaction respected.
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_recall.py"
+# D-62: belief from works that support or refute a proposition.
+$py "$root/scripts/e2e_evidence.py"
 # D-61: dense recall fused with BM25.
 case $parts in
   *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;

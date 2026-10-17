@@ -21,7 +21,7 @@ Rules carry over: kernel v0 stays frozen; every new module runs sandboxed under 
 | M3-T4 | **A public event log at scale** (BPI Challenge, CC BY 4.0, if the license checks out): the event-log encoder and conformance run on it in bounded memory | encodes and checks within a time budget recorded in the decision | |
 | M3-T5 | **Recall that beats the model alone** (D-60, `docs/recall-research.md`): BM25 index as a default module (done); then dense embeddings fused with BM25, then a cross-encoder reranker, each measured on SciFact; then agent memory (LongMemEval) | each step recorded in `eval/scifact/runs/`; kept only if it gains | BM25 done (D-60): nDCG@10 0.659, claim accuracy with the kernel 0.91 vs 0.78 alone; dense + BM25 done, opt-in (D-61): nDCG@10 0.723 |
 | M3-T6 | **Quote verifier** (a verifier module): an extracted claim's quote must occur in its source artifact; claims whose quotes do not are marked, so belief and review can see it | a fabricated quote is caught; a verbatim one passes | |
-| M3-T7 | **Belief from support and contradiction** (belief model v1, competing with v0 in the slot): `cito:supports` and `cito:refutes` from independent sources move a proposition's belief | SciFact stage 3: belief separates supported from contradicted claims | |
+| M3-T7 | **Belief from support and contradiction** (belief model v1, competing with v0 in the slot): `cito:supports` and `cito:refutes` from independent sources move a proposition's belief | SciFact stage 3: belief separates supported from contradicted claims | done (D-62): AUC 0.97, sign right for 91% (Haiku verdicts, 60 claims) |
 
 ## Gates
 

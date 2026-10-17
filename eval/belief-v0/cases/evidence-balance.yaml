@@ -1,0 +1,11 @@
+id: urn:kk:eval:belief-v0/evidence-balance
+description: D-62. One work supports, two independent works refute; one extractor read all three, which does not make them dependent.
+input:
+  functional: []
+  claims:
+  - {id: p, key: label, subject: urn:kk:proposition:p1, predicate: "http://www.w3.org/2000/01/rdf-schema#label", object: "text", agent: eval, sources: [file:claims]}
+  - {id: a, key: ka, subject: urn:w:1, predicate: "http://purl.org/spar/cito/supports", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:1]}
+  - {id: b, key: kb, subject: urn:w:2, predicate: "http://purl.org/spar/cito/refutes", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:2]}
+  - {id: c, key: kc, subject: urn:w:3, predicate: "http://purl.org/spar/cito/refutes", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:3]}
+expect:
+  beliefs: {p: 0.4, a: 0.5, b: 0.5, c: 0.5}

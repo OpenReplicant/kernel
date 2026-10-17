@@ -1,0 +1,11 @@
+id: urn:kk:eval:belief-v0/evidence-same-work-counts-once
+description: D-62. Two agents extract the same support from one work; a second work confirms.
+input:
+  functional: []
+  claims:
+  - {id: p, key: label, subject: urn:kk:proposition:p1, predicate: "http://www.w3.org/2000/01/rdf-schema#label", object: "text", agent: eval, sources: [file:claims]}
+  - {id: a, key: ka, subject: urn:w:1, predicate: "http://purl.org/spar/cito/supports", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:1]}
+  - {id: b, key: ka, subject: urn:w:1, predicate: "http://purl.org/spar/cito/supports", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: y, sources: [urn:w:1]}
+  - {id: c, key: kc, subject: urn:w:2, predicate: "http://purl.org/spar/cito/confirms", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:2]}
+expect:
+  beliefs: {p: 0.75, a: 0.5, b: 0.5, c: 0.5}

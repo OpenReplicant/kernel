@@ -65,6 +65,9 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - Recall quality decides whether the kernel helps at all: with plain full-text search a good model did
   worse with the kernel than alone (SciFact, D-59); with BM25 it did much better (D-60). Measure recall
   before building on it.
+- A CURIE in a change set expands only with a prefix the kernel knows (`kernel.prefix`: rdf, rdfs, owl,
+  dcterms, prov, …); `cito:supports` is refused as "not a known term". Pack vocabularies without a
+  registered prefix go in as full IRIs (D-62).
 - A search path must never wait on a model download: harness subprocesses get a stripped environment
   (no proxy CA), and fastembed retries for ~40 s before failing. Queries load the model from the local
   cache only; the worker downloads it (D-61).
