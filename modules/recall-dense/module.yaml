@@ -1,0 +1,45 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:recall-dense
+name: 'Recall: dense embeddings fused with BM25'
+version: 0.1.0
+description: 'Keeps an embedding (BAAI/bge-small-en-v1.5, ONNX on CPU via fastembed) per claim with a text
+  value, in its own schema `recall_dense` (derived and rebuildable, never a kernel table) with the kernel''s
+  row-level security by scope, and adds api.recall_hybrid: BM25 from the recall index and cosine
+  similarity, min-max normalised and averaged. When it has rows and fastembed is installed where the MCP
+  server or hook runs, search uses it. Needs pgvector; opt in with the `dense` part of kk serve (D-61).'
+license: Apache-2.0
+kind: processor
+slots:
+- recall-index
+protected: false
+agent:
+  iri: urn:kk:agent:recall-dense
+  db_role: kkm_recall_dense
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write: []
+runtime:
+  type: python-service
+  entrypoint: python -m recall_dense
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_recall_dense
+    KK_SWEEP_SECONDS: longest wait between passes (default 30)
+    KK_DENSE_BATCH: claims embedded per transaction (default 256)
+accepts:
+- kernel_change_set notifications
+- kernel_redaction notifications
+produces: []
+triggers:
+- type: notify
+  spec: kernel_change_set
+- type: notify
+  spec: kernel_redaction
+- type: schedule
+  spec: every KK_SWEEP_SECONDS
+mcp:
+  expose: []
+migration: migration.sql

@@ -81,7 +81,8 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:17.11-bookworm
+        # Postgres 17 with pgvector, as deploy/postgres/Dockerfile builds (dense recall, D-61).
+        image: pgvector/pgvector:0.8.7-pg17-bookworm
         env:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
@@ -98,7 +99,7 @@ jobs:
           python-version: "3.13"
       - name: Install the kernel (kk) with the pinned requirements
         run: |
-          pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt -r modules/belief-corroboration/requirements.txt -r modules/self-encoder/requirements.txt
+          pip install -r requirements-ci.txt -r modules/kernel-mcp/requirements.txt -r modules/validator-shacl/requirements.txt -r modules/belief-corroboration/requirements.txt -r modules/self-encoder/requirements.txt -r modules/recall-dense/requirements.txt
           pip install --no-deps -e .
           kk --help > /dev/null
       - name: gitleaks for the ingest filter (pinned release, checksum verified)
@@ -112,7 +113,7 @@ jobs:
           npm install --no-save playwright@1.56.1
           npx playwright install --with-deps chromium
       - name: Postgres + kk (init, person, agent, serve, review, scan, token, status) + the UI, nothing else
-        run: KK_REQUIRE_UI=1 sh scripts/smoke_kernel.sh
+        run: KK_REQUIRE_UI=1 KK_REQUIRE_DENSE=1 sh scripts/smoke_kernel.sh
       - name: kernel-mcp alone installs as a package with its two commands
         run: |
           python -m venv /tmp/mcp-only

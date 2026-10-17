@@ -109,10 +109,10 @@ def retrieval(limit: int = 200) -> dict:
     scores, recalls, ms = [], [], []
     with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
         indexed = recall.indexed(db)
-        statement = recall.ranked(indexed)
+        model = recall.dense(db) if indexed else None
         for q, rel in sorted(qrels.items(), key=lambda kv: int(kv[0])):
-            t0 = time.perf_counter()
-            rows = db.execute(statement, recall.params(claims[int(q)], limit)).fetchone()[0]
+            t0 = time.perf_counter()   # includes embedding the query, as search does
+            rows = db.execute(*recall.plan(db, claims[int(q)], limit)).fetchone()[0]
             ms.append((time.perf_counter() - t0) * 1000)
             ranked = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))
             scores.append(ndcg10(ranked, rel))
@@ -122,7 +122,8 @@ def retrieval(limit: int = 200) -> dict:
            f"recall@{limit}claims": round(statistics.mean(recalls), 4),
            "latency_ms": {"p50": round(ms[len(ms) // 2]), "p95": round(ms[int(len(ms) * 0.95)]), "max": round(ms[-1])},
            "baseline": {"bm25_ndcg@10": 0.665, "source": "BEIR (Thakur et al. 2021)"},
-           "recall": "api.recall: BM25 over the recall-index module (k1 1.2, b 0.75)" if indexed else
+           "recall": f"api.recall_hybrid: BM25 and {model} (recall-dense), min-max normalised, averaged" if model else
+                     "api.recall: BM25 over the recall-index module (k1 1.2, b 0.75)" if indexed else
                      "kernel_mcp.recall.RANKED (Postgres full-text search, OR of lexemes, ts_rank_cd, no index)"}
     return out
 
@@ -159,8 +160,7 @@ def prompts(n: int, k: int) -> list[dict]:
     abstracts, prefix, items = corpus(), f"urn:kk:paper:{SOURCE}:", []
     with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
         for c in sample(n):
-            rows = db.execute(recall.ranked(recall.indexed(db)),
-                              recall.params(c["claim"], 60)).fetchone()[0]
+            rows = db.execute(*recall.plan(db, c["claim"], 60)).fetchone()[0]
             docs = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))[:k]
             for d in docs:
                 text = "\n".join(f"[{i}] {s}" for i, s in enumerate(abstracts[d]))

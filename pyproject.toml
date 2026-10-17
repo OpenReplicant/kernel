@@ -16,6 +16,11 @@ dependencies = [
   "pyshacl==0.40.1", "rdflib==7.6.0", "PyYAML==6.0.3", "jsonschema==4.26.0",
 ]
 
+[project.optional-dependencies]
+# Dense recall (D-61): the recall-dense worker and query embeddings. fastembed is Apache-2.0; it runs
+# ONNX models on CPU (onnxruntime, MIT) and downloads the model on first use.
+dense = ["fastembed==0.7.3"]
+
 [project.scripts]
 kk = "kk.cli:main"
 kernel-mcp = "kernel_mcp.__main__:main"
@@ -24,7 +29,7 @@ kernel-mcp-hook = "kernel_mcp.hooks:main"
 [tool.setuptools]
 packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter",
             "eventlog_encoder", "bpmn_encoder", "conformance", "observer_prometheus", "anomaly",
-            "actuator_compose", "paper_encoder", "recall_index"]
+            "actuator_compose", "paper_encoder", "recall_index", "recall_dense"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -40,3 +45,4 @@ anomaly = "modules/anomaly/anomaly"
 actuator_compose = "modules/actuator-compose/actuator_compose"
 paper_encoder = "modules/encoder-papers/paper_encoder"
 recall_index = "modules/recall-index/recall_index"
+recall_dense = "modules/recall-dense/recall_dense"

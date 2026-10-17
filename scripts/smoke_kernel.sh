@@ -35,7 +35,16 @@ unset KK_ADMIN_URL
 port=$($py -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
 export KK_MCP_URL="http://127.0.0.1:$port/mcp"
 log=$(mktemp)
-KK_SWEEP_SECONDS=5 $py -m kk serve --port "$port" > "$log" 2>&1 &
+# D-61: dense recall when Postgres has pgvector and python has fastembed (KK_REQUIRE_DENSE=1 makes their
+# absence a failure, as in CI).
+parts=mcp,validator,belief,recall
+if [ "$(psql -d "$db" -tAc "select to_regclass('recall_dense.vec') is not null")" = t ] \
+   && $py -c 'import fastembed' 2> /dev/null; then
+  parts=$parts,dense
+elif [ "${KK_REQUIRE_DENSE:-0}" = 1 ]; then
+  echo "FAIL dense recall needs pgvector in Postgres and fastembed (pip install -e '.[dense]')"; exit 1
+fi
+KK_SWEEP_SECONDS=5 $py -m kk serve --port "$port" --only "$parts" > "$log" 2>&1 &
 serve=$!
 cleanup() {
   status=$?
@@ -70,5 +79,10 @@ else
 fi
 # D-60: the recall index (BM25) that kk serve keeps; scopes and redaction respected.
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_recall.py"
+# D-61: dense recall fused with BM25.
+case $parts in
+  *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;
+  *) echo "skip dense recall (no pgvector or fastembed)" ;;
+esac
 # M3-T1: kk up connects a project folder (last: it gives the owner a new login).
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_up.py"

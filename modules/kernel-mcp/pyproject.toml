@@ -7,11 +7,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "knowledge-kernel-mcp"
-version = "0.5.1"
+version = "0.6.0"
 description = "MCP server and harness hooks for the Knowledge Kernel"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = ["mcp==2.3.0", "psycopg[binary]==3.3.6", "PyJWT==2.15.1", "uvicorn==0.54.0"]
+
+[project.optional-dependencies]
+dense = ["fastembed==0.7.3"]   # query embeddings for dense recall (D-61)
 
 [project.scripts]
 kernel-mcp = "kernel_mcp.__main__:main"
