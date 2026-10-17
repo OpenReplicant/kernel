@@ -20,6 +20,7 @@ import json
 import os
 import re
 import runpy
+import shutil
 import sys
 from datetime import date
 from pathlib import Path
@@ -31,7 +32,9 @@ SRC = Path(os.environ.get("RCAEVAL_DIR") or Path.home() / ".cache/knowledge-kern
 def windowed(window: int):
     """The kernel's Analyse view of a case: window means, robust z after the injection."""
     import numpy as np
-    from sklearn.preprocessing import RobustScaler
+
+    sys.path.insert(0, str(HERE))
+    from packs import robust_z
 
     from RCAEval.io.time_series import preprocess
 
@@ -47,7 +50,7 @@ def windowed(window: int):
             a, b = normal[col].to_numpy(), anomal[col].to_numpy()
             if len(a) < 2 or len(b) < 1:
                 continue
-            z = RobustScaler().fit(a.reshape(-1, 1)).transform(b.reshape(-1, 1))[:, 0]
+            z = robust_z(a, b)
             ranks.append((col, float(np.nanmax(z)) if np.isfinite(z).any() else 0.0))
         ranks.sort(key=lambda x: x[1], reverse=True)
         return {"node_names": cols, "ranks": [c for c, _ in ranks]}
@@ -62,6 +65,9 @@ def main() -> int:
     a = ap.parse_args()
     os.chdir(SRC)
     sys.path.insert(0, str(SRC))
+    # RCAEval's main.py writes each case's result to output/results and scores every file there: clear
+    # it, or one run's results are scored again with the next (D-65).
+    shutil.rmtree(SRC / "output" / "results", ignore_errors=True)
     method = a.method
     if a.method == "kernel":
         import RCAEval.e2e as e2e
