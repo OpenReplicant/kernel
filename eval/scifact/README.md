@@ -29,3 +29,16 @@ python eval/scifact/run.py verify --n 60 --answers answers.jsonl                
 
 Runs are kept in `runs/` (results only, no data). `test_score.py` checks the scorer on a fixture,
 including that broken answers score worse.
+
+## Results so far (2026-10-17, 60 dev claims, top 3 abstracts from BM25 recall)
+
+| Model | Abstract F1 (label) | F1 (rationale) | Claim accuracy, with kernel | Closed book | Quotes verbatim |
+| --- | --- | --- | --- | --- | --- |
+| Claude Haiku (sub-agent) | 0.78 | 0.70 | 0.91 | 0.78 | 100% |
+| Nemotron 3 Super 120B (A12B, free) | 0.75 | 0.73 | 0.89 | 0.76 | 97.8% |
+| Liquid LFM 2.5 2.6B (free) | 0.68 | 0.68 | 0.84 | 0.58 | 97.2% |
+
+With the kernel's recall a 2.6B model comes within 7 points of Haiku's claim accuracy, and gains 27 points
+over its own closed-book accuracy. Small models misquote a few sentences (2–3%), which is the case for
+the quote verifier (M3-T6). With the earlier full-text search instead of BM25, Haiku scored 0.51: recall,
+not the model, was the gap.
