@@ -1,5 +1,6 @@
 """kk: the one command for running a knowledge kernel.
 
+  kk up [PROJECT]              connect a project folder to a kernel: stack, logins, MCP, skill, hooks
   kk init                      install the kernel, the default modules and the vocabulary packs
   kk person add NAME           a person's own login (reviews; --steward may also redact)
   kk agent add NAME            a harness agent's own login (MCP stdio, hooks)
@@ -232,6 +233,9 @@ def main(argv=None) -> None:
     if argv[:1] in (["export"], ["import"]):
         from .transfer import main as transfer
         return transfer(argv[0], argv[1:])
+    if argv[:1] == ["up"]:
+        from .up import main as up
+        return up(argv[1:])
     if argv[:1] == ["module"]:
         from .modules import main as module
         return module(argv[1:])
@@ -243,6 +247,7 @@ def main(argv=None) -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog="\n".join(__doc__.splitlines()[2:]))
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("up", help="connect a project folder to a kernel in one command")
     p = sub.add_parser("init", help="install the kernel, default modules and packs")
     p.add_argument("--no-packs", action="store_true", help="leave out the vocabulary packs (e.g. to import a kk export)")
     p.set_defaults(fn=cmd_init)

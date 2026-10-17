@@ -10,6 +10,12 @@ can use it; how deeply depends on what you add (D-36):
 | 3 | + hooks | the harness recalls on its own: identity and a session run at start, related claims with every prompt, the run finished at the end |
 | 4 | + modules | encoders, belief, further processors and decoders, a UI (`kk serve` runs the default ones) |
 
+**The short way:** `kk up PROJECT` does sections 1–4 for one project folder (D-57): it starts the
+compose stack, gives the owner and the project's agent their own logins (kept in
+`~/.config/knowledge-kernel`), and merges the MCP entry, the skill and the hooks into the project
+(`.mcp.json`, `.claude/skills/knowledge-kernel/`, `.claude/settings.local.json`). `--no-stack` uses the
+kernel at `KK_ADMIN_URL` instead. The rest of this guide is what it does, by hand.
+
 ## 1. A database with the kernel
 
 Either the compose stack (`deploy/compose.yaml`: Postgres and one image running `kk serve`), or any
@@ -52,7 +58,8 @@ stdio, one agent per harness. For Claude Code (`.mcp.json`; the same entry is in
   "env": {"KK_DATABASE_URL": "postgresql://agent_claude_code:<agent secret>@localhost/kk"}}}}
 ```
 
-Each agent gets its own login and agent IRI (`kk agent add NAME`: role `agent_<name>`, IRI
+Instead of the secret in `env`, `KK_LOGIN_FILE` may name a file holding `KK_DATABASE_URL=...` (what `kk up`
+writes), so the project's files carry no secret. Each agent gets its own login and agent IRI (`kk agent add NAME`: role `agent_<name>`, IRI
 `urn:kk:agent:<name>`); stdio refuses
 a login that can switch roles. `KK_DATABASE_URL` (or `DATABASE_URL`) names it; the `KK_` name wins so
 a project's own `DATABASE_URL` does not collide. With the compose stack, Postgres is on
