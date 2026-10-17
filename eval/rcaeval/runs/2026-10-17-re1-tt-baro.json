@@ -1,0 +1,21 @@
+{
+  "benchmark": "RCAEval",
+  "dataset": "re1-tt",
+  "method": "baro",
+  "avg@5": {
+    "CPU": 0.17,
+    "MEM": 0.13,
+    "DISK": 0.69,
+    "DELAY": 0.17,
+    "LOSS": 0.15
+  },
+  "avg@5_mean": 0.262,
+  "chance@5": {
+    "CPU": 0.04,
+    "MEM": 0.04,
+    "DISK": 0.04,
+    "DELAY": 0.04,
+    "LOSS": 0.04
+  },
+  "rcaeval_commit": "259ea4167160256a74ad30004aa3d96a998c846e"
+}
