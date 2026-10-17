@@ -68,6 +68,8 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - A CURIE in a change set expands only with a prefix the kernel knows (`kernel.prefix`: rdf, rdfs, owl,
   dcterms, prov, …); `cito:supports` is refused as "not a known term". Pack vocabularies without a
   registered prefix go in as full IRIs (D-62).
+- Tune on SciFact's train split, report on dev: the published comparisons are on dev, and a choice made
+  by looking at dev results inflates them. On dev, the prompt that won on train did not pay (D-64).
 - A search path must never wait on a model download: harness subprocesses get a stripped environment
   (no proxy CA), and fastembed retries for ~40 s before failing. Queries load the model from the local
   cache only; the worker downloads it (D-61).

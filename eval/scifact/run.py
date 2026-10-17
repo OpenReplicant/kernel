@@ -55,7 +55,8 @@ FILES = {  # pinned Oct 2026
     "beir.zip": ("https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip",
                  "536e14446a0ba56ed1398ab1055f39fe852686ecad24a6306c80c490fa8e0165"),
 }
-CORPUS, CLAIMS, QRELS = CACHE / "data/corpus.jsonl", CACHE / "data/claims_dev.jsonl", CACHE / "scifact/qrels/test.tsv"
+SPLIT = os.environ.get("KK_EVAL_SPLIT", "dev")   # dev (compared with published results) or train (for tuning)
+CORPUS, CLAIMS, QRELS = CACHE / "data/corpus.jsonl", CACHE / f"data/claims_{SPLIT}.jsonl", CACHE / "scifact/qrels/test.tsv"
 SOURCE = "scifact"
 
 
@@ -142,6 +143,19 @@ Abstract (numbered sentences):
 Does the abstract SUPPORT the claim, CONTRADICT it, or give NOT_ENOUGH_INFO? If it supports or contradicts,
 quote the sentences it rests on, exactly as written. Answer with JSON only:
 {{"label": "SUPPORT" | "CONTRADICT" | "NOT_ENOUGH_INFO", "quotes": ["exact sentence", ...]}}"""
+# The strict prompt (D-64) follows SciFact's annotation rule: an abstract is evidence only if it directly
+# tests the claim; related findings and background are not.
+ASK_STRICT = """You check a scientific claim against one abstract, as SciFact's annotators did.
+Claim: {claim}
+Abstract (numbered sentences):
+{sentences}
+Answer SUPPORT or CONTRADICT only if the abstract itself reports a finding that directly tests this
+claim: the same intervention or exposure, the same outcome, and a population the claim covers, so that
+the finding alone shows the claim true or false. Otherwise answer NOT_ENOUGH_INFO: when the abstract is
+on the topic but tests something else, gives background or cites other work, reports a related but
+different measure, or would need extra assumptions. For SUPPORT or CONTRADICT, quote the one to three
+sentences that carry the finding, exactly as written. Answer with JSON only:
+{{"label": "SUPPORT" | "CONTRADICT" | "NOT_ENOUGH_INFO", "quotes": ["exact sentence", ...]}}"""
 ASK_CLOSED = """Is this scientific claim true? Use what you know; no sources are given.
 Claim: {claim}
 Answer with JSON only: {{"label": "SUPPORT" | "CONTRADICT" | "NOT_ENOUGH_INFO"}}
@@ -169,8 +183,9 @@ def prompts(n: int, k: int) -> list[dict]:
             docs = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))[:k]
             for d in docs:
                 text = "\n".join(f"[{i}] {s}" for i, s in enumerate(abstracts[d]))
-                items.append({"key": f"{c['id']}|{d}", "claim_id": c["id"], "doc": d,
-                              "prompt": ASK_EVIDENCE.format(claim=c["claim"], sentences=text)})
+                ask_evidence = ASK_STRICT if os.environ.get("KK_EVAL_PROMPT") == "strict" else ASK_EVIDENCE
+                items.append({"key": f"{c['id']}|{d}", "claim_id": c["id"], "doc": d, "rank": docs.index(d) + 1,
+                              "prompt": ask_evidence.format(claim=c["claim"], sentences=text)})
             items.append({"key": f"{c['id']}|closed", "claim_id": c["id"], "doc": None,
                           "prompt": ASK_CLOSED.format(claim=c["claim"])})
     return items
@@ -273,7 +288,20 @@ def load_answers(path: str) -> dict[str, dict]:
             for key, r in raw.items()}
 
 
-def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = None) -> dict:
+def first_verdict(answers: dict[str, dict], rank: dict[str, int]) -> dict[str, dict]:
+    """One verdict per claim (D-64): from the highest-ranked recalled abstract that gives one; the
+    others become NOT_ENOUGH_INFO. Chosen on SciFact's train split, not on dev."""
+    out, taken = dict(answers), set()
+    for key in sorted((k for k in answers if not k.endswith("|closed")), key=lambda k: (k.split("|")[0], rank.get(k, 99))):
+        cid = key.split("|")[0]
+        if answers[key]["label"] != "NOT_ENOUGH_INFO":
+            if cid in taken:
+                out[key] = {**answers[key], "label": "NOT_ENOUGH_INFO", "quotes": []}
+            taken.add(cid)
+    return out
+
+
+def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = None, policy: str = "all") -> dict:
     models: dict[str, int] = {}
     if answers_file:
         answers = load_answers(answers_file)
@@ -289,7 +317,17 @@ def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = 
     missing = [it["key"] for it in items if it["key"] not in answers]
     for key in missing:
         answers[key] = {"label": "NOT_ENOUGH_INFO", "quotes": [], "unparsed": True}
-    return {"stage": "verify", "k": k, "models": models, "missing_answers": len(missing), **score(sample(n), corpus(), answers),
+    if policy == "first":
+        if not prompts_file:
+            sys.exit("--policy first needs --prompts (the recall ranks)")
+        rank, seen = {}, {}
+        for it in map(json.loads, open(prompts_file)):   # recall order, also for prompt files without "rank"
+            cid = it["key"].split("|")[0]
+            seen[cid] = seen.get(cid, 0) + 1
+            rank[it["key"]] = it.get("rank", seen[cid])
+        answers = first_verdict(answers, rank)
+    return {"stage": "verify", "k": k, "split": SPLIT, "prompt": os.environ.get("KK_EVAL_PROMPT", "default"),
+            "policy": policy, "models": models, "missing_answers": len(missing), **score(sample(n), corpus(), answers),
             "baselines": "compare with the SciFact leaderboard's abstract-level metrics on the dev set; open retrieval"}
 
 
@@ -370,6 +408,7 @@ def save(result: dict) -> None:
     runs = HERE / "runs"
     runs.mkdir(exist_ok=True)
     model = "-" + re.sub(r"[^a-z0-9]+", "-", "-".join(result["models"]).lower()).strip("-") if result.get("models") else ""
+    model += "".join(f"-{result[k]}" for k in ("split", "prompt", "policy") if result.get(k) not in (None, "dev", "default", "all"))
     recall = str(result.get("recall", ""))
     method = ("-hybrid" if "recall_hybrid" in recall else "-bm25" if "BM25" in recall
               else "-fts" if result["stage"] == "retrieval" else "")
@@ -400,11 +439,13 @@ if __name__ == "__main__":
         ap.add_argument("--k", type=int, default=3)
         ap.add_argument("--answers")
         ap.add_argument("--prompts", help="the items from an earlier `prompts` run, so every model sees the same ones")
+        ap.add_argument("--policy", choices=("all", "first"), default="all",
+                        help="all: every recalled abstract's verdict counts; first: one per claim, the highest-ranked (D-64)")
         a = ap.parse_args(sys.argv[2:])
         if stage == "prompts":
             for it in prompts(a.n, a.k):
                 print(json.dumps(it))
         else:
-            save(verify(a.n, a.k, a.answers, a.prompts))
+            save(verify(a.n, a.k, a.answers, a.prompts, a.policy))
     else:
         sys.exit(__doc__)

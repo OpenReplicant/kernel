@@ -73,3 +73,16 @@ Published dev-split results to compare with (`docs/benchmarks.md`): ARSJoint 0.6
 0.660 / 0.624, ParagraphJoint 0.651 / 0.599, VeriSci 0.510 / 0.485, all fine-tuned on SciFact. The
 60-claim sample above (0.78) was optimistic.
 
+## Fix loop 1: one verdict per claim (D-64; chosen on 200 train claims, then dev)
+
+| Dev, 300 claims | Label F1 (P / R) | Rationale F1 | Claim accuracy |
+| --- | --- | --- | --- |
+| every recalled abstract counts (D-63) | 0.672 (0.61 / 0.75) | 0.595 | 0.88 |
+| first verdict, strict prompt (chosen) | **0.701** (0.76 / 0.65) | 0.588 | 0.81 |
+| first verdict, original prompt | 0.697 (0.70 / 0.69) | 0.620 | 0.89 |
+
+```sh
+KK_EVAL_SPLIT=train KK_EVAL_PROMPT=strict python eval/scifact/run.py prompts --n 200 > train.jsonl   # tune here
+KK_EVAL_PROMPT=strict python eval/scifact/run.py verify --n 300 --answers answers.jsonl --prompts prompts.jsonl --policy first
+```
+

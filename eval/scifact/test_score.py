@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run import parse, score  # noqa: E402
+from run import first_verdict, parse, score  # noqa: E402
 
 ok = 0
 
@@ -45,4 +45,9 @@ check(score(claims, abstracts, {**right, "3|30": {"label": "SUPPORT", "quotes": 
       "a verdict on an irrelevant abstract costs precision")
 check(parse("Sure! {\"label\": \"contradict\", \"quotes\": [\"a\"]}")["label"] == "CONTRADICT", "parses JSON inside prose")
 check(parse("no json here")["label"] == "NOT_ENOUGH_INFO", "an unparseable answer counts as no verdict")
+extra = {**right, "1|30": {"label": "SUPPORT", "quotes": ["Unrelated work on soil."]}}
+kept = first_verdict(extra, {"1|10": 1, "1|30": 2, "2|20": 1, "3|30": 1})
+check(kept["1|30"]["label"] == "NOT_ENOUGH_INFO" and kept["1|10"]["label"] == "SUPPORT"
+      and score(claims, abstracts, kept)["abstract_label_only"]["f1"] == 1,
+      "first verdict: only the highest-ranked abstract with a verdict counts")
 print(f"SciFact scorer: {ok} checks passed")

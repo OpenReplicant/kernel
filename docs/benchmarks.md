@@ -36,7 +36,9 @@ gold rationale set is within the first three predicted sentences.
 | VerT5erini (BM25) | 66.0 | 62.4 | ARSJoint paper |
 | ARSJoint (BioBERT) | 66.7 | 62.4 | ARSJoint paper |
 | MultiVerS (test split, context only) | 72.5 | – | [arXiv 2112.01640](https://arxiv.org/abs/2112.01640) |
-| **the kernel (hybrid recall, top 3) + Haiku, zero-shot, all 300 dev claims** | **67.2** | **59.5** | `eval/scifact/runs/` (D-63) |
+| the kernel (hybrid recall, top 3) + Haiku, zero-shot, all 300 dev claims | 67.2 | 59.5 | `eval/scifact/runs/` (D-63) |
+| **… + one verdict per claim, strict prompt (chosen on train)** | **70.1** | 58.8 | D-64 |
+| … + one verdict per claim, original prompt | 69.7 | 62.0 | D-64 |
 
 Level with the best fine-tuned systems on labels (precision 0.61, recall 0.75: the model labels abstracts
 SciFact counts as no evidence); behind on rationales. Claim accuracy 0.88 with the kernel, 0.77 without.
