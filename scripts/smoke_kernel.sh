@@ -29,6 +29,7 @@ url() { echo "postgresql://$1:$2@$host:${PGPORT:-5432}/$db"; }
 export OWNER_DATABASE_URL="$(url person_owner "$(kk person add owner --steward | field password)")"
 export AGENT_DATABASE_URL="$(url agent_claude_code "$(kk agent add claude-code --label 'Claude Code (harness agent)' | field password)")"
 export DATABASE_URL="$(url kk_authenticator "$auth_pw")"
+admin_url=$KK_ADMIN_URL
 unset KK_ADMIN_URL
 
 port=$($py -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
@@ -67,3 +68,5 @@ elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
 else
   echo "skip the UI check (no playwright; npm install --no-save playwright to run it)"
 fi
+# M3-T1: kk up connects a project folder (last: it gives the owner a new login).
+KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_up.py"

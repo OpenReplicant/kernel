@@ -10,7 +10,20 @@ add the skill file, harness hooks and further modules (`docs/harness.md`).
 - **Decisions and open questions:** `docs/decisions.md`
 - **Working rules:** `CLAUDE.md`
 
-## Run it locally
+## Quick start: connect your project
+
+With Docker and Python 3.12+, from a checkout:
+
+```sh
+pip install -e .
+kk up ~/code/my-project        # the kernel in Docker, your and the agent's logins, MCP + skill + hooks in the project
+cd ~/code/my-project && claude # approve the 'kernel' MCP server; the agent now recalls, cites and records
+```
+
+`kk up` prints the UI address (http://127.0.0.1:8080/ui/) and your owner token for reviewing. Logins
+stay in `~/.config/knowledge-kernel`, never in the project; running it again changes nothing (D-57).
+
+## Run it by hand
 
 One command, `kk`, sets up and runs a kernel (`pip install -e .` from a checkout, Python 3.12+):
 
@@ -25,6 +38,7 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 
 | Command | Does |
 | --- | --- |
+| `kk up [PROJECT]` | all of the below for one project: the stack, the logins, the MCP entry, skill and hooks |
 | `kk init` | installs kernel v0, every default module's migration and the vocabulary packs (once) |
 | `kk person add NAME` / `kk agent add NAME` | an own login that can act only as itself (D-37) |
 | `kk serve [--only mcp,validator,belief]` | the running kernel: one process, or one container per part; the UI at `/ui` |

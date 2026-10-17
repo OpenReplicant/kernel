@@ -3,7 +3,8 @@
 Talks to Postgres directly. Every tool call runs in its own transaction as the caller's database
 role, so row-level security, write clearance and attribution are enforced by Postgres per agent;
 this server decides nothing. Who the caller is:
-  - stdio (one harness, one agent): KK_DATABASE_URL (or DATABASE_URL) is the agent's own login (e.g. agent_claude_code).
+  - stdio (one harness, one agent): KK_DATABASE_URL (or DATABASE_URL, or the file KK_LOGIN_FILE names) is the agent's
+    own login (e.g. agent_claude_code).
     The server never switches roles in this mode, and refuses a login that could (kk_authenticator,
     superusers): whoever holds such a password could act as anyone, the owner included.
   - http (shared server): DATABASE_URL is kk_authenticator, which only this server holds; each
@@ -77,7 +78,15 @@ def caller_role(ctx: Context) -> str | None:
 
 
 def database_url() -> str:
-    """KK_DATABASE_URL, or DATABASE_URL (KK_ first, so a harness's own DATABASE_URL does not collide)."""
+    """The agent's login: KK_DATABASE_URL from the file KK_LOGIN_FILE names (written by `kk up`, so the
+    secret stays out of the project's files), else KK_DATABASE_URL, else DATABASE_URL (KK_ first, so a
+    harness's own DATABASE_URL does not collide)."""
+    if os.environ.get("KK_LOGIN_FILE"):
+        for line in open(os.path.expanduser(os.environ["KK_LOGIN_FILE"])):
+            key, _, value = line.strip().partition("=")
+            if key == "KK_DATABASE_URL" and value:
+                return value
+        raise KernelError(f"no KK_DATABASE_URL in {os.environ['KK_LOGIN_FILE']}")
     url = os.environ.get("KK_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not url:
         raise KernelError("set KK_DATABASE_URL (or DATABASE_URL) to the agent's own login")

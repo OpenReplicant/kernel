@@ -51,6 +51,13 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   reinstalls all of it (no diffing yet).
 - Supersede, don't edit: new value + `set_status deprecated superseded replaced_by` (decoder claims).
 
+- An empty libpq connection string is not "no connection": `psycopg.connect("")` connects with the PG*
+  variables (a superuser in the dev sandbox). Check for a missing URL before connecting.
+- A URL built from a socket connection (`host=/var/run/postgresql`) fails under peer auth for any other
+  role: write TCP addresses into logins other processes will use (`kk up --db-host`).
+- Claude Code expands `${VAR}` in `.mcp.json` (command, args, env), but its docs do not say a settings
+  file's `env` reaches MCP servers; keep secrets in a file the server reads (`KK_LOGIN_FILE`).
+
 ## Tests
 
 - Gate checks that read a live system must tolerate other modules writing meanwhile: assert "every
