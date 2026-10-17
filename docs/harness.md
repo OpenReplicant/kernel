@@ -102,7 +102,9 @@ docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml --env-file d
 ```
 
 The module gets its own login (it acts only as itself), a read-only filesystem, no capabilities and a
-network that reaches Postgres and nothing else.
+network that reaches Postgres and nothing else, plus what the sandbox policy `deploy/policy.yaml` grants
+it (D-55): the services it may reach, a route out, memory and process limits. A module that asks for
+network the policy does not grant is refused; edit the policy to grant it.
 
 ## Moving or sharing claims
 

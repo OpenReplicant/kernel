@@ -3,7 +3,8 @@
 `kk module install modules/<name>` writes two files here per worker or command module:
 
 - `<name>.yaml`: its compose service, locked down (read-only filesystem, no capabilities, no new
-  privileges, `nobody`, memory and process limits, only the internal network that reaches Postgres);
+  privileges, `nobody`, only the internal network that reaches Postgres, plus what the sandbox policy
+  `deploy/policy.yaml` grants it: memory and process limits, the services it may reach, a route out);
 - `<name>.env`: its own database login (mode 600).
 
 Both are specific to one deployment and are not committed. Start a module with

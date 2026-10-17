@@ -45,6 +45,13 @@ if $py -m kk module install "$out/gpl-module" --out "$out" 2> "$log.err"; then
 fi
 grep -q "allow list" "$log.err" && echo "ok   a module with a license outside the allow list is refused"
 rm -f "$log.err"
+# A module that asks for network the sandbox policy does not grant is refused (D-55).
+echo 'defaults: {reach: []}' > "$out/policy.yaml"
+if $py -m kk module install "$root/modules/observer-prometheus" --out "$out" --policy "$out/policy.yaml" 2> "$log.err"; then
+  echo "FAIL a module was installed with network the policy does not grant"; exit 1
+fi
+grep -q "reach prometheus" "$log.err" && echo "ok   a module asking for network the sandbox policy does not grant is refused"
+rm -f "$log.err"
 $py -m kk module install "$root/modules/belief-corroboration" --out "$out" > /dev/null
 dc -f "$out/belief-corroboration.yaml" up -d module-belief-corroboration >> "$log" 2>&1
 cid=$(dc -f "$out/belief-corroboration.yaml" ps -q module-belief-corroboration)

@@ -113,7 +113,7 @@
     "network": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Network a sandboxed module needs beyond Postgres (D-52). Requested, not granted: kk module install joins the module to one internal network per name, `kk-reach-<name>`, which only the named service also joins.",
+      "description": "Network a sandboxed module needs beyond Postgres (D-52). Requested, not granted: the operator's sandbox policy (deploy/policy.yaml, D-55) grants it, and kk module install refuses a request it does not grant. Each granted service is reached over its own internal network, `kk-reach-<name>`, which only that service also joins.",
       "properties": {
         "reach": {
           "type": "array",
