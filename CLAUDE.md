@@ -60,6 +60,7 @@ pip install -e .                                                           # the
 sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2 on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3: modules in their own sandboxed containers; needs Docker
+sh scripts/e2e_devops.sh                                                   # M2-T5: devops demo stack + metrics observer; needs Docker, gitleaks
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these. The kernel smoke test needs no Docker: a Postgres
@@ -80,11 +81,13 @@ shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
                  encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,
-                 view-bpm; _template/
+                 view-bpm, observer-prometheus; _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
-deploy/          compose.yaml (db, init, kernel = kk serve, caddy), postgres/ (image), modules/ (installed), mcp/
-scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py, eval_self.py,
+deploy/          compose.yaml (db, init, kernel = kk serve, caddy), demo/ (devops demo overlay), postgres/ (image),
+                 modules/ (installed), mcp/
+scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py,
+                 e2e_devops.sh/.py, eval_self.py,
                  check_manifests.py, vocab_subset.py
 examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)

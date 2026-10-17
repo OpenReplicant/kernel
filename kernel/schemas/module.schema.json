@@ -110,6 +110,21 @@
         }
       }
     },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Network a sandboxed module needs beyond Postgres (D-52). Requested, not granted: kk module install joins the module to one internal network per name, `kk-reach-<name>`, which only the named service also joins.",
+      "properties": {
+        "reach": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "description": "Compose service names the module must reach (e.g. prometheus)."
+        }
+      }
+    },
     "budget": {
       "type": "object",
       "additionalProperties": false,

@@ -1,0 +1,13 @@
+# Prometheus for the devops demo. Every replica of a service is a target; `job` names the compose service.
+global:
+  scrape_interval: 5s
+scrape_configs:
+  - job_name: shop
+    dns_sd_configs:
+      - names: [shop]
+        type: A
+        port: 8000
+        refresh_interval: 5s
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]

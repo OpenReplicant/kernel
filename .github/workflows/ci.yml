@@ -57,6 +57,8 @@ jobs:
         run: python modules/encoder-bpmn/tests/test_encode.py
       - name: Conformance tests (M2-T3)
         run: python modules/conformance/tests/test_compare.py
+      - name: Metrics observer tests (M2-T5)
+        run: python modules/observer-prometheus/tests/test_observe.py
       - name: Belief eval (T7)
         run: python modules/belief-corroboration/tests/test_eval.py
       - name: Generated pack migration is up to date
@@ -114,7 +116,10 @@ jobs:
           docker run --rm knowledge-kernel:local gitleaks version
       - name: A module installs into its own sandboxed container (T18)
         run: sh scripts/e2e_module.sh
+      - name: Devops demo stack and the metrics observer, sandboxed (M2-T5)
+        run: sh scripts/e2e_devops.sh
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env
           docker compose -f deploy/compose.yaml --env-file /tmp/ci.env config -q
+          docker compose -f deploy/compose.yaml -f deploy/demo/compose.yaml --env-file /tmp/ci.env config -q

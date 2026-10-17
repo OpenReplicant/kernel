@@ -2,7 +2,7 @@
 the line span it was read from ({"start_line", "end_line"}, 1-based).
 
   modules/*/module.yaml      kk:Module + kk:fills + kkt:hasRequirement + kkt:hasAffordance
-  deploy/compose.yaml        kkt:NodeTemplate + kkt:nodeType + kkt:dependsOn + kkt:memberOf
+  deploy/compose.yaml (+ demo/) kkt:NodeTemplate + kkt:nodeType + kkt:dependsOn + kkt:memberOf
   **/*.ttl                   owl:Ontology (packs) or a graph entity (shapes, fixtures)
   *.sql (schema, migrations) schema objects (dcterms:isPartOf the db node or the module)
 """
@@ -31,7 +31,7 @@ SQL_OBJECT = re.compile(r"^\s*create\s+(?:or\s+replace\s+)?(schema|table|view|fu
 def list_files(repo: Path) -> list[str]:
     """The files the self-model is built from (relative paths, sorted)."""
     patterns = ["modules/*/module.yaml", "modules/*/migration.sql",
-                "deploy/compose.yaml", "kernel/schema/*.sql", "ontology/*.ttl", "shapes/**/*.ttl"]
+                "deploy/compose.yaml", "deploy/demo/compose.yaml", "kernel/schema/*.sql", "ontology/*.ttl", "shapes/**/*.ttl"]
     found = {str(p.relative_to(repo)) for pat in patterns for p in repo.glob(pat)}
     return sorted(p for p in found if "/_template/" not in f"/{p}")
 

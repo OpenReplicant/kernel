@@ -1,0 +1,44 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:observer-prometheus
+name: 'Metrics observer: Prometheus'
+version: 0.1.0
+description: 'Asks Prometheus''s HTTP query API for the queries in queries.yaml once per window and records
+  each answer as an observation of the compose service it is about (SOSA, one observed claim per service,
+  property and window, referenced by the exact query URL), linked to the self-model''s node for that
+  service. Reaches Prometheus over its own internal network only (D-52).'
+license: Apache-2.0
+kind: encoder
+slots:
+- observation-aggregator
+- source-connector
+protected: false
+agent:
+  iri: urn:kk:agent:observer-prometheus
+  db_role: kkm_observer_prometheus
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+network:
+  reach:
+  - prometheus
+runtime:
+  type: python-service
+  entrypoint: python -m observer_prometheus
+  env:
+    DATABASE_URL: the module's own login
+    PROMETHEUS_URL: Prometheus base URL (default http://prometheus:9090)
+    KK_WINDOW_SECONDS: observation window (default 60)
+accepts:
+- application/json (Prometheus HTTP API)
+produces:
+- add_claim
+triggers:
+- type: schedule
+  spec: every KK_WINDOW_SECONDS
+mcp:
+  expose: []
+migration: migration.sql
