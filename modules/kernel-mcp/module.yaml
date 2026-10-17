@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:kernel-mcp
 name: Kernel MCP server
-version: 0.4.0
+version: 0.5.0
 description: 'Agent-facing MCP tools over the api schema: search, get entity, query claims, explain, submit
   change set, start/finish run, list slots and modules; whoami, change sets, the review queue and review
   (people only, enforced by the kernel), and the graph projection that the UI draws. Talks to Postgres directly and runs every call as
@@ -42,5 +42,6 @@ mcp:
   - finish_run
   - list_slots
   - list_modules
+  - list_runs
   read_only: false
 skill: SKILL.md

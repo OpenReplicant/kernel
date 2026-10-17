@@ -1,0 +1,22 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:view-devops
+name: Devops
+version: 0.1.0
+description: 'A view module for the UI (devops): the observed services with their latest observations and
+  anomalies, and the MAPE-K timeline of each adaptation — observed, analysed, planned, approved, executed,
+  observed again — built from the claims and runs that link each step to the one before. Every value
+  explains the claim behind it (D-54).'
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:view-devops
+runtime:
+  type: view
+  entrypoint: view/view.js
+requires:
+- slot: agent-interface
+mcp:
+  expose: []

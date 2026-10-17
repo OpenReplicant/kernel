@@ -60,7 +60,7 @@ pip install -e .                                                           # the
 sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2 on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3: modules in their own sandboxed containers; needs Docker
-sh scripts/e2e_devops.sh                                                   # M2-T5, M2-T6: devops demo stack, the MAPE-K loop; needs Docker, gitleaks
+sh scripts/e2e_devops.sh                                                   # M2-T5–T7, M2-G2: devops demo, MAPE-K loop, Devops view; needs Docker, gitleaks
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these. The kernel smoke test needs no Docker: a Postgres
@@ -81,14 +81,15 @@ shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
                  encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,
-                 view-bpm, observer-prometheus, anomaly, skill-adaptation-planning, actuator-compose;
+                 view-bpm, observer-prometheus, anomaly, skill-adaptation-planning, actuator-compose,
+                 view-devops;
                  _template/
 kk/              the kk command (init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), demo/ (devops demo overlay), postgres/ (image),
                  modules/ (installed), mcp/
 scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py,
-                 e2e_devops.sh/.py, eval_self.py,
+                 e2e_devops.sh/.py + e2e_devops_ui.mjs, eval_self.py,
                  check_manifests.py, vocab_subset.py
 examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
@@ -98,6 +99,7 @@ docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-serv
 
 ## Current milestone
 
-Milestone 1 — the kernel, on its own (`docs/milestone-1.md`, which carries the status of every task).
-Milestone 1 is done: T0–T20; G1–G4 and G7 pass (`scripts/smoke_kernel.sh`; G5 and G6 parked with the
-chain format). Next: milestone 2 (`docs/milestone-2.md`): BPM and devops modules and views. Work one task at a time; each ends with its check passing.
+Milestone 1 (the kernel, `docs/milestone-1.md`) and milestone 2 (BPM and devops as modules and views,
+`docs/milestone-2.md`) are done: T0–T20 and M2-T0–T7; G1–G4, G7 and M2-G1–G3 pass (G5 and G6 parked with
+the chain format). The next milestone is the owner's to set. Work one task at a time; each ends with its
+check passing.

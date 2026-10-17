@@ -92,7 +92,7 @@
       const body = ops.find(o => o.predicate === OA + 'bodyValue');
       const kind = ops.find(o => o.predicate === DCT_TYPE);
       found[iri] = { iri, status: 'awaiting review', changeSet: cs.id, text: body ? body.object.value['@value'] : iri,
-                     kind: kind && kind.object.entity, targets };
+                     kind: kind && kind.object.entity, targets, premises: (body || ops[0]).derived_from || [] };
     }
     // A discrepancy marks the flow it is about: the documented flow for a time limit or a path never
     // taken, otherwise the observed flow the documented process does not have.
@@ -158,7 +158,8 @@
       const legend = el('p', { class: 'muted', textContent:
         'Dashed: documented, not observed. Teal: observed as documented (directly or through a gateway). ' +
         'Blue: observed, not documented (width and number: cases). ' +
-        'Red: confirmed discrepancy. Amber: discrepancy awaiting review. Click a flow or a discrepancy for its claims.' });
+        'Red: confirmed discrepancy. Amber: discrepancy awaiting review — confirm or reject it below, after its evidence. ' +
+        'Click a flow, a discrepancy or a piece of evidence for its claims.' });
       const map = el('div', { id: 'bpm-map', style: 'height:520px;border:1px solid var(--line);border-radius:8px' });
       const info = el('div', { id: 'bpm-edge' });
       const list = el('ul', { id: 'bpm-discrepancies' });
@@ -179,16 +180,38 @@
       const show = async () => {
         const data = await load(kk, pick.value);
         draw(map, kk, data, showEdge);
+        list.dataset.ready = '0';
         list.replaceChildren();
         for (const d of data.discrepancies.sort((x, y) => (x.status > y.status ? 1 : -1))) {
           const li = el('li', { className: 'discrepancy' });
           li.dataset.status = d.status;
           li.append(el('strong', { textContent: `${(d.kind || '').split(':').pop()} ` }));
           if (d.claim) li.append(link(kk, d.claim.id, d.text), el('span', { class: 'muted', textContent: ` (confirmed, belief ${d.claim.belief ?? '—'})` }));
-          else li.append(d.text, el('span', { class: 'muted', textContent: ` (awaiting review in change set ${d.changeSet}; see Review)` }));
+          else li.append(d.text, el('span', { class: 'muted', textContent: ' (awaiting review)' }));
+          // The evidence: the claims it was derived from, each with its evidence type and belief.
+          const premises = d.claim ? (await kk.call('explain', { claim_id: d.claim.id })).derived_from || [] : d.premises;
+          const ev = el('div', { class: 'evidence' }, el('span', { class: 'muted', textContent: 'evidence: ' }));
+          for (const [i, id] of premises.entries()) {
+            const c = (await kk.call('explain', { claim_id: id })).claim;
+            if (i) ev.append(', ');
+            ev.append(c ? link(kk, id, `${c.evidence_type} ${kk.short(c.subject)} (belief ${c.belief ?? '—'})`) : id);
+          }
+          li.append(ev);
+          if (!d.claim) {
+            const decide = approve => async () => {
+              await kk.call('review', { change_set_id: d.changeSet, approve, note: approve ? 'confirmed in the process view' : 'rejected in the process view' });
+              await show();
+            };
+            const yes = el('button', { className: 'approve', textContent: 'Confirm' });
+            const no = el('button', { textContent: 'Reject' });
+            yes.addEventListener('click', () => decide(true)().catch(e => info.replaceChildren(el('span', { class: 'bad', textContent: e.message }))));
+            no.addEventListener('click', () => decide(false)().catch(e => info.replaceChildren(el('span', { class: 'bad', textContent: e.message }))));
+            li.append(el('div', { class: 'row' }, yes, no));
+          }
           list.append(li);
         }
         if (!data.discrepancies.length) list.append(el('li', { class: 'muted', textContent: 'None found.' }));
+        list.dataset.ready = '1';
       };
       pick.addEventListener('change', () => show().catch(e => info.replaceChildren(el('span', { class: 'bad', textContent: e.message }))));
       await show();

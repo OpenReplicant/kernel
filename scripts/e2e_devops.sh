@@ -5,6 +5,7 @@
 # M2-T6: the MAPE-K loop — the shop is stressed, the anomaly processor claims the anomaly, an agent plans
 # a scale-out (review lane), the owner approves, the actuator scales through the socket proxy, and the
 # observer records the recovery; every step cites the one before.
+# M2-T7: the Devops view shows that run's timeline (KK_REQUIRE_UI=1 makes a missing browser a failure).
 # Needs Docker, the kk image (knowledge-kernel:local; built if missing) and this repository installed.
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -56,3 +57,16 @@ printf 'KK_SWEEP_SECONDS=5\nKK_COMPOSE_PROJECT=%s\nKK_ACTUATOR_SERVICES=shop\nKK
 dc up -d module-observer-prometheus module-anomaly module-actuator-compose >> "$log" 2>&1
 export KK_DC="docker compose -p $project --env-file $env $files"
 KK_CONTAINER=$(dc ps -q module-observer-prometheus) $py "$root/scripts/e2e_devops.py"
+# M2-T7: the Devops view of this run, through Caddy (needs Node and playwright, as the UI smoke does).
+if (cd "$root" && node -e "require('playwright')" 2> /dev/null); then
+  dc up -d caddy >> "$log" 2>&1
+  i=0; until $py -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ui/views.json', timeout=2)" 2> /dev/null; do
+    i=$((i + 1)); [ "$i" -lt 60 ] || { echo "FAIL Caddy did not answer"; exit 1; }; sleep 1
+  done
+  token=$(KK_JWT_SECRET=$(sed -n 's/^KK_JWT_SECRET=//p' "$env") $py -m kk token person_owner --days 0.01)
+  KK_URL=http://127.0.0.1:8080 KK_OWNER_TOKEN="$token" node "$root/scripts/e2e_devops_ui.mjs"
+elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
+  echo "FAIL the devops UI check needs Node and playwright (npm install --no-save playwright)"; exit 1
+else
+  echo "skip the devops UI check (no playwright)"
+fi

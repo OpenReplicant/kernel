@@ -18,6 +18,8 @@ and the kernel validates and applies it (or sends it to a person for review).
 - `explain(claim_id)` → sources and quotes, what it was derived from, what uses it, status history,
   beliefs and verifications. Use this before relying on a claim you didn't make.
 - `list_slots()`, `list_modules()` → the platform's own self-model.
+- `list_runs(plan_step?, used?, module?)` → runs: who did what, for which plan step, using which claims,
+  with status and outputs (an actuator records what it did this way, never as claims).
 
 If the harness runs the kernel hooks, claims related to each prompt arrive in your context as lines
 `subject predicate object [claim <id>, belief <b>]`. They are recall, not proof: cite them by id with

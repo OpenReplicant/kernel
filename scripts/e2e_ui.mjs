@@ -3,7 +3,7 @@
 // claims and an edge explains its claim; search finds and explains a claim; a change set an agent
 // submitted for review is approved in the browser and applied; the Modules view module loads and
 // lists the modules; the BPM view (M2-T4) draws the process map, lists the discrepancies and explains
-// one; no page errors and no Content-Security-Policy violations.
+// one, and the person confirms every discrepancy there after seeing its evidence (M2-G1); no page errors and no Content-Security-Policy violations.
 // Env: KK_URL (http://127.0.0.1:<port>), KK_OWNER_TOKEN, KK_AGENT_TOKEN; SHOT_DIR (optional screenshots).
 import { chromium } from 'playwright';
 
@@ -93,6 +93,8 @@ await shot('modules');
 await page.getByRole('button', { name: 'Processes' }).click();
 await page.waitForFunction(() => Number((document.querySelector('#bpm-map') || {dataset: {}}).dataset.edges) > 0,
                            null, { timeout: 30000 });
+const ready = () => page.waitForSelector('#bpm-discrepancies[data-ready="1"]', { timeout: 30000 });
+await ready();
 const map = await page.$eval('#bpm-map', e => ({ nodes: Number(e.dataset.nodes), edges: Number(e.dataset.edges) }));
 check('M2-T4 the process map renders documented and observed flows', map.nodes === 10 && map.edges >= 14,
       `${map.nodes} nodes, ${map.edges} flows`);
@@ -108,7 +110,28 @@ const explained = JSON.parse(await page.textContent('aside.detail pre'));
 check('M2-T4 a discrepancy explains: the claims it was derived from', (explained.derived_from || []).length > 0,
       `${(explained.derived_from || []).length} premises`);
 
+// M2-G1: the person reviews every planted discrepancy in the process view, each with its evidence and
+// belief, and confirms it; all six end confirmed.
+const evidence = await page.$$eval('#bpm-discrepancies li.discrepancy', ls => ls.map(l =>
+  [...l.querySelectorAll('.evidence a')].map(a => a.textContent)));
+check('M2-G1 every discrepancy shows its evidence with belief',
+      evidence.length === 6 && evidence.every(e => e.length > 0 && e.every(t => /belief/.test(t))
+        && e.some(t => /^observed/.test(t)) && e.some(t => /^(deterministic|extracted)/.test(t))),
+      evidence.map(e => e.length).join(','));
+for (let i = 0; i < 5; i++) {
+  const before = await page.$$eval('#bpm-discrepancies li[data-status="awaiting review"]', ls => ls.length);
+  if (!before) break;
+  await page.click('#bpm-discrepancies li[data-status="awaiting review"] button.approve');
+  await page.waitForFunction(n => document.querySelector('#bpm-discrepancies').dataset.ready === '1'
+    && document.querySelectorAll('#bpm-discrepancies li[data-status="awaiting review"]').length < n, before, { timeout: 30000 });
+}
+await ready();
+const reviewed = await page.$$eval('#bpm-discrepancies li.discrepancy', ls => ls.map(l => l.dataset.status));
+check('M2-G1 the person reviews every planted discrepancy in the UI; all six are confirmed',
+      reviewed.length === 6 && reviewed.every(s => s === 'confirmed'), reviewed.join(', '));
+await shot('processes-reviewed');
+
 check('no page errors or CSP violations', errors.length === 0, errors.join(' | ').slice(0, 200));
 await browser.close();
-console.log('T20 and M2-T4 UI', checks.every(Boolean) ? 'passed' : 'FAILED', `(${checks.filter(Boolean).length}/${checks.length})`);
+console.log('T20, M2-T4 and M2-G1 UI', checks.every(Boolean) ? 'passed' : 'FAILED', `(${checks.filter(Boolean).length}/${checks.length})`);
 process.exit(checks.every(Boolean) ? 0 : 1);
