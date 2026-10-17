@@ -1,0 +1,30 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:skill-adaptation-planning
+name: 'Skill: plan an adaptation'
+version: 0.1.0
+description: 'The Plan step of the MAPE-K loop, done by the harness agent: how to turn anomalies into an
+  adaptation plan (a p-plan:Plan of sosa:Actuation steps from the actuator''s fixed action list), derived
+  from the anomalies and observations it answers, submitted to the review lane for a person to approve.
+  The agent records under its own identity; the module has no code and no database role (D-53).'
+license: Apache-2.0
+kind: agent
+slots:
+- agent-skill
+protected: false
+agent:
+  iri: urn:kk:agent:skill-adaptation-planning
+runtime:
+  type: skill-only
+  entrypoint: SKILL.md
+requires:
+- slot: agent-interface
+- slot: actuator
+accepts:
+- http://www.w3.org/ns/oa#Annotation
+produces:
+- add_claim
+triggers:
+- type: manual
+mcp:
+  expose: []
+skill: SKILL.md

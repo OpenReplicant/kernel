@@ -2,6 +2,9 @@
 # Milestone 2, devops: the demo stack (a service under load, Prometheus) next to the kernel, and the
 # metrics observer installed as a sandboxed module that reaches Prometheus and nothing else (D-52).
 # M2-T5: windowed observations for each service, linked to the self-model's nodes.
+# M2-T6: the MAPE-K loop — the shop is stressed, the anomaly processor claims the anomaly, an agent plans
+# a scale-out (review lane), the owner approves, the actuator scales through the socket proxy, and the
+# observer records the recovery; every step cites the one before.
 # Needs Docker, the kk image (knowledge-kernel:local; built if missing) and this repository installed.
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -16,6 +19,8 @@ KK_AUTHENTICATOR_PASSWORD=$(pw)
 KK_JWT_SECRET=$(pw)$(pw)
 CADDY_IMAGE=caddy:2.11.7-alpine
 KK_DB_PORT=$port
+DOCKER_GID=$(stat -c %g /var/run/docker.sock)
+KK_DEMO_DIR=$root/deploy/demo
 ENV
 pg_pw=$(sed -n 's/^POSTGRES_PASSWORD=//p' "$env")
 auth_pw=$(sed -n 's/^KK_AUTHENTICATOR_PASSWORD=//p' "$env")
@@ -31,13 +36,23 @@ trap cleanup EXIT
 docker image inspect knowledge-kernel:local > /dev/null 2>&1 || docker build -q -t knowledge-kernel:local "$root"
 
 dc up -d --wait db >> "$log" 2>&1
-dc up -d kernel shop loadgen prometheus >> "$log" 2>&1
+dc up -d kernel shop loadgen prometheus docker-proxy >> "$log" 2>&1
 export KK_ADMIN_URL="postgresql://postgres:$pg_pw@127.0.0.1:$port/kk"
 # The self-model: the self-encoder reads the compose files, the demo's included (kk scan, as itself).
 DATABASE_URL="postgresql://kk_authenticator:$auth_pw@127.0.0.1:$port/kk" KK_ROLE=kkm_self_encoder \
   $py -m kk scan --repo "$root" --artifacts "$out/artifacts" >> "$log" 2>&1
-$py -m kk module install "$root/modules/observer-prometheus" --out "$out" > /dev/null
+field() { $py -c "import json, sys; print(json.load(sys.stdin)['$1'])"; }
+url() { echo "postgresql://$1:$2@127.0.0.1:$port/kk"; }
+export OWNER_DATABASE_URL="$(url person_owner "$($py -m kk person add owner --steward | field password)")"
+export AGENT_DATABASE_URL="$(url agent_planner "$($py -m kk agent add planner --label 'Planning agent' | field password)")"
+for m in observer-prometheus anomaly actuator-compose; do
+  $py -m kk module install "$root/modules/$m" --out "$out" > /dev/null
+  files="$files -f $out/$m.yaml"
+done
 echo "KK_WINDOW_SECONDS=10" >> "$out/observer-prometheus.env"
-files="$files -f $out/observer-prometheus.yaml"
-dc up -d module-observer-prometheus >> "$log" 2>&1
+printf 'KK_SWEEP_SECONDS=5\n' >> "$out/anomaly.env"
+printf 'KK_SWEEP_SECONDS=5\nKK_COMPOSE_PROJECT=%s\nKK_ACTUATOR_SERVICES=shop\nKK_MAX_REPLICAS=4\n' "$project" \
+  >> "$out/actuator-compose.env"
+dc up -d module-observer-prometheus module-anomaly module-actuator-compose >> "$log" 2>&1
+export KK_DC="docker compose -p $project --env-file $env $files"
 KK_CONTAINER=$(dc ps -q module-observer-prometheus) $py "$root/scripts/e2e_devops.py"

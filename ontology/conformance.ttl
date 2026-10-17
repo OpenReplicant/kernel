@@ -8,8 +8,8 @@
 
 <https://w3id.org/knowledge-kernel/conformance>
     a owl:Ontology ;
-    rdfs:label "Conformance discrepancy kinds" ;
-    owl:versionInfo "0.1.0" .
+    rdfs:label "Discrepancy, anomaly and action kinds" ;
+    owl:versionInfo "0.2.0" .
 
 <urn:kk:discrepancy-kind> a skos:ConceptScheme ; rdfs:label "discrepancy kinds" .
 <urn:kk:discrepancy-kind:skip> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "skipped step" ;
@@ -24,3 +24,20 @@
     skos:definition "A documented path between two steps was never observed." .
 <urn:kk:discrepancy-kind:limit> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "time limit exceeded" ;
     skos:definition "An observed wait between two steps exceeded the documented limit." .
+
+# Anomalies (M2-T6, D-53): an oa:Annotation on a service's node, derived from the observation (and the
+# documented limit) it concerns, valid for the observation's window.
+<urn:kk:anomaly-kind> a skos:ConceptScheme ; rdfs:label "anomaly kinds" .
+<urn:kk:anomaly-kind:limit> a skos:Concept ; skos:inScheme <urn:kk:anomaly-kind> ; skos:prefLabel "over the documented limit" ;
+    skos:definition "An observation exceeded the documented limit (bbo:maxValue) for its property." .
+<urn:kk:anomaly-kind:zscore> a skos:Concept ; skos:inScheme <urn:kk:anomaly-kind> ; skos:prefLabel "unusual value" ;
+    skos:definition "An observation lies more than three standard deviations from the mean of the previous windows." .
+
+# Actions an actuator may carry out (M2-T6, D-53): the fixed list. A plan step is a sosa:Actuation with
+# dcterms:type one of these, sosa:hasFeatureOfInterest the service's node and, for scale, the replica
+# count as sosa:hasSimpleResult.
+<urn:kk:action> a skos:ConceptScheme ; rdfs:label "actions" .
+<urn:kk:action:scale> a skos:Concept ; skos:inScheme <urn:kk:action> ; skos:prefLabel "scale" ;
+    skos:definition "Run the given number of replicas of a service." .
+<urn:kk:action:restart> a skos:Concept ; skos:inScheme <urn:kk:action> ; skos:prefLabel "restart" ;
+    skos:definition "Restart every replica of a service." .

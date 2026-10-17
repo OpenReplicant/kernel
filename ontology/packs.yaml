@@ -111,7 +111,7 @@ profile:
     file: observables.ttl
     license: Apache-2.0
   - id: conformance
-    owns: nothing new — the SKOS scheme of discrepancy kinds (urn:kk:discrepancy-kind:*) (D-50)
+    owns: nothing new — SKOS schemes of discrepancy kinds, anomaly kinds and actions (urn:kk:discrepancy-kind:*, urn:kk:anomaly-kind:*, urn:kk:action:*) (D-50, D-53)
     iri: https://w3id.org/knowledge-kernel/conformance
     file: conformance.ttl
     license: Apache-2.0

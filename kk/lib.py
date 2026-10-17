@@ -50,10 +50,12 @@ def listen(conn: psycopg.Connection, step: Callable[[psycopg.Connection], object
 
 
 @contextmanager
-def run(cur, module: str, params: Optional[dict] = None) -> Iterator[tuple[str, dict]]:
-    """A run of `module` (prov:Activity). Fill `outputs`; the run finishes succeeded, or failed if the
-    block raises."""
-    cur.execute("select api.start_run(%s, null, '[]'::jsonb, %s)", (module, Jsonb(params or {})))
+def run(cur, module: str, params: Optional[dict] = None, plan_step: Optional[str] = None,
+        used: Optional[list] = None) -> Iterator[tuple[str, dict]]:
+    """A run of `module` (prov:Activity), optionally carrying out `plan_step` (p-plan:correspondsToStep)
+    and using `used` (prov:used: claim ids, artifacts, entities). Fill `outputs`; the run finishes
+    succeeded, or failed if the block raises."""
+    cur.execute("select api.start_run(%s, %s, %s, %s)", (module, plan_step, Jsonb(used or []), Jsonb(params or {})))
     run_id = str(cur.fetchone()[0])
     outputs: dict = {}
     try:
