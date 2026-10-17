@@ -1,0 +1,15 @@
+{
+  "benchmark": "RCAEval",
+  "dataset": "re1-tt",
+  "method": "nsigma",
+  "avg@5": {
+    "CPU": 0.77,
+    "MEM": 0.92,
+    "DISK": 0.89,
+    "DELAY": 0.82,
+    "LOSS": 0.65
+  },
+  "avg@5_mean": 0.81,
+  "chance@5": {},
+  "rcaeval_commit": "259ea4167160256a74ad30004aa3d96a998c846e"
+}

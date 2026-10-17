@@ -237,6 +237,9 @@ def score(claims: list[dict], abstracts: dict[str, list[str]], answers: dict[str
                     idx.add(hit)
             if ans["label"] == "NOT_ENOUGH_INFO":
                 continue
+            # As SciFact's official scorer: at most the first three predicted rationale sentences count.
+            idx = set(sorted(idx, key=lambda i: next(n for n, q in enumerate(ans["quotes"])
+                                                     if q.strip() and (q.strip() in sents[i] or sents[i] in q)))[:3])
             verdicts.append(ans["label"])
             predicted += 1
             gold = gold_pairs.get((c["id"], doc))

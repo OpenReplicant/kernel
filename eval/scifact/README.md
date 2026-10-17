@@ -62,3 +62,14 @@ not the model, was the gap.
 
 Most claims have one evidence abstract, so stage 3 mostly carries stage 2's verdicts through. How belief
 accumulates over many works is tested by `eval/belief-v0` and the smoke test (D-62).
+
+## All 300 dev claims (2026-10-17, hybrid recall, top 3, Haiku zero-shot; official protocol)
+
+| Abstract F1, label only | With rationale (first three sentences) | Claim accuracy, with kernel | Closed book | Quotes verbatim | Belief AUC | Belief sign right |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.672 (P 0.61, R 0.75) | 0.595 | 0.88 | 0.77 | 99.4% | 0.95 | 88% |
+
+Published dev-split results to compare with (`docs/benchmarks.md`): ARSJoint 0.667 / 0.624, VerT5erini
+0.660 / 0.624, ParagraphJoint 0.651 / 0.599, VeriSci 0.510 / 0.485, all fine-tuned on SciFact. The
+60-claim sample above (0.78) was optimistic.
+
