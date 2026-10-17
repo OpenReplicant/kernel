@@ -1,11 +1,13 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:belief-corroboration-v0
 name: 'Belief model: corroboration counting v0'
-version: 0.2.0
-description: Scores claims by counting independent sources per statement_key (independent = different
-  source artifact/URI and different generating agent), minus conflicting values on single-value properties;
-  claims with non-overlapping validity windows are changes, not conflicts. Starts itself (listens for applied
-  change sets, sweeps for unscored claims) and submits its scores; needs no runner.
+version: 0.3.0
+description: 'Scores claims by counting independent sources per statement_key (independent = different source
+  artifact/URI and different generating agent), minus conflicting values on single-value properties;
+  claims with non-overlapping validity windows are changes, not conflicts. Works that support or refute
+  an entity (cito) set the belief of its label claim: (for + 1) / (for + against + 2), counting distinct
+  works (D-62). Starts itself (listens for applied change sets, sweeps for unscored claims) and submits
+  its scores; needs no runner.'
 license: Apache-2.0
 kind: processor
 slots:

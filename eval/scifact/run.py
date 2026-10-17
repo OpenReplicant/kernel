@@ -17,6 +17,11 @@
                                          default google/gemma-4-26b-a4b-it:free; key OPENROUTER_API_KEY or
                                          KK_EVAL_MODEL_KEY), or answers produced elsewhere (--answers, the
                                          JSON lines `prompts` describes, e.g. by a harness sub-agent)
+  python eval/scifact/run.py belief --answers FILE [--n N]
+                                         stage 3: those verdicts recorded as claims (`<paper> cito:supports or
+                                         cito:refutes <proposition>`, extracted, with the quotes), then the
+                                         belief model's belief in each proposition against SciFact's label
+                                         (AUC supported vs contradicted, sign accuracy)
 
 The data is CC BY-NC 2.0 (SciFact): downloaded into KK_EVAL_CACHE for measurement, never committed.
 Results go to eval/scifact/runs/<date>-<stage>.json.
@@ -259,12 +264,16 @@ def score(claims: list[dict], abstracts: dict[str, list[str]], answers: dict[str
             "unparsed": sum(1 for a in answers.values() if a.get("unparsed"))}
 
 
+def load_answers(path: str) -> dict[str, dict]:
+    raw = {json.loads(l)["key"]: json.loads(l) for l in open(path) if l.strip()}
+    return {key: parse(r["answer"] if isinstance(r.get("answer"), str) else json.dumps(r.get("answer", r)))
+            for key, r in raw.items()}
+
+
 def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = None) -> dict:
     models: dict[str, int] = {}
     if answers_file:
-        raw = {json.loads(l)["key"]: json.loads(l) for l in open(answers_file) if l.strip()}
-        answers = {key: parse(r["answer"] if isinstance(r.get("answer"), str) else json.dumps(r.get("answer", r)))
-                   for key, r in raw.items()}
+        answers = load_answers(answers_file)
         models[os.environ.get("KK_EVAL_MODEL", "answers file")] = len(answers)
         items = [{"key": key} for key in answers]
     else:
@@ -280,6 +289,78 @@ def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = 
     return {"stage": "verify", "k": k, "models": models, "missing_answers": len(missing), **score(sample(n), corpus(), answers),
             "baselines": "compare with the SciFact leaderboard's abstract-level metrics on the dev set; open retrieval"}
 
+
+# ---------------------------------------------------------------- stage 3: belief
+STANCE = {"SUPPORT": "http://purl.org/spar/cito/supports", "CONTRADICT": "http://purl.org/spar/cito/refutes"}
+LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
+
+
+def proposition(text: str) -> str:
+    return "urn:kk:proposition:" + hashlib.sha256(text.encode()).hexdigest()[:32]
+
+
+def belief(n: int, answers_file: str, wait: float = 600) -> dict:
+    """Stage 3: the stage-2 verdicts recorded as claims (`<paper> cito:supports|refutes <proposition>`,
+    extracted, with the model's quotes) by the agent; then the belief in each proposition, from the belief
+    model, against SciFact's label. A verdict without a quote is not recorded (extracted claims carry one)."""
+    import psycopg
+    from psycopg.types.json import Jsonb
+    answers = load_answers(answers_file)
+    claims = [c for c in sample(n) if any(k.startswith(f"{c['id']}|") for k in answers)]
+    ops, skipped = [], 0
+    for c in claims:
+        prop = proposition(c["claim"])
+        ops.append({"op": "add_claim", "subject": prop, "predicate": "rdfs:label",
+                    "object": {"value": {"@value": c["claim"], "@language": "en"}}, "evidence_type": "testimony",
+                    "references": [{"source_uri": f"https://github.com/allenai/scifact#claim-{c['id']}"}]})
+        for key, ans in answers.items():
+            cid, doc = key.split("|")
+            if int(cid) != c["id"] or doc == "closed" or ans["label"] not in STANCE:
+                continue
+            quotes = [q for q in ans["quotes"] if q.strip()]
+            if not quotes:
+                skipped += 1
+                continue
+            paper = f"urn:kk:paper:{SOURCE}:{doc}"
+            ops.append({"op": "add_claim", "subject": paper, "predicate": STANCE[ans["label"]], "object": {"entity": prop},
+                        "evidence_type": "extracted", "references": [{"source_uri": paper, "quote": q} for q in quotes]})
+    tag = hashlib.sha256(Path(answers_file).read_bytes()).hexdigest()[:16]
+    with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
+        me = db.execute("select kernel.my_agent()").fetchone()[0]
+        for i in range(0, len(ops), 200):
+            run_id = db.execute("select api.start_run(null, null, '[]'::jsonb, %s)",
+                                (Jsonb({"purpose": "scifact stage 3"}),)).fetchone()[0]
+            db.execute("select api.submit_change_set(%s)", (Jsonb({
+                "idempotency_key": f"scifact-belief:{tag}:{i // 200}", "attributed_to": me, "generated_by": str(run_id),
+                "target_scope": "urn:kk:scope:default", "ops": ops[i:i + 200]}),))
+        props = {proposition(c["claim"]): c for c in claims}
+        deadline, last, stable = time.time() + wait, None, 0
+        while time.time() < deadline:   # until every proposition has a belief that no longer changes
+            rows = dict(db.execute("select subject, belief from api.claims where predicate = %s and subject = any(%s)",
+                                   (LABEL, list(props))).fetchall())
+            stable = stable + 1 if rows == last and None not in rows.values() and len(rows) == len(props) else 0
+            if stable >= 3:
+                break
+            last = rows
+            time.sleep(5)
+    truth = {p: (next(iter(c["evidence"].values()))[0]["label"] if c["evidence"] else "NOT_ENOUGH_INFO")
+             for p, c in props.items()}
+    sup = [rows[p] for p in props if truth[p] == "SUPPORT" and rows.get(p) is not None]
+    con = [rows[p] for p in props if truth[p] == "CONTRADICT" and rows.get(p) is not None]
+    nei = [rows[p] for p in props if truth[p] == "NOT_ENOUGH_INFO" and rows.get(p) is not None]
+    pairs = [(a > b) + 0.5 * (a == b) for a in sup for b in con]
+    return {"stage": "belief", "models": {os.environ.get("KK_EVAL_MODEL", "answers file"): len(answers)},
+            "propositions": len(props), "stance_claims": len(ops) - len(props), "verdicts_without_quote": skipped,
+            "supported": len(sup), "contradicted": len(con), "no_evidence": len(nei),
+            "auc_supported_vs_contradicted": round(sum(pairs) / len(pairs), 4) if pairs else None,
+            "sign_accuracy": round((sum(b > 0.5 for b in sup) + sum(b < 0.5 for b in con)) / (len(sup) + len(con)), 4)
+                             if sup or con else None,
+            "undecided_share": {"supported": round(sum(b == 0.5 for b in sup) / len(sup), 4) if sup else None,
+                                "contradicted": round(sum(b == 0.5 for b in con) / len(con), 4) if con else None,
+                                "no_evidence": round(sum(b == 0.5 for b in nei) / len(nei), 4) if nei else None},
+            "mean_belief": {k: round(statistics.mean(v), 4) if v else None
+                            for k, v in (("supported", sup), ("contradicted", con), ("no_evidence", nei))},
+            "model": "belief-corroboration, evidence rule (D-62): (works for + 1) / (works for + against + 2)"}
 
 
 def save(result: dict) -> None:
@@ -302,6 +383,13 @@ if __name__ == "__main__":
         encode()
     elif stage == "retrieval":
         save(retrieval())
+    elif stage == "belief":
+        import argparse
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--n", type=int, default=100)
+        ap.add_argument("--answers", required=True, help="stage-2 answers (JSON lines), as for verify --answers")
+        a = ap.parse_args(sys.argv[2:])
+        save(belief(a.n, a.answers))
     elif stage in ("prompts", "verify"):
         import argparse
         ap = argparse.ArgumentParser()

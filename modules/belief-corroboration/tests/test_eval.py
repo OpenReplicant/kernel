@@ -26,7 +26,7 @@ def run():
         case = yaml.safe_load(path.read_text())
         claims = [Claim(c["id"], c["key"], c["subject"], c["predicate"], c["object"], c["agent"],
                         frozenset(c["sources"]), when(c.get("valid_from")), when(c.get("valid_to")),
-                        c.get("deprecated", False)) for c in case["input"]["claims"]]
+                        c.get("deprecated", False), c.get("entity")) for c in case["input"]["claims"]]
         got = {k: v for k, (v, _) in score(claims, set(case["input"]["functional"])).items()}
         if got != case["expect"]["beliefs"]:
             failures.append(f"{case['id']}: expected {case['expect']['beliefs']}, got {got}")

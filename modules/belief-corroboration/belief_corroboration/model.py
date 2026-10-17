@@ -10,6 +10,14 @@ For a claim x:
   belief    = S / (S + C + 1)
 
 Claims whose validity windows don't overlap are changes over time, not conflicts.
+
+Evidence (D-62): when works bear on an entity with cito:supports or cito:confirms (for) and
+cito:refutes or cito:disputes (against), the entity's rdfs:label claim carries the belief that the
+labelled statement holds (a proposition `urn:kk:proposition:<hash>` is named by its text, so its label
+cannot be wrong otherwise):
+  F, A      = the number of distinct works (the evidence claims' subjects) for and against; a work
+              counted on both sides counts on neither; extractor agents do not make works dependent
+  belief    = (F + 1) / (F + A + 2)     (no evidence: 0.5; one work for: 0.67; one against: 0.33)
 """
 from __future__ import annotations
 
@@ -31,6 +39,13 @@ class Claim:
     valid_from: datetime | None = None
     valid_to: datetime | None = None
     deprecated: bool = False
+    entity: str | None = None     # the object entity's IRI, if the object is an entity
+
+
+CITO = "http://purl.org/spar/cito/"
+FOR = {CITO + "supports", CITO + "confirms"}
+AGAINST = {CITO + "refutes", CITO + "disputes"}
+LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 
 
 def overlap(a: Claim, b: Claim) -> bool:
@@ -68,8 +83,20 @@ def score(claims: list[Claim], functional: set[str]) -> dict[str, tuple[float, d
         by_key.setdefault(c.key, []).append(c)
         if c.predicate in functional:
             by_slot.setdefault((c.subject, c.predicate), []).append(c)
+    stances: dict[str, dict[str, set]] = {}     # entity -> work -> stances
+    for c in live:
+        if c.entity and (c.predicate in FOR or c.predicate in AGAINST):
+            stances.setdefault(c.entity, {}).setdefault(c.subject, set()).add(c.predicate in FOR)
     out = {}
     for c in live:
+        if c.predicate == LABEL and c.subject in stances:
+            works = stances[c.subject]
+            f = sorted(w for w, st in works.items() if st == {True})
+            a = sorted(w for w, st in works.items() if st == {False})
+            out[c.id] = (round((len(f) + 1) / (len(f) + len(a) + 2), 4),
+                         {"model": MODEL, "rule": "evidence", "works_for": len(f), "works_against": len(a),
+                          "for": f[:20], "against": a[:20]})
+            continue
         s = independent_groups(by_key[c.key])
         rivals = [r for r in by_slot.get((c.subject, c.predicate), []) if r.object != c.object and overlap(c, r)]
         k = independent_groups(rivals) if rivals else 0

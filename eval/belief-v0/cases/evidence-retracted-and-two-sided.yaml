@@ -1,0 +1,12 @@
+id: urn:kk:eval:belief-v0/evidence-retracted-and-two-sided
+description: D-62. A deprecated (retracted) refutation does not count; a work that both supports and disputes counts on neither side.
+input:
+  functional: []
+  claims:
+  - {id: p, key: label, subject: urn:kk:proposition:p1, predicate: "http://www.w3.org/2000/01/rdf-schema#label", object: "text", agent: eval, sources: [file:claims]}
+  - {id: a, key: ka, subject: urn:w:1, predicate: "http://purl.org/spar/cito/supports", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:1]}
+  - {id: b, key: kb, subject: urn:w:2, predicate: "http://purl.org/spar/cito/refutes", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:2], deprecated: true}
+  - {id: c, key: kc, subject: urn:w:3, predicate: "http://purl.org/spar/cito/supports", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:3]}
+  - {id: d, key: kd, subject: urn:w:3, predicate: "http://purl.org/spar/cito/disputes", object: "urn:kk:proposition:p1", entity: urn:kk:proposition:p1, agent: x, sources: [urn:w:3]}
+expect:
+  beliefs: {p: 0.6667, a: 0.5, c: 0.5, d: 0.5}

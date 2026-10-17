@@ -1,0 +1,25 @@
+{
+  "stage": "belief",
+  "models": {
+    "claude-haiku-sub-agent": 240
+  },
+  "propositions": 60,
+  "stance_claims": 50,
+  "verdicts_without_quote": 0,
+  "supported": 28,
+  "contradicted": 17,
+  "no_evidence": 15,
+  "auc_supported_vs_contradicted": 0.9727,
+  "sign_accuracy": 0.9111,
+  "undecided_share": {
+    "supported": 0.0714,
+    "contradicted": 0.0588,
+    "no_evidence": 0.8667
+  },
+  "mean_belief": {
+    "supported": 0.6726,
+    "contradicted": 0.3627,
+    "no_evidence": 0.5
+  },
+  "model": "belief-corroboration, evidence rule (D-62): (works for + 1) / (works for + against + 2)"
+}
