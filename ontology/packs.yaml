@@ -36,10 +36,11 @@ core:
     license: W3C Software and Document License
     pin: pin at install
   - id: dcterms
-    owns: source, part-of, replaced-by, license, version links, access rights (scopes), type
+    owns: source, part-of, replaced-by, license, version links, access rights (scopes), type; a work's title and abstract
     iri: http://purl.org/dc/terms/
+    file: dcterms.ttl
     license: CC BY 4.0 (DCMI)
-    pin: pin at install
+    pin: DCMI Metadata Terms 2020-01-20, subset (title, abstract; revision in owl:versionInfo) cut by scripts/vocab_subset.py; kk-core types the terms the module contract uses
   - id: prov-o
     owns: provenance — agents, activities (runs), derivation, attribution, generation time, invalidation
     iri: http://www.w3.org/ns/prov#
@@ -115,6 +116,23 @@ profile:
     iri: https://w3id.org/knowledge-kernel/conformance
     file: conformance.ttl
     license: Apache-2.0
+  - id: fabio
+    owns: kinds of scholarly works — research paper, journal article (D-59)
+    iri: http://purl.org/spar/fabio/
+    file: fabio.ttl
+    license: CC BY 4.0 (SPAR Ontologies)
+    pin: FaBiO 2026-09-03, subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: a paper is `urn:kk:paper:<source>:<id>` a fabio:ResearchPaper (or a sub-class), with dcterms:title and dcterms:abstract
+    load_when: always (milestone 3 — papers)
+  - id: cito
+    owns: how a work bears on a statement — supports, refutes, disputes, confirms (D-59)
+    iri: http://purl.org/spar/cito/
+    file: cito.ttl
+    license: CC BY 4.0 (SPAR Ontologies)
+    pin: CiTO 2.9.0 (2026-09-03), subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: the object may be a proposition (`urn:kk:proposition:<hash>`, rdfs:label its text), not only another work;
+      evidence `extracted` with the sentences that bear on it as quotes
+    load_when: always (milestone 3 — papers)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

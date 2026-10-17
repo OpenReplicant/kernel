@@ -74,7 +74,7 @@ kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
-ontology/        kk-core.ttl (module contract only), profiles kk-tosca/kk-profile/bbo/sosa,
+ontology/        kk-core.ttl (module contract only), dcterms.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,
                  observables.ttl, conformance.ttl, oa.ttl, mappings.ttl,
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
@@ -82,7 +82,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
                  encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,
                  view-bpm, observer-prometheus, anomaly, skill-adaptation-planning, actuator-compose,
-                 view-devops;
+                 view-devops; milestone 3: encoder-papers;
                  _template/
 kk/              the kk command (up, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
@@ -93,7 +93,7 @@ scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mj
                  check_manifests.py, vocab_subset.py
 examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
-eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/)
+eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/), scifact (run.py; data fetched, not committed)
 docs/            spec, milestone-1, decisions, harness (drop-in guide), mcp-servers, sources; spikes/
 ```
 

@@ -1,0 +1,16 @@
+{
+  "stage": "retrieval",
+  "queries": 300,
+  "ndcg@10": 0.2957,
+  "recall@200claims": 0.8188,
+  "latency_ms": {
+    "p50": 1971,
+    "p95": 2645,
+    "max": 3055
+  },
+  "baseline": {
+    "bm25_ndcg@10": 0.665,
+    "source": "BEIR (Thakur et al. 2021)"
+  },
+  "recall": "kernel_mcp.recall.RANKED (Postgres full-text search, OR of lexemes, ts_rank_cd, no index)"
+}
