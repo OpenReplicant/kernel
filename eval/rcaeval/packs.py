@@ -8,8 +8,11 @@ Its score is the largest robust z-score (median, IQR) of the windows after the i
 windows before it, as in eval/rcaeval/run.py. The pack keeps the strongest observations.
 
   python eval/rcaeval/packs.py show CASE_DIR                       one case's pack and prompt
-  python eval/rcaeval/packs.py build SUITE_DIR > prompts.jsonl      every case's prompt (for a model)
-  python eval/rcaeval/packs.py score SUITE_DIR [answers.jsonl]      Avg@5: services ranked by their
+  python eval/rcaeval/packs.py build SUITE_DIR MAP.json > prompts.jsonl
+                                    every case's prompt (for a model), under an opaque key; MAP.json
+                                    maps keys to cases and stays away from the model (D-65: a case's
+                                    path names its root cause)
+  python eval/rcaeval/packs.py score SUITE_DIR [answers.jsonl MAP.json]   Avg@5: services ranked by their
                                     strongest observation (no model), and by the model's answers if given
 """
 from __future__ import annotations
@@ -133,7 +136,8 @@ def avg5(ranked: list[list[str]], truths: list[str]) -> float:
     return round(sum(sum(t in r[:k] for r, t in zip(ranked, truths)) / len(truths) for k in range(1, 6)) / 5, 4)
 
 
-def score(suite: Path, answers: Path | None) -> dict:
+def score(suite: Path, answers: Path | None, keymap: Path | None = None) -> dict:
+    keys = json.loads(keymap.read_text()) if keymap else {}
     packs = [pack(c) for c in cases(suite)]
     truths = [p["truth"] for p in packs]
     out = {"suite": suite.name, "cases": len(packs),
@@ -144,7 +148,7 @@ def score(suite: Path, answers: Path | None) -> dict:
             if line.strip():
                 r = json.loads(line)
                 a = r["answer"] if isinstance(r["answer"], dict) else json.loads(re.search(r"\{.*\}", r["answer"], re.S).group(0))
-                got[r["key"]] = [service(x + "_") if "_" not in x else service(x) for x in a.get("ranks", [])]
+                got[keys.get(r["key"], r["key"])] = [service(x + "_") if "_" not in x else service(x) for x in a.get("ranks", [])]
         ranked = [got.get(p["case"], []) for p in packs]
         out["avg@5"]["model over the observations"] = avg5(ranked, truths)
         out["answered"] = sum(1 for p in packs if p["case"] in got)
@@ -163,8 +167,14 @@ if __name__ == "__main__":
         print(prompt(p))
         print(json.dumps({"truth": p["truth"], "by max z": sorted(p["max_z"], key=lambda s: -p["max_z"][s])[:5]}))
     elif cmd == "build":
+        import hashlib
+        keys = {}
         for c in cases(target):
             p = pack(c)
-            print(json.dumps({"key": p["case"], "prompt": prompt(p)}))
+            key = hashlib.sha256(p["case"].encode()).hexdigest()[:12]
+            keys[key] = p["case"]
+            print(json.dumps({"key": key, "prompt": prompt(p)}))
+        Path(sys.argv[3]).write_text(json.dumps(keys, indent=1))
     elif cmd == "score":
-        print(json.dumps(score(target, Path(sys.argv[3]) if len(sys.argv) > 3 else None), indent=2))
+        print(json.dumps(score(target, Path(sys.argv[3]) if len(sys.argv) > 3 else None,
+                               Path(sys.argv[4]) if len(sys.argv) > 4 else None), indent=2))

@@ -68,6 +68,10 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - A CURIE in a change set expands only with a prefix the kernel knows (`kernel.prefix`: rdf, rdfs, owl,
   dcterms, prov, …); `cito:supports` is refused as "not a known term". Pack vocabularies without a
   registered prefix go in as full IRIs (D-62).
+- A model must never see an eval item's key or path when it names the answer: RCAEval's case paths
+  (`RE2-TT/ts-auth-service_cpu/1`) gave Haiku the root cause, scoring 0.99. Give items opaque keys,
+  keep the map elsewhere, shuffle (D-65). And clear a benchmark's result folder between runs if its
+  scorer reads every file there (RCAEval's `output/results`).
 - Tune on SciFact's train split, report on dev: the published comparisons are on dev, and a choice made
   by looking at dev results inflates them. On dev, the prompt that won on train did not pay (D-64).
 - A search path must never wait on a model download: harness subprocesses get a stripped environment

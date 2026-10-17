@@ -46,14 +46,14 @@ def windowed(window: int):
     return method
 
 
-def replay(path: str):
+def replay(path: str, keymap: str | None = None):
     """A model's rankings (JSON lines {"key": "<suite>/<service_fault>/<n>", "answer": {"ranks": [...]}}, as
     from packs.py build), scored by RCAEval's own evaluator like any method."""
-    got = {}
+    got, keys = {}, json.loads(Path(keymap).read_text()) if keymap else {}
     for line in Path(path).read_text().splitlines():
         if line.strip():
             r = json.loads(line)
-            got[r["key"]] = list((r["answer"] if isinstance(r["answer"], dict) else {}).get("ranks", []))
+            got[keys.get(r["key"], r["key"])] = list((r["answer"] if isinstance(r["answer"], dict) else {}).get("ranks", []))
 
     def method(data, inject_time=None, dataset=None, args=None, **kwargs):
         case = Path(args.data_path).parent
@@ -67,6 +67,7 @@ def main() -> int:
     ap.add_argument("--method", default="kernel")
     ap.add_argument("--window", type=int, default=60)
     ap.add_argument("--answers", help="for --method answers: a model's rankings (JSON lines)")
+    ap.add_argument("--keys", help="for --method answers: the key map packs.py build wrote")
     ap.add_argument("--label", default="", help="a name for the run, e.g. the model")
     a = ap.parse_args()
     os.chdir(SRC)
@@ -77,7 +78,7 @@ def main() -> int:
     method = a.method
     if a.method in ("kernel", "answers"):
         import RCAEval.e2e as e2e
-        e2e.dummy = windowed(a.window) if a.method == "kernel" else replay(a.answers)
+        e2e.dummy = windowed(a.window) if a.method == "kernel" else replay(a.answers, a.keys)
         method = "dummy"
     sys.argv = ["main.py", "--method", method, "--dataset", a.dataset, "--report-chance"]
     out = io.StringIO()
