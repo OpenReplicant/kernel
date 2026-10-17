@@ -26,17 +26,26 @@ python3.12 -m venv /tmp/rca && /tmp/rca/bin/pip install --no-deps -e ~/.cache/kn
 RCAEval's full install pins many old packages; BARO, N-Sigma and its evaluator need only those above.
 It needs Python 3.12 (or 3.8, 3.14). A suite downloads in seconds and runs in under a minute on 4 cores.
 
-## Results (2026-10-17, RE1, Avg@5, run here with RCAEval's code at the pinned commit)
+## Results (2026-10-17, Avg@5, RCAEval's evaluator at the pinned commit; D-65)
 
-| Method | Online Boutique | Sock Shop | Train Ticket | Mean |
-| --- | --- | --- | --- | --- |
-| BARO (raw series) | 0.896 | 0.740 | 0.646 | 0.761 |
-| N-Sigma (raw series) | 0.818 | 0.884 | 0.810 | 0.837 |
-| kernel, 15 s windows | 0.880 | 0.776 | 0.654 | 0.770 |
-| kernel, 60 s windows | **0.908** | 0.844 | 0.700 | 0.817 |
+Every run starts from an empty `output/results` (RCAEval scores every file left there; D-63's first
+numbers mixed runs and are superseded). BARO reproduces RCAEval's published RE2-TT numbers within 0.01
+where our download is complete.
 
-Windows of a minute lose nothing against the raw-series methods: they beat BARO on every system and
-come within 0.02 of N-Sigma on average (ahead on Online Boutique). Averaging smooths the noise that the
-per-second series carry. RE1 gives every method the injection time, so it scores ranking, not detection,
-and simple statistics already do well: the place for an LLM over the kernel's claims is RE2/RE3 (logs,
-traces, code-level faults), next.
+| Suite | BARO | multi-source BARO | N-Sigma | kernel, 60 s windows | Haiku over the evidence packs |
+| --- | --- | --- | --- | --- | --- |
+| RE1-OB | 0.896 | | 0.818 | 0.894 | |
+| RE1-SS | 0.576 | | 0.868 | 0.922 | |
+| RE1-TT | 0.262 | | 0.740 | 0.800 | |
+| RE2-OB (90 cases) | 0.743 | 0.755 | 0.913 | 0.935 | **0.982** |
+| RE2-TT (63 of 90) | 0.762 | | 0.790 | 0.643 | **0.960** |
+
+The kernel's windows use a robust z with a fallback for flat baselines and keep columns that were flat
+before the fault; both matter (D-65). Haiku reads the 40 strongest observations of a case and ranks
+services; it recovers where statistics fall behind (Train Ticket, delay and loss), following how a
+fault spreads to the services that call it.
+
+```sh
+python3.12 eval/rcaeval/packs.py build DATA/RE2/RE2-OB keys.json > prompts.jsonl   # opaque keys; keep keys.json from the model
+python3.12 eval/rcaeval/run.py --dataset re2-ob --method answers --answers answers.jsonl --keys keys.json --label MODEL
+```

@@ -1,0 +1,23 @@
+{
+  "benchmark": "RCAEval",
+  "dataset": "re2-ob",
+  "method": "answers-claude-haiku-sub-agent-blind",
+  "avg@5": {
+    "CPU": 1.0,
+    "MEM": 1.0,
+    "DISK": 1.0,
+    "SOCKET": 0.97,
+    "DELAY": 0.96,
+    "LOSS": 0.96
+  },
+  "avg@5_mean": 0.9817,
+  "chance@5": {
+    "CPU": 0.25,
+    "MEM": 0.25,
+    "DISK": 0.25,
+    "SOCKET": 0.25,
+    "DELAY": 0.25,
+    "LOSS": 0.25
+  },
+  "rcaeval_commit": "259ea4167160256a74ad30004aa3d96a998c846e"
+}
