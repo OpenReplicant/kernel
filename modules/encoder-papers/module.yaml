@@ -1,0 +1,44 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-papers
+name: Paper encoder
+version: 0.1.0
+description: 'Encodes scholarly papers given as JSON lines (an id, a title and an abstract, as text or a list
+  of sentences; the SciFact and BEIR corpus formats) into deterministic claims: each paper is
+  urn:kk:paper:<source>:<id>, a fabio:ResearchPaper with its dcterms:title and dcterms:abstract, referenced
+  by the file artifact and the paper''s id. Batches of papers per change set; the same file again is a
+  no-op. Runs the ingest filter first (D-59).'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-papers
+  db_role: kkm_encoder_papers
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m paper_encoder --source <name> <papers.jsonl>
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_papers
+    KK_INGEST_FILTER: ingest filter command (default python -m ingest_filter)
+requires:
+- slot: ingest-filter
+- slot: artifact-store
+accepts:
+- application/jsonl (one paper per line)
+produces:
+- add_artifact
+- add_claim
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql

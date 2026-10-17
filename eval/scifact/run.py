@@ -1,0 +1,309 @@
+"""SciFact on the kernel (M3-T3, D-59): is the kernel a good base for scientific belief?
+
+  python eval/scifact/run.py fetch       download SciFact and its BEIR split, checked by sha256
+  python eval/scifact/run.py encode      the 5,183 abstracts into the kernel (paper encoder, as its role)
+  python eval/scifact/run.py retrieval   stage 1, no model: the 300 labelled claims through the kernel's
+                                         recall, scored as BEIR does (nDCG@10, recall@100), with latency
+  python eval/scifact/run.py prompts [--n N] [--k K]
+                                         stage 2 inputs: each claim with the top K abstracts the kernel
+                                         recalls (sentences numbered), and the same claim alone (closed book)
+  python eval/scifact/run.py verify [--n N] [--k K] [--answers FILE]
+                                         stage 2: a model labels each (claim, abstract) SUPPORT, CONTRADICT or
+                                         NOT_ENOUGH_INFO with the sentences it rests on, quoted; and each claim
+                                         alone. Scored with SciFact's abstract-level metrics, claim-level
+                                         accuracy with and without the kernel, and quote fidelity (quotes
+                                         found verbatim in the abstract). The model: any OpenAI-compatible
+                                         endpoint (KK_EVAL_MODEL_URL, default OpenRouter; KK_EVAL_MODEL,
+                                         default google/gemma-4-26b-a4b-it:free; key OPENROUTER_API_KEY or
+                                         KK_EVAL_MODEL_KEY), or answers produced elsewhere (--answers, the
+                                         JSON lines `prompts` describes, e.g. by a harness sub-agent)
+
+The data is CC BY-NC 2.0 (SciFact): downloaded into KK_EVAL_CACHE for measurement, never committed.
+Results go to eval/scifact/runs/<date>-<stage>.json.
+
+Env: DATABASE_URL (a login that may SET ROLE kkm_encoder_papers, for encode), AGENT_DATABASE_URL (the
+agent's own login, for retrieval), KK_EVAL_CACHE (default ~/.cache/knowledge-kernel/eval).
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import os
+import re
+import statistics
+import subprocess
+import sys
+import tarfile
+import time
+import urllib.error
+import urllib.request
+import zipfile
+from datetime import date
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+CACHE = Path(os.environ.get("KK_EVAL_CACHE") or Path.home() / ".cache/knowledge-kernel/eval") / "scifact"
+FILES = {  # pinned Oct 2026
+    "data.tar.gz": ("https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz",
+                    "11c621288d41ac144d29b13b0f8503b3820b7d6e8b1f6ff24dff335c196d76be"),
+    "beir.zip": ("https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip",
+                 "536e14446a0ba56ed1398ab1055f39fe852686ecad24a6306c80c490fa8e0165"),
+}
+CORPUS, CLAIMS, QRELS = CACHE / "data/corpus.jsonl", CACHE / "data/claims_dev.jsonl", CACHE / "scifact/qrels/test.tsv"
+SOURCE = "scifact"
+
+
+def fetch() -> None:
+    CACHE.mkdir(parents=True, exist_ok=True)
+    for name, (url, sha) in FILES.items():
+        path = CACHE / name
+        if not path.exists():
+            urllib.request.urlretrieve(url, path)
+        got = hashlib.sha256(path.read_bytes()).hexdigest()
+        if got != sha:
+            sys.exit(f"{name}: sha256 {got}, expected {sha}")
+    with tarfile.open(CACHE / "data.tar.gz") as t:
+        t.extractall(CACHE, filter="data")
+    zipfile.ZipFile(CACHE / "beir.zip").extractall(CACHE)
+    print(json.dumps({"cache": str(CACHE), "papers": sum(1 for _ in open(CORPUS)), "claims": sum(1 for _ in open(CLAIMS))}))
+
+
+def encode() -> None:
+    t0 = time.time()
+    out = subprocess.run([sys.executable, "-m", "paper_encoder", "--source", SOURCE, "--artifacts",
+                          str(CACHE / "artifacts"), str(CORPUS)], capture_output=True, text=True,
+                         env={**os.environ, "KK_ROLE": "kkm_encoder_papers"})
+    if out.returncode:
+        sys.exit(out.stderr[-2000:])
+    res = json.loads(out.stdout)
+    submitted = time.time() - t0
+    import psycopg
+    with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:   # applied = visible to an agent
+        while True:
+            applied = db.execute("select count(*) from api.claims where subject like %s and belief is not null",
+                                 (f"urn:kk:paper:{SOURCE}:%",)).fetchone()[0]
+            if applied >= res["claims"]:
+                break
+            time.sleep(2)
+    res.update(submit_seconds=round(submitted, 1), applied_and_scored_seconds=round(time.time() - t0, 1))
+    print(json.dumps({k: v for k, v in res.items() if k != "change_sets"}))
+
+
+def ndcg10(ranked: list[str], relevant: set[str]) -> float:
+    dcg = sum(1 / math.log2(i + 2) for i, d in enumerate(ranked[:10]) if d in relevant)
+    ideal = sum(1 / math.log2(i + 2) for i in range(min(len(relevant), 10)))
+    return dcg / ideal if ideal else 0.0
+
+
+def retrieval(limit: int = 200) -> dict:
+    import psycopg
+    sys.path.insert(0, str(HERE.parents[1] / "modules/kernel-mcp"))
+    from kernel_mcp import recall
+    claims = {json.loads(l)["id"]: json.loads(l)["claim"] for l in open(CLAIMS)}
+    qrels: dict[str, set[str]] = {}
+    for line in open(QRELS).read().splitlines()[1:]:
+        q, d, _ = line.split("\t")
+        qrels.setdefault(q, set()).add(d)
+    prefix = f"urn:kk:paper:{SOURCE}:"
+    scores, recalls, ms = [], [], []
+    with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
+        for q, rel in sorted(qrels.items(), key=lambda kv: int(kv[0])):
+            t0 = time.perf_counter()
+            rows = db.execute(recall.RANKED, recall.params(claims[int(q)], limit)).fetchone()[0]
+            ms.append((time.perf_counter() - t0) * 1000)
+            ranked = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))
+            scores.append(ndcg10(ranked, rel))
+            recalls.append(len(rel & set(ranked)) / len(rel))
+    ms.sort()
+    out = {"stage": "retrieval", "queries": len(scores), "ndcg@10": round(statistics.mean(scores), 4),
+           f"recall@{limit}claims": round(statistics.mean(recalls), 4),
+           "latency_ms": {"p50": round(ms[len(ms) // 2]), "p95": round(ms[int(len(ms) * 0.95)]), "max": round(ms[-1])},
+           "baseline": {"bm25_ndcg@10": 0.665, "source": "BEIR (Thakur et al. 2021)"},
+           "recall": "kernel_mcp.recall.RANKED (Postgres full-text search, OR of lexemes, ts_rank_cd, no index)"}
+    return out
+
+
+# ---------------------------------------------------------------- stage 2: verification
+LABELS = ("SUPPORT", "CONTRADICT", "NOT_ENOUGH_INFO")
+ASK_EVIDENCE = """You check a scientific claim against one abstract.
+Claim: {claim}
+Abstract (numbered sentences):
+{sentences}
+Does the abstract SUPPORT the claim, CONTRADICT it, or give NOT_ENOUGH_INFO? If it supports or contradicts,
+quote the sentences it rests on, exactly as written. Answer with JSON only:
+{{"label": "SUPPORT" | "CONTRADICT" | "NOT_ENOUGH_INFO", "quotes": ["exact sentence", ...]}}"""
+ASK_CLOSED = """Is this scientific claim true? Use what you know; no sources are given.
+Claim: {claim}
+Answer with JSON only: {{"label": "SUPPORT" | "CONTRADICT" | "NOT_ENOUGH_INFO"}}
+(SUPPORT: true; CONTRADICT: false; NOT_ENOUGH_INFO: you cannot tell.)"""
+
+
+def corpus() -> dict[str, list[str]]:
+    return {str(json.loads(l)["doc_id"]): json.loads(l)["abstract"] for l in open(CORPUS)}
+
+
+def sample(n: int) -> list[dict]:
+    """The first n labelled claims, in id order (deterministic)."""
+    return sorted((json.loads(l) for l in open(CLAIMS)), key=lambda c: c["id"])[:n]
+
+
+def prompts(n: int, k: int) -> list[dict]:
+    """One item per (claim, recalled abstract) and one closed-book item per claim."""
+    import psycopg
+    sys.path.insert(0, str(HERE.parents[1] / "modules/kernel-mcp"))
+    from kernel_mcp import recall
+    abstracts, prefix, items = corpus(), f"urn:kk:paper:{SOURCE}:", []
+    with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
+        for c in sample(n):
+            rows = db.execute(recall.RANKED, recall.params(c["claim"], 60)).fetchone()[0]
+            docs = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))[:k]
+            for d in docs:
+                text = "\n".join(f"[{i}] {s}" for i, s in enumerate(abstracts[d]))
+                items.append({"key": f"{c['id']}|{d}", "claim_id": c["id"], "doc": d,
+                              "prompt": ASK_EVIDENCE.format(claim=c["claim"], sentences=text)})
+            items.append({"key": f"{c['id']}|closed", "claim_id": c["id"], "doc": None,
+                          "prompt": ASK_CLOSED.format(claim=c["claim"])})
+    return items
+
+
+def ask(prompt: str) -> tuple[str, str]:
+    """One completion from an OpenAI-compatible endpoint: (text, the model that answered)."""
+    url = os.environ.get("KK_EVAL_MODEL_URL", "https://openrouter.ai/api/v1").rstrip("/") + "/chat/completions"
+    key = os.environ.get("KK_EVAL_MODEL_KEY") or os.environ.get("OPENROUTER_API_KEY") or ""
+    body = json.dumps({"model": os.environ.get("KK_EVAL_MODEL", "google/gemma-4-26b-a4b-it:free"), "temperature": 0,
+                       "messages": [{"role": "user", "content": prompt}]}).encode()
+    for attempt in range(6):
+        req = urllib.request.Request(url, body, {"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                out = json.load(r)
+            return out["choices"][0]["message"]["content"] or "", out.get("model", "")
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503) or attempt == 5:
+                raise
+            time.sleep(2 ** attempt * 5)
+    raise RuntimeError("unreachable")
+
+
+def parse(text: str) -> dict:
+    """The JSON object in a model's answer; NOT_ENOUGH_INFO when there is none."""
+    a, b = text.find("{"), text.rfind("}")
+    try:
+        out = json.loads(text[a:b + 1])
+    except ValueError:
+        return {"label": "NOT_ENOUGH_INFO", "quotes": [], "unparsed": True}
+    label = str(out.get("label", "")).upper().replace(" ", "_")
+    return {"label": label if label in LABELS else "NOT_ENOUGH_INFO",
+            "quotes": [q for q in out.get("quotes", []) if isinstance(q, str)]}
+
+
+def f1(p: float, r: float) -> float:
+    return round(2 * p * r / (p + r), 4) if p + r else 0.0
+
+
+def score(claims: list[dict], abstracts: dict[str, list[str]], answers: dict[str, dict]) -> dict:
+    """SciFact abstract-level (label only, and with rationale), claim-level accuracy, quote fidelity."""
+    gold_pairs = {(c["id"], d): ev for c in claims for d, ev in c["evidence"].items()}
+    predicted = correct_label = correct_rationale = 0
+    quotes = found = 0
+    claim_hits = {"kernel": 0, "closed": 0}
+    with_evidence = 0
+    for c in claims:
+        verdicts = []
+        for key, ans in answers.items():
+            cid, doc = key.split("|")
+            if int(cid) != c["id"] or doc == "closed":
+                continue
+            sents = abstracts[doc]
+            idx = set()
+            for q in ans["quotes"]:
+                quotes += 1
+                hit = next((i for i, s in enumerate(sents) if q.strip() and (q.strip() in s or s in q)), None)
+                if hit is not None:
+                    found += 1
+                    idx.add(hit)
+            if ans["label"] == "NOT_ENOUGH_INFO":
+                continue
+            verdicts.append(ans["label"])
+            predicted += 1
+            gold = gold_pairs.get((c["id"], doc))
+            if gold and gold[0]["label"] == ans["label"]:
+                correct_label += 1
+                if any(set(r["sentences"]) <= idx for r in gold):
+                    correct_rationale += 1
+        if c["evidence"]:
+            with_evidence += 1
+            truth = next(iter(c["evidence"].values()))[0]["label"]
+            mine = max(set(verdicts), key=verdicts.count) if verdicts else "NOT_ENOUGH_INFO"
+            claim_hits["kernel"] += mine == truth
+            claim_hits["closed"] += answers.get(f"{c['id']}|closed", {}).get("label") == truth
+    gold_n = len(gold_pairs)
+    pl, rl = (correct_label / predicted if predicted else 0), correct_label / gold_n
+    pr, rr = (correct_rationale / predicted if predicted else 0), correct_rationale / gold_n
+    return {"claims": len(claims), "claims_with_evidence": with_evidence, "pairs_gold": gold_n,
+            "pairs_predicted": predicted,
+            "abstract_label_only": {"precision": round(pl, 4), "recall": round(rl, 4), "f1": f1(pl, rl)},
+            "abstract_rationalized": {"precision": round(pr, 4), "recall": round(rr, 4), "f1": f1(pr, rr)},
+            "claim_accuracy_with_kernel": round(claim_hits["kernel"] / with_evidence, 4) if with_evidence else None,
+            "claim_accuracy_closed_book": round(claim_hits["closed"] / with_evidence, 4) if with_evidence else None,
+            "quote_fidelity": {"quotes": quotes, "found_verbatim": found,
+                               "rate": round(found / quotes, 4) if quotes else None},
+            "unparsed": sum(1 for a in answers.values() if a.get("unparsed"))}
+
+
+def verify(n: int, k: int, answers_file: str | None, prompts_file: str | None = None) -> dict:
+    models: dict[str, int] = {}
+    if answers_file:
+        raw = {json.loads(l)["key"]: json.loads(l) for l in open(answers_file) if l.strip()}
+        answers = {key: parse(r["answer"] if isinstance(r.get("answer"), str) else json.dumps(r.get("answer", r)))
+                   for key, r in raw.items()}
+        models[os.environ.get("KK_EVAL_MODEL", "answers file")] = len(answers)
+        items = [{"key": key} for key in answers]
+    else:
+        items = [json.loads(l) for l in open(prompts_file)] if prompts_file else prompts(n, k)
+        answers = {}
+        for it in items:
+            text, model = ask(it["prompt"])
+            answers[it["key"]] = parse(text)
+            models[model] = models.get(model, 0) + 1
+    missing = [it["key"] for it in items if it["key"] not in answers]
+    for key in missing:
+        answers[key] = {"label": "NOT_ENOUGH_INFO", "quotes": [], "unparsed": True}
+    return {"stage": "verify", "k": k, "models": models, "missing_answers": len(missing), **score(sample(n), corpus(), answers),
+            "baselines": "compare with the SciFact leaderboard's abstract-level metrics on the dev set; open retrieval"}
+
+
+
+def save(result: dict) -> None:
+    runs = HERE / "runs"
+    runs.mkdir(exist_ok=True)
+    model = "-" + re.sub(r"[^a-z0-9]+", "-", "-".join(result["models"]).lower()).strip("-") if result.get("models") else ""
+    path = runs / f"{date.today().isoformat()}-{result['stage']}{model[:60]}.json"
+    path.write_text(json.dumps(result, indent=2) + "\n")
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    stage = sys.argv[1] if len(sys.argv) > 1 else ""
+    if stage == "fetch":
+        fetch()
+    elif stage == "encode":
+        encode()
+    elif stage == "retrieval":
+        save(retrieval())
+    elif stage in ("prompts", "verify"):
+        import argparse
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--n", type=int, default=100)
+        ap.add_argument("--k", type=int, default=3)
+        ap.add_argument("--answers")
+        ap.add_argument("--prompts", help="the items from an earlier `prompts` run, so every model sees the same ones")
+        a = ap.parse_args(sys.argv[2:])
+        if stage == "prompts":
+            for it in prompts(a.n, a.k):
+                print(json.dumps(it))
+        else:
+            save(verify(a.n, a.k, a.answers, a.prompts))
+    else:
+        sys.exit(__doc__)

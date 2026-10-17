@@ -1,0 +1,31 @@
+# SciFact on the kernel (M3-T3, D-59)
+
+**Question.** Is the kernel a good base for a scientific-belief world model: papers ingested
+automatically, what they say about a claim recorded with the sentences it rests on, and belief that
+follows the evidence? This eval is a first, light check for gaps, not a leaderboard entry.
+
+**Data.** [SciFact](https://github.com/allenai/scifact) (Wadden et al. 2020): 5,183 abstracts and 300
+labelled dev claims. Each claim is supported or contradicted by sentences of one or more abstracts, or
+has no evidence. BEIR's SciFact test split is the same 300 claims, so retrieval is comparable with
+BEIR's numbers. The license is CC BY-NC 2.0: `run.py fetch` downloads it into a cache (sha256 pinned);
+it is never committed or shipped.
+
+**Stages.**
+
+| Stage | What runs | Measures | Needs |
+| --- | --- | --- | --- |
+| 1 retrieval | the paper encoder puts the abstracts in the kernel; each claim goes through the kernel's recall (the MCP `search` tool's query) | nDCG@10 and recall against BEIR's BM25 (0.665); query latency; ingest time | nothing but the kernel |
+| 2 verification | for each claim, the top 3 abstracts the kernel recalls go to a model, which labels each and quotes the sentences; the same claim goes to the model alone (closed book) | SciFact abstract-level F1 (label only, and with rationale); claim accuracy with and without the kernel; how many quotes are found verbatim | a model: any OpenAI-compatible endpoint (OpenRouter, Ollama, llama.cpp), or answers from a harness sub-agent (`--answers`) |
+| 3 belief | the stage-2 verdicts recorded as claims (`<paper> cito:supports|cito:refutes <proposition>`, extracted, with the quotes), then the belief model | whether belief in each proposition separates supported from contradicted claims | stage 2; a belief model that reads supports and refutes (not yet) |
+
+```sh
+python eval/scifact/run.py fetch
+DATABASE_URL=<kk_authenticator> python eval/scifact/run.py encode      # with kk serve running (validator, belief)
+AGENT_DATABASE_URL=<an agent's login> python eval/scifact/run.py retrieval
+AGENT_DATABASE_URL=... OPENROUTER_API_KEY=... python eval/scifact/run.py verify --n 100
+AGENT_DATABASE_URL=... python eval/scifact/run.py prompts --n 60 > prompts.jsonl   # for a sub-agent;
+python eval/scifact/run.py verify --n 60 --answers answers.jsonl                   # then score its answers
+```
+
+Runs are kept in `runs/` (results only, no data). `test_score.py` checks the scorer on a fixture,
+including that broken answers score worse.

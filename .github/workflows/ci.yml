@@ -57,6 +57,10 @@ jobs:
         run: python modules/encoder-bpmn/tests/test_encode.py
       - name: Conformance tests (M2-T3)
         run: python modules/conformance/tests/test_compare.py
+      - name: Paper encoder and SciFact scorer tests (D-59)
+        run: |
+          python modules/encoder-papers/tests/test_encode.py
+          python eval/scifact/test_score.py
       - name: Sandbox policy tests (D-55)
         run: python kk/tests/test_modules.py
       - name: Metrics observer tests (M2-T5)
