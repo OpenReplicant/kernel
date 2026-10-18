@@ -1,0 +1,58 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-interaction
+name: Interaction encoder
+version: 0.1.0
+description: 'Transcripts of conversations and agent sessions into claims (D-81): each message an
+  as:Note with its author, conversation, reply and time; each tool call, file or API action a
+  prov:Activity with its actor, tool and what it used. The transcript is rendered as plain text and
+  stored as the artifact every claim quotes. Secrets are filtered first.'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-interaction
+  db_role: kkm_encoder_interaction
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m interaction_encoder
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_interaction
+    KK_ARTIFACTS: the artifact store (default ~/.local/share/knowledge-kernel/artifacts)
+requires:
+- slot: ingest-filter
+- slot: artifact-store
+accepts:
+- 'application/jsonl (chat: one message or action per line)'
+- 'application/jsonl (a Claude Code session transcript)'
+produces:
+- add_artifact
+- add_claim
+- set_status
+- 'text/plain (the rendered transcript, the artifact every claim quotes)'
+- as:Note
+- as:content
+- as:attributedTo
+- as:context
+- as:inReplyTo
+- as:published
+- prov:Activity
+- as:actor
+- as:instrument
+- prov:used
+- as:Person
+- as:Application
+- as:Service
+- as:OrderedCollection
+triggers:
+- type: manual
+migration: migration.sql

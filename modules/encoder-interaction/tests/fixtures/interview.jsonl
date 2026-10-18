@@ -1,0 +1,5 @@
+{"id": "1", "conversation": "acme-intake", "author": "interviewer", "kind": "agent", "time": "2026-10-18T09:00:00Z", "text": "Who receives a new purchase request first?"}
+{"id": "2", "conversation": "acme-intake", "author": "Dana Reyes", "time": "2026-10-18T09:00:20Z", "text": "I do. I'm the procurement lead, and I report to the finance director, Sam Okafor.\nEvery request lands in the purchasing inbox first."}
+{"id": "3", "conversation": "acme-intake", "author": "interviewer", "kind": "agent", "time": "2026-10-18T09:00:40Z", "text": "What happens after you receive it?"}
+{"id": "4", "conversation": "acme-intake", "author": "Dana Reyes", "time": "2026-10-18T09:01:05Z", "text": "I check the budget code, then the buyer raises a purchase order. Anything over 10,000 needs Sam's approval first."}
+{"id": "5", "conversation": "acme-intake", "author": "interviewer", "kind": "agent", "time": "2026-10-18T09:01:10Z", "tool": "read_file", "used": ["file:policies/purchasing.md"]}

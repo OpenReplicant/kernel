@@ -145,3 +145,8 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - psycopg's `conn.notifies()` generator holds the connection: querying the same connection inside its
   loop kills the worker (the pattern triggers' first version proposed once, then died). Take one
   notification at a time (`stop_after=1`), let the generator close, then query.
+- A vocabulary pack listed in `packs.yaml` without a file loads no terms: the kernel refused `prov:used`
+  (KK030) though PROV-O was "a core pack". The catalog check now requires each property to be defined
+  in a pack file or the bootstrap migration.
+- An agent cannot see another role's change sets (row-level security): an end-to-end script that waits
+  for an encoder's change sets must read their status as the encoder.
