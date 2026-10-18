@@ -93,6 +93,8 @@ $py "$root/scripts/e2e_evidence.py"
 $py "$root/scripts/e2e_quotes.py"
 # M3-G2: an answer citing the kernel is checked against the claims it cites; eval scores are claims (D-71).
 $py "$root/scripts/e2e_g2.py"
+# M5-T3: the interaction encoder: an interview and an agent session as claims, quotes in the transcript.
+$py "$root/scripts/e2e_interaction.py"
 # D-61: dense recall fused with BM25.
 case $parts in
   *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;

@@ -5,8 +5,8 @@ parentheses:
   * a media type (`text/csv`, `application/bpmn+xml`): what an encoder reads or a decoder writes;
     `*/*` for any file
   * a vocabulary term as a CURIE (`bbo:has_nextFlowNode`, `sosa:Observation`): what a processor reads
-    or what a module claims; it must be defined in a pack file, or be in the namespace of a pack loaded
-    whole (rdf, rdfs, owl, skos, prov, ...)
+    or what a module claims; a property must be defined in a pack file or the bootstrap migration (the
+    kernel refuses any other predicate), a class must be in the namespace of a pack
   * a change-set op kind (`add_claim`, `set_status`, ...) or a kernel record (`change_set`, `claim`,
     `artifact`, `run`, `verification`, `belief`, `redaction`)
 
@@ -46,8 +46,15 @@ def vocabulary() -> tuple[dict[str, str], set[str], set[str]]:
             text = (ROOT / "ontology" / p["file"]).read_text()   # the file's own prefixes, not rdflib's defaults
             for k, v in re.findall(r"^@prefix\s+([a-z][a-z0-9]*):\s*<([^>]+)>", text, re.M):
                 prefixes.setdefault(k, v)
-    whole = {p["iri"] for p in packs if not p.get("file") and p.get("iri")} | set(BOOT.values())
-    return prefixes, {str(s) for s in g.subjects()}, whole
+    # The kernel knows a term only once a pack file or the bootstrap migration (002) records it (KK030):
+    # no namespace is known whole.
+    boot = (ROOT / "kernel/schema/002_bootstrap.sql").read_text()
+    known = {str(s) for s in g.subjects()}
+    known |= {prefixes[k] + local for k, local in re.findall(r"'([a-z][a-z0-9]*):([A-Za-z_][A-Za-z0-9_.-]*)'", boot)
+              if k in prefixes}
+    known |= set(re.findall(r"'(https?://[^']+)'", boot))
+    whole = {p["iri"] for p in packs if p.get("iri")} | set(BOOT.values())
+    return prefixes, known, whole
 
 
 def ops() -> set[str]:
@@ -72,9 +79,14 @@ def problems(entry: str, prefixes, terms, whole, op_kinds) -> str | None:
     ns = prefixes.get(m.group(1))
     if ns is None:
         return f"unknown prefix {m.group(1)}:"
-    if ns + m.group(2) in terms or ns in whole:
+    if ns + m.group(2) in terms:
         return None
-    return f"{ns}{m.group(2)} is not defined in any pack"
+    # A property must be recorded before the kernel accepts it as a predicate (KK030); a class (by RDF
+    # convention, a capitalised name) used as an object needs only a pack that owns its namespace.
+    if m.group(2)[:1].isupper() and ns in whole:
+        return None
+    return f"{ns}{m.group(2)} is not defined in any pack" + ("" if m.group(2)[:1].isupper() else
+                                                           " (the kernel refuses an unknown predicate, KK030)")
 
 
 def manifests() -> list[dict]:

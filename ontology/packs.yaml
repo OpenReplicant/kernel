@@ -44,8 +44,9 @@ core:
   - id: prov-o
     owns: provenance — agents, activities (runs), derivation, attribution, generation time, invalidation
     iri: http://www.w3.org/ns/prov#
+    file: prov.ttl
     license: W3C Software and Document License
-    pin: pin at install
+    pin: PROV-O 2013-04-30 (W3C Recommendation), subset (activities, entities, agents, used, generated, associated, start and end) cut by scripts/vocab_subset.py; upstream sha256 in the file header (D-81). Runs, attribution and derivation stay kernel columns
   - id: p-plan
     owns: plans and steps, and links from runs to the steps they carried out
     iri: http://purl.org/net/p-plan#
@@ -151,6 +152,16 @@ profile:
     note: a measurement is one observed claim (subject = the eval run, predicate = dqv:value, qualifiers dqv:isMeasurementOf
       the metric and dqv:computedOn the eval set), not a node per measurement (as for SOSA, D-47)
     load_when: always (milestone 3 — evaluation)
+  - id: activitystreams
+    owns: messages and the actions of people and agents in an interaction — a message (as:Note) with its
+      author, conversation, reply and time; who acted with which tool (D-80, M5-T3)
+    iri: https://www.w3.org/ns/activitystreams#
+    file: activitystreams.ttl
+    license: W3C Software and Document License
+    pin: Activity Streams 2.0 (W3C Recommendation 2017-05-23), subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: a tool call or a file or API action is a prov:Activity (PROV-O owns activities) with as:actor and as:instrument;
+      schema.org Message and SIOC are mappings only
+    load_when: always (milestone 5 — interactions)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

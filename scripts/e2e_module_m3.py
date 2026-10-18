@@ -7,7 +7,8 @@ read-only, supports a quote of the stored file and refutes a made-up one; recall
 worker needs onnxruntime, which the Alpine kk image cannot hold, so it is not run here); M4-G2: the process
 learner runs as a worker under its own login.
 
-Env: KK_ADMIN_URL, KK_RESULT (the encoder's output line), KK_PAPERS (the input file).
+Env: KK_ADMIN_URL, KK_RESULT (the paper encoder's output line), KK_CHAT_RESULT (the interaction encoder's),
+KK_PAPERS (the input file).
 """
 import hashlib
 import json
@@ -81,6 +82,12 @@ def main() -> int:
         learner = wait(conn, "select count(*) from pg_stat_activity where usename = 'kkm_learner_process'", (),
                        lambda r: r[0] > 0, timeout=60)[0]
         check("M4-G2 the process learner runs sandboxed as its own login", learner > 0, f"({learner} connection)")
+        chat = json.loads(os.environ["KK_CHAT_RESULT"].strip().splitlines()[-1])
+        rows = [wait(conn, "select status, submitted_by from kernel.change_set where id = %s", (cs,),
+                     lambda r: r[0] != "submitted") for cs in chat["change_sets"]]
+        check("M5-G3 the interaction encoder runs sandboxed as itself and its change sets are applied",
+              rows and all(r == ("applied", "kkm_encoder_interaction") for r in rows) and chat["messages"] == 4,
+              f"({rows}, {chat['claims']} claims)")
     print(f"M3-G3 milestone-3 modules passed ({sum(checks)}/{len(checks)})" if all(checks) else "M3-G3 FAILED")
     return 0 if all(checks) else 1
 

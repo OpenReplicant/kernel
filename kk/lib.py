@@ -28,6 +28,7 @@ from psycopg.types.json import Jsonb
 CHANNEL = "kernel_change_set"
 # The vocabulary packs' prefixes, for trigger patterns (scripts/catalog.py --check keeps this in step).
 PREFIXES = {
+    "as": "https://www.w3.org/ns/activitystreams#",
     "bbo": "https://www.irit.fr/recherches/MELODI/ontologies/BBO#", "cito": "http://purl.org/spar/cito/",
     "dcterms": "http://purl.org/dc/terms/", "dqv": "http://www.w3.org/ns/dqv#", "fabio": "http://purl.org/spar/fabio/",
     "kk": "https://w3id.org/knowledge-kernel/ns#", "kkp": "https://w3id.org/knowledge-kernel/profile#",
