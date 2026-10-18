@@ -29,7 +29,8 @@ obs = manifest("observer-prometheus")
 
 g, denied = grant(policy, "observer-prometheus", obs)
 check(not denied and g["reach"] == ["prometheus"] and not g["egress"], "the default policy grants what the demo modules ask")
-for name in ("anomaly", "conformance", "actuator-compose", "encoder-eventlog"):
+for name in ("anomaly", "conformance", "actuator-compose", "encoder-eventlog",
+             "encoder-papers", "recall-index", "recall-dense", "verifier-quotes"):
     check(not grant(policy, name, manifest(name))[1], f"{name} is granted by the default policy")
 
 c = service("observer-prometheus", obs, "/x.env", "img", g)
@@ -54,5 +55,12 @@ check(not denied and svc["networks"] == ["kernel-db", "kk-reach-prometheus", "kk
       "an operator may grant more than the manifest asks: another service, a route out, larger limits")
 check(service("anomaly", manifest("anomaly"), "/x.env", "img", grant(more, "anomaly", {})[0])
       ["services"]["module-anomaly"]["mem_limit"] == "128m", "defaults apply to modules without an entry")
+
+vq = service("verifier-quotes", manifest("verifier-quotes"), "/x.env", "img")
+svc = vq["services"]["module-verifier-quotes"]
+check(svc["volumes"] == ["kk-artifacts:/artifacts:ro"] and svc["environment"]["KK_ARTIFACTS"] == "/artifacts"
+      and "kk-artifacts" in vq["volumes"], "a worker that requires the artifact store reads it, read-only")
+check("volumes" not in service("recall-index", manifest("recall-index"), "/x.env", "img")["services"]["module-recall-index"],
+      "other workers get no volume")
 
 print(f"D-55 sandbox policy: {ok} checks passed")
