@@ -112,11 +112,22 @@ def passage(c: dict) -> str:
     return str(value) if value else f"{words(c.get('subject'))} {words(c.get('object_entity'))}".strip()
 
 
-def rerank(text: str, claims: list[dict], limit: int) -> list[dict]:
-    """The first `limit` claims, re-ordered by the cross-encoder when there is one. It reads per subject: a
-    subject's claims among the first POOL make one passage (a paper's title and abstract together; alone, a
-    title says too little), scored against `text`; subjects go in score order, each with its claims in
-    recalled order, and the claims after the first POOL keep their place (the cost stays bounded)."""
+TEXTS = """select coalesce(jsonb_object_agg(subject, text), '{}'::jsonb) from (
+  select subject, left(string_agg(object_value->>'@value', E'\n' order by length(object_value->>'@value'), id), 3000) as text
+  from api.claims where subject = any(%(subjects)s) and status <> 'deprecated' and object_value ? '@value'
+  group by subject) t"""
+
+
+def subjects(claims: list[dict]) -> list[str]:
+    """The distinct subjects of the first POOL claims, in recalled order: what the cross-encoder scores."""
+    return list(dict.fromkeys(c.get("subject") or "" for c in claims[:POOL]))
+
+
+def rerank(text: str, claims: list[dict], limit: int, texts: dict[str, str] | None = None) -> list[dict]:
+    """The first `limit` claims, re-ordered by the cross-encoder when there is one. It reads per subject:
+    the subject's text (`texts`, from TEXTS: all its literal claims, shortest first, so a paper's title then
+    its abstract; else its recalled claims' passages) scored against `text`. Subjects go in score order, each
+    with its recalled claims; the claims after the first POOL keep their place (the cost stays bounded)."""
     ce = reranker()
     if ce is None or len(claims) < 2:
         return claims[:limit]
@@ -124,10 +135,11 @@ def rerank(text: str, claims: list[dict], limit: int) -> list[dict]:
     groups: dict[str, list[dict]] = {}
     for c in head:
         groups.setdefault(c.get("subject") or "", []).append(c)
-    subjects = list(groups)
-    scores = list(ce.rerank(text, ["\n".join(passage(c) for c in groups[s])[:3000] for s in subjects]))
-    order = sorted(range(len(subjects)), key=lambda i: -scores[i])
-    return ([c for i in order for c in groups[subjects[i]]] + tail)[:limit]
+    keys = list(groups)
+    docs = [(texts or {}).get(k) or "\n".join(passage(c) for c in groups[k])[:3000] for k in keys]
+    scores = list(ce.rerank(text, docs))
+    order = sorted(range(len(keys)), key=lambda i: -scores[i])
+    return ([c for i in order for c in groups[keys[i]]] + tail)[:limit]
 
 
 def indexed(conn) -> bool:
@@ -165,7 +177,9 @@ def plan(conn, text: str, limit: int) -> tuple[str, dict]:
 def recall(conn, text: str, limit: int) -> list[dict]:
     """Ranked recall of `text` on a synchronous connection: the plan, re-ranked."""
     rows = conn.execute(*plan(conn, text, limit)).fetchone()[0]
-    return rerank(text, rows, limit) if indexed(conn) else rows[:limit]
+    if not (indexed(conn) and reranker()):
+        return rows[:limit]
+    return rerank(text, rows, limit, conn.execute(TEXTS, {"subjects": subjects(rows)}).fetchone()[0])
 
 
 def short(iri: str, prefixes: dict[str, str]) -> str:

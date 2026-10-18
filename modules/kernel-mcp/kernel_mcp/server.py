@@ -156,8 +156,9 @@ async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
     vec = await anyio.to_thread.run_sync(recall.vector, text, model) if model else None
     args = recall.params(text, recall.pool(limit) if indexed else limit, vec)
     rows = await query(ctx, recall.ranked(indexed, vec), args)
-    if rows and indexed:
-        return await anyio.to_thread.run_sync(recall.rerank, text, rows, limit)
+    if rows and indexed and recall.reranker():
+        texts = await query(ctx, recall.TEXTS, {"subjects": recall.subjects(rows)})
+        return await anyio.to_thread.run_sync(recall.rerank, text, rows, limit, texts)
     return (rows or await query(ctx, recall.SUBSTRING, recall.params(text, limit)))[:limit]
 
 
