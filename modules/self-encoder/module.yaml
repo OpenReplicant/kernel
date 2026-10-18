@@ -1,10 +1,12 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:self-encoder
 name: Repository encoder (self-model first)
-version: 0.2.0
+version: 0.3.0
 description: 'Scans a repository (first: this project''s own folder) and emits deterministic claims: module
   manifests -> kk:Module and the slots they fill; compose files -> node templates and their relationships;
-  ontology files -> packs; SQL migrations -> schema objects. Every claim references the file artifact and
+  ontology files -> packs; SQL migrations -> schema objects. In any repository (D-68): package manifests
+  (pyproject, requirements, package.json, go.mod, Cargo.toml) -> packages by Package URL and their
+  dependencies (CodeMeta / schema.org terms); Markdown -> documents and their headings. Every claim references the file artifact and
   line span. A plain command (python -m self_encoder scan); runs the ingest filter first and supersedes the
   claims of changed or removed files.'
 license: Apache-2.0

@@ -75,7 +75,7 @@ kernel/
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl (module contract only), dcterms.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,
-                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl,
+                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, codemeta.ttl (packages),
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,

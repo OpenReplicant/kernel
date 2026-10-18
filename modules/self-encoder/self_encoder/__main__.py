@@ -28,9 +28,13 @@ from pathlib import Path
 from kk.lib import connect, ingest_filter, run, submit
 
 from .encode import AGENT, SCOPE, encode_file, list_files
+from .repo import REQUIRES, SUGGESTS
 
 MODULE = "urn:kk:module:self-encoder"
 KEY = "self-encoder:"
+# Predicates with many values per subject: a value that is gone is retracted, never "superseded" by a
+# sibling (a removed dependency is not replaced by another one).
+MANY = {REQUIRES, SUGGESTS}
 PRIOR = """select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.status, s.idempotency_key
            from api.claims c join api.change_sets s on s.id = c.change_set
            where c.attributed_to = %s and c.status <> 'deprecated' and s.idempotency_key like 'self-encoder:%%'"""
@@ -62,7 +66,8 @@ def supersede(cs: dict, prior: list[dict], expand) -> None:
         by_sp.setdefault((s, p), op["ref"])
     for c in prior:
         obj = canonical(c["object_entity"], c["object_value"])
-        new = by_spo.get((c["subject"], c["predicate"], obj)) or by_sp.get((c["subject"], c["predicate"]))
+        new = by_spo.get((c["subject"], c["predicate"], obj)) or (
+            None if c["predicate"] in MANY else by_sp.get((c["subject"], c["predicate"])))
         cs["ops"].append({"op": "set_status", "claim": str(c["id"]), "status": "deprecated",
                           "expect_status": c["status"], **({"reason": "superseded", "replaced_by": new}
                                                         if new else {"reason": "retracted"})})

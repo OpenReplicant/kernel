@@ -5,6 +5,9 @@ the line span it was read from ({"start_line", "end_line"}, 1-based).
   deploy/compose.yaml (+ demo/) kkt:NodeTemplate + kkt:nodeType + kkt:dependsOn + kkt:memberOf
   **/*.ttl                   owl:Ontology (packs) or a graph entity (shapes, fixtures)
   *.sql (schema, migrations) schema objects (dcterms:isPartOf the db node or the module)
+
+and, in any repository (repo.py, M3-T2): package manifests (packages and their dependencies) and
+Markdown documents (their headings).
 """
 from __future__ import annotations
 
@@ -16,13 +19,16 @@ from pathlib import Path
 import rdflib
 import yaml
 
+from . import repo as anyrepo
+
 AGENT = "urn:kk:agent:self-encoder"
 SCOPE = "urn:kk:scope:default"
 KINDS = {"encoder": "kk:Encoder", "processor": "kk:Processor", "decoder": "kk:Decoder",
          "actuator": "kk:Actuator", "interface": "kk:Interface", "agent": "kk:AgentKind",
          "control": "kk:Control", "pack": "kk:Pack"}
 AFFORDANCES = {"action": "td:ActionAffordance", "property": "td:PropertyAffordance", "event": "td:EventAffordance"}
-MEDIA = {".yaml": "application/yaml", ".yml": "application/yaml", ".ttl": "text/turtle", ".sql": "application/sql"}
+MEDIA = {".yaml": "application/yaml", ".yml": "application/yaml", ".ttl": "text/turtle", ".sql": "application/sql",
+         ".md": "text/markdown", ".json": "application/json", ".toml": "application/toml"}
 SERVICE_TEMPLATE = "urn:kk:service-template:knowledge-kernel"
 SQL_OBJECT = re.compile(r"^\s*create\s+(?:or\s+replace\s+)?(schema|table|view|function|role|type)\s+"
                         r"(?:if\s+not\s+exists\s+)?([A-Za-z_][\w.]*)", re.I)
@@ -32,7 +38,7 @@ def list_files(repo: Path) -> list[str]:
     """The files the self-model is built from (relative paths, sorted)."""
     patterns = ["modules/*/module.yaml", "modules/*/migration.sql",
                 "deploy/compose.yaml", "deploy/demo/compose.yaml", "kernel/schema/*.sql", "ontology/*.ttl", "shapes/**/*.ttl"]
-    found = {str(p.relative_to(repo)) for pat in patterns for p in repo.glob(pat)}
+    found = {str(p.relative_to(repo)) for pat in patterns for p in repo.glob(pat)} | set(anyrepo.list_repo_files(repo))
     return sorted(p for p in found if "/_template/" not in f"/{p}")
 
 
@@ -67,12 +73,18 @@ class Builder:
         stored = artifacts_dir / self.sha
         if not stored.exists():
             stored.write_bytes(data)
+        self.seen: set = set()
         self.ops = [{"op": "add_artifact", "sha256": self.sha, "media_type": MEDIA.get(Path(rel).suffix, "text/plain"),
                      "byte_size": len(data), "location": f"file://{artifacts_dir}/{self.sha}",
                      "source_uri": f"file:{rel}", "retrieved_at": datetime.now(timezone.utc).isoformat()}]
 
     def claim(self, s: str, p: str, o, span: tuple[int, int], qualifiers: dict | None = None) -> None:
-        """o is an IRI for predicates in ENTITY_PREDICATES, otherwise a literal (or a JSON-LD value dict)."""
+        """o is an IRI for predicates in ENTITY_PREDICATES, otherwise a literal (or a JSON-LD value dict).
+        A claim already made in this change set is not repeated."""
+        key = (s, p, repr(o), repr(sorted((qualifiers or {}).items())))
+        if key in self.seen:
+            return
+        self.seen.add(key)
         if p in ENTITY_PREDICATES:
             obj = {"entity": o}
         elif isinstance(o, dict):
@@ -94,7 +106,8 @@ class Builder:
 
 ENTITY_PREDICATES = {"rdf:type", "kk:moduleKind", "dcterms:license", "kk:runsAs", "kk:fills",
                      "kkt:hasRequirement", "kkt:hasAffordance", "kkt:memberOf",
-                     "kkt:nodeType", "kkt:dependsOn", "kkt:hasArtifact", "dcterms:isPartOf", "dcterms:hasPart"}
+                     "kkt:nodeType", "kkt:dependsOn", "kkt:hasArtifact", "dcterms:isPartOf", "dcterms:hasPart",
+                     anyrepo.REQUIRES, anyrepo.SUGGESTS}
 
 
 # ------------------------------------------------------------------ encoders per file kind
@@ -193,10 +206,13 @@ def encode_sql(b: Builder, text: str, module_ids: dict) -> None:
 
 
 def encode_file(repo: Path, rel: str, artifacts_dir: Path) -> dict:
-    module_ids = {p.parent.name: yaml.safe_load(p.read_text())["id"] for p in repo.glob("modules/*/module.yaml")}
     data = (repo / rel).read_bytes()
-    text = data.decode()
+    text = data.decode("utf-8", errors="replace")
     b = Builder(rel, data, artifacts_dir)
+    if anyrepo.wanted(rel):
+        anyrepo.encode(b, repo, rel, text)
+        return b.change_set()
+    module_ids = {p.parent.name: yaml.safe_load(p.read_text())["id"] for p in repo.glob("modules/*/module.yaml")}
     if rel.endswith("/module.yaml"):
         encode_module(b, text, module_ids)
     elif rel.endswith("compose.yaml"):
