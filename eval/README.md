@@ -1,8 +1,35 @@
 # Evaluation
 
-Eval sets are data, versioned with the code and reviewable like anything else. The evaluator module
-runs them and records results as observed claims about the module under test:
-a DQV quality measurement (`dqv:QualityMeasurement` with `dqv:computedOn` the module, `dqv:isMeasurementOf` the metric, `dqv:value`, and the eval set as `prov:used`); the evaluator is parked (D-36, D-40).
+Eval sets are data, versioned with the code and reviewable like anything else. Results are recorded
+as claims by the evaluator module (`modules/evaluator`, D-71): each score in a run file
+(`eval/<suite>/runs/*.json`) becomes one observed claim `urn:kk:eval:<suite>:<run> dqv:value <number>`,
+qualified by `dqv:isMeasurementOf` the metric (`urn:kk:metric:<suite>:<name>`) and `dqv:computedOn` the
+eval set, referencing the run file and the score in it. An agent then reads them like any claim:
+
+```sh
+DATABASE_URL=<a login that may SET ROLE kkm_evaluator> python -m evaluator --suite scifact eval/scifact/runs/*.json
+```
+
+## Running the evals with a local model
+
+The model-backed stages call any OpenAI-compatible endpoint, so a local server works as well as a hosted
+one: `KK_EVAL_MODEL_URL` (Ollama `http://localhost:11434/v1`, llama.cpp `http://localhost:8080/v1`,
+vLLM, LM Studio), `KK_EVAL_MODEL` (the name the server knows the model by), `KK_EVAL_MODEL_KEY` (if it
+wants one). Use the same prompt files for every model, so the numbers compare.
+
+```sh
+export KK_EVAL_MODEL_URL=http://localhost:11434/v1 KK_EVAL_MODEL=<model>
+# SciFact (eval/scifact/README.md): with and without the kernel, the same 300 dev claims
+AGENT_DATABASE_URL=... python eval/scifact/run.py prompts --n 300 > prompts.jsonl
+AGENT_DATABASE_URL=... python eval/scifact/run.py verify --n 300 --prompts prompts.jsonl --policy first
+# RCAEval (eval/rcaeval/README.md): the evidence packs, keys kept from the model
+python3.12 eval/rcaeval/packs.py build DATA/RE2/RE2-OB keys.json > prompts.jsonl
+python3.12 eval/rcaeval/ask.py prompts.jsonl answers.jsonl          # resumable
+python3.12 eval/rcaeval/run.py --dataset re2-ob --method answers --answers answers.jsonl --keys keys.json --label <model>
+```
+
+Each run writes `runs/<date>-...json`; commit it (never the data: SciFact is CC BY-NC) and record it with
+the evaluator.
 
 ## Layout
 

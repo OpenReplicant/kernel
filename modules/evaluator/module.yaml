@@ -1,0 +1,43 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:evaluator
+name: Evaluator
+version: 0.1.0
+description: 'Records eval results as claims (spec §12, D-71): each numeric score in an eval run file
+  (eval/<suite>/runs/*.json) becomes one observed claim `urn:kk:eval:<suite>:<run> dqv:value <number>`
+  qualified by dqv:isMeasurementOf the metric (`urn:kk:metric:<suite>:<name>`), referencing the run
+  file as an artifact and the score by JSON pointer; the run names the eval set it used (prov:used).
+  The same file again is a no-op; a changed file supersedes its scores.'
+license: Apache-2.0
+kind: control
+slots:
+- evaluator
+protected: false
+agent:
+  iri: urn:kk:agent:evaluator
+  db_role: kkm_evaluator
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m evaluator --suite <name> <run.json>
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_evaluator
+    KK_ARTIFACTS: the artifact store (default ~/.local/share/knowledge-kernel/artifacts)
+requires:
+- slot: artifact-store
+accepts:
+- application/json (an eval run file)
+produces:
+- add_artifact
+- add_claim
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql

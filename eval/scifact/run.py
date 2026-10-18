@@ -17,7 +17,7 @@
                                          default google/gemma-4-26b-a4b-it:free; key OPENROUTER_API_KEY or
                                          KK_EVAL_MODEL_KEY), or answers produced elsewhere (--answers, the
                                          JSON lines `prompts` describes, e.g. by a harness sub-agent)
-  python eval/scifact/run.py belief --answers FILE [--n N]
+  python eval/scifact/run.py belief --answers FILE [--n N] [--no-submit]
                                          stage 3: those verdicts recorded as claims (`<paper> cito:supports or
                                          cito:refutes <proposition>`, extracted, with the quotes), then the
                                          belief model's belief in each proposition against SciFact's label
@@ -342,7 +342,7 @@ def proposition(text: str) -> str:
     return "urn:kk:proposition:" + hashlib.sha256(text.encode()).hexdigest()[:32]
 
 
-def belief(n: int, answers_file: str, wait: float = 600) -> dict:
+def belief(n: int, answers_file: str, wait: float = 600, record: bool = True) -> dict:
     """Stage 3: the stage-2 verdicts recorded as claims (`<paper> cito:supports|refutes <proposition>`,
     extracted, with the model's quotes) by the agent; then the belief in each proposition, from the belief
     model, against SciFact's label. A verdict without a quote is not recorded (extracted claims carry one)."""
@@ -370,22 +370,32 @@ def belief(n: int, answers_file: str, wait: float = 600) -> dict:
     tag = hashlib.sha256(Path(answers_file).read_bytes()).hexdigest()[:16]
     with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
         me = db.execute("select kernel.my_agent()").fetchone()[0]
-        for i in range(0, len(ops), 200):
+        for i in range(0, len(ops), 200) if record else ():   # --no-submit: score what is recorded already
             run_id = db.execute("select api.start_run(null, null, '[]'::jsonb, %s)",
                                 (Jsonb({"purpose": "scifact stage 3"}),)).fetchone()[0]
             db.execute("select api.submit_change_set(%s)", (Jsonb({
                 "idempotency_key": f"scifact-belief:{tag}:{i // 200}", "attributed_to": me, "generated_by": str(run_id),
                 "target_scope": "urn:kk:scope:default", "ops": ops[i:i + 200]}),))
         props = {proposition(c["claim"]): c for c in claims}
+        verifier = db.execute("select to_regclass('api.verifications')").fetchone()[0] is not None
         deadline, last, stable = time.time() + wait, None, 0
         while time.time() < deadline:   # until every proposition has a belief that no longer changes
             rows = dict(db.execute("select subject, belief from api.claims where predicate = %s and subject = any(%s)",
                                    (LABEL, list(props))).fetchall())
-            stable = stable + 1 if rows == last and None not in rows.values() and len(rows) == len(props) else 0
+            checked = db.execute("""select count(*) from api.claims c join api.verifications v on v.claim_id = c.id
+                                    where c.object_entity = any(%s)""", (list(props),)
+                                 ).fetchone()[0] if verifier else 0
+            stable = stable + 1 if (rows, checked) == last and None not in rows.values() and len(rows) == len(props) else 0
             if stable >= 3:
                 break
-            last = rows
+            last = rows, checked
             time.sleep(5)
+        # M3-G2 (D-71): the quote verifier checks each stance's quotes against the paper's claims in the kernel.
+        verified = dict(db.execute("""
+            select v.verdict, count(*) from api.claims c join api.verifications v on v.claim_id = c.id
+            where c.predicate = any(%s) and c.object_entity = any(%s)
+              and v.method = 'urn:kk:module:verifier-quotes' group by 1""",
+            (list(STANCE.values()), list(props))).fetchall()) if verifier else {}
     truth = {p: (next(iter(c["evidence"].values()))[0]["label"] if c["evidence"] else "NOT_ENOUGH_INFO")
              for p, c in props.items()}
     sup = [rows[p] for p in props if truth[p] == "SUPPORT" and rows.get(p) is not None]
@@ -394,6 +404,7 @@ def belief(n: int, answers_file: str, wait: float = 600) -> dict:
     pairs = [(a > b) + 0.5 * (a == b) for a in sup for b in con]
     return {"stage": "belief", "models": {os.environ.get("KK_EVAL_MODEL", "answers file"): len(answers)},
             "propositions": len(props), "stance_claims": len(ops) - len(props), "verdicts_without_quote": skipped,
+            "stance_quotes_verified": verified,
             "supported": len(sup), "contradicted": len(con), "no_evidence": len(nei),
             "auc_supported_vs_contradicted": round(sum(pairs) / len(pairs), 4) if pairs else None,
             "sign_accuracy": round((sum(b > 0.5 for b in sup) + sum(b < 0.5 for b in con)) / (len(sup) + len(con)), 4)
@@ -432,8 +443,10 @@ if __name__ == "__main__":
         ap = argparse.ArgumentParser()
         ap.add_argument("--n", type=int, default=100)
         ap.add_argument("--answers", required=True, help="stage-2 answers (JSON lines), as for verify --answers")
+        ap.add_argument("--no-submit", action="store_true",
+                        help="only score: the verdicts are recorded already (e.g. by another agent)")
         a = ap.parse_args(sys.argv[2:])
-        save(belief(a.n, a.answers))
+        save(belief(a.n, a.answers, record=not a.no_submit))
     elif stage in ("prompts", "verify"):
         import argparse
         ap = argparse.ArgumentParser()

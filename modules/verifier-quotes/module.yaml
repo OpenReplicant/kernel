@@ -1,9 +1,10 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:verifier-quotes
 name: Quote verifier
-version: 0.1.0
+version: 0.2.0
 description: 'Checks that every extracted claim''s quote occurs in its source (M3-T6): an artifact''s bytes
-  from the artifact store (their sha256 checked too) or a file: source under the project root, compared
+  from the artifact store (their sha256 checked too), a file: source under the project root, or an
+  entity the kernel holds claims about (its claims by other agents, D-71: an answer citing the kernel), compared
   after Unicode (NFKC) and whitespace normalisation. Records supported or refuted with add_verification;
   a source it cannot read here is left unverified. Belief models cap the belief of a claim whose quote is
   refuted (D-67).'

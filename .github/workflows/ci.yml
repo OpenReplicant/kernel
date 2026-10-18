@@ -75,6 +75,8 @@ jobs:
         run: python modules/self-encoder/tests/test_repo.py
       - name: Quote verifier tests (M3-T6)
         run: python modules/verifier-quotes/tests/test_check.py
+      - name: Evaluator tests (M3-G2)
+        run: python modules/evaluator/tests/test_measure.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql

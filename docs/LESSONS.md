@@ -116,3 +116,11 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - Never give a compose volume a fixed `name:`: every project (each e2e script, a person's own stack)
   then shares it, and one test's `down -v` deletes the others' data. `docker compose run -v VOL:/path`
   already resolves a declared volume to the project's own.
+- Postgres roles belong to the cluster, not the database: a module's role existing says nothing about
+  whether this kernel has the module. Ask the kernel (`kernel.agent`), as `kk init` and `kk module
+  install` now do.
+- Agent IRIs are one namespace: `kk agent add NAME` takes `urn:kk:agent:NAME`, so a harness agent named
+  like a module takes that module's agent and the module's install silently keeps the wrong one.
+  `kk agent add` now refuses module names.
+- Change-set idempotency keys are global, not per agent: re-running an eval stage as another agent
+  collides. Score what is recorded (`--no-submit`) instead of re-submitting.
