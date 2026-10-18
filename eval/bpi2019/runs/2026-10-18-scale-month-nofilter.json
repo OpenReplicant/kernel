@@ -1,0 +1,55 @@
+{
+  "stage": "scale",
+  "log": "BPI_Challenge_2019.xes",
+  "sha256": "af63bc687fc4152f2123b05c3af7772b37ef3fce2d3f67f812666c9e356baae7",
+  "window": "month",
+  "ingest_filter": false,
+  "events": 1595923,
+  "claims": 28396,
+  "change_sets": 6,
+  "encoder": {
+    "seconds": 44.4,
+    "stages": {
+      "filter": 0.0,
+      "encode": 42.6,
+      "submit": 1.6
+    },
+    "peak_rss_mb": 95
+  },
+  "validate_and_apply": {
+    "seconds": 78.0,
+    "status": {
+      "applied": 6
+    }
+  },
+  "conformance": {
+    "seconds": 4.9,
+    "peak_rss_mb": 94,
+    "discrepancies": 495,
+    "by_kind": {
+      "unexpected": 470,
+      "rework": 21,
+      "swap": 2,
+      "skip": 2
+    },
+    "validate_seconds": 8.0,
+    "status": {
+      "awaiting_review": 495
+    },
+    "largest": [
+      "110215 case(s) went from Vendor creates invoice to Record Goods Receipt, a path the documented process does not have.",
+      "103150 case(s) went from Create Purchase Order Item to Vendor creates invoice, a path the documented process does not have.",
+      "95218 case(s) went from Vendor creates invoice to Record Invoice Receipt, a path the documented process does not have.",
+      "80616 case(s) went from Record Goods Receipt to Vendor creates invoice, a path the documented process does not have.",
+      "49424 case(s) went from Remove Payment Block to Clear Invoice, a path the documented process does not have.",
+      "46125 case(s) went from Create Purchase Requisition Item to Create Purchase Order Item, a path the documented process does not have.",
+      "37621 case(s) went from Record Invoice Receipt to Remove Payment Block, a path the documented process does not have.",
+      "30837 case(s) went from Create Purchase Order Item to Receive Order Confirmation, a path the documented process does not have."
+    ]
+  },
+  "seconds_total": 138.8,
+  "machine": {
+    "cpus": 4
+  },
+  "data": "van Dongen (2019) BPI Challenge 2019, 4TU.ResearchData, CC BY 4.0, doi:10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1"
+}
