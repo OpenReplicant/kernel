@@ -71,6 +71,8 @@ jobs:
           python modules/actuator-compose/tests/test_plan.py
       - name: Belief eval (T7)
         run: python modules/belief-corroboration/tests/test_eval.py
+      - name: Quote verifier tests (M3-T6)
+        run: python modules/verifier-quotes/tests/test_check.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql

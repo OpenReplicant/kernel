@@ -1,0 +1,28 @@
+id: urn:kk:eval:belief-v0/refuted-quote-is-capped
+description: 'Two independent extractions agree, but a verifier found one quote missing from its source
+  (D-67): that claim keeps at most 0.1; the other keeps its corroboration.'
+input:
+  functional: []
+  claims:
+  - id: a
+    key: k1
+    subject: urn:x:step
+    predicate: bbo:has_nextFlowNode
+    object: urn:x:ship
+    agent: extractor-1
+    sources:
+    - file:procedure.md
+    refuted_by:
+    - urn:kk:module:verifier-quotes
+  - id: b
+    key: k1
+    subject: urn:x:step
+    predicate: bbo:has_nextFlowNode
+    object: urn:x:ship
+    agent: extractor-2
+    sources:
+    - file:transcript.md
+expect:
+  beliefs:
+    a: 0.1
+    b: 0.6667

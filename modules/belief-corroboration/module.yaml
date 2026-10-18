@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:belief-corroboration-v0
 name: 'Belief model: corroboration counting v0'
-version: 0.3.0
+version: 0.4.0
 description: 'Scores claims by counting independent sources per statement_key (independent = different source
   artifact/URI and different generating agent), minus conflicting values on single-value properties;
   claims with non-overlapping validity windows are changes, not conflicts. Works that support or refute

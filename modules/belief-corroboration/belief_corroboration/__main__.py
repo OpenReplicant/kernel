@@ -20,7 +20,7 @@ import psycopg
 from kk.lib import connect, listen, run
 from kk.lib import submit as kernel_submit
 
-from .model import AGAINST, FOR, MODEL, Claim, score
+from .model import AGAINST, FOR, MODEL, REFUTED_CAP, Claim, score
 
 AGENT = "urn:kk:agent:belief-corroboration"
 MODULE = "urn:kk:module:belief-corroboration-v0"
@@ -31,11 +31,19 @@ COLUMNS = ("id, subject, predicate, object_entity, object_value, statement_key, 
            "valid_from, valid_to, status, belief")
 
 
+REFUTED = """select claim_id, method from api.verifications where verdict = 'refuted' and claim_id = any(%s)"""
+# Claims a verifier refuted whose belief is still above the cap (D-67), when a verifier is installed.
+STALE = f""" or (belief > {REFUTED_CAP} and exists (select 1 from api.verifications v
+                                                  where v.claim_id = api.claims.id and v.verdict = 'refuted'))"""
+
+
 def change_sets(cur, watermark) -> tuple[list[dict], object]:
     """The belief change sets one pass would submit, and the new watermark."""
-    cur.execute("""select subject, recorded_at, predicate, object_entity from api.claims
-                   where %(w)s::timestamptz is null or recorded_at > %(w)s
-                      or (belief is null and status <> 'deprecated')""", {"w": watermark})
+    cur.execute("select to_regclass('api.verifications') is not null")
+    verified = cur.fetchone()[0]
+    cur.execute(f"""select subject, recorded_at, predicate, object_entity from api.claims
+                    where %(w)s::timestamptz is null or recorded_at > %(w)s
+                       or (belief is null and status <> 'deprecated'){STALE if verified else ""}""", {"w": watermark})
     new = cur.fetchall()
     if not new:
         return [], watermark
@@ -53,13 +61,18 @@ def change_sets(cur, watermark) -> tuple[list[dict], object]:
     sources: dict = {}
     for claim_id, source in cur.fetchall():
         sources.setdefault(claim_id, set()).add(source)
+    refuted: dict = {}
+    if verified:
+        cur.execute(REFUTED, ([r["id"] for r in rows],))
+        for claim_id, method in cur.fetchall():
+            refuted.setdefault(claim_id, set()).add(method)
     cur.execute("select subject from api.claims where predicate = %s and object_entity = %s and status <> 'deprecated'",
                 (RDF_TYPE, FUNCTIONAL_TYPE))
     functional = {r[0] for r in cur.fetchall()}
     claims = [Claim(str(r["id"]), r["statement_key"], r["subject"], r["predicate"],
                     json.dumps(r["object_entity"] or r["object_value"], sort_keys=True), r["attributed_to"],
                     frozenset(sources.get(r["id"], ())), r["valid_from"], r["valid_to"],
-                    r["status"] == "deprecated", r["object_entity"]) for r in rows]
+                    r["status"] == "deprecated", r["object_entity"], tuple(sorted(refuted.get(r["id"], ())))) for r in rows]
     beliefs = score(claims, functional)
     ops_by_scope: dict[str, list] = {}
     for r in rows:
