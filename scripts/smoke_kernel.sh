@@ -36,7 +36,7 @@ port=$($py -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); pri
 export KK_MCP_URL="http://127.0.0.1:$port/mcp"
 log=$(mktemp)
 # D-61: dense recall when Postgres has pgvector and python has fastembed (KK_REQUIRE_DENSE=1 makes their
-# absence a failure, as in CI).
+# absence a failure, as in CI); KK_RERANK=1: the dense worker also downloads the cross-encoder (D-66).
 parts=mcp,validator,belief,recall
 if [ "$(psql -d "$db" -tAc "select to_regclass('recall_dense.vec') is not null")" = t ] \
    && $py -c 'import fastembed' 2> /dev/null; then
@@ -44,7 +44,7 @@ if [ "$(psql -d "$db" -tAc "select to_regclass('recall_dense.vec') is not null")
 elif [ "${KK_REQUIRE_DENSE:-0}" = 1 ]; then
   echo "FAIL dense recall needs pgvector in Postgres and fastembed (pip install -e '.[dense]')"; exit 1
 fi
-KK_SWEEP_SECONDS=5 $py -m kk serve --port "$port" --only "$parts" > "$log" 2>&1 &
+KK_RERANK=1 KK_SWEEP_SECONDS=5 $py -m kk serve --port "$port" --only "$parts" > "$log" 2>&1 &
 serve=$!
 cleanup() {
   status=$?

@@ -2,7 +2,8 @@
 
 With a recall-index module installed (it adds `api.recall(text, int)`, D-60), ranking is that module's
 (BM25 over its index), fused with dense embeddings when the recall-dense module has an index and
-fastembed is installed here (`api.recall_hybrid`, D-61); otherwise Postgres full-text search, no extension: each claim's text is its literal value plus the words of its
+fastembed is installed here (`api.recall_hybrid`, D-61), then re-ranked by a cross-encoder when its model
+is in the local cache (`rerank`, D-66); otherwise Postgres full-text search, no extension: each claim's text is its literal value plus the words of its
 subject IRI; the query is any word of the input (OR of its lexemes), ranked by ts_rank_cd, then
 belief. When nothing matches, a case-insensitive substring match on labels and subject IRIs is the
 fallback (short inputs, partial words, identifiers). Runs under the caller's role, so RLS applies.
@@ -10,6 +11,7 @@ fallback (short inputs, partial words, identifiers). Runs under the caller's rol
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 COLUMNS = ("id, subject, predicate, object_entity, object_value, qualifiers, scope, evidence_type, "
@@ -57,8 +59,7 @@ def embedder(model: str = MODEL, download: bool = False):
     if _models.get(model) is None:
         try:
             from fastembed import TextEmbedding
-            cache = os.environ.get("KK_EMBED_CACHE") or os.path.expanduser("~/.cache/knowledge-kernel/fastembed")
-            _models[model] = TextEmbedding(model_name=model, cache_dir=cache, local_files_only=not download)
+            _models[model] = TextEmbedding(model_name=model, cache_dir=cache(), local_files_only=not download)
         except Exception as e:  # recall falls back to BM25; say why
             print(f"dense recall off: {model}: {str(e)[:200]}", file=sys.stderr)
             return None
@@ -72,6 +73,73 @@ def vector(text: str, model: str = MODEL) -> str | None:
         return None
     v = next(iter(m.embed([QUERY_PREFIX + text])))
     return "[" + ",".join(f"{x:.6f}" for x in v) + "]"
+
+
+RERANKER = "jinaai/jina-reranker-v1-turbo-en"   # Apache-2.0; the best of five on SciFact (D-66)
+POOL = 60   # claims the cross-encoder re-scores (about 30 papers), however few are asked for
+
+
+def cache() -> str:
+    return os.environ.get("KK_EMBED_CACHE") or os.path.expanduser("~/.cache/knowledge-kernel/fastembed")
+
+
+def reranker(model: str = RERANKER, download: bool = False):
+    """The cross-encoder (fastembed, ONNX on CPU), loaded once from the same cache as the embedder. The
+    recall-dense worker downloads it when started with KK_RERANK=1; a search only uses a model that is
+    already there, and KK_RERANK=0 turns it off. None when off, not installed or not downloaded."""
+    if os.environ.get("KK_RERANK") == "0":
+        return None
+    key = "rerank:" + model
+    if key not in _models:
+        try:
+            from fastembed.rerank.cross_encoder import TextCrossEncoder
+            _models[key] = TextCrossEncoder(model_name=model, cache_dir=cache(), local_files_only=not download)
+        except Exception as e:  # recall keeps the fused order; say why once
+            print(f"re-ranking off: {model}: {str(e)[:200]}", file=sys.stderr)
+            _models[key] = None
+    return _models[key]
+
+
+def pool(limit: int) -> int:
+    """How many claims to recall for `limit` answers: POOL when there is a cross-encoder to re-rank them."""
+    return max(limit, POOL) if reranker() else limit
+
+
+def passage(c: dict) -> str:
+    """What the cross-encoder reads of a claim: its literal value, else the words of its subject and object."""
+    value = (c.get("object_value") or {}).get("@value") if isinstance(c.get("object_value"), dict) else None
+    words = lambda iri: " ".join(re.split(r"[^0-9A-Za-z]+", (iri or "").rsplit("/", 1)[-1].rsplit("#", 1)[-1]))
+    return str(value) if value else f"{words(c.get('subject'))} {words(c.get('object_entity'))}".strip()
+
+
+TEXTS = """select coalesce(jsonb_object_agg(subject, text), '{}'::jsonb) from (
+  select subject, left(string_agg(object_value->>'@value', E'\n' order by length(object_value->>'@value'), id), 3000) as text
+  from api.claims where subject = any(%(subjects)s) and status <> 'deprecated' and object_value ? '@value'
+  group by subject) t"""
+
+
+def subjects(claims: list[dict]) -> list[str]:
+    """The distinct subjects of the first POOL claims, in recalled order: what the cross-encoder scores."""
+    return list(dict.fromkeys(c.get("subject") or "" for c in claims[:POOL]))
+
+
+def rerank(text: str, claims: list[dict], limit: int, texts: dict[str, str] | None = None) -> list[dict]:
+    """The first `limit` claims, re-ordered by the cross-encoder when there is one. It reads per subject:
+    the subject's text (`texts`, from TEXTS: all its literal claims, shortest first, so a paper's title then
+    its abstract; else its recalled claims' passages) scored against `text`. Subjects go in score order, each
+    with its recalled claims; the claims after the first POOL keep their place (the cost stays bounded)."""
+    ce = reranker()
+    if ce is None or len(claims) < 2:
+        return claims[:limit]
+    head, tail = claims[:POOL], claims[POOL:]
+    groups: dict[str, list[dict]] = {}
+    for c in head:
+        groups.setdefault(c.get("subject") or "", []).append(c)
+    keys = list(groups)
+    docs = [(texts or {}).get(k) or "\n".join(passage(c) for c in groups[k])[:3000] for k in keys]
+    scores = list(ce.rerank(text, docs))
+    order = sorted(range(len(keys)), key=lambda i: -scores[i])
+    return ([c for i in order for c in groups[keys[i]]] + tail)[:limit]
 
 
 def indexed(conn) -> bool:
@@ -98,11 +166,20 @@ def params(text: str, limit: int, vec: str | None = None) -> dict:
 
 
 def plan(conn, text: str, limit: int) -> tuple[str, dict]:
-    """The statement and parameters for ranked recall of `text` on a synchronous connection."""
+    """The statement and parameters for ranked recall of `text` on a synchronous connection (it recalls
+    `pool(limit)` claims: pass them through `rerank`)."""
     on = indexed(conn)
     model = dense(conn) if on else None
     vec = vector(text, model) if model else None
-    return ranked(on, vec), params(text, limit, vec)
+    return ranked(on, vec), params(text, pool(limit) if on else limit, vec)
+
+
+def recall(conn, text: str, limit: int) -> list[dict]:
+    """Ranked recall of `text` on a synchronous connection: the plan, re-ranked."""
+    rows = conn.execute(*plan(conn, text, limit)).fetchone()[0]
+    if not (indexed(conn) and reranker()):
+        return rows[:limit]
+    return rerank(text, rows, limit, conn.execute(TEXTS, {"subjects": subjects(rows)}).fetchone()[0])
 
 
 def short(iri: str, prefixes: dict[str, str]) -> str:

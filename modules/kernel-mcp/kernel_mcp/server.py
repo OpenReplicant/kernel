@@ -149,12 +149,17 @@ async def get_entity(ctx: Context, iri: str) -> dict:
 @mcp.tool()
 async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
     """Claims ranked by relevance to the text (any words; BM25 fused with dense embeddings, BM25, or
-    full-text search, depending on the recall modules installed, then belief), or by substring on labels and IRIs when no word matches. Each has id, status, belief, rank."""
+    full-text search, depending on the recall modules installed, then belief; re-ranked by a cross-encoder when
+    one is downloaded), or by substring on labels and IRIs when no word matches. Each has id, status, belief, rank."""
     indexed = bool(await query(ctx, recall.INSTALLED) and await query(ctx, recall.READY))
     model = await query(ctx, recall.DENSE) if indexed else None
     vec = await anyio.to_thread.run_sync(recall.vector, text, model) if model else None
-    args = recall.params(text, limit, vec)
-    return await query(ctx, recall.ranked(indexed, vec), args) or await query(ctx, recall.SUBSTRING, args)
+    args = recall.params(text, recall.pool(limit) if indexed else limit, vec)
+    rows = await query(ctx, recall.ranked(indexed, vec), args)
+    if rows and indexed and recall.reranker():
+        texts = await query(ctx, recall.TEXTS, {"subjects": recall.subjects(rows)})
+        return await anyio.to_thread.run_sync(recall.rerank, text, rows, limit, texts)
+    return (rows or await query(ctx, recall.SUBSTRING, recall.params(text, limit)))[:limit]
 
 
 @mcp.tool()

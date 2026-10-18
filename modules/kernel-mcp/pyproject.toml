@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "knowledge-kernel-mcp"
-version = "0.6.0"
+version = "0.7.0"
 description = "MCP server and harness hooks for the Knowledge Kernel"
 license = "Apache-2.0"
 requires-python = ">=3.12"

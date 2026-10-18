@@ -8,12 +8,13 @@ sweeps every KK_SWEEP_SECONDS. The index is derived: delete its rows and the nex
 
 Runs inside `kk serve` (part `dense`), or alone: python -m recall_dense.
 Env: DATABASE_URL (a login that may SET ROLE to KK_ROLE), KK_ROLE (default kkm_recall_dense),
-KK_SWEEP_SECONDS (default 30), KK_EMBED_CACHE (where the model is kept), KK_DENSE_BATCH (claims per transaction, default 256).
+KK_SWEEP_SECONDS (default 30), KK_EMBED_CACHE (where the model is kept), KK_DENSE_BATCH (claims per transaction, default 256),
+KK_RERANK=1 (also download kernel_mcp.recall.RERANKER, so searches re-rank with it, D-66).
 """
 import os
 import sys
 
-from kernel_mcp.recall import MODEL, embedder
+from kernel_mcp.recall import MODEL, RERANKER, embedder, reranker
 from kk.lib import connect, listen
 
 NEW = """select c.id, c.scope, c.object_value->>'@value' from api.claims c
@@ -62,6 +63,8 @@ def main() -> None:
     model = embedder(MODEL, download=True)
     if model is None:
         sys.exit("recall-dense: no embedding model (pip install -e '.[dense]'; the first start downloads it)")
+    if os.environ.get("KK_RERANK") == "1" and reranker(RERANKER, download=True) is None:
+        sys.exit(f"recall-dense: could not download {RERANKER} (KK_RERANK=1)")
     with connect(os.environ.get("KK_ROLE", "kkm_recall_dense")) as conn:
         if conn.execute("select to_regclass('recall_dense.vec')").fetchone()[0] is None:
             sys.exit("recall-dense: not installed (its migration needs pgvector)")

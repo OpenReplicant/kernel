@@ -18,9 +18,10 @@ self-reported. Our results live in `eval/*/runs/` and the decisions that cite th
 | gte-base | 0.762 | model card (MTEB) |
 | **the kernel: BM25 (D-60)** | **0.659** | `eval/scifact/runs/` |
 | **the kernel: BM25 + bge-small (D-61)** | **0.723** | `eval/scifact/runs/` |
+| **… + jina-reranker-v1-turbo per subject, opt-in (D-66)** | **0.747** | `eval/scifact/runs/` |
 
 Our numbers rank claims (a paper's title and abstract are separate claims), not whole documents; our
-bge-small alone scored 0.706 offline against the card's 0.713. Next targets: bge-base (0.741), then 0.753.
+bge-small alone scored 0.706 offline against the card's 0.713. Re-ranking (D-66) passes bge-base (0.741); next target 0.753, and the latency (4.8 s p50 on 4 cores).
 
 ## Verification: SciFact open, dev split, abstract-level F1 (fine-tuned systems vs an LLM over the kernel)
 
@@ -75,7 +76,7 @@ No benchmark runs an LLM-driven MAPE-K loop on docker-compose end to end. By sta
 
 | Stage | Benchmark | Published to compare with |
 | --- | --- | --- |
-| Analyse (metrics) | [RCAEval](https://github.com/phamquiluan/RCAEval) RE1, MIT ([arXiv 2412.17015](https://arxiv.org/abs/2412.17015)) | ~15 baselines (BARO, N-Sigma, CIRCA, RCD …), Avg@5. The kernel's 60 s windows: RE1 mean 0.872 (BARO 0.578, N-Sigma 0.809); RE2-OB 0.935 (N-Sigma 0.913). **Haiku over the kernel's observations: RE2-OB 0.982, RE2-TT 0.960** (N-Sigma 0.913 / 0.790) (`eval/rcaeval/`, D-65; D-63's first numbers are superseded) |
+| Analyse (metrics) | [RCAEval](https://github.com/phamquiluan/RCAEval) RE1, MIT ([arXiv 2412.17015](https://arxiv.org/abs/2412.17015)) | ~15 baselines (BARO, N-Sigma, CIRCA, RCD …), Avg@5. The kernel's 60 s windows: RE1 mean 0.872 (BARO 0.578, N-Sigma 0.809); RE2-OB 0.935 (N-Sigma 0.913). **Haiku over the kernel's observations: RE2-OB 0.982, RE2-TT 0.960** (N-Sigma 0.913 / 0.790); a free 2.6B model (LFM 2.5): 0.903 / 0.818 (D-66) (`eval/rcaeval/`, D-65; D-63's first numbers are superseded) |
 | Analyse (logs, traces), knowledge value | RCAEval RE2/RE3; [ITBench-AA](https://huggingface.co/datasets/ArtificialAnalysis/ITBench-AA) (CC BY 4.0) | ITBench-AA: Gemma 4 31B 37%, Opus 4.7 47% |
 | Plan | [SWIM](https://github.com/cps-sei/swim) (SEAMS 2018) | an LLM manager at ~71% of the reactive baseline's utility ([arXiv 2404.09866](https://arxiv.org/abs/2404.09866)) |
 | Full loop | [SREGym](https://github.com/SREGym/SREGym) (MIT, NeurIPS 2026), [AIOpsLab](https://github.com/microsoft/AIOpsLab) (MIT) | AIOpsLab ReAct: detection 77%, RCA 45%, mitigation 36% |

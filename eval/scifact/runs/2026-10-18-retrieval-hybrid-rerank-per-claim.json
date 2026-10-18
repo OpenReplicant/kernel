@@ -1,0 +1,16 @@
+{
+  "stage": "retrieval",
+  "queries": 300,
+  "ndcg@10": 0.7187,
+  "recall@200claims": 0.9683,
+  "latency_ms": {
+    "p50": 6035,
+    "p95": 6744,
+    "max": 7954
+  },
+  "baseline": {
+    "bm25_ndcg@10": 0.665,
+    "source": "BEIR (Thakur et al. 2021)"
+  },
+  "recall": "api.recall_hybrid: BM25 and BAAI/bge-small-en-v1.5 (recall-dense), min-max normalised, averaged; top 30 claims re-ranked by jinaai/jina-reranker-v1-turbo-en (cross-encoder)"
+}
