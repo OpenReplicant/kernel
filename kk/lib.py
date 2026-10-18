@@ -76,8 +76,10 @@ def ingest_filter(repo: Path, paths: list[str]) -> dict:
     """Run the ingest filter (KK_INGEST_FILTER, default `python -m ingest_filter`) on `paths` relative
     to `repo`: {"paths": clean, "blocked": findings}. Raises when the filter cannot run (fail closed)."""
     cmd = shlex.split(os.environ.get("KK_INGEST_FILTER") or f"{shlex.quote(sys.executable)} -m ingest_filter")
+    mb = sum((repo / p).stat().st_size for p in paths if (repo / p).is_file()) / (1 << 20)
+    limit = 300 + max(300, mb * float(os.environ.get("KK_FILTER_SECONDS_PER_MB", "2")))  # the filter's own limit, and time to copy
     proc = subprocess.run(cmd + ["--repo", str(repo)], input=json.dumps(paths), capture_output=True, text=True,
-                          timeout=600)
+                          timeout=limit)
     if proc.returncode != 0:
         raise RuntimeError(f"ingest filter failed (fail closed): {proc.stderr.strip()[-400:]}")
     return json.loads(proc.stdout)

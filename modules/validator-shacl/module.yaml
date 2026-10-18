@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:validator-shacl
 name: Change-set validator (JSON Schema + SHACL)
-version: 0.3.0
+version: 0.3.1
 description: Validates submitted change sets against kernel/schemas/change_set.schema.json and the SHACL
   shapes of the installed packs, then records the result. Starts itself (listens on kernel_change_set and
   sweeps the queue); needs no runner. Kernel apply re-checks the invariants regardless.

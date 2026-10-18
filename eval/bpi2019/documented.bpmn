@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The documented process for BPI Challenge 2019 items of the category "3-way matching, invoice after
+     goods receipt", as the dataset's description states it (van Dongen 2019, 4TU.ResearchData,
+     https://doi.org/10.4121/uuid:d06aff4b-79f0-45e6-8ec8-e19730c248f1): the item is created, the goods
+     are received, then the invoice is recorded and cleared. Written for this repository (Apache-2.0);
+     task names are the log's activity names. Used to check conformance at scale (M3-T4), not as an
+     audit: the log mixes four item categories. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="bpi2019-definitions" targetNamespace="urn:kk:eval:bpi2019">
+  <bpmn:process id="purchase_item" name="Purchase order item, 3-way match, invoice after goods receipt" isExecutable="false">
+    <bpmn:startEvent id="start" name="Item needed"/>
+    <bpmn:userTask id="create_item" name="Create Purchase Order Item"/>
+    <bpmn:userTask id="goods_receipt" name="Record Goods Receipt"/>
+    <bpmn:userTask id="invoice_receipt" name="Record Invoice Receipt"/>
+    <bpmn:serviceTask id="clear_invoice" name="Clear Invoice"/>
+    <bpmn:endEvent id="end" name="Item paid"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="start" targetRef="create_item"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="create_item" targetRef="goods_receipt"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="goods_receipt" targetRef="invoice_receipt"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="invoice_receipt" targetRef="clear_invoice"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="clear_invoice" targetRef="end"/>
+  </bpmn:process>
+</bpmn:definitions>
