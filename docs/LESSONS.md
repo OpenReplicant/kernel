@@ -150,3 +150,8 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   in a pack file or the bootstrap migration.
 - An agent cannot see another role's change sets (row-level security): an end-to-end script that waits
   for an encoder's change sets must read their status as the encoder.
+- `scripts/e2e_module.sh` builds `knowledge-kernel:local` only when it is missing: after adding a
+  Python package, rebuild the image (`docker build -t knowledge-kernel:local --secret id=ca,src=... .`)
+  or the new module's container starts and exits at once (no connection, no error in the check).
+- The kernel knows only the prefixes in `kernel.prefix` (002_bootstrap.sql: rdf, rdfs, prov, oa, kk and a few more):
+  writes need full IRIs for `org:`, `bbo:` and the like; the MCP read tools expand kk.lib's longer list.

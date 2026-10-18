@@ -33,7 +33,7 @@ PREFIXES = {
     "dcterms": "http://purl.org/dc/terms/", "dqv": "http://www.w3.org/ns/dqv#", "fabio": "http://purl.org/spar/fabio/",
     "kk": "https://w3id.org/knowledge-kernel/ns#", "kkp": "https://w3id.org/knowledge-kernel/profile#",
     "kkt": "https://w3id.org/knowledge-kernel/tosca#", "oa": "http://www.w3.org/ns/oa#",
-    "owl": "http://www.w3.org/2002/07/owl#", "pplan": "http://purl.org/net/p-plan#", "prov": "http://www.w3.org/ns/prov#",
+    "org": "http://www.w3.org/ns/org#", "owl": "http://www.w3.org/2002/07/owl#", "pplan": "http://purl.org/net/p-plan#", "prov": "http://www.w3.org/ns/prov#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "schema": "http://schema.org/", "skos": "http://www.w3.org/2004/02/skos/core#", "sosa": "http://www.w3.org/ns/sosa/",
     "xsd": "http://www.w3.org/2001/XMLSchema#",

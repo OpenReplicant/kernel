@@ -58,7 +58,7 @@ python scripts/check_manifests.py                                          # man
 python scripts/catalog.py --check                                          # what modules take in and give out (docs/modules.md)
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI), M4-G1 (kk demo, end to end), M5-T3 (interaction encoder) on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI), M4-G1 (kk demo, end to end), M5-T3 (interaction encoder), M5-T4 (the interviewer) on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1 bpmn-moddle@10.3.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3, M3-G3: modules in their own sandboxed containers; needs Docker
 sh scripts/e2e_devops.sh                                                   # M2-T5–T7, M2-G2: devops demo, MAPE-K loop, Devops view; needs Docker, gitleaks
@@ -75,7 +75,7 @@ kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
-ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, activitystreams.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,
+ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, activitystreams.ttl, org.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,
                  observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, codemeta.ttl (packages), dqv.ttl (eval scores),
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
@@ -86,7 +86,9 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  view-devops; milestone 3: encoder-papers, recall-index (BM25, default), recall-dense (embeddings + BM25, opt-in),
                  verifier-quotes (quotes occur in their sources, or in the claims they cite), evaluator (eval scores as DQV claims);
                  milestone 4: learner-process (the Learn phase for processes: approved revisions of the documented process);
-                 milestone 5: encoder-interaction (chats and agent sessions as ActivityStreams messages and PROV activities);
+                 milestone 5: encoder-interaction (chats and agent sessions as ActivityStreams messages and PROV activities),
+                 skill-interview (an agent interviews a person: org and process maps, quoting each message),
+                 map-gaps (what the maps lack, as the questions to ask next);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)

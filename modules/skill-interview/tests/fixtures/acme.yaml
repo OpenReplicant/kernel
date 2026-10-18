@@ -1,0 +1,71 @@
+# The scripted interview (M5-T4): what an agent following the interview skill records from each of the
+# person's answers in acme.jsonl. Each claim: [subject, predicate, object, quote]; the quote is copied from
+# the answer. Shorthands: org: = urn:kk:org:acme:, person: = urn:kk:person:acme:, proc: = urn:kk:process:purchasing:,
+# ORG: and BBO: the vocabularies, a = rdf:type, label = rdfs:label; an object in "quotes" is a literal.
+# `closes` lists the gaps (kind target) the interviewer asked about before this answer; `open` the gaps the
+# map gap processor lists after it.
+source: acme
+organisation: urn:kk:org:acme
+process: urn:kk:process:purchasing
+answers:
+- message: "2"
+  claims:
+  - [urn:kk:org:acme, a, ORG:FormalOrganization, "at Acme"]
+  - [urn:kk:org:acme, label, '"Acme"', "at Acme"]
+  - [org:unit:purchasing, a, ORG:OrganizationalUnit, "in the purchasing team"]
+  - [org:unit:purchasing, label, '"Purchasing"', "in the purchasing team"]
+  - [org:unit:purchasing, ORG:unitOf, urn:kk:org:acme, "I'm the procurement lead at Acme, in the purchasing team"]
+  - [org:post:procurement-lead, a, ORG:Post, "I'm the procurement lead"]
+  - [org:post:procurement-lead, label, '"Procurement lead"', "I'm the procurement lead"]
+  - [org:post:procurement-lead, ORG:postIn, org:unit:purchasing, "I'm the procurement lead at Acme, in the purchasing team"]
+  - [person:dana-reyes, a, prov:Person, "I'm the procurement lead"]
+  - [person:dana-reyes, label, '"Dana Reyes"', "I'm the procurement lead"]
+  - [person:dana-reyes, ORG:holds, org:post:procurement-lead, "I'm the procurement lead"]
+  - [org:post:finance-director, a, ORG:Post, "the finance director"]
+  - [org:post:finance-director, label, '"Finance director"', "the finance director"]
+  - [org:post:procurement-lead, ORG:reportsTo, org:post:finance-director, "I report to the finance director"]
+  - [person:sam-okafor, a, prov:Person, "Sam Okafor"]
+  - [person:sam-okafor, label, '"Sam Okafor"', "Sam Okafor"]
+  - [person:sam-okafor, ORG:holds, org:post:finance-director, "the finance director, Sam Okafor"]
+  open: [no-unit org:post:finance-director]
+- message: "4"
+  claims:
+  - [urn:kk:process:purchasing, a, BBO:Process, "Every request lands in the purchasing inbox first"]
+  - [urn:kk:process:purchasing, label, '"Purchasing"', "Every request lands in the purchasing inbox first"]
+  - [proc:node:start, a, BBO:StartEvent, "Every request lands in the purchasing inbox first"]
+  - [proc:node:start, BBO:has_container, urn:kk:process:purchasing, "Every request lands in the purchasing inbox first"]
+  - [proc:step:check-the-budget-code, label, '"Check the budget code"', "I check the budget code"]
+  - [proc:step:check-the-budget-code, BBO:has_container, urn:kk:process:purchasing, "I check the budget code"]
+  - [proc:node:start, BBO:has_nextFlowNode, proc:step:check-the-budget-code, "Every request lands in the purchasing inbox first. I check the budget code"]
+  - [proc:step:check-the-budget-code, BBO:has_resource, org:post:procurement-lead, "I check the budget code"]
+  - [proc:step:raise-a-purchase-order, label, '"Raise a purchase order"', "the buyer raises a purchase order"]
+  - [proc:step:raise-a-purchase-order, BBO:has_container, urn:kk:process:purchasing, "the buyer raises a purchase order"]
+  - [proc:step:check-the-budget-code, BBO:has_nextFlowNode, proc:step:raise-a-purchase-order, "I check the budget code, then the buyer raises a purchase order"]
+  - [org:post:buyer, a, ORG:Post, "the buyer"]
+  - [org:post:buyer, label, '"Buyer"', "the buyer"]
+  - [proc:step:raise-a-purchase-order, BBO:has_resource, org:post:buyer, "the buyer raises a purchase order"]
+  open: [no-next proc:step:raise-a-purchase-order, unheld org:post:buyer, no-manager org:post:buyer,
+         no-manager org:post:finance-director, no-unit org:post:buyer, no-unit org:post:finance-director]
+- message: "6"
+  closes: [unheld org:post:buyer, no-manager org:post:buyer]
+  claims:
+  - [person:lee-chen, a, prov:Person, "That's Lee Chen"]
+  - [person:lee-chen, label, '"Lee Chen"', "That's Lee Chen"]
+  - [person:lee-chen, ORG:holds, org:post:buyer, "That's Lee Chen"]
+  - [org:post:buyer, ORG:reportsTo, org:post:procurement-lead, "Lee reports to me"]
+  - [org:post:buyer, ORG:postIn, org:unit:purchasing, "sits in purchasing too"]
+  open: [no-next proc:step:raise-a-purchase-order, no-unit org:post:finance-director]
+- message: "8"
+  closes: [no-next proc:step:raise-a-purchase-order]
+  claims:
+  - [proc:node:end, a, BBO:EndEvent, "the process is finished"]
+  - [proc:node:end, BBO:has_container, urn:kk:process:purchasing, "the process is finished"]
+  - [proc:step:raise-a-purchase-order, BBO:has_nextFlowNode, proc:node:end, "Once the purchase order is raised, the process is finished."]
+  open: [no-unit org:post:finance-director]
+- message: "10"
+  closes: [no-unit org:post:finance-director]
+  claims:
+  - [org:unit:finance, a, ORG:OrganizationalUnit, "the finance department"]
+  - [org:unit:finance, label, '"Finance"', "the finance department"]
+  - [org:post:finance-director, ORG:postIn, org:unit:finance, "Sam runs the finance department"]
+  open: []

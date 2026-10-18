@@ -46,7 +46,7 @@ core:
     iri: http://www.w3.org/ns/prov#
     file: prov.ttl
     license: W3C Software and Document License
-    pin: PROV-O 2013-04-30 (W3C Recommendation), subset (activities, entities, agents, used, generated, associated, start and end) cut by scripts/vocab_subset.py; upstream sha256 in the file header (D-81). Runs, attribution and derivation stay kernel columns
+    pin: PROV-O 2013-04-30 (W3C Recommendation), subset (activities, entities, agents, persons, used, generated, associated, start and end) cut by scripts/vocab_subset.py; upstream sha256 in the file header (D-81, D-82). Runs, attribution and derivation stay kernel columns
   - id: p-plan
     owns: plans and steps, and links from runs to the steps they carried out
     iri: http://purl.org/net/p-plan#
@@ -162,6 +162,16 @@ profile:
     note: a tool call or a file or API action is a prov:Activity (PROV-O owns activities) with as:actor and as:instrument;
       schema.org Message and SIOC are mappings only
     load_when: always (milestone 5 — interactions)
+  - id: org
+    owns: organisations — an organisation, its units, posts and who holds them, memberships and roles, who
+      reports to whom (D-80, M5-T4); people are prov:Person
+    iri: http://www.w3.org/ns/org#
+    file: org.ttl
+    license: W3C Software and Document License
+    pin: The Organization Ontology 2014-01-16 (W3C Recommendation), subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: a process step's performer (bbo:has_resource) is the org:Post that does it, so the process and the
+      organisation maps meet; schema.org Organization and Role are mappings only (CC BY-SA)
+    load_when: always (milestone 5 — interviews)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings
