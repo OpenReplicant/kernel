@@ -20,7 +20,7 @@ from collections import defaultdict
 
 from conformance.__main__ import AGENT as CONFORMANCE, CLAIMS
 from conformance.compare import CONTAINER, LABEL, MAX, NEXT, RESULT, discrepancies, value
-from kk.lib import connect, listen, run, submit
+from kk.lib import connect, listen, manifest_patterns, run, submit
 
 from .learn import proposals
 
@@ -58,7 +58,7 @@ def main(argv=None) -> int:
     if a.once:
         print(json.dumps(one_pass(conn)))
         return 0
-    listen(conn, one_pass, wake=lambda payload: json.loads(payload).get("status") == "applied")
+    listen(conn, one_pass, patterns=manifest_patterns("learner-process"))   # D-79
     return 0
 
 

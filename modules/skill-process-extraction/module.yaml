@@ -19,11 +19,13 @@ runtime:
 requires:
 - slot: agent-interface
 accepts:
-- text/markdown
+- text/markdown (a written procedure)
 - text/plain
 produces:
 - add_artifact
 - add_claim
+- 'bbo:has_nextFlowNode (extracted, with the quote)'
+- 'bbo:maxValue (time limits, with the quote)'
 triggers:
 - type: manual
 mcp:

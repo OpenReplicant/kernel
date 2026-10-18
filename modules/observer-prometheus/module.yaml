@@ -33,9 +33,10 @@ runtime:
     PROMETHEUS_URL: Prometheus base URL (default http://prometheus:9090)
     KK_WINDOW_SECONDS: observation window (default 60)
 accepts:
-- application/json (Prometheus HTTP API)
+- application/json (Prometheus HTTP API query results)
 produces:
 - add_claim
+- 'sosa:hasSimpleResult (per window, sosa:observedProperty urn:kk:property:*)'
 triggers:
 - type: schedule
   spec: every KK_WINDOW_SECONDS

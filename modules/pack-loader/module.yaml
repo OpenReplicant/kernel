@@ -22,3 +22,10 @@ runtime:
 mcp:
   expose: []
 migration: migration.sql
+accepts:
+- text/turtle (vocabulary pack files)
+produces:
+- add_claim
+- 'rdfs:Class'
+- 'rdf:Property'
+- 'skos:Concept'

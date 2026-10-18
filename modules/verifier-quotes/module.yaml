@@ -34,7 +34,8 @@ runtime:
 requires:
 - slot: artifact-store
 accepts:
-- kernel_change_set notifications
+- 'claim (extracted, with a quote)'
+- artifact
 produces:
 - add_verification
 triggers:

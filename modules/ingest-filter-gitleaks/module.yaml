@@ -23,3 +23,7 @@ triggers:
 mcp:
   expose: []
 migration: migration.sql
+accepts:
+- '*/* (files about to be stored)'
+produces:
+- 'artifact (only what passes; findings are reported, never stored)'

@@ -36,11 +36,19 @@ requires:
 - slot: ingest-filter
 - slot: artifact-store
 accepts:
-- git repository
-- directory
+- 'inode/directory (a repository checkout, git or not)'
+- text/markdown (documents and their headings)
+- 'application/toml (pyproject.toml, Cargo.toml)'
+- application/json (package.json)
+- 'text/plain (requirements.txt, go.mod)'
 produces:
 - add_artifact
 - add_claim
+- 'schema:SoftwareSourceCode'
+- 'schema:softwareRequirements'
+- 'schema:version'
+- 'dcterms:hasPart'
+- 'dcterms:title'
 triggers:
 - type: manual
 - type: schedule

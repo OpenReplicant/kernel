@@ -31,7 +31,10 @@ runtime:
     DATABASE_URL: login that may SET ROLE kkm_belief (kk_authenticator)
     KK_ROLE: kkm_belief
 accepts:
-- applied change sets
+- claim
+- verification
+- 'cito:supports'
+- 'cito:refutes'
 produces:
 - add_belief
 triggers:

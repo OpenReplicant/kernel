@@ -30,13 +30,22 @@ runtime:
     KK_SWEEP_SECONDS: sweep interval (default 30)
     KK_MIN_SHARE: "paths taken in a smaller share of cases are reported together as one rare discrepancy (default 0.01)"
 accepts:
-- http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement
+- 'bbo:has_nextFlowNode (documented and observed)'
+- 'sosa:Observation (directly-follows counts, waits, case counts)'
+- 'bbo:maxValue (documented limits)'
 produces:
 - add_claim
 - set_status
+- 'oa:Annotation (a discrepancy: dcterms:type urn:kk:discrepancy-kind:*, oa:hasTarget the steps, oa:bodyValue)'
 triggers:
-- type: notify
-  spec: kernel_change_set (applied)
+- type: pattern
+  spec: '? bbo:has_nextFlowNode ?'
+- type: pattern
+  spec: '? sosa:hasSimpleResult ?'
+- type: pattern
+  spec: '? bbo:maxValue ?'
+- type: schedule
+  spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
 mcp:
   expose: []
 migration: migration.sql

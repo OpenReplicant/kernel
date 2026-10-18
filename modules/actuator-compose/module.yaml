@@ -33,8 +33,9 @@ runtime:
     KK_MAX_REPLICAS: upper bound for scale (default 5)
     DOCKER_HOST: the socket proxy (default tcp://docker-proxy:2375)
 accepts:
-- http://www.w3.org/ns/sosa/Actuation
-produces: []
+- 'sosa:Actuation (an approved plan step: dcterms:type scale or restart, sosa:hasFeatureOfInterest the service)'
+produces:
+- 'run (what it did, before and after; it never writes claims)'
 triggers:
 - type: notify
   spec: kernel_change_set (applied)

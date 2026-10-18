@@ -20,3 +20,10 @@ requires:
 - slot: agent-interface
 mcp:
   expose: []
+accepts:
+- 'sosa:Observation'
+- 'oa:Annotation'
+- 'sosa:Actuation'
+- run
+produces:
+- text/html (the Devops view)

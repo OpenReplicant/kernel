@@ -9,7 +9,7 @@ existing open tooling — what this repo builds is the kernel, its conventions a
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
-2. `docs/milestone-4.md` — current work; milestones 1 (the kernel), 2 (BPM and devops) and 3 (your own data, cited) are done.
+2. `docs/milestone-5.md` — current work; milestones 1 (the kernel), 2 (BPM and devops), 3 (your own data, cited) and 4 (a demo you can sell) are done.
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
 5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
@@ -55,6 +55,7 @@ PGHOST=<socket or host> PGUSER=<superuser> sh kernel/schema/tests/run.sh   # 30 
 pip install -r requirements-ci.txt
 python shapes/tests/test_shapes.py                                         # SHACL fixtures
 python scripts/check_manifests.py                                          # manifests and slots
+python scripts/catalog.py --check                                          # what modules take in and give out (docs/modules.md)
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
 sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI), M4-G1 (kk demo, end to end) on kk alone; needs gitleaks
@@ -96,13 +97,13 @@ scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mj
 examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure; bpi2019: the documented model)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/), scifact, rcaeval and bpi2019 (run.py; data fetched, not committed)
-docs/            spec, milestone-1..3, decisions, harness (drop-in guide), mcp-servers, sources, recall-research, benchmarks; spikes/
+docs/            spec, milestone-1..5, decisions, modules (generated catalog), demo, interaction-research, harness (drop-in guide), mcp-servers, sources, recall-research, benchmarks; spikes/
 ```
 
 ## Current milestone
 
-Milestone 4 (`docs/milestone-4.md`, done): a demo you can sell — sign-in with Postgres logins and HTTPS by
-Caddy, discrepancies a person can review, a process model that learns from what people approve, and a
-customer demo with its walkthrough (`kk demo`, `docs/demo.md`). Milestones 1–4 are done; the next is the
-owner's choice (candidates under "Later" in `docs/milestone-4.md`). Work one task at a time; each ends with
-its check passing.
+Milestone 5 (`docs/milestone-5.md`): maps from conversations, interactions and code — what each module
+takes in and gives out (`docs/modules.md`), processors woken by claim patterns, an interaction encoder,
+an interviewer that builds organisation and process maps with quotes, and a code map below packages,
+each measured with small models. Milestones 1–4 are done. Work one task at a time; each ends with its
+check passing.

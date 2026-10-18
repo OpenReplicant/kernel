@@ -30,9 +30,10 @@ runtime:
     KK_SWEEP_SECONDS: longest wait between passes (default 30)
     KK_DENSE_BATCH: claims embedded per transaction (default 256)
 accepts:
-- kernel_change_set notifications
-- kernel_redaction notifications
-produces: []
+- claim
+- redaction
+produces:
+- 'application/json (api.recall_hybrid: ranked claim ids)'
 triggers:
 - type: notify
   spec: kernel_change_set

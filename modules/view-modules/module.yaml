@@ -19,3 +19,7 @@ requires:
 - slot: agent-interface
 mcp:
   expose: []
+accepts:
+- 'kk:Module'
+produces:
+- text/html (the Modules view)

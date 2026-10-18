@@ -142,3 +142,6 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - `kk import` matched new claim ids by content in no fixed order; one run can hold look-alike claims
   from different artifacts, so a status could land on the wrong copy (T19 failed now and then on main).
   It now matches by references too.
+- psycopg's `conn.notifies()` generator holds the connection: querying the same connection inside its
+  loop kills the worker (the pattern triggers' first version proposed once, then died). Take one
+  notification at a time (`stop_after=1`), let the generator close, then query.

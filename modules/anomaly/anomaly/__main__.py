@@ -14,7 +14,7 @@ import json
 import os
 import sys
 
-from kk.lib import connect, listen, run, submit
+from kk.lib import connect, listen, manifest_patterns, run, submit
 
 from .detect import MAX, RESULT, anomalies, change_set
 
@@ -58,7 +58,7 @@ def main(argv=None) -> int:
     if a.once:
         print(json.dumps(one_pass(conn)))
         return 0
-    listen(conn, one_pass, wake=lambda payload: json.loads(payload).get("status") == "applied")
+    listen(conn, one_pass, patterns=manifest_patterns("anomaly"))   # D-79
     return 0
 
 
