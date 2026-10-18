@@ -20,9 +20,11 @@ requires:
 - slot: agent-interface
 - slot: actuator
 accepts:
-- http://www.w3.org/ns/oa#Annotation
+- 'oa:Annotation (an anomaly)'
 produces:
 - add_claim
+- 'pplan:Plan'
+- 'sosa:Actuation (plan steps, review lane)'
 triggers:
 - type: manual
 mcp:

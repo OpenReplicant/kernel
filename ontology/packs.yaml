@@ -40,7 +40,7 @@ core:
     iri: http://purl.org/dc/terms/
     file: dcterms.ttl
     license: CC BY 4.0 (DCMI)
-    pin: DCMI Metadata Terms 2020-01-20, subset (title, abstract; revision in owl:versionInfo) cut by scripts/vocab_subset.py; kk-core types the terms the module contract uses
+    pin: DCMI Metadata Terms 2020-01-20, subset (title, abstract, hasPart, isPartOf; revision in owl:versionInfo) cut by scripts/vocab_subset.py; kk-core types the terms the module contract uses
   - id: prov-o
     owns: provenance — agents, activities (runs), derivation, attribution, generation time, invalidation
     iri: http://www.w3.org/ns/prov#

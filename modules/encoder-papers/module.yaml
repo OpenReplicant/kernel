@@ -33,10 +33,13 @@ requires:
 - slot: ingest-filter
 - slot: artifact-store
 accepts:
-- application/jsonl (one paper per line)
+- 'application/jsonl (one paper per line: SciFact or BEIR)'
 produces:
 - add_artifact
 - add_claim
+- 'fabio:ResearchPaper'
+- 'dcterms:title'
+- 'dcterms:abstract'
 triggers:
 - type: manual
 mcp:

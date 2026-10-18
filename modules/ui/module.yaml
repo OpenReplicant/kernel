@@ -25,3 +25,8 @@ interfaces:
   href: /ui/
 mcp:
   expose: []
+accepts:
+- claim
+- change_set
+produces:
+- text/html (the shell at /ui)

@@ -45,3 +45,10 @@ mcp:
   - list_runs
   read_only: false
 skill: SKILL.md
+accepts:
+- claim
+- change_set
+- run
+produces:
+- 'add_claim (and every op, as the calling agent)'
+- application/json (MCP tool results)

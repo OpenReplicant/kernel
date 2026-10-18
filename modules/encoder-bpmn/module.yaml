@@ -33,11 +33,18 @@ requires:
 - slot: ingest-filter
 - slot: artifact-store
 accepts:
-- application/bpmn+xml
+- application/bpmn+xml (BPMN 2.0)
 produces:
 - add_artifact
 - add_claim
 - set_status
+- 'bbo:Process'
+- 'bbo:Task (and the other flow-node classes)'
+- 'bbo:has_nextFlowNode'
+- 'bbo:has_container'
+- 'bbo:Role'
+- 'bbo:has_resource'
+- 'rdfs:label'
 triggers:
 - type: manual
 mcp:

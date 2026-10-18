@@ -36,6 +36,7 @@ accepts:
 produces:
 - add_artifact
 - add_claim
+- 'dqv:value (dqv:isMeasurementOf, dqv:computedOn as qualifiers)'
 triggers:
 - type: manual
 mcp:

@@ -34,12 +34,16 @@ requires:
 - slot: ingest-filter
 - slot: artifact-store
 accepts:
-- text/csv
-- application/xml (XES)
+- 'text/csv (case, activity, timestamp, resource columns)'
+- application/xml (XES event log)
 produces:
 - add_artifact
 - add_claim
 - set_status
+- 'bbo:has_nextFlowNode (observed)'
+- 'bbo:has_container'
+- 'sosa:hasSimpleResult (counts and waits per window, sosa:observedProperty urn:kk:property:*)'
+- 'rdfs:label'
 triggers:
 - type: manual
 mcp:

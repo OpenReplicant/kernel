@@ -28,7 +28,7 @@ runtime:
 accepts:
 - change_set
 produces:
-- validation_report
+- change_set (its validation report and status)
 triggers:
 - type: notify
   spec: kernel_change_set

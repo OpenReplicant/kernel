@@ -65,7 +65,7 @@
         "iri"
       ],
       "additionalProperties": false,
-      "description": "The identity the module acts as. One database role per module (docs/spec.md \u00a74); omit db_role for a module that only ever acts with its callers' own tokens (kernel-mcp, D-20, D-34).",
+      "description": "The identity the module acts as. One database role per module (docs/spec.md §4); omit db_role for a module that only ever acts with its callers' own tokens (kernel-mcp, D-20, D-34).",
       "properties": {
         "iri": {
           "type": "string",
@@ -221,12 +221,13 @@
               "notify",
               "http",
               "mcp",
-              "manual"
+              "manual",
+              "pattern"
             ]
           },
           "spec": {
             "type": "string",
-            "description": "Cron or interval for schedule; channel for notify; path for http; tool name for mcp."
+            "description": "Cron or interval for schedule; channel for notify; path for http; tool name for mcp; for pattern, a claim pattern `S P O` (each a CURIE, an IRI, `?` or a prefix ending in `*`): the worker wakes when an applied change set adds a fitting claim (D-79)."
           }
         }
       }

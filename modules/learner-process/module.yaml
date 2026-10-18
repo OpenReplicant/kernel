@@ -30,12 +30,17 @@ runtime:
     KK_LEARN_SHARE: "the share of cases a confirmed path needs before it is proposed (default 0.05)"
     KK_SWEEP_SECONDS: sweep interval (default 30)
 accepts:
-- http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement
+- 'oa:Annotation (a confirmed discrepancy)'
+- 'sosa:Observation (case counts)'
 produces:
 - add_claim
+- 'bbo:has_nextFlowNode (learned, inferred)'
+- 'oa:Annotation (dcterms:type urn:kk:revision-kind:add-path)'
 triggers:
-- type: notify
-  spec: kernel_change_set (applied)
+- type: pattern
+  spec: '? dcterms:type urn:kk:discrepancy-kind:*'
+- type: schedule
+  spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
 mcp:
   expose: []
 migration: migration.sql

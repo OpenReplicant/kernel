@@ -20,3 +20,10 @@ requires:
 - slot: agent-interface
 mcp:
   expose: []
+accepts:
+- 'bbo:has_nextFlowNode'
+- 'sosa:Observation'
+- 'oa:Annotation'
+produces:
+- text/html (the Processes view)
+- 'application/bpmn+xml (the documented process, learned paths included)'
