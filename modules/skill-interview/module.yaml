@@ -1,0 +1,41 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:skill-interview
+name: 'Skill: interview a person to map the organisation and its processes'
+version: 0.1.0
+description: 'Instructions for a harness agent to interview a person and record what they say about their
+  organisation (W3C ORG: units, posts, who holds them, who reports to whom) and its processes (BBO: steps,
+  order, who does each), every claim extracted with the exact words of the message it came from, which
+  the interaction encoder recorded (so the quote verifier, not the agent, checks it). The agent asks next
+  about the gaps the map gap processor lists. No code and no database role (D-49).'
+license: Apache-2.0
+kind: agent
+slots:
+- agent-skill
+protected: false
+agent:
+  iri: urn:kk:agent:skill-interview
+runtime:
+  type: skill-only
+  entrypoint: SKILL.md
+requires:
+- slot: agent-interface
+accepts:
+- 'as:Note (the person''s messages, recorded by the interaction encoder)'
+- 'oa:Annotation (the gaps: dcterms:type urn:kk:gap-kind:*)'
+produces:
+- add_claim
+- org:Post
+- org:OrganizationalUnit
+- org:FormalOrganization
+- prov:Person
+- 'org:holds (extracted, with the quote)'
+- org:reportsTo
+- org:postIn
+- org:unitOf
+- 'bbo:has_nextFlowNode (extracted, with the quote)'
+- 'bbo:has_resource (the post that does a step)'
+triggers:
+- type: manual
+mcp:
+  expose: []
+skill: SKILL.md

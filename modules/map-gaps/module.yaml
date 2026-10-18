@@ -1,0 +1,61 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:map-gaps
+name: Map gap processor
+version: 0.1.0
+description: 'Lists what the organisation and process maps people describe still lack (M5-T4): a step
+  nobody does, a step with nothing after or before it, a post nobody holds, a post that reports to no one
+  while another does not either, a post in no unit. Each gap is an oa:Annotation whose body is the
+  question to ask next, derived from the claims that put its target on the map; once answered, it is
+  retracted. The interviewer skill asks about these.'
+license: Apache-2.0
+kind: processor
+slots:
+- reasoner
+protected: false
+agent:
+  iri: urn:kk:agent:map-gaps
+  db_role: kkm_map_gaps
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m map_gaps
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_map_gaps
+    KK_SWEEP_SECONDS: sweep interval (default 30)
+accepts:
+- 'bbo:has_container (steps extracted from what people said)'
+- bbo:has_nextFlowNode
+- 'bbo:has_resource (the post that does a step)'
+- org:Post
+- org:holds
+- org:heldBy
+- org:reportsTo
+- org:postIn
+- org:hasPost
+produces:
+- add_claim
+- set_status
+- 'oa:Annotation (a gap: dcterms:type urn:kk:gap-kind:*, oa:hasTarget the step or post, oa:bodyValue the question)'
+triggers:
+- type: pattern
+  spec: '? bbo:has_container ?'
+- type: pattern
+  spec: '? bbo:has_nextFlowNode ?'
+- type: pattern
+  spec: '? bbo:has_resource ?'
+- type: pattern
+  spec: '? org:* ?'
+- type: pattern
+  spec: '? rdf:type org:Post'
+- type: schedule
+  spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
+mcp:
+  expose: []
+migration: migration.sql

@@ -5,7 +5,7 @@ recall index and the quote verifier run as workers in theirs. Checks: the papers
 as the encoder's own role; the recall index indexes them; the verifier, reading the artifact store
 read-only, supports a quote of the stored file and refutes a made-up one; recall-dense installs (its
 worker needs onnxruntime, which the Alpine kk image cannot hold, so it is not run here); M4-G2: the process
-learner runs as a worker under its own login.
+learner runs as a worker under its own login; M5-G3: the interaction encoder and the map gap processor.
 
 Env: KK_ADMIN_URL, KK_RESULT (the paper encoder's output line), KK_CHAT_RESULT (the interaction encoder's),
 KK_PAPERS (the input file).
@@ -88,6 +88,9 @@ def main() -> int:
         check("M5-G3 the interaction encoder runs sandboxed as itself and its change sets are applied",
               rows and all(r == ("applied", "kkm_encoder_interaction") for r in rows) and chat["messages"] == 4,
               f"({rows}, {chat['claims']} claims)")
+        gaps = wait(conn, "select count(*) from pg_stat_activity where usename = 'kkm_map_gaps'", (),
+                    lambda r: r[0] > 0, timeout=60)[0]
+        check("M5-G3 the map gap processor runs sandboxed as its own login", gaps > 0, f"({gaps} connection)")
     print(f"M3-G3 milestone-3 modules passed ({sum(checks)}/{len(checks)})" if all(checks) else "M3-G3 FAILED")
     return 0 if all(checks) else 1
 
