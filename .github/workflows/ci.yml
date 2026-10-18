@@ -144,3 +144,10 @@ jobs:
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env
           docker compose -f deploy/compose.yaml --env-file /tmp/ci.env config -q
           docker compose -f deploy/compose.yaml -f deploy/demo/compose.yaml --env-file /tmp/ci.env config -q
+          docker compose -f deploy/compose.yaml -f deploy/public.yaml --env-file /tmp/ci.env config -q
+      - name: Caddy serves HTTP locally and HTTPS on a public host name (D-74)
+        run: |
+          caddy=$(sed -n 's/^CADDY_IMAGE=//p' deploy/.env.example)
+          adapt() { docker run --rm "$@" -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" "$caddy" caddy adapt --config /etc/caddy/Caddyfile 2> /dev/null; }
+          adapt | grep -q '"listen":\[":80"\]'
+          adapt -e KK_SITE=kk.example.org | grep -q '"host":\["kk.example.org"\]'

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Knowledge Kernel</title>
-<!-- The UI shell (D-44): an MCP client served by kk serve. Every call carries the person's own token
-     (kk token person_<name>), so the kernel decides what they may see and do. Libraries are vendored and
+<!-- The UI shell (D-44): an MCP client served by kk serve. A person signs in with their own Postgres
+     login (D-73), or pastes a token (kk token person_<name>); every call carries their token, so the kernel decides what they may see and do. Libraries are vendored and
      pinned (vendor/README.md); no inline scripts (the Content-Security-Policy forbids them). -->
 <link rel="stylesheet" href="style.css">
 <script src="vendor/cytoscape-3.34.3.min.js"></script>
@@ -22,8 +22,15 @@
   </nav>
   <div class="who">
     <span class="muted" x-show="me" x-text="me ? me.agent : ''"></span>
-    <input type="password" placeholder="Your token (kk token person_…)" aria-label="Token" x-model="token"
-           @change="signIn()">
+    <button x-show="me" @click="signOut()">Sign out</button>
+    <form class="row" x-show="!me" @submit.prevent="login()">
+      <input placeholder="Name" aria-label="Name" autocomplete="username" x-model="name">
+      <input type="password" placeholder="Password" aria-label="Password" autocomplete="current-password"
+             x-model="password">
+      <button type="submit">Sign in</button>
+    </form>
+    <input type="password" x-show="!me" placeholder="or a token (kk token person_…)" aria-label="Token"
+           x-model="token" @change="signIn()">
   </div>
 </header>
 <main>

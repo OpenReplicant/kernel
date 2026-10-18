@@ -1,5 +1,8 @@
 # Milestone 3 — your own data, cited, in minutes
 
+**Done** (D-73): every gate passed; the remaining benchmark steps of M3-T3, T5 and T8 wait for local
+models. Next: `docs/milestone-4.md`.
+
 **Why this, now** (D-56). Milestones 1 and 2 proved the kernel and two target uses on synthetic demos.
 What stands between that and a product is adoption: connecting a kernel to a harness takes a dozen
 commands and a guide, and the third target use (coding agents and their codebase) still encodes only

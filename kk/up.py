@@ -13,7 +13,7 @@
    the ingest filter first), in the kernel image with the stack (it carries gitleaks), here with
    --no-stack. Unchanged files change nothing; the session hook says when the checkout moved on.
 
-Prints the UI address, the owner's token (when KK_JWT_SECRET is known) and what changed. Running it
+Prints the UI address, the owner's sign-in (name and password, D-74) and token (when KK_JWT_SECRET is known) and what changed. Running it
 again changes nothing.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse
 
 import psycopg
 
@@ -216,9 +216,11 @@ def main(argv: list[str]) -> None:
         out["encoded"] = encode(folder, admin_url, None if a.no_stack else ROOT / "deploy/.env")
     if not a.no_stack:
         out["ui"] = "http://127.0.0.1:8080/ui/"
+    if pw := urlparse(read_env(h / "owner.env").get("KK_DATABASE_URL", "")).password:
+        out["owner_sign_in"] = {"name": "owner", "password": unquote(pw)}   # the UI's sign-in (D-74)
     if len(jwt) >= 32:
         out["owner_token"] = mint("person_owner", jwt, 30)
     print(json.dumps(out, indent=2))
     print(f"\nReady. Open the project in your harness (Claude Code: `claude` in {folder}); approve the"
-          " 'kernel' MCP server when asked." + (f" Review in the UI at {out['ui']} with the owner token."
+          " 'kernel' MCP server when asked." + (f" Review in the UI at {out['ui']}: sign in as owner (owner_sign_in)."
                                                  if "ui" in out else ""), file=sys.stderr)

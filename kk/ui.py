@@ -3,15 +3,23 @@
   /ui/              the shell (modules/ui/web): an MCP client; every call carries the person's own token
   /ui/views.json    the view modules: manifests with runtime type `view` that fill the `ui` slot
   /ui/views/<name>/ each view module's folder (its entrypoint script registers the view with the shell)
+  /ui/login         POST {name, password}: a person signs in with their own Postgres login (`kk person add`);
+                    Postgres checks the password, and the answer is a bearer token for their role (D-73)
 
-Static files only; nothing here reads the database. Responses carry a strict Content-Security-Policy
+Static files otherwise; only the sign-in touches the database, as the person. Responses carry a strict Content-Security-Policy
 (scripts from this origin only; Alpine.js needs 'unsafe-eval' for its expressions).
 """
 from __future__ import annotations
 
+import asyncio
+import os
+import time
 from pathlib import Path
 
 import yaml
+
+SESSION_HOURS = 8
+PERSON = "kk_reviewer"   # people are reviewers (kk person add); agents and modules sign in elsewhere
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
        "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
@@ -47,6 +55,22 @@ class Secure:
         await self.app(scope, receive, send_with_headers)
 
 
+async def sign_in(name: str, password: str, url: str) -> str | None:
+    """The person's role if Postgres accepts their password and the role is a person's; else None."""
+    import psycopg
+    from psycopg.conninfo import make_conninfo
+    role = "person_" + name.replace("-", "_")
+    try:
+        async with await psycopg.AsyncConnection.connect(make_conninfo(url, user=role, password=password),
+                                                         connect_timeout=10) as conn:
+            row = await (await conn.execute(
+                "select pg_has_role(current_user, %s, 'member') and not rolsuper"
+                " from pg_roles where rolname = current_user", (PERSON,))).fetchone()
+    except psycopg.Error:
+        return None
+    return role if row and row[0] else None
+
+
 def routes(root: Path) -> list:
     from starlette.responses import JSONResponse, RedirectResponse
     from starlette.routing import Mount, Route
@@ -64,6 +88,25 @@ def routes(root: Path) -> list:
     async def home(request):
         return RedirectResponse("/ui/")
 
+    async def login(request):
+        from .cli import NAME, mint
+        headers = dict((k.decode(), v.decode()) for k, v in HEADERS)
+        try:
+            body = await request.json()
+            name, password = str(body["name"]), str(body["password"])
+        except Exception:
+            return JSONResponse({"error": "send {name, password}"}, status_code=400, headers=headers)
+        secret, url = os.environ.get("KK_JWT_SECRET", ""), os.environ.get("DATABASE_URL", "")
+        if len(secret) < 32 or not url:
+            return JSONResponse({"error": "sign-in is not configured"}, status_code=503, headers=headers)
+        role = await sign_in(name, password, url) if NAME.match(name) and password else None
+        if not role:
+            await asyncio.sleep(1)   # slows guessing; Postgres logs every failed attempt
+            return JSONResponse({"error": "name or password not accepted"}, status_code=401, headers=headers)
+        return JSONResponse({"token": mint(role, secret, SESSION_HOURS / 24), "role": role,
+                             "expires": int(time.time()) + SESSION_HOURS * 3600}, headers=headers)
+
     return [Route("/", home), Route("/ui", home), Route("/ui/views.json", views_json),
+            Route("/ui/login", login, methods=["POST"]),
             *[Mount(f"/ui/views/{v['name']}", app=Secure(StaticFiles(directory=v["dir"]))) for v in found],
             Mount("/ui", app=Secure(StaticFiles(directory=shell, html=True)))]
