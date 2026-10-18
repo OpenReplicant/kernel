@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:view-bpm
 name: Processes
-version: 0.1.0
+version: 0.2.0
 description: 'A view module for the UI (BPM): the process map of a documented process next to what was
   observed — tasks, gateways and events; documented flows, observed flows with their case counts, and the
   conformance discrepancies, confirmed or awaiting review, highlighted on the steps and flows they concern.

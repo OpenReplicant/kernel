@@ -5,7 +5,8 @@
   kk person add NAME           a person's own login (reviews; --steward may also redact)
   kk agent add NAME            a harness agent's own login (MCP stdio, hooks)
   kk serve                     MCP over HTTP (+ the UI at /ui) + the validator + the belief model + the recall index
-                               (--only ...,dense adds dense recall: pgvector, fastembed)
+                               (--only ...,dense adds dense recall: pgvector, fastembed; ...,conformance,learner
+                               the process loop: discrepancies and learned revisions)
   kk status                    who you are, what you can see, what is waiting
   kk review list|show|approve|reject
   kk scan --repo DIR           ingest a repository (self-encoder, ingest filter first)
@@ -42,7 +43,8 @@ from psycopg import sql
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[1])
 NAME = re.compile(r"^[a-z][a-z0-9-]{0,40}$")
 WORKERS = ("validator", "belief", "recall", "quotes")
-OPTIONAL = ("dense",)   # opt in: needs pgvector and fastembed (D-61)
+OPTIONAL = ("dense", "conformance", "learner")   # opt in: dense needs pgvector and fastembed (D-61); the
+                                                 # process loop (D-50, D-76) for kernels holding processes
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 KK_MODULE = "https://w3id.org/knowledge-kernel/ns#Module"
 OWL_VERSION = "http://www.w3.org/2002/07/owl#versionInfo"
@@ -168,6 +170,12 @@ def worker(name: str):
         from recall_dense.__main__ import main
     elif name == "quotes":
         from verifier_quotes.__main__ import main
+    elif name == "conformance":
+        from conformance.__main__ import main as loop
+        return lambda: loop([])   # no command-line arguments of its own here
+    elif name == "learner":
+        from process_learner.__main__ import main as loop
+        return lambda: loop([])
     else:
         from belief_corroboration.__main__ import main
     return main

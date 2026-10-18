@@ -51,7 +51,7 @@ KK_RERANK=1 KK_SWEEP_SECONDS=5 $py -m kk serve --port "$port" --only "$parts" > 
 serve=$!
 cleanup() {
   status=$?
-  kill "$serve" 2>/dev/null || true
+  kill "$serve" ${loop:-} 2>/dev/null || true
   if [ "$status" -ne 0 ]; then
     echo "--- smoke test failed ($status); kk serve log:"; tail -60 "$log"
   fi
@@ -73,13 +73,17 @@ KK_SMOKE_DB="$db" $py "$root/scripts/e2e_transfer.py"
 # T20 and G3: the UI in headless Chromium (needs Node and the playwright package; KK_REQUIRE_UI=1 makes
 # a missing browser a failure, as in CI).
 if (cd "$root" && node -e "require('playwright')" 2> /dev/null); then
+  # D-76: the process loop (conformance and the process learner) runs from here on, as in the demo stack.
+  KK_SWEEP_SECONDS=5 $py -m kk serve --only conformance,learner >> "$log" 2>&1 &
+  loop=$!
   KK_URL="http://127.0.0.1:$port" KK_OWNER_PASSWORD="$owner_pw" \
     KK_OWNER_TOKEN="$(kk token person_owner --days 0.01)" \
     KK_AGENT_TOKEN="$(kk token agent_claude_code --days 0.01)" node "$root/scripts/e2e_ui.mjs"
+  kill "$loop" 2>/dev/null || true
 elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
-  echo "FAIL the UI check needs Node and playwright (npm install --no-save playwright)"; exit 1
+  echo "FAIL the UI check needs Node and playwright (npm install --no-save playwright@1.56.1 bpmn-moddle@10.3.1)"; exit 1
 else
-  echo "skip the UI check (no playwright; npm install --no-save playwright to run it)"
+  echo "skip the UI check (no playwright; npm install --no-save playwright@1.56.1 bpmn-moddle@10.3.1 to run it)"
 fi
 # D-60: the recall index (BM25) that kk serve keeps; scopes and redaction respected.
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_recall.py"

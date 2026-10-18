@@ -142,7 +142,44 @@ check('M2-G1 the person reviews every planted discrepancy in the UI; all six are
       reviewed.length === 6 && reviewed.every(s => s === 'confirmed'), reviewed.join(', '));
 await shot('processes-reviewed');
 
+// D-76: the process loop learns. With conformance and the process learner running (kk serve), the confirmed,
+// frequent deviations come back as proposals; the person approves one, the documented process gains the path,
+// conformance retracts that discrepancy, and the BPMN download has the learned path.
+const reopen = async () => { await page.locator('nav').getByRole('button', { name: 'Search' }).click();
+                             await page.getByRole('button', { name: 'Processes' }).click(); await ready(); };
+const until = async (cond, what) => {
+  for (let i = 0; i < 30; i++) { if (await page.evaluate(cond)) return true; await page.waitForTimeout(2000); await reopen(); }
+  return false;
+};
+const swap = '#bpm-revisions li[data-status="proposed"]';
+check('D-76 the confirmed, frequent deviations are proposed as revisions of the documented process',
+      await until(() => [...document.querySelectorAll('#bpm-revisions li.revision')].some(l => /Send invoice to Ship goods/.test(l.textContent))),
+      (await page.$$eval('#bpm-revisions li.revision', ls => ls.length)) + ' proposals');
+await shot('processes-proposals');
+const target = await page.$$(swap);
+for (const li of target) {
+  if (/Send invoice to Ship goods/.test(await li.textContent())) { await (await li.$('button.approve')).click(); break; }
+}
+check('D-76 approved, it is learned and conformance no longer flags the swap',
+      await until(() => [...document.querySelectorAll('#bpm-revisions li[data-status="learned"]')].some(l => /Send invoice to Ship goods/.test(l.textContent))
+                        && ![...document.querySelectorAll('#bpm-discrepancies li.discrepancy')].some(l => /swap/.test(l.textContent))),
+      (await page.$$eval('#bpm-discrepancies li.discrepancy', ls => ls.map(l => l.querySelector('strong').textContent.trim()))).join(', '));
+await shot('processes-learned');
+const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download BPMN' }).click()]);
+const xml = (await import('node:fs')).readFileSync(await download.path(), 'utf8');
+const { BpmnModdle } = await import('bpmn-moddle');
+const { rootElement, warnings } = await new BpmnModdle().fromXML(xml);
+const proc = rootElement.rootElements.find(e => e.$type === 'bpmn:Process');
+const named = id => (proc.flowElements.find(e => e.id === id) || {}).name;
+const flows = proc.flowElements.filter(e => e.$type === 'bpmn:SequenceFlow');
+const shapes = rootElement.diagrams[0].plane.planeElement.length;
+const learnedFlow = flows.some(f => named(f.sourceRef.id) === 'Send invoice'
+  && (named(f.targetRef.id) === 'Ship goods' || flows.some(g => g.sourceRef === f.targetRef && named(g.targetRef.id) === 'Ship goods')));
+check('D-76 the documented process downloads as BPMN 2.0 with a diagram, the learned path included',
+      warnings.length === 0 && flows.length > 5 && shapes === proc.flowElements.length && learnedFlow,
+      `${proc.flowElements.length - flows.length} nodes, ${flows.length} flows, ${warnings.length} warnings`);
+
 check('no page errors or CSP violations', errors.length === 0, errors.join(' | ').slice(0, 200));
 await browser.close();
-console.log('T20, M2-T4 and M2-G1 UI', checks.every(Boolean) ? 'passed' : 'FAILED', `(${checks.filter(Boolean).length}/${checks.length})`);
+console.log('T20, M2-T4, M2-G1 and D-76 UI', checks.every(Boolean) ? 'passed' : 'FAILED', `(${checks.filter(Boolean).length}/${checks.length})`);
 process.exit(checks.every(Boolean) ? 0 : 1);

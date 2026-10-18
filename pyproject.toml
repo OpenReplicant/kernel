@@ -30,7 +30,7 @@ kernel-mcp-hook = "kernel_mcp.hooks:main"
 packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter",
             "eventlog_encoder", "bpmn_encoder", "conformance", "observer_prometheus", "anomaly",
             "actuator_compose", "paper_encoder", "recall_index", "recall_dense",
-            "verifier_quotes", "evaluator"]
+            "verifier_quotes", "evaluator", "process_learner"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -49,3 +49,4 @@ recall_index = "modules/recall-index/recall_index"
 recall_dense = "modules/recall-dense/recall_dense"
 verifier_quotes = "modules/verifier-quotes/verifier_quotes"
 evaluator = "modules/evaluator/evaluator"
+process_learner = "modules/learner-process/process_learner"

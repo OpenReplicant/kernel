@@ -11,7 +11,8 @@ a discrepancy that is no longer found has its claims retracted.
 
   python -m conformance [--once]
 Env: DATABASE_URL (the module's own login, or one that may SET ROLE to KK_ROLE), KK_ROLE (default
-kkm_conformance), KK_SWEEP_SECONDS (default 30).
+kkm_conformance), KK_SWEEP_SECONDS (default 30), KK_MIN_SHARE (default 0.01: a path outside the documented
+process taken in a smaller share of cases is reported with the others like it, as one `rare` discrepancy).
 """
 from __future__ import annotations
 
@@ -32,6 +33,7 @@ SCOPE = "urn:kk:scope:default"
 OA = "http://www.w3.org/ns/oa#"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 DCT_TYPE = "http://purl.org/dc/terms/type"
+MIN_SHARE = float(os.environ.get("KK_MIN_SHARE", "0.01"))   # D-75: rarer paths are reported together
 CLAIMS = """select id, subject, predicate, object_entity, object_value, qualifiers, evidence_type from api.claims
             where status <> 'deprecated' and (predicate = any(%(p)s)
                or (predicate = %(label)s and subject in (select subject from api.claims where predicate = %(c)s)))"""
@@ -53,7 +55,7 @@ def one_pass(conn) -> dict:
     with conn.cursor() as cur:
         cur.execute(CLAIMS, {"p": [NEXT, CONTAINER, RESULT, MAX], "label": LABEL, "c": CONTAINER})
         cols = [d.name for d in cur.description]
-        found = discrepancies([dict(zip(cols, r)) for r in cur.fetchall()])
+        found = discrepancies([dict(zip(cols, r)) for r in cur.fetchall()], MIN_SHARE)
         stale = [c for c in prior_claims(cur, AGENT, "conformance:", "")
                  if c["subject"] not in {d["iri"] for d in found}]
         submitted = {}

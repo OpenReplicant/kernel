@@ -8,8 +8,8 @@
 
 <https://w3id.org/knowledge-kernel/conformance>
     a owl:Ontology ;
-    rdfs:label "Discrepancy, anomaly and action kinds" ;
-    owl:versionInfo "0.2.0" .
+    rdfs:label "Discrepancy, revision, anomaly and action kinds" ;
+    owl:versionInfo "0.3.0" .
 
 <urn:kk:discrepancy-kind> a skos:ConceptScheme ; rdfs:label "discrepancy kinds" .
 <urn:kk:discrepancy-kind:skip> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "skipped step" ;
@@ -24,6 +24,14 @@
     skos:definition "A documented path between two steps was never observed." .
 <urn:kk:discrepancy-kind:limit> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "time limit exceeded" ;
     skos:definition "An observed wait between two steps exceeded the documented limit." .
+<urn:kk:discrepancy-kind:rare> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "rare paths" ;
+    skos:definition "Paths outside the documented process, each taken in a smaller share of cases than the reporting threshold, reported together as one discrepancy targeting the process (D-75)." .
+
+# Revisions the process learner proposes (D-76): an oa:Annotation targeting the steps, inferred and
+# derived from the confirmed discrepancy, next to the documented path it adds; a person approves it.
+<urn:kk:revision-kind> a skos:ConceptScheme ; rdfs:label "revision kinds" .
+<urn:kk:revision-kind:add-path> a skos:Concept ; skos:inScheme <urn:kk:revision-kind> ; skos:prefLabel "learned path" ;
+    skos:definition "A path added to the documented process because people confirmed that practice takes it in a large share of cases." .
 
 # Anomalies (M2-T6, D-53): an oa:Annotation on a service's node, derived from the observation (and the
 # documented limit) it concerns, valid for the observation's window.
