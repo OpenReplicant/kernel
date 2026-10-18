@@ -25,7 +25,8 @@ watches what happens and adapts through the same governed write path.
 
 Almost every component already exists. What this project contributes is the **configuration**: a
 small kernel that enforces epistemic guarantees in the database, a stable set of slot contracts that
-modules plug into, and a default distribution of modules and vocabularies.
+modules plug into, and a default distribution of modules and vocabularies. A plain-language account of
+the architecture (a symbolic store that learns, with models at its edges) is `docs/architecture.md`.
 
 ```
  sources ─encoders─▶ change sets ─▶ ┌────────── kernel (Postgres) ──────────┐ ─▶ read views / MCP / UI
@@ -42,7 +43,7 @@ modules plug into, and a default distribution of modules and vocabularies.
 | --- | --- | --- |
 | **Kernel** | Five primitives, six invariants, the apply function, row-level security. Plain Postgres 16+, no extensions. `kernel/schema/` | Frozen at v0. Change needs evaluator evidence + owner decision |
 | **ABI** (slot contracts) | Change-set format, module manifest, slot catalog, hook contract. `kernel/schemas/`, `ontology/slots.yaml`, `kernel/contracts.py` | Versioned (semver). Additive changes are minor; breaking changes are major and need a decision |
-| **Distribution** | Default modules for the kernel's three jobs, each swappable: ingestion (self-encoder, ingest filter), processing (validator, belief model), recall (kernel-mcp). Optional: PostgREST, Caddy. Parked (D-36): runners, decoders, UI. `ontology/`, `modules/`, `deploy/` | Normal module lifecycle (review lane + eval) |
+| **Distribution** | Default modules for the kernel's three jobs, each swappable: ingestion (repository encoder, ingest filter), processing (validator, belief model, quote verifier), recall (kernel-mcp, the BM25 recall index). Optional: Caddy, the UI and its views, and the further modules catalogued in `docs/modules.md`. Parked (D-36): chain runners and their decoders. `ontology/`, `modules/`, `deploy/` | Normal module lifecycle (review lane + eval) |
 
 Operating-system reading of the same thing: Postgres is the kernel (state, permissions, IPC via
 NOTIFY), the `api` schema is the system-call interface (views + `submit_change_set`), each module runs under
@@ -235,17 +236,29 @@ Python shapes of these contracts: `kernel/contracts.py`. Wire formats (all langu
 
 `modules/<name>/module.yaml` (schema `kernel/schemas/module.schema.json`). Declares identity
 (agent IRI + `kkm_*` role), the slots it fills, requested clearance (granted by a person at install),
-budget, runtime (`rulego-chain`, `python-service`, `container`, `sql`, `skill-only`), requirements
+budget, runtime (`command`, `python-service`, `container`, `sql`, `skill-only`, `view`), requirements
 (TOSCA-style), accepts/produces, triggers, interfaces (WoT-style affordances with transports), MCP
-exposure allow-list, migration, skill and eval paths, and `protected`.
+exposure allow-list, network reach, migration, skill and eval paths, and `protected`.
+
+- **Accepts and produces** (D-78): each entry is one token with an optional note in parentheses: a
+  media type (what an encoder reads or a decoder writes), a pack term as a CURIE (what a processor reads
+  or what a module claims), a change-set op kind, or a kernel record (`change_set`, `claim`, `artifact`,
+  `run`, `verification`, `belief`, `redaction`). `scripts/catalog.py --check` refuses anything else and
+  generates the catalog, `docs/modules.md`.
+- **Triggers**: `manual`, `schedule`, `notify` (a channel), `http`, `mcp`, and `pattern` (D-79): a claim
+  pattern `S P O` (each a CURIE, an IRI, `?`, or a prefix ending in `*`). A worker with patterns is
+  woken only when an applied change set adds a claim that fits one (§11).
 
 **Protected** modules (validator, belief model, runners, decoders that deploy chains, ingest filter,
 evaluator, pack loader, kernel MCP) are system components: never exposed for editing; changes need
 the review lane and a passing eval.
 
-Installing or changing a module: the module manager submits the manifest as claims (review lane),
-a person approves and grants clearance, the migration runs as `kk_owner`, and the orchestrator driver
-starts it. See `modules/_template/`.
+Installing a module today: `kk module install DIR` runs its migration (role and agent row), gives the
+role its own login and writes a locked-down container definition from the operator's grant in
+`deploy/policy.yaml`. What it may reach and use is the operator's grant, not the manifest's request
+(D-43, D-55). The target remains the governed path: the module manager submits the manifest as claims
+(review lane), a person approves and grants clearance, and the orchestrator driver starts it. See
+`modules/_template/`.
 
 ### 5.3 Slot catalog
 
@@ -375,7 +388,7 @@ section describes the parked runner modules (`parked/`) and stays as history unt
 - **Identity.** RuleGo-Server's MCP mode does not pass the caller's identity into a chain (T1, D-21),
   so agent-facing tools live in `kernel-mcp`, which forwards each caller's token, and RuleGo runs
   system chains under their modules' identities.
-- **Triggers** (D-32). `notify`: the `endpoint/pgNotify` component of our RuleGo build (event-transport
+- **Triggers** (D-32; superseded for modules by §11's triggers). `notify`: the `endpoint/pgNotify` component of our RuleGo build (event-transport
   slot, D-35) listens on `kernel_change_set` and starts the chain with `{id, status, scope, lane}`; the chain reads what it needs through the API
   under its own token. `schedule`: periodic work only (e.g. the drift check). `http`: the runner's
   HTTP endpoint. `chain`: called as a sub-chain.
@@ -411,7 +424,7 @@ records each pass.
 | Plan | router: a System 1 recipe if one matches, otherwise an agent profile | proposing the adaptation as a change set |
 | Execute | decoder + actuator, gated by clearance and the actuator's action list; model-level changes via review | none; the gates are deterministic |
 | Knowledge | the kernel | — |
-| **Learn** | evaluator, consolidator | plans that keep working are crystallized into System 1 rules or recipes |
+| **Learn** | evaluator, consolidator | plans that keep working are crystallized into System 1 rules or recipes; for processes (D-76), the process learner proposes confirmed, frequent deviations as revisions of the documented model, and a person approves them |
 
 Three scopes: a single case (one process or chain run), a modeled system (a repo, a business), and
 the platform itself (its modules, chains and vocabularies). Each pass is an **adaptation record**: an
@@ -427,6 +440,14 @@ entities and claims, not a new primitive.
   a local deployment.
 - **Cold path**: validation, apply, belief re-scoring, verification, reasoning — triggered by
   `kernel_change_set` notifications. Target: auto-lane submit → applied in < 2 s locally.
+- **How workers are triggered** (D-79). No runner and no Postgres extension: the kernel's own triggers
+  call `pg_notify` when a change set is submitted and when it is decided, and each worker listens
+  (`kk.lib.listen`). A worker that declares `pattern` triggers in its manifest is woken only when the
+  change set was applied and added a claim fitting one of them (one indexed query on `api.claims`),
+  so it runs as soon as the shape it reacts to appears, and not on every change. Every worker also
+  sweeps every `KK_SWEEP_SECONDS`, because a notification sent while it was down is not kept.
+  Patterns that span many claims ("the same deviation confirmed three times") are checked in the
+  worker's own pass; the pattern only decides when that pass runs.
 - **Session claims** an agent needs immediately are submitted normally; read models show
   not-yet-applied change sets of the same agent as "pending" when useful.
 - Channels: `kernel_change_set` (`{id, status, scope, lane}`), `kernel_redaction` (`{kind, id}` — the
@@ -450,16 +471,25 @@ entities and claims, not a new primitive.
 
 ## 13. Milestones
 
-- **Milestone 1 — the kernel, on its own** (details, status and gates: `docs/milestone-1.md`; D-36).
-  Postgres, the validator and kernel-mcp work with nothing else; vocabularies move to standards;
-  ingestion and belief run without a runner; a harness kit (skill, hooks, guide) lets any agent recall
-  and record; an agent answers questions about the system's structure with cited claims and belief.
-- **Milestone 2 — a real process loop.** Model a repository's build-and-deploy pipeline, decode it to
-  BPMN, run it with SpiffWorkflow calling the real CI, bring traces back as OCEL observations, check
-  conformance, adapt once through the review lane.
-- **Later:** interviews (OntoAgent-style, gap-driven), reasoner (SQL rules, then Nemo), agent profile
-  decoders, real-time event transport, consolidator (decay, crystallization), Wikibase or other
-  publication targets as decoders.
+Each milestone has its own file with tasks, gates and status (`docs/milestone-N.md`).
+
+- **Milestone 1 — the kernel, on its own** (done; D-36). Postgres, the validator and kernel-mcp work
+  with nothing else; vocabularies move to standards; ingestion and belief run without a runner; a
+  harness kit (skill, hooks, guide) lets any agent recall and record with cited claims and belief.
+- **Milestone 2 — BPM and devops as modules** (done). Event logs and BPMN models as claims,
+  conformance with discrepancies reviewed in place, and a MAPE-K loop over a running demo (metrics
+  observer, anomaly, a planning skill, an actuator), each module sandboxed.
+- **Milestone 3 — your own data, cited, in minutes** (done). `kk up` connects a project; a repository
+  encoder; recall measured on SciFact (BM25, then dense and re-ranking); a quote verifier; belief from
+  support and contradiction; eval scores as claims; a public event log at scale (BPI Challenge 2019).
+- **Milestone 4 — a demo you can sell** (done). Sign-in with Postgres logins and HTTPS by Caddy;
+  discrepancies a person can review; the Learn phase for processes; `kk demo` and its walkthrough.
+- **Milestone 5 — maps from conversations, interactions and code** (current). What each module takes
+  in and gives out; processors woken by patterns; an interaction encoder (chats, agent sessions, robot
+  commands and readings); an interviewer that builds organisation and process maps with quotes; a code
+  map below packages; each measured with small models.
+- **Later:** a BPMN runner; the Learn phase for operations; reasoner (SQL rules, then Nemo); agent
+  profile decoders; Wikibase or other publication targets as decoders; hosting beyond one machine.
 
 ---
 
