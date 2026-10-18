@@ -105,17 +105,18 @@ PY
 echo "M2-G3 command and worker modules passed"
 # M3-G3: the milestone-3 modules install the same way under the default policy. The paper encoder runs
 # one-shot on a small file of its own; the recall index and the quote verifier (reading the artifact
-# store read-only) run as workers; recall-dense installs (its worker needs a glibc image, D-70).
+# store read-only) run as workers; recall-dense installs (its worker needs a glibc image, D-70). M4-G2: the
+# process learner (milestone 4) runs as a worker too.
 papers="$out/papers"; mkdir "$papers"
 cat > "$papers/papers.jsonl" <<'JSONL'
 {"_id": "1", "title": "Sandboxed module workers", "text": "Sandboxed workers read the artifact store without writing it. Each runs as its own database role."}
 {"_id": "2", "title": "Network grants", "text": "An operator grants each module the services it may reach; a module asking for more is refused."}
 JSONL
 chmod 755 "$papers"; chmod 644 "$papers/papers.jsonl"
-for name in encoder-papers recall-index verifier-quotes recall-dense; do
+for name in encoder-papers recall-index verifier-quotes recall-dense learner-process; do
   $py -m kk module install "$root/modules/$name" --out "$out" > /dev/null
 done
-files="$files -f $out/encoder-papers.yaml -f $out/recall-index.yaml -f $out/verifier-quotes.yaml -f $out/recall-dense.yaml"
+files="$files -f $out/encoder-papers.yaml -f $out/recall-index.yaml -f $out/verifier-quotes.yaml -f $out/recall-dense.yaml -f $out/learner-process.yaml"
 res=$(KK_INPUT="$papers" dc $files run --rm -T module-encoder-papers --source g3 /input/papers.jsonl 2>> "$log")
-KK_INPUT=/nonexistent dc $files up -d module-recall-index module-verifier-quotes >> "$log" 2>&1
+KK_INPUT=/nonexistent dc $files up -d module-recall-index module-verifier-quotes module-learner-process >> "$log" 2>&1
 KK_RESULT="$res" KK_PAPERS="$papers/papers.jsonl" $py "$root/scripts/e2e_module_m3.py"

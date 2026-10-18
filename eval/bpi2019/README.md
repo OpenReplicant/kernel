@@ -38,3 +38,12 @@ The discrepancies by kind: 470 unexpected paths, 21 rework, 2 swaps, 2 skips. Th
 categories' paths (110,215 items went from "Vendor creates invoice" to "Record Goods Receipt"); the
 swaps are the compliance question the challenge asks: 15,580 items had the invoice recorded before the
 goods receipt, and 3,958 an invoice recorded after the invoice was cleared.
+
+## Reviewable (M4-T2, D-75; `runs/2026-10-18-scale-month-nofilter.json`)
+
+Conformance 0.2.0 lists a path on its own only when at least 1% of cases took it (`KK_MIN_SHARE`); the
+rest are one "rare paths" item. The same log now gives **35 items to review instead of 495**: 28
+unexpected paths, 4 rework loops, the 2 swaps, and one item for the other 461 paths (85,435
+transitions, 10% of the deviating ones; the largest "Change Quantity" repeated, 2,290). Encode,
+validate and the pass took 115 s without the ingest filter.
+

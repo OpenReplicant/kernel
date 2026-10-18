@@ -1,4 +1,5 @@
-// The BPM view (M2-T4, D-51): a process map, documented vs observed, with the conformance discrepancies.
+// The BPM view (M2-T4, D-51): a process map, documented vs observed, with the conformance discrepancies,
+// the revisions the process learner proposes (D-76) and the documented process as BPMN.
 // Reads with the signed-in person's MCP tools; every edge and discrepancy explains its claims.
 (() => {
   const BBO = 'https://www.irit.fr/recherches/MELODI/ontologies/BBO#';
@@ -7,7 +8,7 @@
   const TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
   const LABEL = 'http://www.w3.org/2000/01/rdf-schema#label';
   const DCT_TYPE = 'http://purl.org/dc/terms/type';
-  const DOCUMENTED = new Set(['deterministic', 'extracted']);
+  const DOCUMENTED = new Set(['deterministic', 'extracted', 'inferred']);   // inferred: learned (D-76)
   let cyView = null;
 
   const el = (tag, attrs = {}, ...kids) => {
@@ -68,8 +69,10 @@
     };
     for (const e of Object.values(edges)) e.conforms = !!(e.documented.length || (e.observed.length && reaches(e.a, e.b)));
     // Confirmed discrepancies are claims; pending ones are change sets in the review lane.
-    const found = {};
-    for (const n of Object.values(nodes)) {
+    // A `rare` discrepancy targets the process itself (D-75).
+    const found = {}, whole = await kk.call('get_entity', { iri: process });
+    const onProcess = (whole.referenced_by || []).filter(c => c.predicate === OA + 'hasTarget');
+    for (const n of [...Object.values(nodes), { targetedBy: onProcess }]) {
       for (const t of n.targetedBy) {
         if (!found[t.subject]) {
           const card = await kk.call('get_entity', { iri: t.subject });
@@ -86,7 +89,7 @@
     for (const cs of queue) {
       const ops = (cs.ops || []).filter(o => o.op === 'add_claim');
       const targets = ops.filter(o => o.predicate === OA + 'hasTarget').map(o => o.object.entity);
-      if (!targets.length || !targets.every(t => nodes[t])) continue;
+      if (!targets.length || !targets.every(t => nodes[t] || t === process)) continue;
       const iri = ops[0].subject;
       if (found[iri]) continue;
       const body = ops.find(o => o.predicate === OA + 'bodyValue');
@@ -94,18 +97,79 @@
       found[iri] = { iri, status: 'awaiting review', changeSet: cs.id, text: body ? body.object.value['@value'] : iri,
                      kind: kind && kind.object.entity, targets, premises: (body || ops[0]).derived_from || [] };
     }
+    // Revisions the process learner proposes (D-76) are annotations too; they are listed on their own.
+    for (const d of Object.values(found)) d.revision = (d.kind || '').startsWith('urn:kk:revision-kind:');
     // A discrepancy marks the flow it is about: the documented flow for a time limit or a path never
     // taken, otherwise the observed flow the documented process does not have.
-    for (const d of Object.values(found)) {
+    for (const d of Object.values(found).filter(d => !d.revision)) {
       const t = new Set(d.targets), kind = (d.kind || '').split(':').pop();
       for (const e of Object.values(edges)) {
         if (!t.has(e.a) || !t.has(e.b) || (e.a === e.b) !== (kind === 'rework')) continue;
-        const fits = kind === 'limit' ? e.documented.length && e.observed.length
+        const fits = kind === 'limit' ? e.documented.some(c => c.evidence_type !== 'inferred') && e.observed.length   // not a learned path
           : kind === 'missing' ? !e.observed.length : e.observed.length && !e.conforms;
         if (fits) e.discrepancies.push(d);
       }
     }
-    return { nodes, edges, discrepancies: Object.values(found) };
+    const all = Object.values(found);
+    return { nodes, edges, discrepancies: all.filter(d => !d.revision), revisions: all.filter(d => d.revision) };
+  }
+
+  // The documented process (BPMN, D-41 encoder; learned paths, D-76) as BPMN 2.0 XML with a simple layered
+  // layout, so it opens in any BPMN editor. A task with more than one documented successor gets an
+  // exclusive gateway in front of them (BPMN would otherwise take every outgoing flow).
+  function toBpmn(data, process) {
+    const TAGS = new Set(['Task', 'UserTask', 'ServiceTask', 'ManualTask', 'ScriptTask', 'SendTask', 'ReceiveTask',
+      'BusinessRuleTask', 'StartEvent', 'EndEvent', 'IntermediateCatchEvent', 'IntermediateThrowEvent',
+      'ExclusiveGateway', 'ParallelGateway', 'InclusiveGateway', 'EventBasedGateway']);
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const flows = Object.values(data.edges).filter(e => e.documented.length).map(e => [e.a, e.b]);
+    const ids = {}, nodes = [];
+    const node = (iri, kind, label) => { if (!ids[iri]) { ids[iri] = 'n' + (nodes.length + 1); nodes.push({ iri, kind, label }); } return ids[iri]; };
+    for (const [a, b] of flows) for (const x of [a, b]) {
+      const n = data.nodes[x];
+      node(x, TAGS.has(n.kind) ? n.kind : 'Task', n.label);
+    }
+    const out = {};
+    for (const [a, b] of flows) (out[a] ||= []).push(b);
+    const edges = [];
+    for (const [a, targets] of Object.entries(out)) {
+      if (targets.length > 1 && data.nodes[a].kind.endsWith('Task')) {
+        const g = node(a + '#choice', 'ExclusiveGateway', '');
+        edges.push([ids[a], g]);
+        targets.forEach(b => edges.push([g, ids[b]]));
+      } else targets.forEach(b => edges.push([ids[a], ids[b]]));
+    }
+    // Layers by breadth-first search from the nodes nothing flows into (or the first node).
+    const into = new Set(edges.map(e => e[1])), next = {};
+    edges.forEach(([a, b]) => (next[a] ||= []).push(b));
+    const layer = {}, todo = nodes.map(n => ids[n.iri]).filter(id => !into.has(id));
+    if (!todo.length && nodes.length) todo.push(ids[nodes[0].iri]);
+    todo.forEach(id => (layer[id] = 0));
+    for (let i = 0; i < todo.length; i++) for (const b of next[todo[i]] || []) if (!(b in layer)) { layer[b] = layer[todo[i]] + 1; todo.push(b); }
+    const size = k => (k.endsWith('Event') ? [36, 36] : k.endsWith('Gateway') ? [50, 50] : [100, 80]);
+    const box = {}, rows = {};
+    for (const n of nodes) {
+      const id = ids[n.iri], l = layer[id] ?? 0, r = (rows[l] = (rows[l] ?? -1) + 1), [w, h] = size(n.kind);
+      box[id] = { x: 60 + l * 170 + (100 - w) / 2, y: 60 + r * 120 + (80 - h) / 2, w, h };
+    }
+    const lc = k => k[0].toLowerCase() + k.slice(1);
+    const pid = 'Process_' + process.replace(/[^A-Za-z0-9_]/g, '_');
+    const flowId = i => 'f' + (i + 1);
+    const xml = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"',
+      '  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI"',
+      `  id="Definitions_1" targetNamespace="${esc(process)}" exporter="Knowledge Kernel" exporterVersion="view-bpm 0.2.0">`,
+      `  <bpmn:process id="${pid}" name="${esc(process)}" isExecutable="false">`,
+      ...nodes.map(n => `    <bpmn:${lc(n.kind)} id="${ids[n.iri]}" name="${esc(n.label)}"/>`),
+      ...edges.map(([a, b], i) => `    <bpmn:sequenceFlow id="${flowId(i)}" sourceRef="${a}" targetRef="${b}"/>`),
+      '  </bpmn:process>',
+      `  <bpmndi:BPMNDiagram id="Diagram_1"><bpmndi:BPMNPlane id="Plane_1" bpmnElement="${pid}">`,
+      ...nodes.map(n => { const b = box[ids[n.iri]]; return `    <bpmndi:BPMNShape id="${ids[n.iri]}_di" bpmnElement="${ids[n.iri]}"><dc:Bounds x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"/></bpmndi:BPMNShape>`; }),
+      ...edges.map(([a, b], i) => { const s = box[a], t = box[b]; return `    <bpmndi:BPMNEdge id="${flowId(i)}_di" bpmnElement="${flowId(i)}"><di:waypoint x="${s.x + s.w}" y="${s.y + s.h / 2}"/><di:waypoint x="${t.x}" y="${t.y + t.h / 2}"/></bpmndi:BPMNEdge>`; }),
+      '  </bpmndi:BPMNPlane></bpmndi:BPMNDiagram>',
+      '</bpmn:definitions>', ''];
+    return xml.join('\n');
   }
 
   function draw(container, kk, data, onEdge) {
@@ -163,8 +227,21 @@
       const map = el('div', { id: 'bpm-map', style: 'height:520px;border:1px solid var(--line);border-radius:8px' });
       const info = el('div', { id: 'bpm-edge' });
       const list = el('ul', { id: 'bpm-discrepancies' });
-      root.append(el('div', { class: 'row' }, el('strong', { textContent: 'Process ' }), pick), legend, map, info,
-                  el('h3', { textContent: 'Discrepancies' }), list);
+      const learned = el('ul', { id: 'bpm-revisions' });
+      const download = el('button', { textContent: 'Download BPMN', title: 'The documented process, learned paths included, as BPMN 2.0' });
+      root.append(el('div', { class: 'row' }, el('strong', { textContent: 'Process ' }), pick, download), legend, map, info,
+                  el('h3', { textContent: 'Discrepancies' }), list,
+                  el('h3', { textContent: 'Learned from practice' }),
+                  el('p', { class: 'muted', textContent: 'Paths people confirmed as deviations that practice takes often: ' +
+                    'approve one to make it part of the documented process; the next conformance pass then stops flagging it.' }),
+                  learned);
+      let current = null;
+      download.addEventListener('click', () => {
+        if (!current) return;
+        const a = el('a', { href: URL.createObjectURL(new Blob([toBpmn(current, pick.value)], { type: 'application/xml' })),
+                            download: kk.short(pick.value) + '.bpmn' });
+        document.body.append(a); a.click(); a.remove();
+      });
 
       const showEdge = e => {
         info.replaceChildren(el('strong', { textContent: `${kk.short(e.a)} → ${kk.short(e.b)}: ` }));
@@ -179,15 +256,18 @@
       };
       const show = async () => {
         const data = await load(kk, pick.value);
+        current = data;
         draw(map, kk, data, showEdge);
         list.dataset.ready = '0';
         list.replaceChildren();
-        for (const d of data.discrepancies.sort((x, y) => (x.status > y.status ? 1 : -1))) {
-          const li = el('li', { className: 'discrepancy' });
-          li.dataset.status = d.status;
+        learned.replaceChildren();
+        for (const d of [...data.discrepancies, ...data.revisions].sort((x, y) => (x.status > y.status ? 1 : -1))) {
+          const li = el('li', { className: d.revision ? 'revision' : 'discrepancy' });
+          const status = d.revision ? (d.claim ? 'learned' : 'proposed') : d.status;
+          li.dataset.status = status;
           li.append(el('strong', { textContent: `${(d.kind || '').split(':').pop()} ` }));
-          if (d.claim) li.append(link(kk, d.claim.id, d.text), el('span', { class: 'muted', textContent: ` (confirmed, belief ${d.claim.belief ?? '—'})` }));
-          else li.append(d.text, el('span', { class: 'muted', textContent: ' (awaiting review)' }));
+          if (d.claim) li.append(link(kk, d.claim.id, d.text), el('span', { class: 'muted', textContent: ` (${d.revision ? 'learned' : 'confirmed'}, belief ${d.claim.belief ?? '—'})` }));
+          else li.append(d.text, el('span', { class: 'muted', textContent: d.revision ? ' (proposed)' : ' (awaiting review)' }));
           // The evidence: the claims it was derived from, each with its evidence type and belief.
           const premises = d.claim ? (await kk.call('explain', { claim_id: d.claim.id })).derived_from || [] : d.premises;
           const ev = el('div', { class: 'evidence' }, el('span', { class: 'muted', textContent: 'evidence: ' }));
@@ -199,18 +279,20 @@
           li.append(ev);
           if (!d.claim) {
             const decide = approve => async () => {
-              await kk.call('review', { change_set_id: d.changeSet, approve, note: approve ? 'confirmed in the process view' : 'rejected in the process view' });
+              await kk.call('review', { change_set_id: d.changeSet, approve,
+                                        note: `${approve ? (d.revision ? 'approved' : 'confirmed') : 'rejected'} in the process view` });
               await show();
             };
-            const yes = el('button', { className: 'approve', textContent: 'Confirm' });
+            const yes = el('button', { className: 'approve', textContent: d.revision ? 'Approve' : 'Confirm' });
             const no = el('button', { textContent: 'Reject' });
             yes.addEventListener('click', () => decide(true)().catch(e => info.replaceChildren(el('span', { class: 'bad', textContent: e.message }))));
             no.addEventListener('click', () => decide(false)().catch(e => info.replaceChildren(el('span', { class: 'bad', textContent: e.message }))));
             li.append(el('div', { class: 'row' }, yes, no));
           }
-          list.append(li);
+          (d.revision ? learned : list).append(li);
         }
         if (!data.discrepancies.length) list.append(el('li', { class: 'muted', textContent: 'None found.' }));
+        if (!data.revisions.length) learned.append(el('li', { class: 'muted', textContent: 'Nothing proposed yet.' }));
         list.dataset.ready = '1';
       };
       pick.addEventListener('change', () => show().catch(e => info.replaceChildren(el('span', { class: 'bad', textContent: e.message }))));

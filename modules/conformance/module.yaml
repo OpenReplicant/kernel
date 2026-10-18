@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:conformance
 name: Conformance processor
-version: 0.1.0
+version: 0.2.0
 description: 'Compares each documented process (BPMN encoder, process-extraction skill) with what was
   observed (event-log encoder) and claims every discrepancy — skipped step, swapped order, rework,
   unexpected path, path never taken, time limit exceeded — as an oa:Annotation targeting the steps,
@@ -28,6 +28,7 @@ runtime:
   env:
     DATABASE_URL: the module's own login, or one that may SET ROLE kkm_conformance
     KK_SWEEP_SECONDS: sweep interval (default 30)
+    KK_MIN_SHARE: "paths taken in a smaller share of cases are reported together as one rare discrepancy (default 0.01)"
 accepts:
 - http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement
 produces:

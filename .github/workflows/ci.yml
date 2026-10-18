@@ -77,6 +77,8 @@ jobs:
         run: python modules/verifier-quotes/tests/test_check.py
       - name: Evaluator tests (M3-G2)
         run: python modules/evaluator/tests/test_measure.py
+      - name: Process learner tests (M4-T3)
+        run: python modules/learner-process/tests/test_learn.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql
@@ -118,7 +120,7 @@ jobs:
         run: python modules/ingest-filter-gitleaks/tests/test_filter.py
       - name: Playwright and Chromium for the UI check (pinned)
         run: |
-          npm install --no-save playwright@1.56.1
+          npm install --no-save playwright@1.56.1 bpmn-moddle@10.3.1
           npx playwright install --with-deps chromium
       - name: Postgres + kk (init, person, agent, serve, review, scan, token, status) + the UI, nothing else
         run: KK_REQUIRE_UI=1 KK_REQUIRE_DENSE=1 sh scripts/smoke_kernel.sh

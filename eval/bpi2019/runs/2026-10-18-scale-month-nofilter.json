@@ -8,33 +8,33 @@
   "claims": 28396,
   "change_sets": 6,
   "encoder": {
-    "seconds": 44.4,
+    "seconds": 34.3,
     "stages": {
       "filter": 0.0,
-      "encode": 42.6,
-      "submit": 1.6
+      "encode": 32.9,
+      "submit": 1.1
     },
     "peak_rss_mb": 95
   },
   "validate_and_apply": {
-    "seconds": 78.0,
+    "seconds": 74.0,
     "status": {
       "applied": 6
     }
   },
   "conformance": {
-    "seconds": 4.9,
+    "seconds": 1.3,
     "peak_rss_mb": 94,
-    "discrepancies": 495,
+    "discrepancies": 35,
     "by_kind": {
-      "unexpected": 470,
-      "rework": 21,
+      "unexpected": 28,
+      "rework": 4,
       "swap": 2,
-      "skip": 2
+      "rare": 1
     },
-    "validate_seconds": 8.0,
+    "validate_seconds": 2.0,
     "status": {
-      "awaiting_review": 495
+      "awaiting_review": 35
     },
     "largest": [
       "110215 case(s) went from Vendor creates invoice to Record Goods Receipt, a path the documented process does not have.",
@@ -47,7 +47,7 @@
       "30837 case(s) went from Create Purchase Order Item to Receive Order Confirmation, a path the documented process does not have."
     ]
   },
-  "seconds_total": 138.8,
+  "seconds_total": 114.9,
   "machine": {
     "cpus": 4
   },

@@ -61,4 +61,12 @@ lim = next(d for d in found if d["kind"].endswith("limit"))
 check("3000" in lim["premises"] and "48 h" in lim["text"], f"the limit cites the documented limit: {lim['text']}")
 check(len({d["iri"] for d in found}) == len(found) and found == discrepancies(documented + observed + limit),
       "stable IRIs: the same input gives the same discrepancies")
+strict = discrepancies(documented + observed + limit, min_share=0.2)   # 8 of the 40 cases
+rare = [d for d in strict if d["kind"].endswith(":rare")]
+kinds = sorted(d["kind"].rsplit(":", 1)[1] for d in strict)
+check(len(rare) == 1 and rare[0]["targets"] == [P] and "of the 40 cases" in rare[0]["text"]
+      and set(rare[0]["premises"]) <= {r["id"] for r in observed},
+      f"D-75: paths under the threshold are one 'rare' discrepancy on the process, from the observed edges: {rare and rare[0]['text']}")
+check(len(strict) < len(found) and "limit" in kinds,
+      f"D-75: ... and the rest are reported as before (limits are never rare): {kinds}")
 print(f"M2-T3 conformance checks passed ({ok}/{ok})")

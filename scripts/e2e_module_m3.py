@@ -4,7 +4,8 @@ The paper encoder (a command) has stored and encoded a small JSON-lines file fro
 recall index and the quote verifier run as workers in theirs. Checks: the papers' change sets are applied
 as the encoder's own role; the recall index indexes them; the verifier, reading the artifact store
 read-only, supports a quote of the stored file and refutes a made-up one; recall-dense installs (its
-worker needs onnxruntime, which the Alpine kk image cannot hold, so it is not run here).
+worker needs onnxruntime, which the Alpine kk image cannot hold, so it is not run here); M4-G2: the process
+learner runs as a worker under its own login.
 
 Env: KK_ADMIN_URL, KK_RESULT (the encoder's output line), KK_PAPERS (the input file).
 """
@@ -77,6 +78,9 @@ def main() -> int:
                               "(select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace "
                               "where n.nspname = 'api' and p.proname = 'recall_hybrid')").fetchone()[0]
         check("M3-G3 recall-dense installs (its schema and api.recall_hybrid, with pgvector)", hybrid)
+        learner = wait(conn, "select count(*) from pg_stat_activity where usename = 'kkm_learner_process'", (),
+                       lambda r: r[0] > 0, timeout=60)[0]
+        check("M4-G2 the process learner runs sandboxed as its own login", learner > 0, f"({learner} connection)")
     print(f"M3-G3 milestone-3 modules passed ({sum(checks)}/{len(checks)})" if all(checks) else "M3-G3 FAILED")
     return 0 if all(checks) else 1
 

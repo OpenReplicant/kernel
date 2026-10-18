@@ -1,8 +1,8 @@
 """Documented vs observed process -> discrepancies (D-50). Pure functions; no database.
 
 Input: current claims (dicts with id, subject, predicate, object_entity, object_value, qualifiers,
-evidence_type). The documented process is the `bbo:has_nextFlowNode` claims with evidence deterministic
-or extracted (BPMN encoder, process-extraction skill); a task's documented successors are the tasks
+evidence_type). The documented process is the `bbo:has_nextFlowNode` claims with evidence deterministic,
+extracted or inferred (BPMN encoder, process-extraction skill, the process learner's approved revisions); a task's documented successors are the tasks
 reachable through gateways and events. The observed process is the `observed` edges and the SOSA
 observations of the event-log encoder. For each process:
 
@@ -14,6 +14,9 @@ observations of the event-log encoder. For each process:
   documented a→b never observed            missing      (only for processes with observations)
   wait-seconds-max of b after a > the documented bbo:maxValue limit         limit
 
+An observed path taken in fewer than min_share of the process's cases (its case-count observations,
+summed over windows) is not reported on its own: such paths are reported together as one `rare`
+discrepancy targeting the process (D-75), so a large log gives a list a person can review.
 Each discrepancy lists the claims it was derived from: the observed edge and its counts (or the
 waits), and the documented claims it contradicts.
 """
@@ -29,7 +32,7 @@ LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 NEXT, CONTAINER, MAX = BBO + "has_nextFlowNode", BBO + "has_container", BBO + "maxValue"
 RESULT, OBSERVED_PROPERTY, PREV = SOSA + "hasSimpleResult", SOSA + "observedProperty", BBO + "has_previousFlowNode"
 PROPERTY = "urn:kk:property:"
-DOCUMENTED = {"deterministic", "extracted"}
+DOCUMENTED = {"deterministic", "extracted", "inferred"}   # inferred: learned and approved (D-76)
 KIND = "urn:kk:discrepancy-kind:"
 
 
@@ -41,8 +44,13 @@ def value(c: dict):
     return (c.get("object_value") or {}).get("@value")
 
 
-def discrepancies(claims: list[dict]) -> list[dict]:
-    """[{iri, process, kind, targets, text, premises}] sorted by iri."""
+MIN_SHARE = 0.01
+
+
+def discrepancies(claims: list[dict], min_share: float = MIN_SHARE) -> list[dict]:
+    """[{iri, process, kind, targets, text, premises, edge, count, cases}] sorted by iri: edge is the
+    (a, b) compared, count the observed transitions a → b (None for missing and limit), cases the
+    process's cases."""
     container, labels = {}, {}
     for c in claims:
         if c["predicate"] == CONTAINER and c["object_entity"]:
@@ -53,7 +61,7 @@ def discrepancies(claims: list[dict]) -> list[dict]:
 
     doc = defaultdict(lambda: defaultdict(list))      # process -> node -> [(next, claim id)]
     seen = defaultdict(lambda: defaultdict(list))     # process -> (a, b) -> [claim ids]
-    counts, longest, limits = defaultdict(list), defaultdict(list), {}
+    counts, longest, limits, cases = defaultdict(list), defaultdict(list), {}, defaultdict(int)
     for c in claims:
         p, s, o = container.get(c["subject"]), c["subject"], c["object_entity"]
         q = c.get("qualifiers") or {}
@@ -68,6 +76,8 @@ def discrepancies(claims: list[dict]) -> list[dict]:
                 counts[(q[PREV], s)].append((value(c), str(c["id"])))
             elif prop == PROPERTY + "wait-seconds-max":
                 longest[(q[PREV], s)].append((value(c), str(c["id"])))
+        elif c["predicate"] == RESULT and q.get(OBSERVED_PROPERTY) == PROPERTY + "case-count" and not is_step(s):
+            cases[s] += value(c) or 0                  # the process's cases, per window
         elif c["predicate"] == MAX and q.get(PREV) and q.get(OBSERVED_PROPERTY) == PROPERTY + "wait-seconds":
             limits[(q[PREV], s)] = (value(c), str(c["id"]))
 
@@ -88,34 +98,49 @@ def discrepancies(claims: list[dict]) -> list[dict]:
                         todo.append((nxt, path + [cid]))
             return found
 
-        def add(kind, a, b, text, premises, extra=()):
+        def add(kind, a, b, text, premises, extra=(), count=None):
             key = hashlib.sha256(f"{p}|{kind}|{a}|{b}".encode()).hexdigest()[:16]
             out.append({"iri": f"urn:kk:discrepancy:{key}", "process": p, "kind": KIND + kind,
-                        "targets": sorted({a, b, *extra}), "text": text, "premises": sorted(set(premises))})
+                        "targets": sorted({a, b, *extra}), "text": text, "premises": sorted(set(premises)),
+                        "edge": [a, b], "count": count, "cases": cases[p]})
 
         if not doc[p]:
             continue                                   # nothing documented to compare with
+        rare = []                                      # (n, a, b, edge claims) under the threshold
         for (a, b), edge_ids in sorted(seen[p].items()):
             succ = successors(a)
             if b in succ:
                 continue
             n = sum(v or 0 for v, _ in counts[(a, b)])
+            if cases[p] and n < min_share * cases[p]:
+                rare.append((n, a, b, edge_ids))
+                continue
             ev = edge_ids + [cid for _, cid in counts[(a, b)]]
             doc_ids = [cid for path in succ.values() for cid in path]
             between = [x for x, path in succ.items() if b in successors(x)]
             if a == b:
                 add("rework", a, b, f"{name(a)} directly repeated itself in {n} case(s); the documented process "
-                    f"goes on to {', '.join(name(x) for x in sorted(succ)) or 'nothing'}.", ev + doc_ids)
+                    f"goes on to {', '.join(name(x) for x in sorted(succ)) or 'nothing'}.", ev + doc_ids, count=n)
             elif between:
                 x = between[0]
                 add("skip", a, b, f"{n} case(s) went from {name(a)} to {name(b)} without {name(x)}, which the "
-                    f"documented process puts between them.", ev + doc_ids + successors(x)[b], [x])
+                    f"documented process puts between them.", ev + doc_ids + successors(x)[b], [x], count=n)
             elif a in successors(b):
                 add("swap", a, b, f"{n} case(s) did {name(b)} after {name(a)}; the documented order is "
-                    f"{name(b)} then {name(a)}.", ev + doc_ids + successors(b)[a])
+                    f"{name(b)} then {name(a)}.", ev + doc_ids + successors(b)[a], count=n)
             else:
                 add("unexpected", a, b, f"{n} case(s) went from {name(a)} to {name(b)}, a path the documented "
-                    f"process does not have.", ev + doc_ids)
+                    f"process does not have.", ev + doc_ids, count=n)
+        if rare:
+            n = sum(r[0] for r in rare)
+            key = hashlib.sha256(f"{p}|rare".encode()).hexdigest()[:16]
+            out.append({"iri": f"urn:kk:discrepancy:{key}", "process": p, "kind": KIND + "rare", "targets": [p],
+                        "text": f"{len(rare)} further path(s) outside the documented process, each taken in under "
+                                f"{min_share:.0%} of the {cases[p]:,} cases ({n:,} transitions in all), are not listed "
+                                f"one by one; the largest: " + "; ".join(
+                                    f"{name(a)} → {name(b)} ({k:,})" for k, a, b, _ in sorted(rare, reverse=True)[:3]) + ".",
+                        "premises": sorted({i for r in rare for i in r[3]}), "edge": None, "count": n,
+                        "cases": cases[p]})
         if seen[p]:
             for a in sorted(n for n in graph if is_step(n)):
                 for b, path in sorted(successors(a).items()):

@@ -1,0 +1,41 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:learner-process
+name: Process learner
+version: 0.1.0
+description: 'The Learn phase for processes (D-76): for each discrepancy a person confirmed whose path
+  practice takes in a large share of cases, proposes adding that path to the documented process, as a
+  change set in the review lane derived from the confirmed discrepancy. Once a person approves it, the
+  documented process has the path and the next conformance pass retracts the discrepancy.'
+license: Apache-2.0
+kind: processor
+slots:
+- consolidator
+protected: false
+agent:
+  iri: urn:kk:agent:learner-process
+  db_role: kkm_learner_process
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m process_learner
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_learner_process
+    KK_LEARN_SHARE: "the share of cases a confirmed path needs before it is proposed (default 0.05)"
+    KK_SWEEP_SECONDS: sweep interval (default 30)
+accepts:
+- http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement
+produces:
+- add_claim
+triggers:
+- type: notify
+  spec: kernel_change_set (applied)
+mcp:
+  expose: []
+migration: migration.sql
