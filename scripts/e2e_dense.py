@@ -77,7 +77,7 @@ def main() -> int:
           got[:1] == [mine] and decoy in got, got[:3])
     os.environ["KK_RERANK"] = "0"
     check("D-66 KK_RERANK=0 keeps the fused order", recall.reranker() is None
-          and [c["subject"] for c in recall.recall(agent, question, 5)] == hits(agent, question)[:5])
+          and [c["subject"] for c in recall.recall(agent, question, 10)] == hits(agent, question))
     del os.environ["KK_RERANK"]
 
     admin.execute("insert into kernel.scope(iri, label) values (%s, 'dense smoke: private') on conflict do nothing", (PRIVATE,))

@@ -77,6 +77,11 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - A search path must never wait on a model download: harness subprocesses get a stripped environment
   (no proxy CA), and fastembed retries for ~40 s before failing. Queries load the model from the local
   cache only; the worker downloads it (D-61).
+- A cross-encoder must read what a document says, not one claim of it: re-ranking SciFact claim by
+  claim (a title alone, an abstract alone) lost to no re-ranking (0.719 vs 0.723); per subject on the
+  recalled claims gained a little (0.731); per subject on all its text claims gained most (0.747, D-66).
+  And hybrid scores are min-max normalised over the candidates, so the order depends on how many are
+  recalled: compare runs at the same limit.
 - Free model endpoints are rate-limited upstream per model (429 from a shared pool even with quota
   left); probe a few and record which model answered.
 

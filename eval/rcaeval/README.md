@@ -32,13 +32,13 @@ Every run starts from an empty `output/results` (RCAEval scores every file left 
 numbers mixed runs and are superseded). BARO reproduces RCAEval's published RE2-TT numbers within 0.01
 where our download is complete.
 
-| Suite | BARO | multi-source BARO | N-Sigma | kernel, 60 s windows | Haiku over the evidence packs |
-| --- | --- | --- | --- | --- | --- |
-| RE1-OB | 0.896 | | 0.818 | 0.894 | |
-| RE1-SS | 0.576 | | 0.868 | 0.922 | |
-| RE1-TT | 0.262 | | 0.740 | 0.800 | |
-| RE2-OB (90 cases) | 0.743 | 0.755 | 0.913 | 0.935 | **0.982** |
-| RE2-TT (63 of 90) | 0.762 | | 0.790 | 0.643 | **0.960** |
+| Suite | BARO | multi-source BARO | N-Sigma | kernel, 60 s windows | Haiku over the evidence packs | LFM 2.5 2.6B (free) | Nemotron 3 Super (free) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| RE1-OB | 0.896 | | 0.818 | 0.894 | | | |
+| RE1-SS | 0.576 | | 0.868 | 0.922 | | | |
+| RE1-TT | 0.262 | | 0.740 | 0.800 | | | |
+| RE2-OB (90 cases) | 0.743 | 0.755 | 0.913 | 0.935 | **0.982** | 0.903 | 0.880 |
+| RE2-TT (63 of 90) | 0.762 | | 0.790 | 0.643 | **0.960** | 0.818 | |
 
 The kernel's windows use a robust z with a fallback for flat baselines and keep columns that were flat
 before the fault; both matter (D-65). Haiku reads the 40 strongest observations of a case and ranks

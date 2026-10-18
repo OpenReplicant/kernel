@@ -38,6 +38,7 @@ including that broken answers score worse.
 | Postgres full-text search (no index) | 0.296 | | 1,971 ms |
 | BM25, recall-index (D-60) | 0.659 | 0.93 | 274 ms |
 | BM25 + bge-small-en-v1.5, recall-dense (D-61) | 0.723 | 0.97 | 476 ms |
+| … re-ranked per subject by jina-reranker-v1-turbo-en, `KK_RERANK=1` (D-66) | 0.747 | 0.97 | 4,820 ms |
 
 BEIR's BM25 baseline is 0.665.
 
