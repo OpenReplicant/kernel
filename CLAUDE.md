@@ -57,7 +57,7 @@ python shapes/tests/test_shapes.py                                         # SHA
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI) on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI), M4-G1 (kk demo, end to end) on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1 bpmn-moddle@10.3.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3, M3-G3: modules in their own sandboxed containers; needs Docker
 sh scripts/e2e_devops.sh                                                   # M2-T5–T7, M2-G2: devops demo, MAPE-K loop, Devops view; needs Docker, gitleaks
@@ -86,14 +86,14 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  verifier-quotes (quotes occur in their sources, or in the claims they cite), evaluator (eval scores as DQV claims);
                  milestone 4: learner-process (the Learn phase for processes: approved revisions of the documented process);
                  _template/
-kk/              the kk command (up, init, person/agent add, serve, status, review, scan, token, module,
+kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), policy.yaml (sandbox grants), demo/ (devops demo overlay), postgres/ (image),
                  modules/ (installed), mcp/
 scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py/_m3.py,
                  e2e_devops.sh/.py + e2e_devops_ui.mjs, eval_self.py,
                  check_manifests.py, vocab_subset.py
-examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure)
+examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure; bpi2019: the documented model)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/), scifact, rcaeval and bpi2019 (run.py; data fetched, not committed)
 docs/            spec, milestone-1..3, decisions, harness (drop-in guide), mcp-servers, sources, recall-research, benchmarks; spikes/
@@ -101,7 +101,8 @@ docs/            spec, milestone-1..3, decisions, harness (drop-in guide), mcp-s
 
 ## Current milestone
 
-Milestone 4 (`docs/milestone-4.md`): a demo you can sell — sign-in with Postgres logins and HTTPS by
+Milestone 4 (`docs/milestone-4.md`, done): a demo you can sell — sign-in with Postgres logins and HTTPS by
 Caddy, discrepancies a person can review, a process model that learns from what people approve, and a
-customer demo with its walkthrough. Milestones 1–3 are done. Work one task at a time; each ends with its
-check passing.
+customer demo with its walkthrough (`kk demo`, `docs/demo.md`). Milestones 1–4 are done; the next is the
+owner's choice (candidates under "Later" in `docs/milestone-4.md`). Work one task at a time; each ends with
+its check passing.

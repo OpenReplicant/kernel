@@ -9,7 +9,7 @@ production size, in bounded memory and a reasonable time?
 (a single line). Downloaded at run time, checked by sha256, not committed. (BPI Challenge 2017 is under
 4TU's non-commercial terms, so it was not used.)
 
-**Documented process** (`documented.bpmn`, written here): the dataset description's category
+**Documented process** (`examples/bpi2019/documented.bpmn`, written for this eval; `kk demo --bpi` uses it too): the dataset description's category
 "3-way matching, invoice after goods receipt" — create the item, record the goods receipt, record the
 invoice, clear it. The log mixes four categories, so most discrepancies are paths of the other
 categories; this measures conformance at scale, it is not an audit.

@@ -133,3 +133,12 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   log's licence (BPI Challenge 2019 is CC BY 4.0).
 - `pgrep -f` with a pattern also in your own command line matches your shell, and a `readlink` test
   against `/bin/bash` misses `/usr/bin/bash`: match the target's exe (`*python*`) or use `pgrep -x`.
+- `npm install --no-save A` removes other packages installed with `--no-save`: install the UI test's
+  packages in one command (`playwright@1.56.1 bpmn-moddle@10.3.1`).
+- `docker compose up --wait` returns once the kernel container has started, before it listens: the
+  first sign-in through Caddy got a 502. `kk up` and `kk demo` wait for the UI to answer.
+- A free-port probe must close its socket before the port is handed to a server (or the server cannot
+  bind and the client sees "connection refused").
+- `kk import` matched new claim ids by content in no fixed order; one run can hold look-alike claims
+  from different artifacts, so a status could land on the wrong copy (T19 failed now and then on main).
+  It now matches by references too.
