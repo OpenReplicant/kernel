@@ -19,7 +19,7 @@ from pyshacl import validate as shacl_validate
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, PROV, RDF, SH, XSD
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[3])
 SCHEMA = json.loads((ROOT / "kernel/schemas/change_set.schema.json").read_text())
 SHAPES = Graph()
@@ -45,6 +45,30 @@ PREFIXES = {
     "kkt": "https://w3id.org/knowledge-kernel/tosca#",
     "kkp": "https://w3id.org/knowledge-kernel/profile#",
 }
+
+
+def _prepared_queries() -> None:
+    """pySHACL runs each SPARQL-based constraint once per focus node, as a query string, and rdflib parses
+    the string every time: 70% of validating a large change set (M3-T4). Translate each distinct query
+    once and reuse it with each node's bindings, as rdflib's prepared queries are meant to be used."""
+    from functools import lru_cache
+
+    from rdflib.plugins.sparql import processor
+
+    @lru_cache(maxsize=256)
+    def prepared(text: str, base, ns: tuple):
+        return processor.translateQuery(processor.parseQuery(text), base, dict(ns))
+
+    query = processor.SPARQLProcessor.query
+
+    def cached(self, strOrQuery, initBindings=None, initNs=None, base=None, DEBUG=False):
+        if isinstance(strOrQuery, str):
+            strOrQuery = prepared(strOrQuery, base, tuple(sorted((initNs or {}).items())))
+        return query(self, strOrQuery, initBindings, initNs, base, DEBUG)
+    processor.SPARQLProcessor.query = cached
+
+
+_prepared_queries()
 EVIDENCE = {name: URIRef(f"urn:kk:evidence:{name}")
             for name in ("deterministic", "extracted", "inferred", "observed", "testimony")}
 

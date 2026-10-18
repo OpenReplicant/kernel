@@ -114,6 +114,8 @@ jobs:
           echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tgz" | sha256sum -c -
           sudo tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
           gitleaks version
+      - name: Ingest filter tests (M3-T4, large files in chunks)
+        run: python modules/ingest-filter-gitleaks/tests/test_filter.py
       - name: Playwright and Chromium for the UI check (pinned)
         run: |
           npm install --no-save playwright@1.56.1

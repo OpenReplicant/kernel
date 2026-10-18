@@ -22,6 +22,7 @@ import re
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
+from typing import Iterable, Iterator
 
 BBO = "https://www.irit.fr/recherches/MELODI/ontologies/BBO#"
 SOSA = "http://www.w3.org/ns/sosa/"
@@ -62,19 +63,38 @@ def read_csv(data: bytes, case: str, activity: str, timestamp: str, resource: st
 
 
 def read_xes(data: bytes) -> list[dict]:
-    """XES (IEEE 1849): trace concept:name, event concept:name, time:timestamp, org:resource.
-    ElementTree resolves no external entities; expat limits entity expansion."""
+    """XES (IEEE 1849) from bytes: every event (see traces_xes)."""
+    return [e for _, trace in traces_xes(io.BytesIO(data)) for e in trace]
+
+
+def traces_xes(stream) -> Iterator[tuple[str, list[dict]]]:
+    """XES (IEEE 1849), read as a stream one trace at a time, so memory holds one trace however large the
+    log (M3-T4): (case, events) with trace concept:name, event concept:name, time:timestamp,
+    org:resource. A .gz stream is read the same way by the caller. ElementTree resolves no external
+    entities; expat limits entity expansion."""
     local = lambda tag: tag.rsplit("}", 1)[-1]
-    events = []
-    for trace in (e for e in ET.fromstring(data) if local(e.tag) == "trace"):
-        attrs = lambda el: {a.get("key"): a.get("value") for a in el if local(a.tag) in ("string", "date")}
-        case = attrs(trace).get("concept:name")
-        for ev in (e for e in trace if local(e.tag) == "event"):
+    attrs = lambda el: {a.get("key"): a.get("value") for a in el if local(a.tag) in ("string", "date")}
+    for _, el in ET.iterparse(stream, events=("end",)):
+        if local(el.tag) != "trace":
+            continue
+        case, events = attrs(el).get("concept:name"), []
+        for ev in (e for e in el if local(e.tag) == "event"):
             a = attrs(ev)
             if case and a.get("concept:name") and a.get("time:timestamp"):
                 events.append({"case": case, "activity": a["concept:name"], "time": parse_time(a["time:timestamp"]),
                                "resource": a.get("org:resource")})
-    return events
+        el.clear()
+        if events:
+            yield case, events
+
+
+def group(events: list[dict]) -> Iterator[tuple[str, list[dict]]]:
+    """Events in any order (a CSV) -> (case, events) per case, cases in sorted order."""
+    cases: dict[str, list[dict]] = defaultdict(list)
+    for e in events:
+        cases[e["case"]].append(e)
+    for case in sorted(cases):
+        yield case, cases[case]
 
 
 # ------------------------------------------------------------------ windows
@@ -98,34 +118,60 @@ def integer(n: int) -> dict:
 
 
 def encode(events: list[dict], process: str, window: str, sha: str) -> list[dict]:
-    """The add_claim ops for one log (the caller adds the artifact op)."""
+    """The add_claim ops for one log given as events (the caller adds the artifact op)."""
+    return encode_traces(group(events), process, window, sha)
+
+
+class Window:
+    """What one window's traces add up to: counts only, so memory does not grow with the log."""
+
+    def __init__(self):
+        self.traces, self.events, self.cases, self.starts, self.ends = 0, Counter(), Counter(), Counter(), Counter()
+        self.by_res, self.follows, self.waits, self.longest = Counter(), Counter(), defaultdict(float), defaultdict(float)
+
+    def add(self, trace: list[dict]) -> None:
+        acts = [e["activity"] for e in trace]
+        self.traces += 1
+        self.events.update(acts)
+        self.cases.update(set(acts))
+        self.starts[acts[0]] += 1
+        self.ends[acts[-1]] += 1
+        self.by_res.update((e["activity"], e["resource"]) for e in trace if e["resource"])
+        for a, b in zip(trace, trace[1:]):
+            edge = (a["activity"], b["activity"])
+            wait = (b["time"] - a["time"]).total_seconds()
+            self.follows[edge] += 1
+            self.waits[edge] += wait
+            self.longest[edge] = max(self.longest[edge], wait)
+
+
+def encode_traces(traces: Iterable[tuple[str, list[dict]]], process: str, window: str, sha: str) -> list[dict]:
+    """The add_claim ops for one log given as (case, events) per case, in one pass (the caller adds the
+    artifact op). A case is placed in the window its first event falls in."""
     if window not in WINDOWS:
         raise ValueError(f"window must be one of {WINDOWS}")
-    if not events:
-        raise ValueError("the log has no events")
     ref = [{"artifact": sha}]
-    cases: dict[str, list[dict]] = defaultdict(list)
-    for e in events:
-        cases[e["case"]].append(e)
-    for trace in cases.values():
+    windows: dict[tuple, Window] = defaultdict(Window)
+    first = last = None
+    for _, trace in traces:
         trace.sort(key=lambda e: e["time"])          # stable: equal timestamps keep file order
-    first = min(e["time"] for e in events).astimezone(timezone.utc)
-    last = max(e["time"] for e in events).astimezone(timezone.utc)
+        t0, t1 = trace[0]["time"].astimezone(timezone.utc), trace[-1]["time"].astimezone(timezone.utc)
+        first, last = min(first or t0, t0, t1), max(last or t1, t0, t1)
+        windows[("all",) if window == "all" else window_of(t0, window, t0, t0)].add(trace)
+    if not windows:
+        raise ValueError("the log has no events")
+    if window == "all":
+        windows = {(first, last + timedelta(seconds=1)): windows[("all",)]}
 
     ops: list[dict] = []
-    for act in sorted({e["activity"] for e in events}):
+    for act in sorted({a for w in windows.values() for a in w.events}):
         s = step_iri(process, act)
         ops.append({"op": "add_claim", "subject": s, "predicate": RDFS_LABEL, "object": {"value": {"@value": act}},
                     "evidence_type": "deterministic", "references": ref})
         ops.append({"op": "add_claim", "subject": s, "predicate": CONTAINER, "object": {"entity": process},
                     "evidence_type": "deterministic", "references": ref})
 
-    by_window: dict[tuple, list[list[dict]]] = defaultdict(list)
-    for case in sorted(cases):
-        trace = cases[case]
-        by_window[window_of(trace[0]["time"], window, first, last)].append(trace)
-
-    for (vf, vt), traces in sorted(by_window.items()):
+    for (vf, vt), w in sorted(windows.items()):
         valid = {"valid_from": vf.isoformat(), "valid_to": vt.isoformat()}
 
         def observe(subject: str, prop: str, value: dict, **quals) -> None:
@@ -133,38 +179,22 @@ def encode(events: list[dict], process: str, window: str, sha: str) -> list[dict
                         "qualifiers": {OBSERVED_PROPERTY: PROPERTY + prop, **quals},
                         "evidence_type": "observed", "references": ref, **valid})
 
-        events_n, cases_n, starts, ends, by_res = Counter(), Counter(), Counter(), Counter(), Counter()
-        follows, waits, longest = Counter(), defaultdict(float), defaultdict(float)
-        for trace in traces:
-            acts = [e["activity"] for e in trace]
-            events_n.update(acts)
-            cases_n.update(set(acts))
-            starts[acts[0]] += 1
-            ends[acts[-1]] += 1
-            by_res.update((e["activity"], e["resource"]) for e in trace if e["resource"])
-            for a, b in zip(trace, trace[1:]):
-                follows[(a["activity"], b["activity"])] += 1
-                wait = (b["time"] - a["time"]).total_seconds()
-                waits[(a["activity"], b["activity"])] += wait
-                longest[(a["activity"], b["activity"])] = max(longest[(a["activity"], b["activity"])], wait)
-
-        observe(process, "case-count", integer(len(traces)))
-        for act in sorted(events_n):
+        observe(process, "case-count", integer(w.traces))
+        for act in sorted(w.events):
             s = step_iri(process, act)
-            observe(s, "case-count", integer(cases_n[act]))
-            observe(s, "event-count", integer(events_n[act]))
-            if starts[act]:
-                observe(s, "start-count", integer(starts[act]))
-            if ends[act]:
-                observe(s, "end-count", integer(ends[act]))
-        for (act, res), n in sorted(by_res.items()):
+            observe(s, "case-count", integer(w.cases[act]))
+            observe(s, "event-count", integer(w.events[act]))
+            if w.starts[act]:
+                observe(s, "start-count", integer(w.starts[act]))
+            if w.ends[act]:
+                observe(s, "end-count", integer(w.ends[act]))
+        for (act, res), n in sorted(w.by_res.items()):
             observe(step_iri(process, act), "event-count", integer(n), **{RESOURCE: resource_iri(res)})
-        for (a, b), n in sorted(follows.items()):
+        for (a, b), n in sorted(w.follows.items()):
             sa, sb = step_iri(process, a), step_iri(process, b)
             ops.append({"op": "add_claim", "subject": sa, "predicate": NEXT, "object": {"entity": sb},
                         "evidence_type": "observed", "references": ref, **valid})
             observe(sb, "directly-follows-count", integer(n), **{PREV: sa})
-            observe(sb, "wait-seconds-mean", integer(round(waits[(a, b)] / n)), **{PREV: sa})
-            observe(sb, "wait-seconds-max", integer(longest[(a, b)]), **{PREV: sa})
+            observe(sb, "wait-seconds-mean", integer(round(w.waits[(a, b)] / n)), **{PREV: sa})
+            observe(sb, "wait-seconds-max", integer(w.longest[(a, b)]), **{PREV: sa})
     return ops
-

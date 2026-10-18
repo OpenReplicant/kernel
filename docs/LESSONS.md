@@ -124,3 +124,12 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   `kk agent add` now refuses module names.
 - Change-set idempotency keys are global, not per agent: re-running an eval stage as another agent
   collides. Score what is recorded (`--no-submit`) instead of re-submitting.
+- gitleaks v8.30.1 scans on one core, whatever the number of files, and a 728 MB file took 13 min.
+  The ingest filter now splits large files into overlapping byte chunks and runs one gitleaks per CPU
+  (an XES log can be a single line, so line-based chunks don't split it).
+- pySHACL runs a SPARQL-based constraint once per focus node as a query string, and rdflib re-parses
+  it each time (70% of validating 1,000 claims). The validator caches prepared queries: 22× faster.
+- 4TU.ResearchData's "General Terms of Use" (e.g. BPI Challenge 2017) are non-commercial; check each
+  log's licence (BPI Challenge 2019 is CC BY 4.0).
+- `pgrep -f` with a pattern also in your own command line matches your shell, and a `readlink` test
+  against `/bin/bash` misses `/usr/bin/bash`: match the target's exe (`*python*`) or use `pgrep -x`.
