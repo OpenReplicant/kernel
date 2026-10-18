@@ -6,6 +6,10 @@ each done by a swappable default module; everything else is a module too. Integr
 MCP only → + skill file → + harness hooks → + further modules (D-36). Almost every component is
 existing open tooling — what this repo builds is the kernel, its conventions and the default modules.
 
+Positioning (D-84): for developers, an agent memory layer with provenance and clearance; for
+organisations, a knowledge management system sold as **distributions** (preset bundles of modules, packs,
+skills and views that do one job; the first is org and process maps from conversations).
+
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
