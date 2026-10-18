@@ -118,7 +118,7 @@ def retrieval(limit: int = 200) -> dict:
         model = recall.dense(db) if indexed else None
         for q, rel in sorted(qrels.items(), key=lambda kv: int(kv[0])):
             t0 = time.perf_counter()   # includes embedding the query, as search does
-            rows = db.execute(*recall.plan(db, claims[int(q)], limit)).fetchone()[0]
+            rows = recall.recall(db, claims[int(q)], limit)
             ms.append((time.perf_counter() - t0) * 1000)
             ranked = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))
             scores.append(ndcg10(ranked, rel))
@@ -131,6 +131,8 @@ def retrieval(limit: int = 200) -> dict:
            "recall": f"api.recall_hybrid: BM25 and {model} (recall-dense), min-max normalised, averaged" if model else
                      "api.recall: BM25 over the recall-index module (k1 1.2, b 0.75)" if indexed else
                      "kernel_mcp.recall.RANKED (Postgres full-text search, OR of lexemes, ts_rank_cd, no index)"}
+    if indexed and recall.reranker():
+        out["recall"] += f"; top {recall.POOL} claims re-ranked per subject by {recall.RERANKER} (cross-encoder)"
     return out
 
 
@@ -179,7 +181,7 @@ def prompts(n: int, k: int) -> list[dict]:
     abstracts, prefix, items = corpus(), f"urn:kk:paper:{SOURCE}:", []
     with psycopg.connect(os.environ["AGENT_DATABASE_URL"], autocommit=True) as db:
         for c in sample(n):
-            rows = db.execute(*recall.plan(db, c["claim"], 60)).fetchone()[0]
+            rows = recall.recall(db, c["claim"], 60)
             docs = list(dict.fromkeys(r["subject"][len(prefix):] for r in rows if r["subject"].startswith(prefix)))[:k]
             for d in docs:
                 text = "\n".join(f"[{i}] {s}" for i, s in enumerate(abstracts[d]))
@@ -411,7 +413,7 @@ def save(result: dict) -> None:
     model += "".join(f"-{result[k]}" for k in ("split", "prompt", "policy") if result.get(k) not in (None, "dev", "default", "all"))
     recall = str(result.get("recall", ""))
     method = ("-hybrid" if "recall_hybrid" in recall else "-bm25" if "BM25" in recall
-              else "-fts" if result["stage"] == "retrieval" else "")
+              else "-fts" if result["stage"] == "retrieval" else "") + ("-rerank" if "re-ranked" in recall else "")
     path = runs / f"{date.today().isoformat()}-{result['stage']}{method}{model[:60]}.json"
     path.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

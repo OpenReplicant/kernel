@@ -1,8 +1,10 @@
-"""D-61: dense recall fused with BM25, run by scripts/smoke_kernel.sh while `kk serve` runs the `dense` part.
+"""D-61: dense recall fused with BM25, run by scripts/smoke_kernel.sh while `kk serve` runs the `dense` part
+(with KK_RERANK=1, so the worker downloads the cross-encoder; D-66).
 
 Search fuses BM25 with embeddings once the dense index has rows; a paraphrase that shares no word with a
 claim finds it (BM25 alone does not); a scope the caller may not read keeps its embeddings from them;
-a redacted claim leaves the index.
+a redacted claim leaves the index. D-66: recall re-ranks the fused pool with the cross-encoder, which puts
+the claim that answers a question above one that only shares its words; KK_RERANK=0 keeps the fused order.
 
 Env: KK_ADMIN_URL (superuser), OWNER_DATABASE_URL (a steward), AGENT_DATABASE_URL; the
 knowledge-kernel package installed with the `dense` extra; pgvector in Postgres.
@@ -65,6 +67,19 @@ def main() -> int:
     check("D-61 a paraphrase sharing no word is found by the fused recall, not by BM25 alone",
           mine in hits(agent, "feline napping on a rug") and mine not in bm25)
 
+    decoy = f"urn:kk:test:dense:decoy:{stamp}"
+    submit(agent, "urn:kk:scope:default", decoy, "Doormat sales at the cat market rose; a doormat cat market report")
+    embedded(agent, decoy)
+    question = "Which animal is asleep on the doormat?"
+    check("D-66 the cross-encoder is downloaded by the dense worker (KK_RERANK=1)", recall.reranker() is not None)
+    got = [c["subject"] for c in recall.recall(agent, question, 5)]
+    check("D-66 re-ranked recall puts the claim that answers the question first",
+          got[:1] == [mine] and decoy in got, got[:3])
+    os.environ["KK_RERANK"] = "0"
+    check("D-66 KK_RERANK=0 keeps the fused order", recall.reranker() is None
+          and [c["subject"] for c in recall.recall(agent, question, 5)] == hits(agent, question)[:5])
+    del os.environ["KK_RERANK"]
+
     admin.execute("insert into kernel.scope(iri, label) values (%s, 'dense smoke: private') on conflict do nothing", (PRIVATE,))
     for role, write in (("person_owner", True), ("kkm_validator", False), ("kkm_belief", False),
                         ("kkm_recall_index", False), ("kkm_recall_dense", False)):
@@ -87,7 +102,7 @@ def main() -> int:
     check("D-61 a redacted claim leaves the dense index",
           not agent.execute("select count(*) from recall_dense.vec where claim_id = %s", (claim,)).fetchone()[0])
     print(json.dumps({"embedded": agent.execute("select count(*) from recall_dense.vec").fetchone()[0]}))
-    print(f"D-61 dense recall passed ({sum(checks)}/{len(checks)})" if all(checks) else "D-61 dense recall FAILED")
+    print(f"D-61, D-66 dense recall and re-ranking passed ({sum(checks)}/{len(checks)})" if all(checks) else "D-61, D-66 dense recall FAILED")
     return 0 if all(checks) else 1
 
 
