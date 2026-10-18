@@ -9,7 +9,8 @@ it, the old requirement superseded.
 
 Env: KK_ADMIN_URL (superuser), PGHOST/PGPORT, gitleaks on PATH; the knowledge-kernel package installed.
 With KK_G1_STACK=1 (CI, with Docker): kk up starts the compose stack itself (KK_DB_PORT for Postgres)
-and scans in the kernel image; the stack is taken down at the end.
+and scans in the kernel image; the stack is taken down at the end with its volumes (`down -v`): never run
+it where deploy/ holds a stack you keep.
 """
 import json
 import os

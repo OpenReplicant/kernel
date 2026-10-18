@@ -113,3 +113,6 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - `pkill -f <pattern>` matches the calling shell's own command line and kills it (exit 144); stop
   processes by `/proc/<pid>/exe` instead.
 - Local Postgres uses peer auth: run `psql` and `kernel/schema/tests/run.sh` as the `postgres` user.
+- Never give a compose volume a fixed `name:`: every project (each e2e script, a person's own stack)
+  then shares it, and one test's `down -v` deletes the others' data. `docker compose run -v VOL:/path`
+  already resolves a declared volume to the project's own.
