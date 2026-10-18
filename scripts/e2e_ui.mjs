@@ -4,7 +4,7 @@
 // submitted for review is approved in the browser and applied; the Modules view module loads and
 // lists the modules; the BPM view (M2-T4) draws the process map, lists the discrepancies and explains
 // one, and the person confirms every discrepancy there after seeing its evidence (M2-G1); no page errors and no Content-Security-Policy violations.
-// Env: KK_URL (http://127.0.0.1:<port>), KK_OWNER_TOKEN, KK_AGENT_TOKEN; SHOT_DIR (optional screenshots).
+// Env: KK_URL (http://127.0.0.1:<port>), KK_OWNER_PASSWORD, KK_OWNER_TOKEN, KK_AGENT_TOKEN; SHOT_DIR (optional screenshots).
 import { chromium } from 'playwright';
 
 const base = process.env.KK_URL;
@@ -42,10 +42,21 @@ page.on('console', m => { if (/Content.Security.Policy|Refused to/i.test(m.text(
 const shot = async name => { if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/${name}.png` }); };
 
 await page.goto(base + '/');
+const signedIn = () => page.waitForFunction(() => document.querySelector('.who .muted')?.textContent.includes('urn:kk:agent:person:owner'), null, { timeout: 15000 });
+await page.getByLabel('Name').fill('owner');
+await page.getByLabel('Password').fill('not-the-password');
+await page.getByRole('button', { name: 'Sign in' }).click();
+await page.waitForFunction(() => /not accepted/.test(document.querySelector('[role=alert]')?.textContent || ''), null, { timeout: 15000 });
+check('D-74: a wrong password is refused', true);
+await page.getByLabel('Password').fill(process.env.KK_OWNER_PASSWORD);
+await page.getByRole('button', { name: 'Sign in' }).click();
+await signedIn();
+check('D-74: a person signs in with their own Postgres login', true);
+await page.getByRole('button', { name: 'Sign out' }).click();
 await page.getByLabel('Token').fill(process.env.KK_OWNER_TOKEN);
 await page.getByLabel('Token').press('Enter');
 await page.getByLabel('Token').blur();
-await page.waitForFunction(() => document.querySelector('.who .muted')?.textContent.includes('urn:kk:agent:person:owner'), null, { timeout: 15000 });
+await signedIn();
 check('signs in with the person\'s own token', true);
 
 await page.getByRole('button', { name: 'Graph' }).click();

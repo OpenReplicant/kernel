@@ -1,0 +1,25 @@
+# A kernel on a public host name over HTTPS (D-73). Point the name's DNS at this machine, open ports 80
+# and 443, and set KK_SITE in deploy/.env; Caddy gets and renews the certificate (Let's Encrypt).
+#
+#   docker compose -f deploy/compose.yaml -f deploy/public.yaml --env-file deploy/.env up -d
+#   docker compose ... run --rm init kk person add <name>    # each person signs in at https://KK_SITE/ui/
+#
+# People sign in with their own Postgres login (name and password); agents keep their tokens. Postgres
+# stays on localhost.
+services:
+  kernel:
+    environment:
+      KK_SITE: ${KK_SITE:?set the public host name in .env}
+  caddy:
+    environment:
+      KK_SITE: ${KK_SITE:?set the public host name in .env}
+    ports: !override
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data          # certificates survive restarts
+
+volumes:
+  caddy-data:

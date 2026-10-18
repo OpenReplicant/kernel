@@ -26,7 +26,8 @@ packs=$(psql -d "$db" -v ON_ERROR_STOP=1 -q -tA -f "$root/modules/pack-loader/te
 echo "$packs" | tail -1
 # The owner's and the agent's own logins, each able to act only as itself (D-37).
 url() { echo "postgresql://$1:$2@$host:${PGPORT:-5432}/$db"; }
-export OWNER_DATABASE_URL="$(url person_owner "$(kk person add owner --steward | field password)")"
+owner_pw=$(kk person add owner --steward | field password)
+export OWNER_DATABASE_URL="$(url person_owner "$owner_pw")"
 export AGENT_DATABASE_URL="$(url agent_claude_code "$(kk agent add claude-code --label 'Claude Code (harness agent)' | field password)")"
 export DATABASE_URL="$(url kk_authenticator "$auth_pw")"
 admin_url=$KK_ADMIN_URL
@@ -72,7 +73,8 @@ KK_SMOKE_DB="$db" $py "$root/scripts/e2e_transfer.py"
 # T20 and G3: the UI in headless Chromium (needs Node and the playwright package; KK_REQUIRE_UI=1 makes
 # a missing browser a failure, as in CI).
 if (cd "$root" && node -e "require('playwright')" 2> /dev/null); then
-  KK_URL="http://127.0.0.1:$port" KK_OWNER_TOKEN="$(kk token person_owner --days 0.01)" \
+  KK_URL="http://127.0.0.1:$port" KK_OWNER_PASSWORD="$owner_pw" \
+    KK_OWNER_TOKEN="$(kk token person_owner --days 0.01)" \
     KK_AGENT_TOKEN="$(kk token agent_claude_code --days 0.01)" node "$root/scripts/e2e_ui.mjs"
 elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
   echo "FAIL the UI check needs Node and playwright (npm install --no-save playwright)"; exit 1

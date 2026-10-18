@@ -92,8 +92,10 @@ harnesses call the same commands with their own hook JSON (`session_id`, `prompt
 
 ## The UI
 
-`kk serve` also serves the UI at `/ui/` (behind Caddy: http://127.0.0.1:8080/ui/). Paste your own token
-(`kk token person_<name>`, with `KK_JWT_SECRET` set): search and explain, the review queue, change
+`kk serve` also serves the UI at `/ui/` (behind Caddy: http://127.0.0.1:8080/ui/). Sign in with your
+name and the password `kk person add` printed (`kk up` prints the owner's), or paste a token
+(`kk token person_<name>`, with `KK_JWT_SECRET` set) (D-74). On a public host name, add
+`deploy/public.yaml` and Caddy serves HTTPS. Then: search and explain, the review queue, change
 sets, the graph, and every view module. A view module is a folder with a manifest (runtime type
 `view`, slot `ui`) and one script that calls `KK.register({id, title, render(el, kk)})` and renders with
 `kk.call(tool, args)`; see `modules/view-modules` (D-44).

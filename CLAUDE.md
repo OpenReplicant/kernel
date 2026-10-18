@@ -9,7 +9,7 @@ existing open tooling — what this repo builds is the kernel, its conventions a
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
-2. `docs/milestone-3.md` — current work; `docs/milestone-2.md` (BPM and devops) and `docs/milestone-1.md` (the kernel) are done.
+2. `docs/milestone-4.md` — current work; milestones 1 (the kernel), 2 (BPM and devops) and 3 (your own data, cited) are done.
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
 5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
@@ -100,6 +100,7 @@ docs/            spec, milestone-1..3, decisions, harness (drop-in guide), mcp-s
 
 ## Current milestone
 
-Milestone 3 (`docs/milestone-3.md`): your own data, cited, in minutes — `kk up PROJECT`, a repository
-encoder for any repository, a recall eval, a public event log at scale. Milestones 1 (the kernel) and 2
-(BPM and devops) are done. Work one task at a time; each ends with its check passing.
+Milestone 4 (`docs/milestone-4.md`): a demo you can sell — sign-in with Postgres logins and HTTPS by
+Caddy, discrepancies a person can review, a process model that learns from what people approve, and a
+customer demo with its walkthrough. Milestones 1–3 are done. Work one task at a time; each ends with its
+check passing.

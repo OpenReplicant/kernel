@@ -249,6 +249,13 @@ def op_key(op: dict, agent: str, scope: str) -> str:
                    op.get("valid_from"), op.get("valid_to"), agent, scope)
 
 
+def ref_key(refs: list) -> str:
+    """A claim's sources (artifact, source URI) in a fixed order, for matching: from an op's references
+    or from the kernel's rows."""
+    pairs = [[r.get("artifact"), r.get("source_uri")] if isinstance(r, dict) else list(r) for r in refs or []]
+    return json.dumps(sorted(pairs, key=lambda r: [x or "" for x in r]))
+
+
 CLAIM_ROWS = """select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.qualifiers, c.valid_from,
                        c.valid_to, c.attributed_to, c.scope from kernel.claim c"""
 
@@ -302,9 +309,17 @@ def import_(conn, ds: Dataset, digest: str) -> dict:
             continue
         key = f"import:{digest}:claims:{run.removeprefix('urn:kk:run:')}:{scope}"
         install(key.removeprefix(f"import:{digest}:"), scope, ops, agent)
-        made = existing(conn, "join kernel.change_set s on s.id = c.change_set where s.idempotency_key = %s", (key,))
+        # Claims alike in content but not in their sources are told apart by their references.
+        made = defaultdict(list)
+        for cid, *rest, refs in conn.execute(
+                f"""{CLAIM_ROWS.replace(' from kernel.claim c', '')},
+                           (select coalesce(jsonb_agg(jsonb_build_array(r.artifact, r.source_uri)), '[]')
+                              from kernel.claim_reference r where r.claim_id = c.id)
+                    from kernel.claim c join kernel.change_set s on s.id = c.change_set
+                    where s.idempotency_key = %s""", (key,)).fetchall():
+            made[(row_key(*rest), ref_key(refs))].append(str(cid))
         for c in added:
-            new[c["old"]] = made[op_key(c["op"], agent, scope)].pop(0)
+            new[c["old"]] = made[(op_key(c["op"], agent, scope), ref_key(c["op"].get("references")))].pop(0)
     status_ops = defaultdict(list)
     for c in claims:
         if c["status"]:

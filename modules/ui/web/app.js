@@ -40,7 +40,7 @@ const KK = {
 
 function shell() {
   return {
-    tab: 'search', token: '', me: null, error: '', rows: [], query: '', searched: false, detail: null,
+    tab: 'search', token: '', name: '', password: '', me: null, error: '', rows: [], query: '', searched: false, detail: null,
     notes: {}, views: [], graphBy: '', graphOn: '', graphInfo: '', modules: [], slots: [],
 
     async init() {
@@ -60,6 +60,21 @@ function shell() {
       try { sessionStorage.setItem('kk_token', this.token); } catch (e) { /* storage blocked */ }
       await this.run(async () => { this.me = await KK.call('whoami'); });
       if (this.me) this.open(this.tab);
+    },
+    async login() {
+      await this.run(async () => {
+        const r = await fetch('/ui/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                             body: JSON.stringify({ name: this.name, password: this.password }) });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || r.statusText);
+        this.token = body.token;
+      });
+      this.password = '';
+      if (this.token) await this.signIn();
+    },
+    signOut() {
+      this.token = ''; this.me = null; this.rows = []; this.detail = null; KK.token = '';
+      try { sessionStorage.removeItem('kk_token'); } catch (e) { /* storage blocked */ }
     },
     async run(fn) {
       this.error = '';

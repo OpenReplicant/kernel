@@ -6,7 +6,7 @@ each done by a swappable default module; everything else is a module too. Use it
 add the skill file, harness hooks and further modules (`docs/harness.md`).
 
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
-- **Status:** milestones 1 (the kernel, `docs/milestone-1.md`) and 2 (BPM and devops as modules and views, `docs/milestone-2.md`) are done; milestone 3 (your own data, cited, in minutes: `docs/milestone-3.md`) is under way.
+- **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`) and 3 (your own data, cited, in minutes: `docs/milestone-3.md`) are done; milestone 4 (a demo you can sell: `docs/milestone-4.md`) is under way.
 - **Decisions and open questions:** `docs/decisions.md`
 - **Working rules:** `CLAUDE.md`
 
@@ -51,7 +51,8 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | `kk module install DIR` | a module from `modules/`: its own login and a locked-down container |
 | `kk export` / `kk import FILE` | every claim with its provenance as N-Quads, scopes as named graphs |
 
-Open http://127.0.0.1:8000/ui/ and paste your token (`kk token person_owner`): search and explain,
+Open http://127.0.0.1:8000/ui/ and sign in as `owner` with the password `kk person add` printed (or
+paste a token, `kk token person_owner`): search and explain,
 the review queue, change sets, the graph, and view modules (`modules/view-modules` is the pattern).
 
 Or as a compose stack (Postgres, then one image running `kk serve` behind Caddy at

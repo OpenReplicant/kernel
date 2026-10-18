@@ -1,6 +1,7 @@
-# Front door. Local only (compose publishes 127.0.0.1:8080). Replaceable by any reverse proxy:
-# the kernel depends on nothing here.
-:80 {
+# Front door. Local by default (compose publishes 127.0.0.1:8080). With KK_SITE set to a public host
+# name (deploy/public.yaml), Caddy gets and renews its certificate and serves HTTPS there. Replaceable by
+# any reverse proxy: the kernel depends on nothing here.
+{$KK_SITE::80} {
 	encode zstd gzip
 
 	# Kernel MCP server (streamable HTTP) and the UI (an MCP client). Callers send their own bearer
