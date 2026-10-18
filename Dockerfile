@@ -17,6 +17,7 @@ COPY kk kk
 COPY kernel kernel
 COPY shapes/*.shacl.ttl shapes/
 COPY modules modules
+COPY examples examples
 RUN --mount=type=secret,id=ca,required=false \
     if [ -f /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi; \
     pip install --no-cache-dir --no-deps . && rm -rf build *.egg-info

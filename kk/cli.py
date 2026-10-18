@@ -1,6 +1,7 @@
 """kk: the one command for running a knowledge kernel.
 
   kk up [PROJECT]              connect a project folder to a kernel: stack, logins, MCP, skill, hooks
+  kk demo [--bpi]              a process demo in one command: kk up, the event log, the model, the procedure
   kk init                      install the kernel, the default modules and the vocabulary packs
   kk person add NAME           a person's own login (reviews; --steward may also redact)
   kk agent add NAME            a harness agent's own login (MCP stdio, hooks)
@@ -269,6 +270,9 @@ def main(argv=None) -> None:
     if argv[:1] == ["up"]:
         from .up import main as up
         return up(argv[1:])
+    if argv[:1] == ["demo"]:
+        from .demo import main as demo
+        return demo(argv[1:])
     if argv[:1] == ["module"]:
         from .modules import main as module
         return module(argv[1:])
@@ -281,6 +285,7 @@ def main(argv=None) -> None:
                                  epilog="\n".join(__doc__.splitlines()[2:]))
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("up", help="connect a project folder to a kernel in one command")
+    sub.add_parser("demo", help="a process demo in one command: order-to-cash, or --bpi")
     p = sub.add_parser("init", help="install the kernel, default modules and packs")
     p.add_argument("--no-packs", action="store_true", help="leave out the vocabulary packs (e.g. to import a kk export)")
     p.set_defaults(fn=cmd_init)
@@ -295,7 +300,7 @@ def main(argv=None) -> None:
             p.add_argument("--steward", action="store_true", help="may also redact")
         p.set_defaults(fn=fn)
     p = sub.add_parser("serve", help="MCP over HTTP + validator + belief")
-    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, dense (default: all but dense)")
+    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, dense, conformance, learner (default: the first five)")
     p.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     p.set_defaults(fn=cmd_serve)

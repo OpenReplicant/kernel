@@ -141,6 +141,8 @@ jobs:
         run: KK_REQUIRE_UI=1 sh scripts/e2e_devops.sh
       - name: Zero to a cited answer with the Docker stack (M3-G1)
         run: KK_G1_STACK=1 KK_DB_PORT=55432 python scripts/e2e_g1.py
+      - name: The process demo with the Docker stack (M4-G1)
+        run: KK_DEMO_STACK=1 KK_DB_PORT=55432 python scripts/e2e_demo.py
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env

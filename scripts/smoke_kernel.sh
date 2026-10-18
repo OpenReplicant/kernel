@@ -102,3 +102,5 @@ esac
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_up.py"
 # M3-G1: zero to a cited answer on your own repository (clone, kk up, the harness's hooks).
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_g1.py"
+# M4-G1: the process loop as a customer sees it (kk demo, sign in, review, learn, a cited answer).
+$py "$root/scripts/e2e_demo.py"

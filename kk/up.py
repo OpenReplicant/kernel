@@ -85,6 +85,21 @@ def stack(env_file: Path) -> tuple[str, str]:
     return f"postgresql://postgres:{env['POSTGRES_PASSWORD']}@127.0.0.1:{port}/kk", env["KK_JWT_SECRET"]
 
 
+def ready(url: str, timeout: float = 120) -> None:
+    """Wait until the kernel answers through Caddy (compose starts it before it listens)."""
+    import time
+    import urllib.request
+    deadline = time.time() + timeout
+    while True:
+        try:
+            urllib.request.urlopen(url, timeout=5).close()
+            return
+        except OSError:
+            if time.time() > deadline:
+                sys.exit(f"the kernel did not answer at {url}: docker compose -f deploy/compose.yaml logs kernel")
+            time.sleep(1)
+
+
 # ---------------------------------------------------------------- logins
 def works(url: str | None) -> bool:
     if not url:              # never "" : libpq would fall back to the PG* variables
@@ -182,6 +197,37 @@ def project(folder: Path, login_file: Path) -> list[str]:
     return changed
 
 
+def connect(folder: Path, agent: str, no_stack: bool, db_host: str | None, no_scan: bool) -> dict:
+    """Steps 1–4 for one project folder; what kk up prints. Also out["admin_url"] (not printed)."""
+    if not folder.is_dir():
+        sys.exit(f"{folder} is not a folder")
+    h = home()
+    if no_stack:
+        admin_url, jwt = os.environ.get("KK_ADMIN_URL", ""), os.environ.get("KK_JWT_SECRET", "")
+    else:
+        admin_url, jwt = stack(ROOT / "deploy/.env")
+    agent_file = h / "agents" / f"{agent}.env"
+    changed = [f for f, did in (
+        (str(h / "owner.env"), login(admin_url, db_host, h / "owner.env", "person_owner", "urn:kk:agent:person:owner",
+                                     "person", "Local owner", ["kk_reviewer", "kk_steward"])),
+        (str(agent_file), login(admin_url, db_host, agent_file, f"agent_{agent.replace('-', '_')}",
+                                f"urn:kk:agent:{agent}", "software", agent, ["kk_agent"]))) if did]
+    changed += project(folder, agent_file)
+    out = {"project": str(folder), "agent": f"urn:kk:agent:{agent}", "changed": changed,
+           "owner_login": str(h / "owner.env")}
+    if not no_scan:
+        out["encoded"] = encode(folder, admin_url, None if no_stack else ROOT / "deploy/.env")
+    if not no_stack:
+        out["ui"] = "http://127.0.0.1:8080/ui/"
+        ready(out["ui"] + "views.json")
+    if pw := urlparse(read_env(h / "owner.env").get("KK_DATABASE_URL", "")).password:
+        out["owner_sign_in"] = {"name": "owner", "password": unquote(pw)}   # the UI's sign-in (D-74)
+    if len(jwt) >= 32:
+        out["owner_token"] = mint("person_owner", jwt, 30)
+    out["admin_url"] = admin_url
+    return out
+
+
 def main(argv: list[str]) -> None:
     import argparse
 
@@ -195,32 +241,9 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--db-host", help="Postgres host:port as the harness reaches it (default: as KK_ADMIN_URL does)")
     ap.add_argument("--no-scan", action="store_true", help="connect the project without reading its contents")
     a = ap.parse_args(argv)
-    folder = a.project.resolve()
-    if not folder.is_dir():
-        sys.exit(f"{folder} is not a folder")
-    h = home()
-    if a.no_stack:
-        admin_url, jwt = os.environ.get("KK_ADMIN_URL", ""), os.environ.get("KK_JWT_SECRET", "")
-    else:
-        admin_url, jwt = stack(ROOT / "deploy/.env")
-    agent_file = h / "agents" / f"{a.agent}.env"
-    changed = [f for f, did in (
-        (str(h / "owner.env"), login(admin_url, a.db_host, h / "owner.env", "person_owner", "urn:kk:agent:person:owner",
-                                     "person", "Local owner", ["kk_reviewer", "kk_steward"])),
-        (str(agent_file), login(admin_url, a.db_host, agent_file, f"agent_{a.agent.replace('-', '_')}",
-                                f"urn:kk:agent:{a.agent}", "software", a.agent, ["kk_agent"]))) if did]
-    changed += project(folder, agent_file)
-    out = {"project": str(folder), "agent": f"urn:kk:agent:{a.agent}", "changed": changed,
-           "owner_login": str(h / "owner.env")}
-    if not a.no_scan:
-        out["encoded"] = encode(folder, admin_url, None if a.no_stack else ROOT / "deploy/.env")
-    if not a.no_stack:
-        out["ui"] = "http://127.0.0.1:8080/ui/"
-    if pw := urlparse(read_env(h / "owner.env").get("KK_DATABASE_URL", "")).password:
-        out["owner_sign_in"] = {"name": "owner", "password": unquote(pw)}   # the UI's sign-in (D-74)
-    if len(jwt) >= 32:
-        out["owner_token"] = mint("person_owner", jwt, 30)
-    print(json.dumps(out, indent=2))
+    out = connect(a.project.resolve(), a.agent, a.no_stack, a.db_host, a.no_scan)
+    folder = Path(out["project"])
+    print(json.dumps({k: v for k, v in out.items() if k != "admin_url"}, indent=2))
     print(f"\nReady. Open the project in your harness (Claude Code: `claude` in {folder}); approve the"
           " 'kernel' MCP server when asked." + (f" Review in the UI at {out['ui']}: sign in as owner (owner_sign_in)."
                                                  if "ui" in out else ""), file=sys.stderr)

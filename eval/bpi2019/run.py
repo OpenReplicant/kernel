@@ -17,23 +17,20 @@ KK_EVAL_CACHE (default ~/.cache/knowledge-kernel/eval); KK_ARTIFACTS.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
 import time
-import urllib.request
 from collections import Counter
 from datetime import date
 from pathlib import Path
 
+from kk.demo import BPI_LOG as LOG, BPI_SHA256 as SHA256, fetch_bpi   # the log is pinned there (D-72)
+
 HERE = Path(__file__).resolve().parent
-CACHE = Path(os.environ.get("KK_EVAL_CACHE") or Path.home() / ".cache/knowledge-kernel/eval") / "bpi2019"
-LOG = CACHE / "BPI_Challenge_2019.xes"
-URL = "https://data.4tu.nl/file/35ed7122-966a-484e-a0e1-749b64e3366d/864493d1-3a58-47f6-ad6f-27f95f995828"
-SHA256 = "af63bc687fc4152f2123b05c3af7772b37ef3fce2d3f67f812666c9e356baae7"   # pinned Oct 2026 (md5 as published: 4eb909242351193a61e1c15b9c3cc814)
+ROOT = HERE.parents[1]
 PROCESS = "urn:kk:process:bpi2019"
 # Runs a module as __main__ and reports its peak memory on stderr (one JSON line).
 WRAP = ("import json, resource, runpy, sys\nsys.argv = sys.argv[1:]\ntry:\n    runpy.run_module(sys.argv[0], run_name='__main__')\n"
@@ -42,25 +39,9 @@ WRAP = ("import json, resource, runpy, sys\nsys.argv = sys.argv[1:]\ntry:\n    r
         "sys.exit(code or 0)")
 
 
-def sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        while block := f.read(1 << 20):
-            h.update(block)
-    return h.hexdigest()
-
-
 def fetch() -> None:
-    CACHE.mkdir(parents=True, exist_ok=True)
-    if not LOG.exists() or sha256(LOG) != SHA256:
-        part = LOG.with_suffix(".part")
-        with urllib.request.urlopen(URL, timeout=600) as r, open(part, "wb") as f:
-            while block := r.read(1 << 20):
-                f.write(block)
-        if sha256(part) != SHA256:
-            sys.exit(f"{part}: sha256 does not match the pinned one")
-        part.rename(LOG)
-    print(f"{LOG} ({LOG.stat().st_size} bytes, sha256 ok)")
+    log = fetch_bpi()
+    print(f"{log} ({log.stat().st_size} bytes, sha256 ok)")
 
 
 def step(module: str, *args: str, role: str) -> tuple[dict, float, int]:
@@ -95,7 +76,7 @@ def scale(window: str, use_filter: bool) -> dict:
     enc, enc_s, enc_peak = step("eventlog_encoder", "--process", PROCESS, "--window", window,
                                 *([] if use_filter else ["--no-filter"]), str(LOG), role="kkm_encoder_eventlog")
     enc_status, enc_wait = settle("kkm_encoder_eventlog", enc["change_sets"])
-    doc, _, _ = step("bpmn_encoder", "--process", PROCESS, str(HERE / "documented.bpmn"), role="kkm_encoder_bpmn")
+    doc, _, _ = step("bpmn_encoder", "--process", PROCESS, str(ROOT / "examples/bpi2019/documented.bpmn"), role="kkm_encoder_bpmn")
     settle("kkm_encoder_bpmn", [doc["change_set"]])
     conf, conf_s, conf_peak = step("conformance", "--once", role="kkm_conformance")
     ids = list(conf["discrepancies"].values())
