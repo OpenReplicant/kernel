@@ -34,8 +34,22 @@ PEP508 = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?\s*(.*)$")
 HEADING = re.compile(r"^(#{1,3})\s+(.+?)\s*#*\s*$")
 
 
-def repo_iri(repo: Path) -> str:
-    return f"urn:kk:repo:{quote(repo.resolve().name)}"
+def repo_name(repo: Path, name: str | None = None) -> str:
+    """The repository's name: as given (kk up passes the project folder's), else its folder's."""
+    return name or repo.resolve().name
+
+
+def repo_iri(repo: Path, name: str | None = None) -> str:
+    return f"urn:kk:repo:{quote(repo_name(repo, name), safe='')}"
+
+
+def commit(repo: Path) -> str | None:
+    """The checked-out commit, when the repository is a git checkout."""
+    try:
+        out = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True, timeout=30)
+        return out.stdout.strip() or None if out.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def purl(kind: str, name: str) -> str:
@@ -47,7 +61,7 @@ def purl(kind: str, name: str) -> str:
 def wanted(rel: str) -> bool:
     name = PurePosixPath(rel).name
     return (name in MANIFESTS or bool(REQUIREMENTS.search(rel)) or name.lower().endswith(".md")) \
-        and not set(PurePosixPath(rel).parts[:-1]) & SKIP_DIRS
+        and not any(p in SKIP_DIRS or p.startswith(".") for p in PurePosixPath(rel).parts[:-1])
 
 
 def list_repo_files(repo: Path) -> list[str]:
@@ -219,14 +233,14 @@ def encode_markdown(b, repo: str, text: str, rel: str) -> None:
         b.claim(doc, "dcterms:title", rel, (1, max(1, len(lines))))
 
 
-def encode(b, repo_dir: Path, rel: str, text: str) -> None:
+def encode(b, repo_dir: Path, rel: str, text: str, name: str | None = None) -> None:
     """Dispatch one repository file to its encoder; the repository itself is typed from its root files."""
-    repo = repo_iri(repo_dir)
-    name = PurePosixPath(rel).name
+    repo = repo_iri(repo_dir, name)
+    file = PurePosixPath(rel).name
     if "/" not in rel:
         b.claim(repo, "rdf:type", SOURCE_CODE, (1, 1))
-        b.claim(repo, "rdfs:label", repo_dir.resolve().name, (1, 1))
-    if name == "pyproject.toml":
+        b.claim(repo, "rdfs:label", repo_name(repo_dir, name), (1, 1))
+    if file == "pyproject.toml":
         encode_pyproject(b, repo, text)
     elif REQUIREMENTS.search(rel):
         here = repo_dir / PurePosixPath(rel).parent / "pyproject.toml"
@@ -236,11 +250,11 @@ def encode(b, repo_dir: Path, rel: str, text: str) -> None:
             n = (d.get("project") or {}).get("name") or ((d.get("tool") or {}).get("poetry") or {}).get("name")
             owner = purl("pypi", n) if n else repo
         encode_requirements(b, repo, text, rel, owner)
-    elif name == "package.json":
+    elif file == "package.json":
         encode_package_json(b, repo, text)
-    elif name == "go.mod":
+    elif file == "go.mod":
         encode_go_mod(b, repo, text)
-    elif name == "Cargo.toml":
+    elif file == "Cargo.toml":
         encode_cargo(b, repo, text)
-    elif name.lower().endswith(".md"):
+    elif file.lower().endswith(".md"):
         encode_markdown(b, repo, text, rel)

@@ -40,7 +40,9 @@ def check(name, ok, detail=""):
 
 
 def scan(repo: Path, artifacts: str) -> dict:
-    out = subprocess.run([sys.executable, "-m", "kk", "scan", "--repo", str(repo), "--artifacts", artifacts],
+    """Scan as this repository (its name, whichever folder holds the copy)."""
+    out = subprocess.run([sys.executable, "-m", "kk", "scan", "--repo", str(repo), "--artifacts", artifacts,
+                          "--name", ROOT.name],
                          capture_output=True, text=True, env={**os.environ, "KK_ROLE": "kkm_self_encoder"})
     if out.returncode != 0:
         raise SystemExit(f"scan failed: {out.stderr[-1500:]}")
@@ -157,7 +159,8 @@ def main() -> int:
                   json.dumps(reasons))
             removed = as_encoder("""select count(*) filter (where c.status = 'deprecated'), count(*) from api.claims c
                            join api.change_sets s on s.id = c.change_set
-                           where s.idempotency_key like 'self-encoder:modules/ingest-filter-gitleaks/migration.sql:%%'""")
+                           where s.idempotency_key like %s""",
+                           f"self-encoder:{ROOT.name}:modules/ingest-filter-gitleaks/migration.sql:%")
             check("the removed file's claims are retracted", removed[0][1] > 0 and removed[0][0] == removed[0][1],
                   f"{removed[0][0]}/{removed[0][1]} deprecated")
     print("T13 ingestion", "passed" if all(checks) else "FAILED", f"({sum(checks)}/{len(checks)})")

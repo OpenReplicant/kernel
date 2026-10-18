@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -42,6 +43,33 @@ def context(event: str, text: str) -> None:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": text}}))
 
 
+ENCODED = """select info->>'commit', started_at from kernel.run
+             where module = 'urn:kk:module:self-encoder' and status = 'succeeded' and info->>'repo_name' = %s
+             order by started_at desc limit 1"""
+
+
+def freshness(conn, cwd: str | None) -> str:
+    """Whether the kernel has read this checkout's commit (M3-G1): a line for the agent, or ''."""
+    if not cwd:
+        return ""
+    try:
+        head = subprocess.run(["git", "-C", cwd, "rev-parse", "HEAD"], capture_output=True, text=True,
+                              timeout=5).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if not head:
+        return ""
+    name = Path(cwd).name
+    row = conn.execute(ENCODED, (name,)).fetchone()
+    if row is None:
+        return (f" The repository {name} is not in the kernel yet: ask the user to run `kk up {cwd}` so its "
+                "packages and documents are recalled.")
+    if row[0] != head:
+        return (f" The kernel read {name} at commit {(row[0] or 'unknown')[:12]} ({row[1]:%Y-%m-%d %H:%M}); the "
+                f"checkout is at {head[:12]}: claims about it may be stale; `kk up {cwd}` refreshes them.")
+    return ""
+
+
 def session_start(data: dict) -> None:
     with connect() as conn:
         agent = conn.execute("select kernel.my_agent()").fetchone()[0]
@@ -49,13 +77,14 @@ def session_start(data: dict) -> None:
                            (Jsonb({"harness_session": data.get("session_id"), "cwd": data.get("cwd"),
                                    "source": data.get("source")}),)).fetchone()[0]
         visible = conn.execute("select count(*) from api.claims where status <> 'deprecated'").fetchone()[0]
+        fresh = freshness(conn, data.get("cwd"))
     STATE.mkdir(parents=True, exist_ok=True)
     run_file(data.get("session_id", "")).write_text(str(run))
     context("SessionStart",
             f"Knowledge kernel connected as {agent} ({visible} claims visible). This session's kernel run is "
             f"{run}: use it as generated_by when you submit change sets. Claims related to each prompt are "
             "recalled for you; cite claim ids and their belief, and call explain(claim_id) before relying "
-            "on a claim you did not make. Record what you learn as claims (knowledge-kernel skill).")
+            "on a claim you did not make. Record what you learn as claims (knowledge-kernel skill)." + fresh)
 
 
 def prompt(data: dict) -> None:

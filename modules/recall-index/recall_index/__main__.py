@@ -14,10 +14,8 @@ KK_SWEEP_SECONDS (default 30).
 import os
 import sys
 
+from kernel_mcp.recall import DOC  # a claim's searchable text, one definition for both
 from kk.lib import connect, listen
-
-DOC = ("to_tsvector('english', coalesce(c.object_value->>'@value', '') || ' ' || "
-       "regexp_replace(c.subject, '[^[:alnum:]]+', ' ', 'g'))")
 
 # One statement per pass: new rows, then their terms and corpus counts, in one transaction.
 INDEX = f"""

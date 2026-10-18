@@ -1,6 +1,6 @@
 """Self-encoder: scan a repository into the kernel. A plain command; needs no runner (D-41).
 
-  python -m self_encoder scan [--repo DIR] [--artifacts DIR] [--no-filter]
+  python -m self_encoder scan [--repo DIR] [--name NAME] [--artifacts DIR] [--no-filter]
 
 1. List the files the self-model is built from (encode.list_files).
 2. Run the ingest filter (KK_INGEST_FILTER, default `python -m ingest_filter`); files with secrets are
@@ -10,7 +10,8 @@
    file's earlier versions (superseded by the new claim with the same subject, predicate and object,
    or the same subject and predicate; otherwise retracted). A file that disappeared gets a change set
    retracting its claims. An unchanged file resubmits the same idempotency key, which is a no-op.
-5. Submit everything under one run of the self-encoder's role, then print a summary.
+5. Submit everything under one run of the self-encoder's role (its info names the repository and the
+   commit it read, so the session hook can tell when the checkout moved on), then print a summary.
 
 Env: DATABASE_URL (a login that may SET ROLE to KK_ROLE, or the module's own login), KK_ROLE (default
 kkm_self_encoder), KK_INGEST_FILTER, KK_ARTIFACTS (default ~/.local/share/knowledge-kernel/artifacts).
@@ -27,22 +28,21 @@ from pathlib import Path
 
 from kk.lib import connect, ingest_filter, run, submit
 
-from .encode import AGENT, SCOPE, encode_file, list_files
-from .repo import REQUIRES, SUGGESTS
+from .encode import AGENT, SCOPE, encode_file, key_prefix, list_files
+from .repo import REQUIRES, SUGGESTS, commit, repo_name
 
 MODULE = "urn:kk:module:self-encoder"
-KEY = "self-encoder:"
 # Predicates with many values per subject: a value that is gone is retracted, never "superseded" by a
 # sibling (a removed dependency is not replaced by another one).
 MANY = {REQUIRES, SUGGESTS}
 PRIOR = """select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.status, s.idempotency_key
            from api.claims c join api.change_sets s on s.id = c.change_set
-           where c.attributed_to = %s and c.status <> 'deprecated' and s.idempotency_key like 'self-encoder:%%'"""
+           where c.attributed_to = %s and c.status <> 'deprecated' and starts_with(s.idempotency_key, %s)"""
 
 
-def path_of(key: str) -> str:
-    """'self-encoder:<path>:<sha16>' or 'self-encoder:<path>:removed:<hash>' -> <path>."""
-    rest = key[len(KEY):]
+def path_of(key: str, prefix: str) -> str:
+    """'<prefix><path>:<sha16>' or '<prefix><path>:removed:<hash>' -> <path>."""
+    rest = key[len(prefix):]
     return rest.split(":removed:")[0] if ":removed:" in rest else rest.rsplit(":", 1)[0]
 
 
@@ -73,7 +73,8 @@ def supersede(cs: dict, prior: list[dict], expand) -> None:
                                                         if new else {"reason": "retracted"})})
 
 
-def scan(conn, repo: Path, artifacts: Path, use_filter: bool) -> dict:
+def scan(conn, repo: Path, artifacts: Path, use_filter: bool, name: str | None = None,
+         at: str | None = None) -> dict:
     prefixes = dict(conn.execute("select prefix, namespace from kernel.prefix").fetchall())
 
     def expand(term: str) -> str:
@@ -83,16 +84,19 @@ def scan(conn, repo: Path, artifacts: Path, use_filter: bool) -> dict:
     files = list_files(repo)
     filtered = ingest_filter(repo, files) if use_filter else {"paths": files, "blocked": []}
     prior: dict[str, list] = {}
-    cur = conn.execute(PRIOR, (AGENT,))
+    prefix = key_prefix(repo, name)
+    cur = conn.execute(PRIOR, (AGENT, prefix))
     cols = [d.name for d in cur.description]
     for row in cur.fetchall():
         r = dict(zip(cols, row))
-        prior.setdefault(path_of(r["idempotency_key"]), []).append(r)
+        prior.setdefault(path_of(r["idempotency_key"], prefix), []).append(r)
 
     statuses: Counter = Counter()
-    with conn.cursor() as cur, run(cur, MODULE, {"repo": str(repo), "filtered": use_filter}) as (run_id, outputs):
+    info = {"repo": str(repo), "repo_name": repo_name(repo, name), "commit": at or commit(repo),
+            "filtered": use_filter}
+    with conn.cursor() as cur, run(cur, MODULE, info) as (run_id, outputs):
         for rel in filtered["paths"]:
-            cs = encode_file(repo, rel, artifacts)
+            cs = encode_file(repo, rel, artifacts, name)
             old = [c for c in prior.get(rel, []) if c["idempotency_key"] != cs["idempotency_key"]]
             if old:
                 supersede(cs, old, expand)
@@ -100,12 +104,12 @@ def scan(conn, repo: Path, artifacts: Path, use_filter: bool) -> dict:
         for rel in sorted(set(prior) - set(files)):
             gone = sorted(prior[rel], key=lambda c: str(c["id"]))
             digest = hashlib.sha256(" ".join(str(c["id"]) for c in gone).encode()).hexdigest()[:16]
-            cs = {"idempotency_key": f"{KEY}{rel}:removed:{digest}", "attributed_to": AGENT, "target_scope": SCOPE,
+            cs = {"idempotency_key": f"{prefix}{rel}:removed:{digest}", "attributed_to": AGENT, "target_scope": SCOPE,
                   "ops": [{"op": "set_status", "claim": str(c["id"]), "status": "deprecated", "reason": "retracted",
                            "expect_status": c["status"]} for c in gone]}
             statuses[submit(cur, cs, run_id)["status"]] += 1
         outputs.update(files=len(filtered["paths"]), blocked=len(filtered["blocked"]))
-    return {"run": run_id, "files": len(files), "encoded": len(filtered["paths"]),
+    return {"run": run_id, "repo": info["repo_name"], "commit": info["commit"], "files": len(files), "encoded": len(filtered["paths"]),
             "blocked": filtered["blocked"], "change_sets": dict(statuses)}
 
 
@@ -113,12 +117,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Scan a repository into the kernel (self-model).")
     ap.add_argument("command", choices=["scan"])
     ap.add_argument("--repo", default=".")
+    ap.add_argument("--name", help="the repository's name (default: its folder's)")
+    ap.add_argument("--commit", help="the commit being read (default: git rev-parse HEAD in --repo)")
     ap.add_argument("--artifacts", default=os.environ.get("KK_ARTIFACTS")
                     or str(Path.home() / ".local/share/knowledge-kernel/artifacts"))
     ap.add_argument("--no-filter", action="store_true", help="skip the ingest filter (secrets may be stored)")
     a = ap.parse_args(argv)
     with connect(os.environ.get("KK_ROLE", "kkm_self_encoder")) as conn:
-        print(json.dumps(scan(conn, Path(a.repo).resolve(), Path(a.artifacts), not a.no_filter)))
+        print(json.dumps(scan(conn, Path(a.repo).resolve(), Path(a.artifacts), not a.no_filter, a.name, a.commit)))
     return 0
 
 

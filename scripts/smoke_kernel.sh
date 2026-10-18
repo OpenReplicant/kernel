@@ -92,3 +92,5 @@ case $parts in
 esac
 # M3-T1: kk up connects a project folder (last: it gives the owner a new login).
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_up.py"
+# M3-G1: zero to a cited answer on your own repository (clone, kk up, the harness's hooks).
+KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_g1.py"

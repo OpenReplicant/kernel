@@ -57,7 +57,7 @@ python shapes/tests/test_shapes.py                                         # SHA
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up) on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer) on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3: modules in their own sandboxed containers; needs Docker
 sh scripts/e2e_devops.sh                                                   # M2-T5–T7, M2-G2: devops demo, MAPE-K loop, Devops view; needs Docker, gitleaks
