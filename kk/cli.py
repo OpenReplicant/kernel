@@ -40,7 +40,7 @@ from psycopg import sql
 
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[1])
 NAME = re.compile(r"^[a-z][a-z0-9-]{0,40}$")
-WORKERS = ("validator", "belief", "recall")
+WORKERS = ("validator", "belief", "recall", "quotes")
 OPTIONAL = ("dense",)   # opt in: needs pgvector and fastembed (D-61)
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 KK_MODULE = "https://w3id.org/knowledge-kernel/ns#Module"
@@ -149,6 +149,8 @@ def worker(name: str):
         from recall_index.__main__ import main
     elif name == "dense":
         from recall_dense.__main__ import main
+    elif name == "quotes":
+        from verifier_quotes.__main__ import main
     else:
         from belief_corroboration.__main__ import main
     return main
@@ -268,7 +270,7 @@ def main(argv=None) -> None:
             p.add_argument("--steward", action="store_true", help="may also redact")
         p.set_defaults(fn=fn)
     p = sub.add_parser("serve", help="MCP over HTTP + validator + belief")
-    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, dense (default: all but dense)")
+    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, dense (default: all but dense)")
     p.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     p.set_defaults(fn=cmd_serve)

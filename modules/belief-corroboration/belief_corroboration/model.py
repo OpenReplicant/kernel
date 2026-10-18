@@ -18,6 +18,9 @@ cannot be wrong otherwise):
   F, A      = the number of distinct works (the evidence claims' subjects) for and against; a work
               counted on both sides counts on neither; extractor agents do not make works dependent
   belief    = (F + 1) / (F + A + 2)     (no evidence: 0.5; one work for: 0.67; one against: 0.33)
+
+Verification (D-67): a claim that a verifier refuted (its quote is not in its source, say) keeps at most
+REFUTED_CAP, whatever its corroboration: a verifier is never the claim's producer (invariant 5).
 """
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 MODEL = "urn:kk:module:belief-corroboration-v0"
+REFUTED_CAP = 0.1
 
 
 @dataclass(frozen=True)
@@ -40,6 +44,7 @@ class Claim:
     valid_to: datetime | None = None
     deprecated: bool = False
     entity: str | None = None     # the object entity's IRI, if the object is an entity
+    refuted_by: tuple = ()        # verifier modules that refuted the claim
 
 
 CITO = "http://purl.org/spar/cito/"
@@ -76,6 +81,15 @@ def independent_groups(claims: list[Claim]) -> int:
 
 def score(claims: list[Claim], functional: set[str]) -> dict[str, tuple[float, dict]]:
     """Belief for every non-deprecated claim: {claim id: (value, explanation)}."""
+    out = corroboration(claims, functional)
+    for c in claims:
+        if c.id in out and c.refuted_by:
+            value, why = out[c.id]
+            out[c.id] = (min(value, REFUTED_CAP), {**why, "refuted_by": sorted(c.refuted_by), "cap": REFUTED_CAP})
+    return out
+
+
+def corroboration(claims: list[Claim], functional: set[str]) -> dict[str, tuple[float, dict]]:
     live = [c for c in claims if not c.deprecated]
     by_key: dict[str, list[Claim]] = {}
     by_slot: dict[tuple[str, str], list[Claim]] = {}

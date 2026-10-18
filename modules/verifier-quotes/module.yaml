@@ -1,0 +1,44 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:verifier-quotes
+name: Quote verifier
+version: 0.1.0
+description: 'Checks that every extracted claim''s quote occurs in its source (M3-T6): an artifact''s bytes
+  from the artifact store (their sha256 checked too) or a file: source under the project root, compared
+  after Unicode (NFKC) and whitespace normalisation. Records supported or refuted with add_verification;
+  a source it cannot read here is left unverified. Belief models cap the belief of a claim whose quote is
+  refuted (D-67).'
+license: Apache-2.0
+kind: processor
+slots:
+- verifier
+protected: false
+agent:
+  iri: urn:kk:agent:verifier-quotes
+  db_role: kkm_verifier_quotes
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m verifier_quotes
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_verifier_quotes (kk_authenticator)
+    KK_ARTIFACTS: the artifact store (default ~/.local/share/knowledge-kernel/artifacts)
+    KK_SOURCE_ROOT: 'where file: sources resolve (default the working directory)'
+    KK_SWEEP_SECONDS: longest wait between passes (default 30)
+accepts:
+- kernel_change_set notifications
+produces:
+- add_verification
+triggers:
+- type: notify
+  spec: kernel_change_set
+- type: schedule
+  spec: every KK_SWEEP_SECONDS
+mcp:
+  expose: []
+migration: migration.sql

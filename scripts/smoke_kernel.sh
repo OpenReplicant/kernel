@@ -37,7 +37,9 @@ export KK_MCP_URL="http://127.0.0.1:$port/mcp"
 log=$(mktemp)
 # D-61: dense recall when Postgres has pgvector and python has fastembed (KK_REQUIRE_DENSE=1 makes their
 # absence a failure, as in CI); KK_RERANK=1: the dense worker also downloads the cross-encoder (D-66).
-parts=mcp,validator,belief,recall
+parts=mcp,validator,belief,recall,quotes
+# M3-T6: the quote verifier reads file: sources under the repository and artifacts from a fresh store.
+export KK_SOURCE_ROOT="$root" KK_ARTIFACTS="$(mktemp -d)"
 if [ "$(psql -d "$db" -tAc "select to_regclass('recall_dense.vec') is not null")" = t ] \
    && $py -c 'import fastembed' 2> /dev/null; then
   parts=$parts,dense
@@ -81,6 +83,8 @@ fi
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_recall.py"
 # D-62: belief from works that support or refute a proposition.
 $py "$root/scripts/e2e_evidence.py"
+# M3-T6: the quote verifier catches a fabricated quote; belief caps it (D-67).
+$py "$root/scripts/e2e_quotes.py"
 # D-61: dense recall fused with BM25.
 case $parts in
   *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;
