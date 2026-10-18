@@ -96,7 +96,7 @@ runs one query to see whether the change set added a claim matching the worker's
 (`S P O`, e.g. `? bbo:has_nextFlowNode ?`), and a periodic sweep catches anything missed. The worker
 then recomputes what it needs and submits change sets.
 
-**Proposed (D-83, owner to confirm after a spike): a live graph and detectors in the kernel, reactors
+**Proposed (D-83, owner to confirm; the spike passed): a live graph and detectors in the kernel, reactors
 outside.**
 
 ```
@@ -115,7 +115,8 @@ outside.**
   set, so it is never behind. Entities are nodes; current claims with an entity object are edges
   carrying the claim id, predicate, belief and scope; superseded, retracted or redacted claims leave the
   graph (their history stays in the claims). Queried in openCypher, read-only, with row-level security
-  (AGE 1.7, which means Postgres 18).
+  (AGE 1.7.0, released for Postgres 17 too). The spike (`docs/spikes/D83-age.md`) passed: 11 checks, and
+  at 50k claims the graph adds about 2 ms to an apply and three detectors about 20 ms more.
 - **Detectors are separate from reactors.** A detector is data (a pattern registered by a module or a
   person), evaluated by the kernel at apply time against everything stored, anchored on what changed;
   it records an event when a match forms or dissolves. Any number of reactors subscribe to a detector's
