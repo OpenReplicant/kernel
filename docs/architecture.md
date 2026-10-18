@@ -88,6 +88,7 @@ Six invariants are enforced by the database itself, not by a model's judgment:
 
 ## Read next
 
+- `docs/developer-guide.md`: the moving parts, the interfaces, and where to plug in.
 - `docs/spec.md`: the specification.
 - `docs/modules.md`: what each module takes in and gives out.
 - `docs/demo.md`: the process demo.
