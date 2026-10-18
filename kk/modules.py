@@ -36,6 +36,11 @@ SANDBOXED = WORKERS | {"command"}
 GRANTS = {"reach", "egress", "memory", "pids"}
 
 
+def module_agents(root: Path) -> set[str]:
+    """The agent IRIs the modules in this repository install (urn:kk:agent:<module>)."""
+    return {(yaml.safe_load(m.read_text()).get("agent") or {}).get("iri") for m in root.glob("modules/*/module.yaml")}
+
+
 def check(manifest: dict, root: Path, allow_license: bool) -> list[str]:
     import jsonschema
     schema = json.loads((root / "kernel/schemas/module.schema.json").read_text())

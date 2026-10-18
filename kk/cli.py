@@ -106,13 +106,9 @@ def cmd_person(a) -> None:
     print(json.dumps(out))
 
 
-def module_agents() -> set[str]:
-    """The agent IRIs the modules in this repository install (urn:kk:agent:<module>)."""
-    return {(yaml.safe_load(m.read_text()).get("agent") or {}).get("iri") for m in ROOT.glob("modules/*/module.yaml")}
-
-
 def cmd_agent(a) -> None:
-    if f"urn:kk:agent:{a.name}" in module_agents():   # a module installed later would find its agent taken
+    from .modules import module_agents
+    if f"urn:kk:agent:{a.name}" in module_agents(ROOT):   # a module installed later would find its agent taken
         sys.exit(f"refused: urn:kk:agent:{a.name} is a module's agent; choose another name")
     with admin() as conn:
         out = add_identity(conn, f"agent_{a.name.replace('-', '_')}", f"urn:kk:agent:{a.name}", "software",
