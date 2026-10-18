@@ -142,6 +142,15 @@ profile:
     note: a package is its Package URL (pkg:pypi/..., pkg:npm/..., pkg:golang/..., pkg:cargo/...); version as owl:versionInfo,
       name as rdfs:label, the repository it is in as dcterms:isPartOf
     load_when: always (milestone 3 — repositories)
+  - id: dqv
+    owns: measurements of quality — a metric, the value measured, what it was computed on (D-71); eval scores (spec §12)
+    iri: http://www.w3.org/ns/dqv#
+    file: dqv.ttl
+    license: W3C Software and Document License
+    pin: DQV 2016-12-15 (W3C Working Group Note), subset (revision in owl:versionInfo) cut by scripts/vocab_subset.py; upstream sha256 in the file header
+    note: a measurement is one observed claim (subject = the eval run, predicate = dqv:value, qualifiers dqv:isMeasurementOf
+      the metric and dqv:computedOn the eval set), not a node per measurement (as for SOSA, D-47)
+    load_when: always (milestone 3 — evaluation)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

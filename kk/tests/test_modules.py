@@ -7,7 +7,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT)]
-from kk.modules import grant, service  # noqa: E402
+from kk.modules import grant, module_agents, service  # noqa: E402
 
 ok = 0
 
@@ -62,5 +62,8 @@ check(svc["volumes"] == ["kk-artifacts:/artifacts:ro"] and svc["environment"]["K
       and "kk-artifacts" in vq["volumes"], "a worker that requires the artifact store reads it, read-only")
 check("volumes" not in service("recall-index", manifest("recall-index"), "/x.env", "img")["services"]["module-recall-index"],
       "other workers get no volume")
+
+check({"urn:kk:agent:evaluator", "urn:kk:agent:verifier-quotes"} <= module_agents(ROOT),
+      "kk agent add knows the modules' agents, so it refuses their names")
 
 print(f"D-55 sandbox policy: {ok} checks passed")

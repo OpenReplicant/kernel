@@ -107,6 +107,9 @@ def cmd_person(a) -> None:
 
 
 def cmd_agent(a) -> None:
+    from .modules import module_agents
+    if f"urn:kk:agent:{a.name}" in module_agents(ROOT):   # a module installed later would find its agent taken
+        sys.exit(f"refused: urn:kk:agent:{a.name} is a module's agent; choose another name")
     with admin() as conn:
         out = add_identity(conn, f"agent_{a.name.replace('-', '_')}", f"urn:kk:agent:{a.name}", "software",
                            a.label or a.name, ["kk_agent"], password(a))
@@ -126,14 +129,15 @@ def cmd_init(a) -> None:
         installed = conn.execute("select to_regclass('kernel.agent') is not null").fetchone()[0]
     if installed:
         # An existing kernel (kernel v0 is frozen): install the default modules added since, as `kk module
-        # install` does (a module whose role exists is installed), then the vocabulary packs (keyed by
-        # version, so what is there stays as it is).
+        # install` does (a module whose agent this kernel has is installed; roles are shared by every
+        # database in the cluster, so they do not tell), then the vocabulary packs (keyed by version, so
+        # what is there stays as it is).
         for f in migrations(packs=not a.no_packs)[2:]:
             manifest = f.parent / "module.yaml"
-            role = ((yaml.safe_load(manifest.read_text()).get("agent") or {}).get("db_role")
-                    if f.name == "migration.sql" and manifest.exists() else None)
+            agent = ((yaml.safe_load(manifest.read_text()).get("agent") or {}).get("iri")
+                     if f.name == "migration.sql" and manifest.exists() else None)
             with admin() as conn:
-                if role and conn.execute("select 1 from pg_roles where rolname = %s", (role,)).fetchone():
+                if agent and conn.execute("select 1 from kernel.agent where iri = %s", (agent,)).fetchone():
                     continue
                 conn.execute("set client_min_messages = warning")
                 conn.execute(f.read_text())

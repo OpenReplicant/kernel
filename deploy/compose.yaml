@@ -92,8 +92,7 @@ services:
 
 volumes:
   db-data:
-  kk-artifacts:
-    name: kk-artifacts      # `kk up` and `kk scan` (docker compose run -v kk-artifacts:/artifacts) write here
+  kk-artifacts:             # per project: `docker compose run -v kk-artifacts:/artifacts` resolves to it too
 
 networks:
   # Internal: module containers reach Postgres here and nothing else (no route out).

@@ -1,7 +1,7 @@
 """kk module install DIR: put a module from this repository into a running kernel, sandboxed (T18, D-43).
 
 1. Check the manifest (kernel/schemas/module.schema.json) and its license (D-11: permissive or LGPL).
-2. Apply its migration (its role and agent row; views it adds to `api`) unless its role exists.
+2. Apply its migration (its role and agent row; views it adds to `api`) unless this kernel has its agent.
 3. Give its role its own login: the module acts only as itself and cannot switch roles (D-37).
 4. For a worker (runtime python-service or container) or a command, write a compose service to
    OUT/<name>.yaml and its login to OUT/<name>.env (never committed). The service runs locked down:
@@ -34,6 +34,11 @@ PERMISSIVE = {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "PSF-2
 WORKERS = {"python-service", "container"}
 SANDBOXED = WORKERS | {"command"}
 GRANTS = {"reach", "egress", "memory", "pids"}
+
+
+def module_agents(root: Path) -> set[str]:
+    """The agent IRIs the modules in this repository install (urn:kk:agent:<module>)."""
+    return {(yaml.safe_load(m.read_text()).get("agent") or {}).get("iri") for m in root.glob("modules/*/module.yaml")}
 
 
 def check(manifest: dict, root: Path, allow_license: bool) -> list[str]:
@@ -116,13 +121,14 @@ def install(conn, folder: Path, root: Path, out: Path, db_host: str, image: str,
     role = manifest["agent"].get("db_role")
     result = {"module": manifest["id"], "version": str(manifest["version"]), "role": role}
 
-    exists = role and conn.execute("select 1 from pg_roles where rolname = %s", (role,)).fetchone()
+    # Installed when this kernel has its agent (roles are shared by every database in the cluster).
+    exists = conn.execute("select 1 from kernel.agent where iri = %s", (manifest["agent"].get("iri"),)).fetchone()
     migration = folder / manifest.get("migration", "migration.sql")
     if not exists and migration.exists():
         conn.execute("set client_min_messages = warning")
         conn.execute(migration.read_text())
         conn.execute("reset role")
-    result["migration"] = "applied" if not exists and migration.exists() else "skipped (role exists)" if exists else "none"
+    result["migration"] = "applied" if not exists and migration.exists() else "skipped (installed)" if exists else "none"
 
     if manifest["runtime"]["type"] in SANDBOXED:
         from psycopg import sql

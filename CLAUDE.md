@@ -57,7 +57,7 @@ python shapes/tests/test_shapes.py                                         # SHA
 python scripts/check_manifests.py                                          # manifests and slots
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer) on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims) on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3, M3-G3: modules in their own sandboxed containers; needs Docker
 sh scripts/e2e_devops.sh                                                   # M2-T5–T7, M2-G2: devops demo, MAPE-K loop, Devops view; needs Docker, gitleaks
@@ -75,7 +75,7 @@ kernel/
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl (module contract only), dcterms.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,
-                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, codemeta.ttl (packages),
+                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, codemeta.ttl (packages), dqv.ttl (eval scores),
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
@@ -83,7 +83,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,
                  view-bpm, observer-prometheus, anomaly, skill-adaptation-planning, actuator-compose,
                  view-devops; milestone 3: encoder-papers, recall-index (BM25, default), recall-dense (embeddings + BM25, opt-in),
-                 verifier-quotes (quotes occur in their sources);
+                 verifier-quotes (quotes occur in their sources, or in the claims they cite), evaluator (eval scores as DQV claims);
                  _template/
 kk/              the kk command (up, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)

@@ -1,0 +1,29 @@
+{
+  "stage": "belief",
+  "models": {
+    "claude-haiku-sub-agent-hybrid-300-verified": 1200
+  },
+  "propositions": 300,
+  "stance_claims": 258,
+  "verdicts_without_quote": 0,
+  "stance_quotes_verified": {
+    "refuted": 1,
+    "supported": 307
+  },
+  "supported": 124,
+  "contradicted": 64,
+  "no_evidence": 112,
+  "auc_supported_vs_contradicted": 0.9476,
+  "sign_accuracy": 0.883,
+  "undecided_share": {
+    "supported": 0.0565,
+    "contradicted": 0.0938,
+    "no_evidence": 0.7411
+  },
+  "mean_belief": {
+    "supported": 0.6577,
+    "contradicted": 0.3513,
+    "no_evidence": 0.5183
+  },
+  "model": "belief-corroboration, evidence rule (D-62): (works for + 1) / (works for + against + 2)"
+}

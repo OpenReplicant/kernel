@@ -87,3 +87,13 @@ KK_EVAL_SPLIT=train KK_EVAL_PROMPT=strict python eval/scifact/run.py prompts --n
 KK_EVAL_PROMPT=strict python eval/scifact/run.py verify --n 300 --answers answers.jsonl --prompts prompts.jsonl --policy first
 ```
 
+
+## Cited quotes checked against the kernel (M3-G2, D-71; 2026-10-18)
+
+With the quote verifier running (0.2.0), each stance claim's quotes (`<paper> cito:supports|refutes
+<proposition>`, the paper cited by its IRI) are checked against that paper's claims in the kernel. On
+Haiku's verdicts for the 300 dev claims: 308 stance claims, **307 quotes supported, 1 refuted** (the
+model added a word: "…C. difficile infection" for the paper's "…C. difficile."), capped by belief;
+belief otherwise unchanged (AUC 0.948, sign accuracy 0.883). Score verdicts recorded earlier by another
+agent with `belief --no-submit` (idempotency keys are global). Run files go into the kernel as DQV
+measurements with the evaluator (`eval/README.md`).

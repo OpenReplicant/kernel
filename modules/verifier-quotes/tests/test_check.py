@@ -50,6 +50,14 @@ with tempfile.TemporaryDirectory() as d:
     check("an artifact not in this store is not judged", one(artifact="1" * 64, quote="x") is None)
     check("a path outside the source root is not read", one(source_uri="file:../secret.txt", quote="outside") is None)
     check("an http source is not fetched", one(source_uri="https://example.org/a", quote="x") is None)
+    kernel = {"urn:kk:paper:p1": [("c1", "Aspirin lowers the risk of stroke."), ("c2", "A cohort study.")]}
+    v, d = verdict([{"source_uri": "urn:kk:paper:p1", "quote": "lowers the risk of stroke"}], store, root, kernel)
+    check("D-71 a quote of an entity's claims is supported, citing those claims",
+          v == "supported" and d["references"][0]["claims"] == ["c1", "c2"])
+    check("D-71 a quote the entity's claims do not contain is refuted",
+          verdict([{"source_uri": "urn:kk:paper:p1", "quote": "raises the risk"}], store, root, kernel)[0] == "refuted")
+    check("D-71 an entity the kernel has no claims about is not judged",
+          verdict([{"source_uri": "urn:kk:paper:p2", "quote": "x"}], store, root, kernel)[0] is None)
     check("one refuted quote among several refutes the claim",
           verdict([{"source_uri": "file:docs/procedure.md", "quote": "within two days of shipping"},
                    {"artifact": sha, "quote": "the dose doubled"}], store, root)[0] == "refuted")

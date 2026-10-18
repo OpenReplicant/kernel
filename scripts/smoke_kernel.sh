@@ -85,6 +85,8 @@ KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_recall.py"
 $py "$root/scripts/e2e_evidence.py"
 # M3-T6: the quote verifier catches a fabricated quote; belief caps it (D-67).
 $py "$root/scripts/e2e_quotes.py"
+# M3-G2: an answer citing the kernel is checked against the claims it cites; eval scores are claims (D-71).
+$py "$root/scripts/e2e_g2.py"
 # D-61: dense recall fused with BM25.
 case $parts in
   *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;
