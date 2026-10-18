@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68"]
+
+[project]
+name = "Acme_Tools"
+version = "1.4.2"
+description = "Fixture: a Python package"
+dependencies = [
+  "requests>=2.31,<3",
+  "PyYAML==6.0.2",
+  "tomli; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]

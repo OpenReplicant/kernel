@@ -1,0 +1,4 @@
+# pinned for CI
+ruff==0.6.9  # linter
+-r requirements.txt
+git+https://example.org/x.git

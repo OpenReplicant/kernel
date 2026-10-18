@@ -133,6 +133,15 @@ profile:
     note: the object may be a proposition (`urn:kk:proposition:<hash>`, rdfs:label its text), not only another work;
       evidence `extracted` with the sentences that bear on it as quotes
     load_when: always (milestone 3 — papers)
+  - id: codemeta
+    owns: software packages and their dependencies — source code, requirements, suggestions, programming language (D-68)
+    iri: http://schema.org/
+    file: codemeta.ttl
+    license: Apache-2.0 (term IRIs only; schema.org text is not copied)
+    pin: CodeMeta v3 terms (https://codemeta.github.io/terms/), the schema.org subset it uses
+    note: a package is its Package URL (pkg:pypi/..., pkg:npm/..., pkg:golang/..., pkg:cargo/...); version as owl:versionInfo,
+      name as rdfs:label, the repository it is in as dcterms:isPartOf
+    load_when: always (milestone 3 — repositories)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

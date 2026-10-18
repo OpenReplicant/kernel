@@ -82,6 +82,9 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   recalled claims gained a little (0.731); per subject on all its text claims gained most (0.747, D-66).
   And hybrid scores are min-max normalised over the candidates, so the order depends on how many are
   recalled: compare runs at the same limit.
+- Two claims with the same content from one agent are one claim to `kk import` (it merges by content,
+  keeping one reference set): give each source file's claims their own subject when they would repeat
+  (a requirements file requires its pins; it is part of the package beside it, D-68).
 - Free model endpoints are rate-limited upstream per model (429 from a shared pool even with quota
   left); probe a few and record which model answered.
 

@@ -1,0 +1,27 @@
+@prefix schema:  <http://schema.org/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+# Software packages and their dependencies (tier: profile; M3-T2, D-68): the schema.org terms CodeMeta
+# uses for software (https://codemeta.github.io/terms/), declared here by IRI with our own labels; no
+# schema.org text is copied (schema.org is CC BY-SA 3.0). IRIs as CodeMeta's JSON-LD context writes them
+# (http://schema.org/). The kernel has no `schema:` prefix (kernel v0 is frozen), so claims use full IRIs.
+# A package is named by its Package URL (pkg:pypi/psycopg, pkg:npm/react, ...): one identity across
+# repositories and SBOM tools.
+
+<https://w3id.org/knowledge-kernel/codemeta>
+    a owl:Ontology ;
+    rdfs:label "Knowledge Kernel software profile (CodeMeta / schema.org terms)" ;
+    dcterms:source <https://codemeta.github.io/terms/> ;
+    owl:versionInfo "0.1.0" .
+
+schema:SoftwareSourceCode a owl:Class ; rdfs:label "software source code" ;
+    rdfs:comment "A repository or a package built from it; named by its Package URL when it has one." .
+schema:softwareRequirements a owl:ObjectProperty ; rdfs:label "software requirements" ;
+    rdfs:comment "A package this software needs to run or build (as CodeMeta uses it). Qualifier schema:version: the required versions, as the manifest writes them." .
+schema:softwareSuggestions a owl:ObjectProperty ; rdfs:label "software suggestions" ;
+    rdfs:comment "An optional dependency: for optional features or development (as CodeMeta uses it)." .
+schema:programmingLanguage a owl:DatatypeProperty ; rdfs:label "programming language" .
+schema:version a owl:DatatypeProperty ; rdfs:label "version" ;
+    rdfs:comment "Used here only as the qualifier on a requirement: the versions required." .

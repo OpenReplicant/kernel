@@ -27,6 +27,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 ENCODER = "urn:kk:agent:self-encoder"
 VERSION = "http://www.w3.org/2002/07/owl#versionInfo"
+REQUIRES = "http://schema.org/softwareRequirements"
+KERNEL_PKG = "pkg:pypi/knowledge-kernel"
+DEPS = """select c.object_entity, c.qualifiers->>'http://schema.org/version', c.status from api.claims c
+          where c.subject = %s and c.predicate = %s and c.object_entity = any(%s)"""
 checks = []
 
 
@@ -93,6 +97,13 @@ def main() -> int:
         unreferenced = q("""select count(*) from api.claims c where c.attributed_to = %s
                             and not exists (select 1 from api.claim_references r where r.claim_id = c.id)""", ENCODER)
         check("every encoder claim references its file artifact", unreferenced == [(0,)], str(unreferenced))
+        deps = {r[0]: r[1] for r in q(DEPS, KERNEL_PKG, REQUIRES, ["pkg:pypi/psycopg", "pkg:pypi/pyjwt"])
+                if r[2] != "deprecated"}
+        check("M3-T2 pyproject.toml: the package requires its dependencies, with the version as written",
+              deps == {"pkg:pypi/psycopg": "==3.3.6", "pkg:pypi/pyjwt": "==2.15.1"}, json.dumps(deps))
+        titles = q("select count(*) from api.claims where predicate = %s and subject like 'urn:kk:repo:%%/README.md'",
+                   "http://purl.org/dc/terms/title")
+        check("M3-T2 Markdown documents and their headings are in the kernel", titles[0][0] >= 1, str(titles))
         again = scan(ROOT, artifacts)
         settle()
         check("re-scanning an unchanged repository changes nothing", statuses() == st,
@@ -108,6 +119,9 @@ def main() -> int:
             old_version = next(line.split(": ")[1] for line in text.splitlines() if line.startswith("version: "))
             manifest.write_text(text.replace(f"version: {old_version}", "version: 9.9.9", 1))
             (repo / "modules/ingest-filter-gitleaks/migration.sql").unlink()
+            py = repo / "pyproject.toml"
+            py.write_text(py.read_text().replace('"psycopg[binary]==3.3.6"', '"psycopg[binary]==3.4.0"')
+                          .replace('"PyJWT==2.15.1", ', ""))
             token = "ghp_" + "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(36))
             leaky = repo / "modules/validator-shacl/migration.sql"
             leaky.write_text(leaky.read_text() + f"\n-- github_token: {token}\n")
@@ -129,6 +143,18 @@ def main() -> int:
             check("the old version claim is deprecated as superseded, pointing at its replacement",
                   last.get("status") == "deprecated" and last.get("reason") == "superseded" and last.get("replaced_by"),
                   json.dumps(last)[:160])
+            deps = q(DEPS, KERNEL_PKG, REQUIRES, ["pkg:pypi/psycopg", "pkg:pypi/pyjwt"])
+            live = {(r[0], r[1]) for r in deps if r[2] != "deprecated"}
+            check("M3-T2 a changed manifest supersedes: the new psycopg range is current, PyJWT is gone",
+                  ("pkg:pypi/psycopg", "==3.4.0") in live and not any(d == "pkg:pypi/pyjwt" for d, _ in live),
+                  json.dumps(sorted(live)))
+            old_dep = q("""select c.object_entity, api.explain(c.id)->'status'->-1 from api.claims c
+                           where c.subject = %s and c.predicate = %s and c.qualifiers->>'http://schema.org/version' in ('==3.3.6', '==2.15.1')""",
+                        KERNEL_PKG, REQUIRES)
+            reasons = {r[0]: (r[1] or {}).get("reason") for r in old_dep}
+            check("M3-T2 the old psycopg requirement is superseded; the removed PyJWT one retracted",
+                  reasons.get("pkg:pypi/psycopg") == "superseded" and reasons.get("pkg:pypi/pyjwt") == "retracted",
+                  json.dumps(reasons))
             removed = as_encoder("""select count(*) filter (where c.status = 'deprecated'), count(*) from api.claims c
                            join api.change_sets s on s.id = c.change_set
                            where s.idempotency_key like 'self-encoder:modules/ingest-filter-gitleaks/migration.sql:%%'""")

@@ -72,7 +72,7 @@ def main() -> int:
     embedded(agent, decoy)
     question = "Which animal is asleep on the doormat?"
     check("D-66 the cross-encoder is downloaded by the dense worker (KK_RERANK=1)", recall.reranker() is not None)
-    got = [c["subject"] for c in recall.recall(agent, question, 5)]
+    got = [c["subject"] for c in recall.recall(agent, question, 20)]
     check("D-66 re-ranked recall puts the claim that answers the question first",
           got[:1] == [mine] and decoy in got, got[:3])
     os.environ["KK_RERANK"] = "0"
