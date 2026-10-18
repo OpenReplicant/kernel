@@ -97,7 +97,7 @@ scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mj
 examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure; bpi2019: the documented model)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/), scifact, rcaeval and bpi2019 (run.py; data fetched, not committed)
-docs/            spec, milestone-1..5, decisions, modules (generated catalog), demo, interaction-research, harness (drop-in guide), mcp-servers, sources, recall-research, benchmarks; spikes/
+docs/            spec, architecture (plain language), milestone-1..5, decisions, modules (generated catalog), demo, interaction-research, harness (drop-in guide), mcp-servers, sources, recall-research, benchmarks; spikes/
 ```
 
 ## Current milestone
