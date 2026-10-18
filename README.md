@@ -1,9 +1,15 @@
 # Knowledge Kernel
 
-A small knowledge kernel that drops into any agent harness. One Postgres holds every claim, each
-attributed, referenced, belief-scored and scoped. Its three jobs are ingestion, processing and recall,
-each done by a swappable default module; everything else is a module too. Use it over MCP alone, or
-add the skill file, harness hooks and further modules (`docs/harness.md`).
+A knowledge management system where nobody has to write the knowledge down. It is captured from the
+conversations, logs, documents and code where work already happens; every fact cites its source, shows how
+sure we are, and is reviewed by a person before it counts (D-84).
+
+- **For developers: an agent memory layer.** A small kernel that drops into any agent harness. One Postgres
+  holds every claim, each attributed, referenced, belief-scored and scoped. Use it over MCP alone, or add the
+  skill file, harness hooks and further modules (`docs/harness.md`).
+- **For organisations: distributions.** A distribution is a preset bundle of modules, vocabularies, skills and
+  views that does one job, installed as its own stack. The first: organisation and process maps from
+  conversations.
 
 - **How it works, in plain language:** `docs/architecture.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
