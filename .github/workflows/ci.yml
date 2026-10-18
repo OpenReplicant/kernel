@@ -133,6 +133,8 @@ jobs:
         run: sh scripts/e2e_module.sh
       - name: Devops demo, the MAPE-K loop and the Devops view, sandboxed (M2-T5–T7, M2-G2)
         run: KK_REQUIRE_UI=1 sh scripts/e2e_devops.sh
+      - name: Zero to a cited answer with the Docker stack (M3-G1)
+        run: KK_G1_STACK=1 KK_DB_PORT=55432 python scripts/e2e_g1.py
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env

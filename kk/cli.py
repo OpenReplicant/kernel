@@ -36,6 +36,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import psycopg
+import yaml
 from psycopg import sql
 
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[1])
@@ -124,7 +125,19 @@ def cmd_init(a) -> None:
     with admin() as conn:
         installed = conn.execute("select to_regclass('kernel.agent') is not null").fetchone()[0]
     if installed:
-        print("kernel already installed; nothing to do", file=sys.stderr)
+        # An existing kernel (kernel v0 is frozen): install the default modules added since, as `kk module
+        # install` does (a module whose role exists is installed), then the vocabulary packs (keyed by
+        # version, so what is there stays as it is).
+        for f in migrations(packs=not a.no_packs)[2:]:
+            manifest = f.parent / "module.yaml"
+            role = ((yaml.safe_load(manifest.read_text()).get("agent") or {}).get("db_role")
+                    if f.name == "migration.sql" and manifest.exists() else None)
+            with admin() as conn:
+                if role and conn.execute("select 1 from pg_roles where rolname = %s", (role,)).fetchone():
+                    continue
+                conn.execute("set client_min_messages = warning")
+                conn.execute(f.read_text())
+            print(f"applied {f.relative_to(ROOT)}", file=sys.stderr)
     else:
         for f in migrations(packs=not a.no_packs):
             with admin() as conn:  # a fresh session per file: files SET ROLE

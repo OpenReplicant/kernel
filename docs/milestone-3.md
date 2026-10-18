@@ -28,7 +28,7 @@ Rules carry over: kernel v0 stays frozen; every new module runs sandboxed under 
 
 | Gate | Check | Status |
 | --- | --- | --- |
-| M3-G1 | **Zero to a cited answer on your own repository**: clone, `kk up <project>`, open the harness: at most three commands and ten minutes, and the agent's first answer about the project cites claims with belief (scripted in CI) | |
+| M3-G1 | **Zero to a cited answer on your own repository**: clone, `kk up <project>`, open the harness: at most three commands and ten minutes, and the agent's first answer about the project cites claims with belief (scripted in CI) | passed (D-69): clone, `kk up`, the harness: the first prompt recalls the project's packages cited with belief, 68 s on the Docker stack (CI) and 10 s without; a moved checkout is reported stale and `kk up` refreshes it |
 | M3-G2 | **Evidence the kernel helps**: on the recall eval, answers with the kernel cite valid claims and score at least as well as without it; the scores are claims | |
 | M3-G3 | Every new module installs with `kk module install` under the default policy; the kernel tests and all earlier gates still pass | |
 

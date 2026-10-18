@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from urllib.parse import quote
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -67,8 +68,8 @@ def yaml_lines(text: str):
 class Builder:
     """Collects ops for one file's change set."""
 
-    def __init__(self, rel: str, data: bytes, artifacts_dir: Path):
-        self.rel, self.sha = rel, hashlib.sha256(data).hexdigest()
+    def __init__(self, rel: str, data: bytes, artifacts_dir: Path, key: str = "self-encoder:"):
+        self.rel, self.sha, self.key = rel, hashlib.sha256(data).hexdigest(), key
         artifacts_dir.mkdir(parents=True, exist_ok=True)
         stored = artifacts_dir / self.sha
         if not stored.exists():
@@ -100,7 +101,7 @@ class Builder:
         self.ops.append(op)
 
     def change_set(self) -> dict:
-        return {"idempotency_key": f"self-encoder:{self.rel}:{self.sha[:16]}", "attributed_to": AGENT,
+        return {"idempotency_key": f"{self.key}{self.rel}:{self.sha[:16]}", "attributed_to": AGENT,
                 "target_scope": SCOPE, "ops": self.ops}
 
 
@@ -205,12 +206,18 @@ def encode_sql(b: Builder, text: str, module_ids: dict) -> None:
         b.claim(obj, "dcterms:isPartOf", owner, (i, i))
 
 
-def encode_file(repo: Path, rel: str, artifacts_dir: Path) -> dict:
+def key_prefix(repo: Path, name: str | None = None) -> str:
+    """Change sets of one repository: 'self-encoder:<name>:<path>:<sha16>' (D-69), so two repositories
+    with the same file never share a key, and a re-scan supersedes only its own repository's claims."""
+    return f"self-encoder:{quote(anyrepo.repo_name(repo, name), safe='')}:"
+
+
+def encode_file(repo: Path, rel: str, artifacts_dir: Path, name: str | None = None) -> dict:
     data = (repo / rel).read_bytes()
     text = data.decode("utf-8", errors="replace")
-    b = Builder(rel, data, artifacts_dir)
+    b = Builder(rel, data, artifacts_dir, key_prefix(repo, name))
     if anyrepo.wanted(rel):
-        anyrepo.encode(b, repo, rel, text)
+        anyrepo.encode(b, repo, rel, text, name)
         return b.change_set()
     module_ids = {p.parent.name: yaml.safe_load(p.read_text())["id"] for p in repo.glob("modules/*/module.yaml")}
     if rel.endswith("/module.yaml"):

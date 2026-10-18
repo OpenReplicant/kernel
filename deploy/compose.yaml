@@ -18,8 +18,9 @@
 # reaches Postgres and nothing else (D-43):
 #   KK_ADMIN_URL=postgresql://postgres:<password>@localhost:5432/kk kk module install modules/<name>
 #   docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml --env-file deploy/.env up -d
-# KK_SERVE_PARTS chooses what the kernel container runs (default mcp,validator,belief,recall): leave out a
-# part that runs as its own module container.
+# KK_SERVE_PARTS chooses what the kernel container runs (default mcp,validator,belief,recall,quotes): leave
+# out a part that runs as its own module container. The quote verifier reads the artifact store (the
+# kk-artifacts volume, read-only), where `kk up` / `kk scan` put what they read (D-69).
 
 name: knowledge-kernel
 
@@ -59,6 +60,8 @@ services:
     environment:
       KK_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/kk
       KK_AUTHENTICATOR_PASSWORD: ${KK_AUTHENTICATOR_PASSWORD:?set in .env}
+    volumes:
+      - kk-artifacts:/artifacts   # mounted first, writable: a fresh volume takes the image's owner (nobody)
     depends_on:
       db: {condition: service_healthy}
     restart: "no"
@@ -67,10 +70,13 @@ services:
   # One login that switches to each part's own role; never a superuser, never given to agents (D-37).
   kernel:
     <<: *kk
-    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall}"]
+    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall,quotes}"]
     environment:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
+      KK_ARTIFACTS: /store      # read-only here; `kk scan` writes at /artifacts (docker compose run -v)
+    volumes:
+      - kk-artifacts:/store:ro
     depends_on:
       init: {condition: service_completed_successfully}
     restart: unless-stopped
@@ -86,6 +92,8 @@ services:
 
 volumes:
   db-data:
+  kk-artifacts:
+    name: kk-artifacts      # `kk up` and `kk scan` (docker compose run -v kk-artifacts:/artifacts) write here
 
 networks:
   # Internal: module containers reach Postgres here and nothing else (no route out).

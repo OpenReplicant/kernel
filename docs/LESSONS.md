@@ -85,6 +85,11 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - Two claims with the same content from one agent are one claim to `kk import` (it merges by content,
   keeping one reference set): give each source file's claims their own subject when they would repeat
   (a requirements file requires its pins; it is part of the package beside it, D-68).
+- `docker compose run -v VOL:/path` does not replace a read-only mount the service already has at the same
+  path: mount the writer elsewhere. And a fresh named volume takes the image directory's owner only if its
+  first mount is writable: let the first service to start (init) mount it read-write (D-69).
+- An installed stack is not upgraded by a newer checkout unless `kk init` installs what was added and the
+  image is rebuilt: `kk up` builds every time (cached layers) and `kk init` adds new modules (D-69).
 - Free model endpoints are rate-limited upstream per model (429 from a shared pool even with quota
   left); probe a few and record which model answered.
 

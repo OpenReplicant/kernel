@@ -16,8 +16,13 @@ import sys
 
 COLUMNS = ("id, subject, predicate, object_entity, object_value, qualifiers, scope, evidence_type, "
            "attributed_to, status, belief, valid_from, valid_to")
+# A claim's searchable text: its literal value, the words of its subject and object IRIs, and its
+# predicate's name split at case changes (`softwareRequirements` -> "software Requirements"), so claims
+# between entities (a package and what it requires) are found too (D-69). The recall index uses it too.
 DOC = ("to_tsvector('english', coalesce(c.object_value->>'@value', '') || ' ' || "
-       "regexp_replace(c.subject, '[^[:alnum:]]+', ' ', 'g'))")
+       "regexp_replace(c.subject, '[^[:alnum:]]+', ' ', 'g') || ' ' || "
+       "regexp_replace(coalesce(c.object_entity, ''), '[^[:alnum:]]+', ' ', 'g') || ' ' || "
+       "regexp_replace(regexp_replace(c.predicate, '^.*[/#:]', ''), '([a-z])([A-Z])', '\\1 \\2', 'g'))")
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
@@ -105,11 +110,23 @@ def pool(limit: int) -> int:
     return max(limit, POOL) if reranker() else limit
 
 
-def passage(c: dict) -> str:
-    """What the cross-encoder reads of a claim: its literal value, else the words of its subject and object."""
+def words(iri: str | None) -> str:
+    """An IRI's last segment as words: `pkg:pypi/psycopg` -> "psycopg", `softwareRequirements` -> "software Requirements"."""
+    local = re.split(r"[/#]", iri or "")[-1]
+    return " ".join(re.split(r"[^0-9A-Za-z]+", re.sub(r"([a-z])([A-Z])", r"\1 \2", local))).strip()
+
+
+def literal(c: dict) -> str | None:
     value = (c.get("object_value") or {}).get("@value") if isinstance(c.get("object_value"), dict) else None
-    words = lambda iri: " ".join(re.split(r"[^0-9A-Za-z]+", (iri or "").rsplit("/", 1)[-1].rsplit("#", 1)[-1]))
-    return str(value) if value else f"{words(c.get('subject'))} {words(c.get('object_entity'))}".strip()
+    return str(value) if value else None
+
+
+def passage(c: dict) -> str:
+    """What the cross-encoder reads of a claim: its literal value, else its subject, predicate, object and
+    qualifiers as words ("knowledge kernel software Requirements psycopg version ==3.3.6")."""
+    return literal(c) or " ".join(filter(None, [words(c.get("subject")), words(c.get("predicate")),
+                                                words(c.get("object_entity")),
+                                                *(f"{words(k)} {v}" for k, v in (c.get("qualifiers") or {}).items())]))
 
 
 TEXTS = """select coalesce(jsonb_object_agg(subject, text), '{}'::jsonb) from (
@@ -136,7 +153,11 @@ def rerank(text: str, claims: list[dict], limit: int, texts: dict[str, str] | No
     for c in head:
         groups.setdefault(c.get("subject") or "", []).append(c)
     keys = list(groups)
-    docs = [(texts or {}).get(k) or "\n".join(passage(c) for c in groups[k])[:3000] for k in keys]
+    # The subject's text claims (TEXTS) and, written out, its recalled claims between entities, which
+    # TEXTS cannot hold (a package's requirements); without TEXTS, every recalled claim's passage.
+    docs = ["\n".join(dict.fromkeys(filter(None, [(texts or {}).get(k), *(passage(c) for c in groups[k]
+                                                                          if not (texts and literal(c)))])))[:3000]
+            for k in keys]
     scores = list(ce.rerank(text, docs))
     order = sorted(range(len(keys)), key=lambda i: -scores[i])
     return ([c for i in order for c in groups[keys[i]]] + tail)[:limit]
@@ -198,6 +219,7 @@ def render(claims: list[dict], prefixes: dict[str, str], header: str) -> str:
         obj = short(c["object_entity"], prefixes) if c["object_entity"] else \
             '"' + str((c["object_value"] or {}).get("@value", c["object_value"]))[:200] + '"'
         belief = "unscored" if c["belief"] is None else f"{c['belief']:.2f}"
+        quals = "; ".join(f"{re.split(r'[/#:]', k)[-1]} {v}" for k, v in (c.get("qualifiers") or {}).items())
         lines.append(f"- {short(c['subject'], prefixes)} {short(c['predicate'], prefixes)} {obj}"
-                     f"  [claim {c['id']}, belief {belief}]")
+                     + (f" ({quals})" if quals else "") + f"  [claim {c['id']}, belief {belief}]")
     return "\n".join(lines)

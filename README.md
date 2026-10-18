@@ -16,12 +16,14 @@ With Docker and Python 3.12+, from a checkout:
 
 ```sh
 pip install -e .
-kk up ~/code/my-project        # the kernel in Docker, your and the agent's logins, MCP + skill + hooks in the project
+kk up ~/code/my-project        # the kernel in Docker, your and the agent's logins, MCP + skill + hooks, and the project read in
 cd ~/code/my-project && claude # approve the 'kernel' MCP server; the agent now recalls, cites and records
 ```
 
 `kk up` prints the UI address (http://127.0.0.1:8080/ui/) and your owner token for reviewing. Logins
-stay in `~/.config/knowledge-kernel`, never in the project; running it again changes nothing (D-57).
+stay in `~/.config/knowledge-kernel`, never in the project; running it again changes nothing but what
+changed in the project (D-57). It reads the project's packages, dependencies and documents in (D-68,
+D-69); when the checkout moves on, the session tells the agent, and `kk up` again refreshes it.
 
 ## Run it by hand
 

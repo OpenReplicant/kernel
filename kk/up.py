@@ -9,6 +9,9 @@
 3. The project: the MCP entry in .mcp.json (it names the login file, never the secret), the
    knowledge-kernel skill in .claude/skills/, and the hooks in .claude/settings.local.json. Merged
    into what is there: other servers, hooks and settings are kept; a file is written only if it changes.
+4. The project's contents (M3-G1, D-69): the repository encoder reads it as its own role (kk scan;
+   the ingest filter first), in the kernel image with the stack (it carries gitleaks), here with
+   --no-stack. Unchanged files change nothing; the session hook says when the checkout moved on.
 
 Prints the UI address, the owner's token (when KK_JWT_SECRET is known) and what changed. Running it
 again changes nothing.
@@ -71,11 +74,11 @@ def stack(env_file: Path) -> tuple[str, str]:
                "KK_JWT_SECRET": env.get("KK_JWT_SECRET") or secrets.token_urlsafe(48),
                **({"KK_DB_PORT": os.environ["KK_DB_PORT"]} if os.environ.get("KK_DB_PORT") else {})}
         write_secret(env_file, env)
-    image = "knowledge-kernel:local"
-    if subprocess.run(["docker", "image", "inspect", image], capture_output=True).returncode:
-        ca = os.environ.get("KK_BUILD_CA")    # a TLS-intercepting proxy's CA, as a build secret
-        subprocess.run(["docker", "build", "-q", "-t", image, *(["--secret", f"id=ca,src={ca}"] if ca else []),
-                        str(ROOT)], check=True, stdout=subprocess.DEVNULL)
+    # Built every time: Docker's layer cache makes an unchanged checkout a no-op, and an updated one is
+    # never run on an image of older code.
+    ca = os.environ.get("KK_BUILD_CA")    # a TLS-intercepting proxy's CA, as a build secret
+    subprocess.run(["docker", "build", "-q", "-t", "knowledge-kernel:local",
+                    *(["--secret", f"id=ca,src={ca}"] if ca else []), str(ROOT)], check=True, stdout=subprocess.DEVNULL)
     subprocess.run(["docker", "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file),
                     "up", "-d", "--wait", "db", "kernel", "caddy"], check=True, stdout=subprocess.DEVNULL)
     port = os.environ.get("KK_DB_PORT") or env.get("KK_DB_PORT") or "5432"
@@ -106,6 +109,27 @@ def login(admin_url: str, db_host: str | None, path: Path, role: str, iri: str, 
             else out["database_url"]
     write_secret(path, {"KK_DATABASE_URL": url})
     return True
+
+
+# ---------------------------------------------------------------- the project's contents
+def encode(folder: Path, admin_url: str, env_file: Path | None) -> dict:
+    """Scan the project into the kernel as the repository encoder; the scan's summary, or its error."""
+    from self_encoder.repo import commit
+    args = ["--name", folder.name] + (["--commit", c] if (c := commit(folder)) else [])
+    if env_file:   # the stack: the kernel image, the project read-only, artifacts in their volume
+        cmd = ["docker", "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file), "run",
+               "--rm", "--no-deps", "-v", f"{folder}:/repo:ro", "-v", "kk-artifacts:/artifacts",
+               "-e", "KK_ARTIFACTS=/artifacts", "-e", "KK_ROLE=kkm_self_encoder",
+               "kernel", "kk", "scan", "--repo", "/repo", *args]
+        env = os.environ
+    else:          # here, as the encoder's role through the admin login
+        cmd = [sys.executable, "-m", "kk", "scan", "--repo", str(folder), *args]
+        env = {**os.environ, "DATABASE_URL": admin_url, "KK_ROLE": "kkm_self_encoder"}
+    out = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    if out.returncode:
+        return {"error": (out.stderr or out.stdout).strip()[-600:]}
+    summary = json.loads(out.stdout.strip().splitlines()[-1])
+    return {k: summary[k] for k in ("repo", "commit", "files", "encoded", "blocked", "change_sets") if k in summary}
 
 
 # ---------------------------------------------------------------- the project
@@ -169,6 +193,7 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--agent", type=name, default="claude-code", help="the project's agent (default claude-code)")
     ap.add_argument("--no-stack", action="store_true", help="use the kernel at KK_ADMIN_URL; start nothing")
     ap.add_argument("--db-host", help="Postgres host:port as the harness reaches it (default: as KK_ADMIN_URL does)")
+    ap.add_argument("--no-scan", action="store_true", help="connect the project without reading its contents")
     a = ap.parse_args(argv)
     folder = a.project.resolve()
     if not folder.is_dir():
@@ -187,6 +212,8 @@ def main(argv: list[str]) -> None:
     changed += project(folder, agent_file)
     out = {"project": str(folder), "agent": f"urn:kk:agent:{a.agent}", "changed": changed,
            "owner_login": str(h / "owner.env")}
+    if not a.no_scan:
+        out["encoded"] = encode(folder, admin_url, None if a.no_stack else ROOT / "deploy/.env")
     if not a.no_stack:
         out["ui"] = "http://127.0.0.1:8080/ui/"
     if len(jwt) >= 32:
