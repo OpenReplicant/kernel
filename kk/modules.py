@@ -11,7 +11,8 @@
    only that service also joins (D-52), and a route out if granted. A module that requests network the
    policy does not grant is refused. A command's service is in the `run`
    profile: it reads its input from KK_INPUT (mounted read-only at /input) and keeps artifacts in the
-   kk-artifacts volume.
+   kk-artifacts volume. A worker that requires the artifact-store slot (the quote verifier) reads that
+   volume read-only.
 
 Then: docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml up -d (a worker), or
 KK_INPUT=DIR docker compose ... run --rm module-<name> ARGS... (a command, e.g. /input/log.csv).
@@ -76,6 +77,9 @@ def service(name: str, manifest: dict, env_file: str, image: str, g: dict | None
     if rt["type"] == "python-service":
         svc["working_dir"] = f"/kk/modules/{name}"
         svc["command"] = shlex.split(rt["entrypoint"])
+    if rt["type"] in WORKERS and any(r.get("slot") == "artifact-store" for r in manifest.get("requires", [])):
+        svc.update(environment={"KK_ARTIFACTS": "/artifacts"}, volumes=["kk-artifacts:/artifacts:ro"])
+        return {"services": {f"module-{name}": svc}, "volumes": {"kk-artifacts": {}}, **networks(g, svc)}
     if rt["type"] == "command":           # one-shot: docker compose run --rm module-<name> ARGS...
         words = shlex.split(rt["entrypoint"])
         svc.update(working_dir=f"/kk/modules/{name}", profiles=["run"], restart="no",

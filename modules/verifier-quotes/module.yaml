@@ -30,6 +30,8 @@ runtime:
     KK_ARTIFACTS: the artifact store (default ~/.local/share/knowledge-kernel/artifacts)
     KK_SOURCE_ROOT: 'where file: sources resolve (default the working directory)'
     KK_SWEEP_SECONDS: longest wait between passes (default 30)
+requires:
+- slot: artifact-store
 accepts:
 - kernel_change_set notifications
 produces:
