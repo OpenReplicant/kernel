@@ -51,28 +51,38 @@ Runs: `runs/2026-10-19-bm25.json`, `runs/2026-10-19-bm25-rerank.json`.
 
 ## End to end (Oct 2026, the same 100 questions plus abstention: 101)
 
-The kernel recalls (BM25 with re-ranking) and the top 5 sessions go, in date order, to
-`liquid/lfm-2.5-2.6b:free` (2.6B parameters) with the paper's reader prompt. Haiku judges each answer
-with the paper's judge prompt for its question type. Five verdicts were checked by hand, and all five
-were right. Run: `runs/2026-10-19-lfm-k5-qa.json`.
+The same reader, `liquid/lfm-2.5-2.6b:free` (2.6B parameters), with the paper's reader prompt, given four
+kinds of context:
 
-| Type | n | accuracy |
-| --- | --- | --- |
-| single-session-assistant | 11 | 1.00 |
-| single-session-user | 12 | 0.92 |
-| abstention | 8 | 0.75 |
-| temporal-reasoning | 26 | 0.62 |
-| knowledge-update | 13 | 0.54 |
-| single-session-preference | 6 | 0.50 |
-| multi-session | 25 | 0.44 |
-| **all** | 101 | **0.644** |
+- **none:** the question alone.
+- **full history:** the most recent sessions that fit its window, about 50k tokens of the 115k.
+- **kernel:** the top 5 sessions the kernel recalls (BM25 with re-ranking), in date order.
+- **oracle:** only the sessions holding the answer.
 
-- **Context.** On the full 500 questions with GPT-4o judging, the paper and Zep report 0.60 for GPT-4o
-  reading the whole history, and 0.71 for Zep with GPT-4o. Ours is a 2.6B reader on a 100-question subset
-  with a different judge, so the numbers are not a ranking. They do say that a small model with the
-  kernel's recall is in the same range as a large model given everything.
+Haiku sub-agents judged all 404 answers blind, with the paper's judge prompt for each question type. The
+answers were shuffled across the four settings under opaque ids. A second, separate judging of the
+kernel's answers agreed on 99 of 101. Runs: `runs/2026-10-19-lfm-{none,full,k5,oracle}-qa.json`.
+
+| Type | n | none | full history | kernel | oracle |
+| --- | --- | --- | --- | --- | --- |
+| single-session-assistant | 11 | 0.27 | 0.46 | 0.91 | 1.00 |
+| single-session-user | 12 | 0.00 | 0.08 | 0.92 | 1.00 |
+| abstention | 8 | 0.88 | 0.75 | 0.75 | 0.88 |
+| temporal-reasoning | 26 | 0.00 | 0.15 | 0.61 | 0.58 |
+| knowledge-update | 13 | 0.00 | 0.23 | 0.54 | 0.77 |
+| single-session-preference | 6 | 0.00 | 0.17 | 0.33 | 1.00 |
+| multi-session | 25 | 0.00 | 0.00 | 0.44 | 0.40 |
+| **all** | 101 | **0.099** | **0.198** | **0.624** | **0.703** |
+
+- **The kernel closes 87% of the gap** between no memory and the oracle (0.099 to 0.624, against 0.703).
+- **Giving a small model everything it can hold does little (0.198).** The evidence is often in older
+  sessions that do not fit, and a 2.6B model loses the thread in 50k tokens (the paper saw Llama 8B drop
+  beyond about 3k tokens of retrieved history). A memory layer matters most under small models.
+- **Rough context, not a ranking.** On all 500 questions with GPT-4o judging, the paper and Zep report 0.60
+  for GPT-4o reading the whole history, and 0.71 for Zep with GPT-4o.
 - **3 answers were empty.** The reasoning model ran out of tokens; they count as wrong.
-- **Where it loses: multi-session (0.44) and knowledge update (0.54).** These need several sessions
+- **Where the kernel still loses: multi-session (0.44) and knowledge update (0.54).** Multi-session is low
+  even for the oracle (0.40), so part of it is the reader. These need several sessions
   combined, or the latest value chosen over an earlier one. That is the ground for conclusions with
   premises and supersede (D-90), and for M6-T13's time-aware recall. Five sessions also leave little room
   for counting questions.
