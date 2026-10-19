@@ -6,7 +6,8 @@
    only as itself. Their connection strings are kept outside the project, mode 600, in KK_HOME
    (default ~/.config/knowledge-kernel): owner.env and agents/<name>.env. A login that still works is
    kept; one that does not gets a new password.
-3. The project: the MCP entry in .mcp.json (it names the login file, never the secret), the
+3. The project: the MCP entry in .mcp.json (it names the login file, never the secret, and the tool
+   profile: memory by default, four tools; --profile operator for every tool, M6-T1), the
    knowledge-kernel skill in .claude/skills/, and the hooks in .claude/settings.local.json. Merged
    into what is there: other servers, hooks and settings are kept; a file is written only if it changes.
 4. The project's contents (M3-G1, D-69): the repository encoder reads it as its own role (kk scan;
@@ -166,11 +167,11 @@ def command(name: str) -> str:
     return str(here) if here.exists() else shutil.which(name) or name
 
 
-def mcp_entry(login_file: Path) -> dict:
-    return {"command": command("kernel-mcp"), "env": {"KK_LOGIN_FILE": shown(login_file)}}
+def mcp_entry(login_file: Path, profile: str = "memory") -> dict:
+    return {"command": command("kernel-mcp"), "env": {"KK_LOGIN_FILE": shown(login_file), "KK_PROFILE": profile}}
 
 
-def with_hooks(settings: dict, login_file: Path) -> dict:
+def with_hooks(settings: dict, login_file: Path, profile: str = "memory") -> dict:
     """Add the kernel's three hooks unless a kernel-mcp-hook is already configured for that event."""
     hooks = settings.setdefault("hooks", {})
     for event, arg in HOOKS.items():
@@ -178,26 +179,28 @@ def with_hooks(settings: dict, login_file: Path) -> dict:
         if any("kernel-mcp-hook" in h.get("command", "") for e in entries for h in e.get("hooks", [])):
             continue
         entries.append({"hooks": [{"type": "command", "timeout": 10,
-                                   "command": f'KK_LOGIN_FILE="{shown(login_file)}" {command("kernel-mcp-hook")} {arg}'}]})
+                                   "command": f'KK_LOGIN_FILE="{shown(login_file)}" KK_PROFILE={profile} '
+                                              f'{command("kernel-mcp-hook")} {arg}'}]})
     return settings
 
 
-def project(folder: Path, login_file: Path) -> list[str]:
+def project(folder: Path, login_file: Path, profile: str = "memory") -> list[str]:
     changed = []
     mcp = folder / ".mcp.json"
     cfg = load_json(mcp)
-    cfg.setdefault("mcpServers", {})["kernel"] = mcp_entry(login_file)
+    cfg.setdefault("mcpServers", {})["kernel"] = mcp_entry(login_file, profile)
     if write_if_changed(mcp, json.dumps(cfg, indent=2) + "\n"):
         changed.append(".mcp.json")
     if write_if_changed(folder / ".claude/skills/knowledge-kernel/SKILL.md", SKILL.read_text()):
         changed.append(".claude/skills/knowledge-kernel/SKILL.md")
     local = folder / ".claude/settings.local.json"
-    if write_if_changed(local, json.dumps(with_hooks(load_json(local), login_file), indent=2) + "\n"):
+    if write_if_changed(local, json.dumps(with_hooks(load_json(local), login_file, profile), indent=2) + "\n"):
         changed.append(".claude/settings.local.json")
     return changed
 
 
-def connect(folder: Path, agent: str, no_stack: bool, db_host: str | None, no_scan: bool) -> dict:
+def connect(folder: Path, agent: str, no_stack: bool, db_host: str | None, no_scan: bool,
+            profile: str = "memory") -> dict:
     """Steps 1–4 for one project folder; what kk up prints. Also out["admin_url"] (not printed)."""
     if not folder.is_dir():
         sys.exit(f"{folder} is not a folder")
@@ -212,7 +215,7 @@ def connect(folder: Path, agent: str, no_stack: bool, db_host: str | None, no_sc
                                      "person", "Local owner", ["kk_reviewer", "kk_steward"])),
         (str(agent_file), login(admin_url, db_host, agent_file, f"agent_{agent.replace('-', '_')}",
                                 f"urn:kk:agent:{agent}", "software", agent, ["kk_agent"]))) if did]
-    changed += project(folder, agent_file)
+    changed += project(folder, agent_file, profile)
     out = {"project": str(folder), "agent": f"urn:kk:agent:{agent}", "changed": changed,
            "owner_login": str(h / "owner.env")}
     if not no_scan:
@@ -240,8 +243,11 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--no-stack", action="store_true", help="use the kernel at KK_ADMIN_URL; start nothing")
     ap.add_argument("--db-host", help="Postgres host:port as the harness reaches it (default: as KK_ADMIN_URL does)")
     ap.add_argument("--no-scan", action="store_true", help="connect the project without reading its contents")
+    ap.add_argument("--profile", choices=("memory", "operator"), default="memory",
+                    help="the agent's MCP tools: memory (four: remember, recall, explain, changes_since; default)"
+                         " or operator (every tool)")
     a = ap.parse_args(argv)
-    out = connect(a.project.resolve(), a.agent, a.no_stack, a.db_host, a.no_scan)
+    out = connect(a.project.resolve(), a.agent, a.no_stack, a.db_host, a.no_scan, a.profile)
     folder = Path(out["project"])
     print(json.dumps({k: v for k, v in out.items() if k != "admin_url"}, indent=2))
     print(f"\nReady. Open the project in your harness (Claude Code: `claude` in {folder}); approve the"

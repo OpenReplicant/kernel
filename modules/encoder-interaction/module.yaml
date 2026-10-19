@@ -1,11 +1,12 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:encoder-interaction
 name: Interaction encoder
-version: 0.1.0
+version: 0.2.0
 description: 'Transcripts of conversations and agent sessions into claims (D-81): each message an
   as:Note with its author, conversation, reply and time; each tool call, file or API action a
   prov:Activity with its actor, tool and what it used. The transcript is rendered as plain text and
-  stored as the artifact every claim quotes. Secrets are filtered first.'
+  stored as the artifact every claim quotes. A line that starts with Decision:, Remember:, Preference:,
+  Commitment: or Correction: is also a memory of its own (M6-T1), quoting that line. Secrets are filtered first.'
 license: Apache-2.0
 kind: encoder
 slots:
@@ -53,6 +54,8 @@ produces:
 - as:Application
 - as:Service
 - as:OrderedCollection
+- dcterms:type
+- dcterms:isPartOf
 triggers:
 - type: manual
 migration: migration.sql

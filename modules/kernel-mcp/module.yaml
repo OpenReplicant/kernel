@@ -1,8 +1,10 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:kernel-mcp
 name: Kernel MCP server
-version: 0.7.0
-description: 'Agent-facing MCP tools over the api schema: search, get entity, query claims, explain, submit
+version: 0.8.0
+description: 'Agent-facing MCP tools over the api schema, in two profiles chosen per login (M6-T1): memory
+  (remember, recall, explain, changes_since: one-sentence memories and cited briefings with who said what and
+  its belief, also as MCP resources) and operator (every tool): search, get entity, query claims, explain, submit
   change set, start/finish run, list slots and modules; whoami, change sets, the review queue and review
   (people only, enforced by the kernel), and the graph projection that the UI draws. Talks to Postgres directly and runs every call as
   the caller''s own role (stdio: the agent''s own login; http: the role in the caller''s JWT), so row-level security
@@ -23,6 +25,8 @@ runtime:
   env:
     DATABASE_URL: 'stdio: the agent''s own login; http: kk_authenticator'
     KK_JWT_SECRET: http mode (python -m kernel_mcp --http) only
+    KK_PROFILE: 'stdio: memory (four tools) or operator (every tool, the default); http: the token''s profile claim'
+    KK_MEMORY_SCOPE: the scope remember writes to (default urn:kk:scope:default)
 requires:
 - slot: identity
 interfaces:
@@ -32,6 +36,9 @@ interfaces:
   href: /mcp
 mcp:
   expose:
+  - remember
+  - recall
+  - changes_since
   - search
   - get_entity
   - query_claims
@@ -51,4 +58,8 @@ accepts:
 - run
 produces:
 - 'add_claim (and every op, as the calling agent)'
+- as:Note
+- as:content
+- dcterms:type
+- dcterms:subject
 - application/json (MCP tool results)

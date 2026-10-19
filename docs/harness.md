@@ -69,6 +69,13 @@ Shared server for several agents: `kk serve` (or `kernel-mcp --http`) with `KK_J
 request sends `Authorization: Bearer <JWT>` whose `role` claim is the agent's role
 (`kk token agent_claude_code`).
 
+**Profiles (M6-T1).** Which tools an agent sees is chosen per login: `KK_PROFILE` in the MCP entry
+(stdio) or the token's `profile` claim (`kk token agent_claude_code --profile memory`). `memory` shows four
+tools: `remember`, `recall`, `explain` and `changes_since`; the briefings are also MCP resources
+(`kernel://recall/{question}`, `kernel://changes`). `operator`, the default, shows every tool. `kk up`
+writes `memory` unless given `--profile operator`. A profile keeps the agent's context small; it is not
+a security boundary, since Postgres decides what each login may do.
+
 ## 3. The skill file
 
 Copy `modules/kernel-mcp/SKILL.md` into the harness's skills folder (Claude Code:

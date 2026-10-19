@@ -21,6 +21,10 @@ escapes would keep a quote from occurring in the source file). Claims (determini
   actor     urn:kk:actor:<source>:<name>   a as:Person or as:Application; rdfs:label
   tool      urn:kk:tool:<name>             a as:Service; rdfs:label
   conversation urn:kk:conversation:<source>:<conversation>  a as:OrderedCollection; rdfs:label
+  memory    urn:kk:memory:<source>:<conversation>:<id>:<n>  a line of a message that starts with Decision:,
+            Remember:, Preference:, Commitment: or Correction: (M6-T1): an as:Note with the rest of the line as
+            as:content, as:attributedTo who wrote the message, dcterms:type its kind (urn:kk:memory-kind:decision,
+            ...; Remember is a fact), dcterms:isPartOf the message; it quotes the whole line
 """
 from __future__ import annotations
 
@@ -31,6 +35,7 @@ from pathlib import PurePosixPath
 
 AS = "https://www.w3.org/ns/activitystreams#"
 PROV = "http://www.w3.org/ns/prov#"
+DCT = "http://purl.org/dc/terms/"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 DATETIME = "http://www.w3.org/2001/XMLSchema#dateTime"
@@ -38,6 +43,11 @@ QUOTE = 300            # characters of a message quoted (its start, verbatim)
 CONTENT = 4000         # characters of a message kept in as:content
 PATH_KEYS = ("file_path", "path", "notebook_path", "url")
 SKIP_TEXT = re.compile(r"^\s*<(system-reminder|command-|local-command)")
+# An inline memory: a line of a message that starts with one of these words and a colon (optionally as a
+# list item or in bold), e.g. "Decision: we pin psycopg 3.3.6".
+INLINE = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*)?(Decision|Remember|Preference|Commitment|Correction)(?:\*\*)?:"
+                    r"(?:\*\*)?\s+(\S.*?)\s*$")
+KINDS = {"Remember": "fact"}
 
 
 @dataclass
@@ -173,6 +183,18 @@ def encode(events: list[Event], source: str, sha: str) -> list[dict]:
                      (AS + "attributedTo", {"entity": actor}), (AS + "context", {"entity": conv}), *when,
                      *([(AS + "inReplyTo", {"entity": prev})] if prev else [])]
             last[e.conversation] = me
+            for n, text in enumerate(e.text.splitlines()):
+                m = INLINE.match(text)
+                if not m:
+                    continue
+                at = first + 1 + n   # the message's text starts on the line after its author
+                line_ref = {"artifact": sha, "quote": text.strip(), "span": {"start_line": at, "end_line": at}}
+                note = f"{me.replace('urn:kk:message:', 'urn:kk:memory:', 1)}:{n}"
+                kind = KINDS.get(m.group(1), m.group(1).lower())
+                for p, o in [(RDF_TYPE, {"entity": AS + "Note"}), (AS + "content", {"value": {"@value": m.group(2)}}),
+                             (AS + "attributedTo", {"entity": actor}), (DCT + "type", {"entity": f"urn:kk:memory-kind:{kind}"}),
+                             (DCT + "isPartOf", {"entity": me}), (AS + "context", {"entity": conv}), *when]:
+                    claim(note, p, o, line_ref)
         else:
             me = f"urn:kk:action:{slug(source)}:{slug(e.conversation)}:{slug(e.id)}"
             tool = f"urn:kk:tool:{slug(e.tool or 'tool')}"

@@ -1,0 +1,185 @@
+"""The memory profile's tools (M6-T1): remember, recall, changes_since; explain is shared with operators.
+
+An agent with this profile never builds a change set, picks an IRI or reads a triple. `remember` writes
+one sentence as an as:Note attributed to the agent, quoting its words (testimony; it goes through the
+validator like any change set). `recall` and `changes_since` answer with a briefing (briefing.py).
+"""
+from __future__ import annotations
+
+import hashlib
+import os
+from datetime import datetime, timezone
+from urllib.parse import unquote
+
+import anyio
+from mcp.server.mcpserver import Context
+from psycopg.types.json import Jsonb
+
+from . import briefing, recall as ranked
+from .briefing import AS, DCT, KIND, KINDS, LABEL, NOTE, NOTE_PARTS, RDF_TYPE
+from .server import CLAIM_COLUMNS, KernelError, connection, expand, mcp, one, rows
+
+SCOPE = os.environ.get("KK_MEMORY_SCOPE", "urn:kk:scope:default")
+DATETIME = "http://www.w3.org/2001/XMLSchema#dateTime"
+VOCAB = "urn:kk:scope:vocab"   # the packs' terms: not news to an agent
+RUN = """select id from kernel.run where agent = kernel.my_agent() and status = 'running'
+         order by started_at desc limit 1"""
+
+
+async def resolve(conn, h: str) -> str:
+    """A claim id from a handle (#1a2b3c4d, any prefix of at least four characters) or a full id."""
+    h = h.strip().lstrip("#").lower()
+    hexes = h.replace("-", "")
+    if len(hexes) < 4 or any(ch not in "0123456789abcdef" for ch in hexes) or len(hexes) > 32:
+        raise KernelError(f"not a claim handle: {h!r}")
+    lo, hi = (hexes + pad * (32 - len(hexes)) for pad in "0f")
+    uuid = lambda x: f"{x[:8]}-{x[8:12]}-{x[12:16]}-{x[16:20]}-{x[20:]}"   # noqa: E731
+    found = await one(conn, "select coalesce(array_agg(id::text), '{}') from (select id from api.claims"
+                            " where id between %s::uuid and %s::uuid limit 2) c", (uuid(lo), uuid(hi)))
+    if not found:
+        raise KernelError(f"no claim you can see has the handle #{h}")
+    if len(found) > 1:
+        raise KernelError(f"#{h} matches more than one claim; give more characters")
+    return found[0]
+
+
+async def context(conn, claims: list[dict]) -> tuple[dict, dict, dict, dict, str]:
+    """What a briefing needs beyond the claims: notes, labels, kernel agents, actor types, and who asks."""
+    subjects = list({c["subject"] for c in claims})
+    parts = await one(conn, rows(f"select {CLAIM_COLUMNS} from api.claims where subject = any(%s)"
+                                 " and predicate = any(%s) and status <> 'deprecated'"), (subjects, list(NOTE_PARTS)))
+    found = briefing.notes(parts)
+    iris = {c["subject"] for c in claims} | {c["object_entity"] for c in claims if c.get("object_entity")} \
+        | {c["attributed_to"] for c in claims} | {n.get("author") for n in found.values()} \
+        | {a for n in found.values() for a in n["about"]}
+    iris = [i for i in iris if i]
+    labels = await one(conn, "select coalesce(jsonb_object_agg(subject, label), '{}') from (select distinct on (subject)"
+                             " subject, object_value->>'@value' as label from api.claims where subject = any(%s)"
+                             " and predicate = %s and status <> 'deprecated' order by subject, belief desc nulls last) l",
+                       (iris, LABEL))
+    agents = await one(conn, "select coalesce(jsonb_object_agg(iri, jsonb_build_object('kind', kind, 'label', label)),"
+                             " '{}') from kernel.agent where iri = any(%s)", (iris,))
+    types = await one(conn, "select coalesce(jsonb_object_agg(subject, object_entity), '{}') from api.claims"
+                            " where subject = any(%s) and predicate = %s and object_entity = any(%s)"
+                            " and status <> 'deprecated'", (iris, RDF_TYPE, [AS + "Person", AS + "Application"]))
+    me = await one(conn, "select kernel.my_agent()")
+    return found, labels, agents, types, me
+
+
+@mcp.tool()
+async def remember(ctx: Context, kind: str, text: str, about: str | None = None, replaces: str | None = None) -> dict:
+    """Remember one thing, in a sentence. kind: fact, decision, preference, commitment or correction.
+    about: what it concerns (optional; an IRI, a CURIE, or a #handle from a briefing, meaning that claim's
+    subject). replaces: the #handle of a memory this one corrects (the old one is kept, marked superseded).
+    It is recorded as yours, quoting your words; recall shows it once the kernel has applied it."""
+    text = " ".join(text.split())
+    if kind not in KINDS:
+        raise KernelError(f"kind must be one of {', '.join(KINDS)}")
+    if not text or len(text) > 2000:
+        raise KernelError("text must be one to 2000 characters: one sentence is best")
+    async with connection(ctx) as conn:
+        me = await one(conn, "select kernel.my_agent()")
+        if about and about.strip().startswith("#"):
+            about = await one(conn, "select subject from api.claims where id = %s::uuid", (await resolve(conn, about),))
+        about = expand(about.strip()) if about else None
+        run = await one(conn, RUN) or await one(conn, "select api.start_run(null, null, '[]'::jsonb, %s)",
+                                                  (Jsonb({"via": "remember"}),))
+        digest = hashlib.sha256("\x1f".join([me, kind, text, about or ""]).encode()).hexdigest()
+        note = f"urn:kk:memory:{digest[:24]}"
+        ref = {"source_uri": f"urn:kk:run:{run}", "quote": text}
+        facts = [(RDF_TYPE, {"entity": NOTE}), (AS + "content", {"value": {"@value": text}}),
+                 (AS + "attributedTo", {"entity": me}), (DCT + "type", {"entity": KIND + kind}),
+                 (AS + "published", {"value": {"@value": datetime.now(timezone.utc).isoformat(), "@type": DATETIME}}),
+                 *([(DCT + "subject", {"entity": about})] if about else [])]
+        ops = [{"op": "add_claim", "ref": f"c{i}", "subject": note, "predicate": p, "object": o,
+                "evidence_type": "testimony", "references": [ref]} for i, (p, o) in enumerate(facts)]
+        if replaces:
+            old = await resolve(conn, replaces)
+            # A memory is replaced whole (every claim of its note); any other claim, alone.
+            prior = await one(conn, rows("""select c.id, c.predicate, c.status from api.claims c, api.claims o
+                where o.id = %(c)s::uuid and c.status <> 'deprecated' and c.subject = o.subject
+                  and (c.id = o.id or exists (select 1 from api.claims t where t.subject = o.subject
+                       and t.predicate = %(type)s and t.object_entity = %(note)s and t.status <> 'deprecated'))"""),
+                              {"c": old, "type": RDF_TYPE, "note": NOTE})
+            by = {op["predicate"]: op["ref"] for op in ops}
+            ops += [{"op": "set_status", "claim": c["id"], "status": "deprecated", "expect_status": c["status"],
+                     "reason": "superseded", "replaced_by": by.get(c["predicate"], "c1")} for c in prior]
+        key = "memory:" + hashlib.sha256(f"{digest}|{replaces or ''}".encode()).hexdigest()[:32]
+        cs = {"idempotency_key": key, "attributed_to": me, "generated_by": str(run), "target_scope": SCOPE, "ops": ops}
+        result = await one(conn, "select api.submit_change_set(%s)", (Jsonb(cs),))
+    return {"memory": note, "change_set": result["id"], "status": result["status"],
+            "note": "recall shows it once it is applied" if result["status"] != "applied" else "applied"}
+
+
+@mcp.tool()
+async def recall(ctx: Context, question: str, budget: int = 800) -> str:
+    """What the kernel knows about the question, as a briefing within `budget` tokens (default 800): one
+    line per memory or claim, saying who said it and its belief (0 to 1), ending in a #handle. Cite the
+    handles you rely on; explain(handle) gives a line's sources and history."""
+    budget = max(100, min(budget, 8000))
+    async with connection(ctx) as conn:
+        indexed = bool(await one(conn, ranked.INSTALLED) and await one(conn, ranked.READY))
+        model = await one(conn, ranked.DENSE) if indexed else None
+        vec = await anyio.to_thread.run_sync(ranked.vector, question, model) if model else None
+        limit = max(10, budget // 25)
+        args = ranked.params(question, ranked.pool(limit) if indexed else limit, vec)
+        found = await one(conn, ranked.ranked(indexed, vec), args)
+        if found and indexed and ranked.reranker():
+            texts = await one(conn, ranked.TEXTS, {"subjects": ranked.subjects(found)})
+            found = await anyio.to_thread.run_sync(ranked.rerank, question, found, limit, texts)
+        found = (found or await one(conn, ranked.SUBSTRING, ranked.params(question, limit)) or [])[:limit]
+        notes, labels, agents, types, me = await context(conn, found)
+    if not found:
+        return f'Nothing recalled for "{question}".'
+    return briefing.fit(f'Recalled for "{question}" (who said it; belief 0-1; explain(#handle) for sources):',
+                        briefing.lines(found, notes, labels, agents, me, types), budget)
+
+
+@mcp.tool()
+async def changes_since(ctx: Context, since: str | None = None, budget: int = 800) -> str:
+    """What others changed since you last looked: claims added and claims superseded or retracted, newest
+    first, as a briefing within `budget` tokens. since: the cursor a previous call returned (an ISO time);
+    by default, the end of your last finished run (else the last day). Ends with the next cursor."""
+    budget = max(100, min(budget, 8000))
+    async with connection(ctx) as conn:
+        start = await one(conn, "select coalesce(%s::timestamptz, (select max(ended_at) from kernel.run"
+                                " where agent = kernel.my_agent()), now() - interval '1 day')", (since,))
+        cursor = await one(conn, "select now()")
+        added = await one(conn, rows(f"select {CLAIM_COLUMNS} from api.claims where recorded_at > %(t)s"
+                                     " and attributed_to is distinct from kernel.my_agent() and scope <> %(v)s"
+                                     " and status <> 'deprecated' order by recorded_at desc limit 200"),
+                          {"t": start, "v": VOCAB})
+        ended = await one(conn, rows(f"""select {', '.join('c.' + x for x in CLAIM_COLUMNS.split(', '))},
+                                             s.reason, s.replaced_by from kernel.claim_status s
+                                        join api.claims c on c.id = s.claim_id
+                                        where s.recorded_at > %(t)s and s.status = 'deprecated' and c.scope <> %(v)s
+                                        order by s.recorded_at desc limit 100"""), {"t": start, "v": VOCAB})
+        notes, labels, agents, types, me = await context(conn, added + ended)
+    body = briefing.lines(added, notes, labels, agents, me, types)
+    old = briefing.notes(ended)   # a superseded memory is one line, not one per claim of its note
+    gone, seen = [], set()
+    for c in ended:
+        if c["subject"] in old:
+            if c["subject"] in seen:
+                continue
+            seen.add(c["subject"])
+            c = old[c["subject"]]["content"]
+        mark = f"[{c['reason'] or 'deprecated'}" + (f" by {briefing.handle(c['replaced_by'])}" if c.get("replaced_by") else "")
+        gone += [line.replace("- ", f"- {mark}] ", 1) for line in briefing.lines([c], old, labels, agents, me, types)]
+    header = (f"Changes since {start.astimezone(timezone.utc):%Y-%m-%d %H:%M} UTC: {len(body)} added,"
+              f" {len(gone)} superseded or retracted"
+              f" (next cursor: {cursor.isoformat()}).")
+    return briefing.fit(header, body + gone, budget) if body or gone else header
+
+
+# The same briefings as MCP resources, for harnesses that attach resources to the context (M6-T1).
+@mcp.resource("kernel://recall/{question}{?budget}", name="recall", mime_type="text/plain",
+              description="What the kernel knows about the question, as a cited briefing (recall).")
+async def recall_resource(question: str, ctx: Context, budget: int = 800) -> str:
+    return await recall(ctx, unquote(question), budget)
+
+
+@mcp.resource("kernel://changes{?since}", name="changes", mime_type="text/plain",
+              description="What others changed since you last looked, as a cited briefing (changes_since).")
+async def changes_resource(ctx: Context, since: str | None = None) -> str:
+    return await changes_since(ctx, unquote(since) if since else None)
