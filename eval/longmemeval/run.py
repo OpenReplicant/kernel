@@ -276,7 +276,7 @@ def ask(prompt: str) -> tuple[str, str]:
     url = os.environ.get("KK_EVAL_MODEL_URL", "https://openrouter.ai/api/v1").rstrip("/") + "/chat/completions"
     key = os.environ.get("KK_EVAL_MODEL_KEY") or os.environ.get("OPENROUTER_API_KEY") or ""
     body = json.dumps({"model": os.environ.get("KK_EVAL_MODEL", "liquid/lfm-2.5-2.6b:free"), "temperature": 0,
-                       "max_tokens": 1500, "messages": [{"role": "user", "content": prompt}]}).encode()
+                       "max_tokens": 6000, "messages": [{"role": "user", "content": prompt}]}).encode()
     for attempt in range(6):
         req = urllib.request.Request(url, body, {"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
         try:
