@@ -24,6 +24,13 @@ SCOPE = os.environ.get("KK_MEMORY_SCOPE", "urn:kk:scope:default")
 DATETIME = "http://www.w3.org/2001/XMLSchema#dateTime"
 VOCAB = "urn:kk:scope:vocab"
 TMS = "urn:kk:module:truth-maintenance"   # the packs' terms: not news to an agent
+# The messages just before and after each recalled message (as:inReplyTo either way), per message.
+NEAR = f"""select coalesce(jsonb_object_agg(m, n), '{{}}') from (select m, jsonb_agg(distinct n) n from (
+    select subject m, object_entity n from api.claims where subject = any(%(s)s) and predicate = '{briefing.REPLY}'
+       and status <> 'deprecated'
+    union all
+    select object_entity, subject from api.claims where object_entity = any(%(s)s) and predicate = '{briefing.REPLY}'
+       and status <> 'deprecated') x group by m) y"""
 RUN = """select id from kernel.run where agent = kernel.my_agent() and status = 'running'
          order by started_at desc limit 1"""
 
@@ -200,16 +207,22 @@ async def recall(ctx: Context, question: str, budget: int = 800) -> str:
         found = found or await one(conn, ranked.SUBSTRING, ranked.params(question, limit)) or []
         # The packs' term definitions answer an operator's search, not an agent's memory question.
         found = [c for c in found if c.get("scope") != VOCAB][:limit]
-        notes, labels, agents, types, me = await context(conn, found)
+        near = await one(conn, NEAR, {"s": list({c["subject"] for c in found})}) if found else {}
+        around = sorted({s for ns in near.values() for s in ns})
+        extra = await one(conn, rows(f"select {CLAIM_COLUMNS} from api.claims where subject = any(%s)"
+                                     " and predicate = %s and status <> 'deprecated'"),
+                          (around, AS + "content")) if around else []
+        notes, labels, agents, types, me = await context(conn, found + extra)
         cued = [(r, why) for r in await one(conn, briefing.CUED)
                 if (cue := cues.parse(r["cue"])) and (why := cues.fires(cue, text=question))]
     if not found and not cued:
         return f'Nothing recalled for "{question}".'
     first = {r["subject"] for r, _ in cued}
-    return briefing.fit(f'Recalled for "{question}" (who said it; belief 0-1; explain(#handle) for sources):',
-                        [briefing.cue_line(r, why, me) for r, why in cued]
-                        + briefing.lines([c for c in found if c["subject"] not in first], notes, labels, agents, me,
-                                         types), budget)
+    header = f'Recalled for "{question}" (who said it; belief 0-1; explain(#handle) for sources):'
+    top = [briefing.cue_line(r, why, me) for r, why in cued]
+    room = budget * 4 - len(header) - 80 - sum(len(x) + 1 for x in top)
+    return briefing.fit(header, top + briefing.recalled([c for c in found if c["subject"] not in first], near, notes,
+                                                        labels, agents, me, types, room), budget)
 
 
 @mcp.tool()
