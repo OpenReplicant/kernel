@@ -58,6 +58,8 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
   theirs (kernel changes, positioning, licences) and say what you recommend.
 - When asked to be dialectical, give the strongest objections, then a synthesis that keeps what survives.
 - Plain words. Don't write "...and it's worth...".
+- Evals that need a model use OpenRouter `:free` models under 10B parameters (Oct 2026: `liquid/lfm-2.5-2.6b:free`)
+  and/or Haiku as harness sub-agents (answers files, as SciFact's `--answers`); never paid models.
 - Each task ships the same way: implement, test (unit tests, `smoke_kernel.sh`, and `e2e_module.sh` and
   `e2e_devops.sh` when relevant), gitleaks, commit, push, PR, CI green, squash merge, reset the branch to
   main (the `kernel-dev` skill).

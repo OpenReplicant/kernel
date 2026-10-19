@@ -1,0 +1,43 @@
+{
+  "eval": "longmemeval_s qa",
+  "label": "lfm-oracle",
+  "questions": 101,
+  "accuracy": 0.703,
+  "by_type": {
+    "abstention": {
+      "n": 8,
+      "accuracy": 0.875
+    },
+    "knowledge-update": {
+      "n": 13,
+      "accuracy": 0.769
+    },
+    "multi-session": {
+      "n": 25,
+      "accuracy": 0.4
+    },
+    "single-session-assistant": {
+      "n": 11,
+      "accuracy": 1.0
+    },
+    "single-session-preference": {
+      "n": 6,
+      "accuracy": 1.0
+    },
+    "single-session-user": {
+      "n": 12,
+      "accuracy": 1.0
+    },
+    "temporal-reasoning": {
+      "n": 26,
+      "accuracy": 0.577
+    }
+  },
+  "unanswered": 0,
+  "unjudged": 0,
+  "reader": [
+    "liquid/lfm-2.5-2.6b:free"
+  ],
+  "judge": "haiku",
+  "date": "2026-10-19"
+}
