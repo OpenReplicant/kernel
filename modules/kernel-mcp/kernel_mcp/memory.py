@@ -189,7 +189,7 @@ async def recall(ctx: Context, question: str, budget: int = 800) -> str:
     budget = max(100, min(budget, 8000))
     async with connection(ctx) as conn:
         indexed = bool(await one(conn, ranked.INSTALLED) and await one(conn, ranked.READY))
-        model = await one(conn, ranked.DENSE) if indexed else None
+        model = await one(conn, ranked.DENSE) if indexed and ranked.dense_on() else None
         vec = await anyio.to_thread.run_sync(ranked.vector, question, model) if model else None
         limit = max(10, budget // 25)
         args = ranked.params(question, ranked.pool(2 * limit) if indexed else 2 * limit, vec)

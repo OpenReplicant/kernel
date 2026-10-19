@@ -228,10 +228,11 @@ def retrieval(n: int, label: str) -> dict:
         return round(statistics.mean(vals), 3) if vals else None
     metrics = {f"{key}.{m}": mean(key, m) for key in ("session@5", "session@10", "turn@5", "turn@10")
                for m in ("recall_any", "recall_all", "ndcg")}
-    by_type = {t: {k: mean(k, "recall_any", [r for r in rows if r["type"] == t]) for k in ("session@5", "session@10")}
+    by_type = {t: {f"{k}.{m}": mean(k, m, [r for r in rows if r["type"] == t]) for k in ("session@5", "session@10")
+                   for m in ("recall_any", "recall_all")}
                for t in sorted({r["type"] for r in rows})}
     out = {"eval": "longmemeval_s retrieval", "label": label, "questions": len(rows), "metrics": metrics,
-           "session_recall_any_by_type": by_type, "latency_s": {"p50": round(statistics.median(lat), 3),
+           "session_recall_by_type": by_type, "latency_s": {"p50": round(statistics.median(lat), 3),
                                                                  "p95": round(sorted(lat)[int(0.95 * len(lat))], 3)},
            "recall": os.environ.get("KK_RERANK", "default"), "date": date.today().isoformat(),
            "counts": dict(Counter(r["type"] for r in rows))}
@@ -311,7 +312,8 @@ def history(q: dict, ranked_sessions: list[str], k: int) -> str:
     return out
 
 
-MODES = ("kernel", "none", "full", "oracle")
+MODES = ("kernel", "kernel-turns", "none", "full", "oracle")
+TURN_CHARS = int(os.environ.get("KK_EVAL_TURN_CHARS", "24000"))   # kernel-turns: about 6k tokens of turns
 FULL_CHARS = 200_000   # about 50k tokens: the reader's 65k window, less the prompt and its answer
 
 
@@ -336,8 +338,42 @@ def context_for(q: dict, mode: str, k: int, admin=None) -> str | None:
     admin.execute(f"set role {reader(q)}")
     found = recall.recall(admin, q["question"], 60)
     admin.execute("reset role")
-    ranked = sessions([c["subject"] for c in found if c.get("scope") == scope(q)], k)
+    turns_ranked = [c["subject"] for c in found if c.get("scope") == scope(q)]
+    if mode == "kernel-turns":
+        return turn_history(q, turns_ranked)
+    ranked = sessions(turns_ranked, k)
     return history(q, [s.rsplit(":", 1)[1] for s in ranked], k)
+
+
+def turn_history(q: dict, ranked: list[str]) -> str:
+    """The recalled turns, each with the turn before and after it, grouped by session in date order (with
+    dates), until TURN_CHARS: less of each session, from more sessions."""
+    qh = h(q["question_id"])
+    by_key = {h(qh + sid): (stamp, s) for sid, stamp, s in
+              zip(q["haystack_session_ids"], q["haystack_dates"], q["haystack_sessions"])}
+    picked: dict[str, set[int]] = {}
+    size = 0
+    for subject in ranked:
+        sh, i = subject.split(":")[-2], int(subject.split(":")[-1])
+        stamp, session = by_key[sh]
+        new = {j for j in (i - 1, i, i + 1) if 0 <= j < len(session)} - picked.get(sh, set())
+        add = sum(len(session[j]["content"]) + 12 for j in new)
+        if size + add > TURN_CHARS and picked:
+            break
+        picked.setdefault(sh, set()).update(new)
+        size += add
+    out = ""
+    for n, sh in enumerate(sorted(picked, key=lambda x: when(by_key[x][0]))):
+        stamp, session = by_key[sh]
+        idx = sorted(picked[sh])
+        text, last = "", None
+        for j in idx:
+            if last is not None and j != last + 1:
+                text += "\n\n[...]"
+            text += f"\n\n{session[j]['role']}: {session[j]['content'].strip()}"
+            last = j
+        out += f"\n### Session {n + 1}:\nSession Date: {stamp}\nSession Content:\n{text}\n"
+    return out
 
 
 def answer(n: int, k: int, label: str, mode: str = "kernel") -> dict:

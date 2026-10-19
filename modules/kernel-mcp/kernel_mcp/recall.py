@@ -168,9 +168,14 @@ def indexed(conn) -> bool:
     return bool(conn.execute(INSTALLED).fetchone()[0] and conn.execute(READY).fetchone()[0])
 
 
+def dense_on() -> bool:
+    """KK_DENSE=0 turns dense recall off (BM25 only), as KK_RERANK=0 turns re-ranking off."""
+    return os.environ.get("KK_DENSE") != "0"
+
+
 def dense(conn) -> str | None:
-    """The dense index's model when the recall-dense module is installed and has rows."""
-    return conn.execute(DENSE).fetchone()[0]
+    """The dense index's model when the recall-dense module is installed and has rows (and dense is on)."""
+    return conn.execute(DENSE).fetchone()[0] if dense_on() else None
 
 
 def ranked(indexed: bool, vec: str | None = None) -> str:
