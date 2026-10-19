@@ -43,9 +43,12 @@ Runs: `runs/2026-10-19-bm25.json`, `runs/2026-10-19-bm25-rerank.json`.
   no words with the turn where the preference was stated. Re-ranking lifts it from 0.17 to 0.67, and recall
   cues (D-91) address it at the source.
 - **Re-ranking costs latency here.** The cross-encoder reads 60 long chat turns on a 4-core CPU.
-- **Dense recall is not measured yet.** Embedding the 50k turns with the recall-dense worker took about 2
-  turns a second and 8.6 GB of memory, so it was stopped. A smaller subset, or embedding with truncation,
-  comes next.
+- **Dense recall adds nothing over re-ranked BM25 here.** Embedding all 50k turns on a 4-core CPU would take
+  hours, so it was measured on 25 questions (26 with abstention; 13k claims embedded with bge-small, batches
+  of 32), both with re-ranking: session R_any@5 0.962 either way, R_all@5 0.923 with dense against 0.962
+  without, turn R_any@5 0.846 either way, turn R_all@10 0.846 against 0.885. Dense recall stays opt-in, and
+  `KK_DENSE=0` turns it off where it is installed. Runs: `runs/2026-10-19-sub25-{dense,bm25}-rerank.json`
+  (their latencies are not comparable: another job shared the CPU).
 - **Comparison.** The paper's retrieval tables are on LongMemEval_M (500 sessions a question; BM25
   session R@5 0.634 there). Ours is on S, so the two compare only in direction, not value.
 

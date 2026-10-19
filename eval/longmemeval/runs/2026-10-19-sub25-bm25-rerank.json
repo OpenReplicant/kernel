@@ -1,0 +1,71 @@
+{
+  "eval": "longmemeval_s retrieval",
+  "label": "sub25-bm25-rerank",
+  "questions": 26,
+  "metrics": {
+    "session@5.recall_any": 0.962,
+    "session@5.recall_all": 0.962,
+    "session@5.ndcg": 0.939,
+    "session@10.recall_any": 1.0,
+    "session@10.recall_all": 1.0,
+    "session@10.ndcg": 0.953,
+    "turn@5.recall_any": 0.846,
+    "turn@5.recall_all": 0.769,
+    "turn@5.ndcg": 0.699,
+    "turn@10.recall_any": 0.962,
+    "turn@10.recall_all": 0.885,
+    "turn@10.ndcg": 0.736
+  },
+  "session_recall_by_type": {
+    "knowledge-update": {
+      "session@5.recall_any": 1.0,
+      "session@5.recall_all": 1.0,
+      "session@10.recall_any": 1.0,
+      "session@10.recall_all": 1.0
+    },
+    "multi-session": {
+      "session@5.recall_any": 1.0,
+      "session@5.recall_all": 1.0,
+      "session@10.recall_any": 1.0,
+      "session@10.recall_all": 1.0
+    },
+    "single-session-assistant": {
+      "session@5.recall_any": 1.0,
+      "session@5.recall_all": 1.0,
+      "session@10.recall_any": 1.0,
+      "session@10.recall_all": 1.0
+    },
+    "single-session-preference": {
+      "session@5.recall_any": 0.5,
+      "session@5.recall_all": 0.5,
+      "session@10.recall_any": 1.0,
+      "session@10.recall_all": 1.0
+    },
+    "single-session-user": {
+      "session@5.recall_any": 1.0,
+      "session@5.recall_all": 1.0,
+      "session@10.recall_any": 1.0,
+      "session@10.recall_all": 1.0
+    },
+    "temporal-reasoning": {
+      "session@5.recall_any": 1.0,
+      "session@5.recall_all": 1.0,
+      "session@10.recall_any": 1.0,
+      "session@10.recall_all": 1.0
+    }
+  },
+  "latency_s": {
+    "p50": 8.665,
+    "p95": 15.447
+  },
+  "recall": "default",
+  "date": "2026-10-19",
+  "counts": {
+    "multi-session": 6,
+    "temporal-reasoning": 7,
+    "knowledge-update": 4,
+    "single-session-assistant": 3,
+    "single-session-preference": 2,
+    "single-session-user": 4
+  }
+}
