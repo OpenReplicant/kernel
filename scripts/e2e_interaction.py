@@ -2,11 +2,13 @@
 
 The encoder (as its own role) encodes an interview (chat JSON lines) and a Claude Code session: the
 change sets are applied; the agent reads the messages and actions back; each quote occurs in the stored
-transcript; the same file again changes nothing; a grown interview supersedes the claims it replaces.
+transcript; the same file again changes nothing; a grown interview supersedes the claims it replaces;
+the agent's recall (the memory profile) shows a message with the ones just before and after it (D-92).
 
 Env: DATABASE_URL (a login that may SET ROLE kkm_encoder_interaction), AGENT_DATABASE_URL, KK_ARTIFACTS;
 gitleaks on PATH (the ingest filter); the knowledge-kernel package installed.
 """
+import asyncio
 import json
 import os
 import shutil
@@ -17,6 +19,8 @@ import time
 from pathlib import Path
 
 import psycopg
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "modules/encoder-interaction/tests/fixtures"
@@ -48,6 +52,17 @@ def settled(_, ids) -> list[str]:
             return rows
         time.sleep(0.25)
     return rows
+
+
+async def recall(question: str) -> str:
+    """The agent's recall briefing, through the kernel MCP server in the memory profile."""
+    env = {k: v for k, v in os.environ.items() if k in ("PATH", "PYTHONPATH", "HOME")}
+    env.update(DATABASE_URL=os.environ["AGENT_DATABASE_URL"], KK_PROFILE="memory")
+    params = StdioServerParameters(command=sys.executable, args=["-m", "kernel_mcp"], env=env)
+    async with stdio_client(params) as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        res = await s.call_tool("recall", {"question": question, "budget": 2000})
+        return res.content[0].text if res.content else ""
 
 
 def main() -> int:
@@ -88,6 +103,18 @@ def main() -> int:
                         (f"urn:kk:message:acme{stamp}:acme-intake:6",)).fetchone()[0]
     check("M5-T3 a grown interview supersedes the claims it replaces and adds the new message",
           old and old[0] == "deprecated" and grown["superseded"] > 0 and new > 0, (old, grown["superseded"], new))
+    brief, lines = "", []
+    for _ in range(40):   # recall's index catches up with the new claims
+        brief = asyncio.run(recall("Anything over 10,000 needs approval first?"))
+        lines = brief.splitlines()
+        if any("needs Sam's approval" in x for x in lines):
+            break
+        time.sleep(0.5)
+    hit = next((i for i, x in enumerate(lines) if "needs Sam's approval" in x), None)
+    check("M5-T3 recall shows a message with the one before and after it, under its conversation (D-92)",
+          hit is not None and any(x.startswith("- in acme-intake") for x in lines[:hit])
+          and "What happens after you receive it?" in lines[hit - 1] and "Sam signs off" in lines[hit + 1]
+          and lines[hit].startswith("  - 2026-10-18 Dana Reyes (person): "), brief[:900])
     session = encode(FIX / "session.jsonl", "--source", f"dev{stamp}", "--person", "ana")
     settled(agent, session["change_sets"])
     used = sorted(u for (u,) in agent.execute("""select object_entity from api.claims where predicate = %s
