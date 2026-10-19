@@ -1,0 +1,106 @@
+{
+  "eval": "memory-extractor fixture",
+  "label": "lfm-v3-3",
+  "models": [
+    "liquid/lfm-2.5-2.6b:free"
+  ],
+  "date": "2026-10-19",
+  "metrics": {
+    "expected_found": 0.8,
+    "corrections_replace": 1.0,
+    "instructions_cued": 1.0,
+    "quiet_messages": 1.0,
+    "items_dropped": 0.577,
+    "extra_memories": 3
+  },
+  "missed": [
+    {
+      "message": "a1",
+      "words": [
+        "Sam",
+        "peanut"
+      ],
+      "found": false,
+      "replaces_ok": null,
+      "always_ok": null
+    },
+    {
+      "message": "b1",
+      "words": [
+        "Postgres",
+        "row-level"
+      ],
+      "found": false,
+      "replaces_ok": null,
+      "always_ok": null
+    }
+  ],
+  "memories": [
+    {
+      "message": "a1",
+      "kind": "preference",
+      "text": "The user is vegetarian.",
+      "replaces_message": null
+    },
+    {
+      "message": "a1",
+      "kind": "fact",
+      "text": "Sam is the user's partner.",
+      "replaces_message": null
+    },
+    {
+      "message": "a1",
+      "kind": "commitment",
+      "text": "Will create a vegetarian meal plan for next week without peanuts.",
+      "replaces_message": null
+    },
+    {
+      "message": "a3",
+      "kind": "fact",
+      "text": "There is a dinner for the user's parents on 2026-11-14.",
+      "replaces_message": null
+    },
+    {
+      "message": "a4",
+      "kind": "decision",
+      "text": "The user's parents' dinner is now planned for 2026-11-21.",
+      "replaces_message": "a3"
+    },
+    {
+      "message": "b1",
+      "kind": "decision",
+      "text": "The user",
+      "replaces_message": null
+    },
+    {
+      "message": "b2",
+      "kind": "commitment",
+      "text": "I will write the first migrations by Friday.",
+      "replaces_message": null
+    },
+    {
+      "message": "b3",
+      "kind": "commitment",
+      "text": "Always run the tests before you push.",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "commitment",
+      "text": "Ask Dana (billing service owner) before changing the invoice schema.",
+      "replaces_message": null
+    },
+    {
+      "message": "c3",
+      "kind": "fact",
+      "text": "The user moved to Hobart in September 2026.",
+      "replaces_message": null
+    },
+    {
+      "message": "c3",
+      "kind": "fact",
+      "text": "The user has a dog named Pip.",
+      "replaces_message": null
+    }
+  ]
+}

@@ -91,6 +91,8 @@ jobs:
           python modules/kernel-mcp/tests/test_cues.py
       - name: Truth maintenance tests (M6-T12)
         run: python modules/truth-maintenance/tests/test_plan.py
+      - name: Memory extractor tests (M6-T4)
+        run: python modules/memory-extractor/tests/test_extract.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql

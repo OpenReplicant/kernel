@@ -1,0 +1,11 @@
+{"id": "a1", "conversation": "meals", "author": "user", "time": "2026-10-01T18:00:00Z", "text": "Can you help me plan meals for next week? I'm vegetarian, and my partner Sam is allergic to peanuts."}
+{"id": "a2", "conversation": "meals", "author": "assistant", "kind": "agent", "time": "2026-10-01T18:00:20Z", "text": "Of course! Some ideas: a lentil curry, roasted vegetable lasagne, and a chickpea salad. All are peanut-free."}
+{"id": "a3", "conversation": "meals", "author": "user", "time": "2026-10-01T18:02:00Z", "text": "Great. We're hosting my parents on November 14, so I need something special for that dinner."}
+{"id": "a4", "conversation": "meals", "author": "user", "time": "2026-10-03T09:00:00Z", "text": "Change of plan: my parents moved their visit to November 21."}
+{"id": "b1", "conversation": "billing", "author": "user", "time": "2026-10-05T10:00:00Z", "text": "We decided to use Postgres 17 instead of MySQL, because we need row-level security."}
+{"id": "b2", "conversation": "billing", "author": "assistant", "kind": "agent", "time": "2026-10-05T10:00:30Z", "text": "Understood. I will write the first migrations by Friday."}
+{"id": "b3", "conversation": "billing", "author": "user", "time": "2026-10-05T10:01:00Z", "text": "Thanks. Always run the tests before you push."}
+{"id": "b4", "conversation": "billing", "author": "user", "time": "2026-10-05T10:02:00Z", "text": "Dana owns the billing service, so ask her before changing the invoice schema."}
+{"id": "c1", "conversation": "trivia", "author": "user", "time": "2026-10-10T08:00:00Z", "text": "What's the capital of Australia?"}
+{"id": "c2", "conversation": "trivia", "author": "assistant", "kind": "agent", "time": "2026-10-10T08:00:05Z", "text": "Canberra."}
+{"id": "c3", "conversation": "trivia", "author": "user", "time": "2026-10-10T08:01:00Z", "text": "Thanks! By the way, I moved to Hobart last month, and I just got a dog called Pip."}

@@ -95,6 +95,8 @@ $py "$root/scripts/e2e_quotes.py"
 $py "$root/scripts/e2e_g2.py"
 # M5-T3: the interaction encoder: an interview and an agent session as claims, quotes in the transcript.
 $py "$root/scripts/e2e_interaction.py"
+# M6-T4: the memory extractor, with a stand-in model: memories quoting their messages; a correction supersedes.
+$py "$root/scripts/e2e_extract.py"
 # M5-T4: the interviewer: a scripted interview builds the org and process maps; the gaps close as it answers.
 $py "$root/scripts/e2e_interview.py"
 # D-61: dense recall fused with BM25.
