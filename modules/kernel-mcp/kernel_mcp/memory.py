@@ -66,11 +66,30 @@ async def context(conn, claims: list[dict]) -> tuple[dict, dict, dict, dict, str
     return found, labels, agents, types, me
 
 
+def slug(text: str) -> str:
+    return "-".join("".join(ch if ch.isalnum() else " " for ch in text.lower()).split())[:80] or "topic"
+
+
+async def subject(conn, about: str) -> tuple[str, str | None]:
+    """What a memory is about: (IRI, None), or (a new topic's IRI, its name) when nothing has that name.
+    A #handle means its claim's subject; an IRI or CURIE is taken as it is; a name is looked up by label."""
+    if about.startswith("#"):
+        return await one(conn, "select subject from api.claims where id = %s::uuid", (await resolve(conn, about),)), None
+    if ":" in about and " " not in about:
+        return expand(about), None
+    found = await one(conn, "select coalesce(array_agg(distinct subject), '{}') from (select subject from api.claims"
+                            " where predicate = %s and lower(object_value->>'@value') = lower(%s)"
+                            " and status <> 'deprecated' limit 6) l", (LABEL, about))
+    if len(found) > 1:
+        raise KernelError(f"{about!r} names more than one thing: {', '.join(found[:5])}; give one of these IRIs")
+    return (found[0], None) if found else (f"urn:kk:topic:{slug(about)}", about)
+
+
 @mcp.tool()
 async def remember(ctx: Context, kind: str, text: str, about: str | None = None, replaces: str | None = None) -> dict:
     """Remember one thing, in a sentence. kind: fact, decision, preference, commitment or correction.
-    about: what it concerns (optional; an IRI, a CURIE, or a #handle from a briefing, meaning that claim's
-    subject). replaces: the #handle of a memory this one corrects (the old one is kept, marked superseded).
+    about: what it concerns (optional): a name ("the Quokka ledger": the entity with that label, or a new
+    topic), an IRI or CURIE, or a #handle from a briefing (that claim's subject). replaces: the #handle of a memory this one corrects (the old one is kept, marked superseded).
     It is recorded as yours, quoting your words; recall shows it once the kernel has applied it."""
     text = " ".join(text.split())
     if kind not in KINDS:
@@ -81,7 +100,7 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
         me = await one(conn, "select kernel.my_agent()")
         if about and about.strip().startswith("#"):
             about = await one(conn, "select subject from api.claims where id = %s::uuid", (await resolve(conn, about),))
-        about = expand(about.strip()) if about else None
+        about, topic = await subject(conn, about.strip()) if about and about.strip() else (None, None)
         run = await one(conn, RUN) or await one(conn, "select api.start_run(null, null, '[]'::jsonb, %s)",
                                                   (Jsonb({"via": "remember"}),))
         digest = hashlib.sha256("\x1f".join([me, kind, text, about or ""]).encode()).hexdigest()
@@ -91,8 +110,11 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
                  (AS + "attributedTo", {"entity": me}), (DCT + "type", {"entity": KIND + kind}),
                  (AS + "published", {"value": {"@value": datetime.now(timezone.utc).isoformat(), "@type": DATETIME}}),
                  *([(DCT + "subject", {"entity": about})] if about else [])]
+        named = [(about, LABEL, {"value": {"@value": topic}})] if topic else []
         ops = [{"op": "add_claim", "ref": f"c{i}", "subject": note, "predicate": p, "object": o,
                 "evidence_type": "testimony", "references": [ref]} for i, (p, o) in enumerate(facts)]
+        ops += [{"op": "add_claim", "subject": s, "predicate": p, "object": o, "evidence_type": "testimony",
+                 "references": [{"source_uri": f"urn:kk:run:{run}", "quote": topic}]} for s, p, o in named]
         if replaces:
             old = await resolve(conn, replaces)
             # A memory is replaced whole (every claim of its note); any other claim, alone.

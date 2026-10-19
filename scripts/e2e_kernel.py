@@ -210,6 +210,14 @@ async def memory_session():
         check("M6-T1 explain(handle) gives the source: the agent's own words, quoted",
               why and why["references"][0]["quote"] == text and why["claim"]["evidence_type"] == "testimony",
               err or "")
+        named, err = await tool(s, "remember", {"kind": "fact", "text": f"The Quokka ledger lives in Hobart ({stamp})",
+                                                 "about": f"Quokka ledger {stamp}"})
+        line, _ = await recalled(s, "Where does the Quokka ledger live?", "lives in Hobart")
+        res, _ = await tool(s, "remember", {"kind": "fact", "text": f"The Quokka ledger has two owners ({stamp})",
+                                            "about": f"quokka LEDGER {stamp}"})
+        both, _ = await recalled(s, "Who owns the Quokka ledger?", "two owners")
+        check("M6-T1 about: a name becomes a labelled topic, and the same name later finds it",
+              f"(about Quokka ledger {stamp})" in line and f"(about Quokka ledger {stamp})" in both, err or both)
         res, err = await tool(s, "remember", {"kind": "correction", "text": fixed, "replaces": handle})
         line, err = await recalled(s, "When do we reconcile the Quokka ledger?", fixed)
         old, _ = await recalled(s, "When do we reconcile the Quokka ledger?", text, want="never")
