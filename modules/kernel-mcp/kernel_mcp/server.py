@@ -15,6 +15,7 @@ Every claim returned carries its id and belief, so answers can cite them (invari
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from typing import Any
 
 import anyio
@@ -41,11 +42,44 @@ CLAIM_COLUMNS = ("id, subject, predicate, object_entity, object_value, qualifier
 RDF_TYPE = PREFIXES["rdf"] + "type"
 REQUIRE_TOKEN = False  # set by the http entrypoint
 
-mcp = MCPServer(
+# The tools each profile shows (D-85, M6-T1). An agent's door is `memory`: four tools. `operator` is every
+# tool, for operators, modules and the UI. The profile is chosen per login, not by the agent; it keeps an
+# agent's context small and is not a security boundary (Postgres decides what each role may do).
+PROFILES = {"memory": ("remember", "recall", "explain", "changes_since")}
+
+
+class KernelServer(MCPServer):
+    """An MCPServer that lists and calls only the tools of the caller's profile."""
+
+    @staticmethod
+    def allowed(profile: str) -> tuple[str, ...] | None:
+        if profile != "operator" and profile not in PROFILES:
+            raise KernelError(f"unknown profile {profile!r}: memory or operator")
+        return PROFILES.get(profile)
+
+    async def _handle_list_tools(self, ctx, params):
+        result = await super()._handle_list_tools(ctx, params)
+        try:
+            allowed = self.allowed(caller(Context(request_context=ctx, mcp_server=self))[1])
+        except KernelError:
+            allowed = PROFILES["memory"]   # no valid token: list the small door; calls are refused anyway
+        if allowed is not None:
+            result.tools = [t for t in result.tools if t.name in allowed]
+        return result
+
+    async def call_tool(self, name, arguments, context=None):
+        allowed = self.allowed(caller(context)[1])
+        if allowed is not None and name not in allowed:
+            raise KernelError(f"{name} is not in your profile; your tools: {', '.join(allowed)}")
+        return await super().call_tool(name, arguments, context)
+
+
+mcp = KernelServer(
     "knowledge-kernel",
-    instructions="Knowledge Kernel tools. Read claims (each has an id and a belief) and submit change sets "
-                 "under your own identity. Cite claim ids and their belief in every answer. "
-                 "See the knowledge-kernel skill for the write rules.",
+    instructions="Knowledge Kernel: memory with sources. recall(question) gives a briefing; each line says who "
+                 "said it and how sure it is, with a #handle that explain(handle) expands. remember(kind, text) "
+                 "records one sentence as yours. changes_since() says what others changed. Cite the #handles "
+                 "and their belief in every answer.",
 )
 
 
@@ -62,11 +96,12 @@ def expand(term: str | None) -> str | None:
     return term
 
 
-def caller_role(ctx: Context) -> str | None:
-    """The role to switch to (http), or None when the login itself is the caller (stdio)."""
+def caller(ctx: Context | None) -> tuple[str | None, str]:
+    """The role to switch to (http; None when the login itself is the caller, stdio) and the caller's
+    profile: the token's `profile` claim (http) or KK_PROFILE (stdio); operator when not set."""
     if not REQUIRE_TOKEN:
-        return None
-    auth = (ctx.headers or {}).get("authorization", "")
+        return None, os.environ.get("KK_PROFILE") or "operator"
+    auth = ((ctx.headers if ctx else None) or {}).get("authorization", "")
     if not auth.lower().startswith("bearer ") or not auth[7:].strip():
         raise KernelError("no bearer token: send 'Authorization: Bearer <your agent JWT>'")
     try:
@@ -75,7 +110,7 @@ def caller_role(ctx: Context) -> str | None:
         raise KernelError(f"invalid token: {e}") from None
     if not claims.get("role"):
         raise KernelError("token has no role claim")
-    return claims["role"]
+    return claims["role"], claims.get("profile") or "operator"
 
 
 def database_url() -> str:
@@ -97,9 +132,10 @@ def database_url() -> str:
 SWITCHING_LOGIN = """select rolsuper or rolname = 'kk_authenticator' from pg_roles where rolname = current_user"""
 
 
-async def query(ctx: Context, statement: str, params: tuple | dict = ()) -> Any:
-    """Run one statement as the caller; returns the first column of the first row."""
-    role = caller_role(ctx)
+@asynccontextmanager
+async def connection(ctx: Context):
+    """A connection in one transaction as the caller (http: SET LOCAL ROLE to the token's role)."""
+    role = caller(ctx)[0]
     try:
         async with await psycopg.AsyncConnection.connect(database_url()) as conn:
             async with conn.transaction():
@@ -108,11 +144,21 @@ async def query(ctx: Context, statement: str, params: tuple | dict = ()) -> Any:
                 elif (await (await conn.execute(SWITCHING_LOGIN)).fetchone())[0]:
                     raise KernelError("stdio needs the agent's own login in DATABASE_URL, not one that can "
                                       "switch roles (kk_authenticator or a superuser)")
-                cur = await conn.execute(statement, params)
-                row = await cur.fetchone()
-                return row[0] if row else None
+                yield conn
     except psycopg.Error as e:
         raise KernelError(f"kernel refused: {(e.diag.message_primary or str(e))[:500]}") from None
+
+
+async def one(conn, statement: str, params: tuple | dict = ()) -> Any:
+    """The first column of the first row of one statement on `conn`."""
+    row = await (await conn.execute(statement, params)).fetchone()
+    return row[0] if row else None
+
+
+async def query(ctx: Context, statement: str, params: tuple | dict = ()) -> Any:
+    """Run one statement as the caller; returns the first column of the first row."""
+    async with connection(ctx) as conn:
+        return await one(conn, statement, params)
 
 
 def rows(select: str) -> str:
@@ -164,8 +210,11 @@ async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
 
 @mcp.tool()
 async def explain(ctx: Context, claim_id: str) -> dict:
-    """Where a claim came from: sources and quotes, derivations, uses, status history, beliefs, verifications, run."""
-    return await query(ctx, "select api.explain(%s::uuid)", (claim_id,))
+    """Where a claim came from: sources and quotes, derivations, uses, status history, beliefs, verifications,
+    run. claim_id: a claim id, or the #handle a briefing shows (its first characters)."""
+    from .memory import resolve
+    async with connection(ctx) as conn:
+        return await one(conn, "select api.explain(%s::uuid)", (await resolve(conn, claim_id),))
 
 
 async def _typed(ctx: Context, cls: str, props: list[str]) -> list[dict]:
@@ -282,3 +331,6 @@ async def graph(ctx: Context, module: str | None = None, slot: str | None = None
         (PREFIXES["rdfs"] + "label",))
     g = build(claims)
     return cytoscape(g, select(g, expand(module), expand(slot), expand(root), max(1, min(depth, 4))))
+
+
+from . import memory  # noqa: E402,F401  the memory profile's tools (they use what is defined above)

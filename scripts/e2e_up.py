@@ -4,8 +4,8 @@
 A fixture project that already has its own MCP server, hook and setting gets the kernel's MCP entry,
 skill and hooks merged in; no secret is written into the project. A harness session started from those
 files alone (the MCP server as .mcp.json names it, the hooks as the settings name them, with no login in
-the environment) is the project's agent: it submits a claim, sees it applied and cites it; the hooks
-recall it. Running kk up again changes nothing.
+the environment) is the project's agent with the memory profile (M6-T1): it sees four tools, remembers a fact,
+recalls it with belief and a handle, and explains the handle; the hooks recall it. Running kk up again changes nothing.
 
 Env: KK_ADMIN_URL (superuser), the knowledge-kernel package installed (pip install -e .).
 """
@@ -58,35 +58,27 @@ async def session(project: Path) -> str | None:
     params = StdioServerParameters(command=os.path.expandvars(entry["command"]), args=entry.get("args", []), env=env)
     async with stdio_client(params) as (r, w), ClientSession(r, w) as s:
         await s.initialize()
-        run, err = await tool(s, "start_run", {"info": {"purpose": "kk up smoke"}})
-        subject = f"urn:kk:test:up:{int(time.time() * 1000)}"
-        cs = {"idempotency_key": f"up-test:{subject}", "attributed_to": AGENT, "generated_by": run,
-              "target_scope": "urn:kk:scope:default",
-              "ops": [{"op": "add_claim", "subject": subject, "predicate": "rdfs:label",
-                       "object": {"value": {"@value": "Zanzibar ledger reconciliation", "@language": "en"}},
-                       "evidence_type": "testimony", "references": [{"source_uri": "file:README.md"}]}]}
-        sub, err = await tool(s, "submit_change_set", {"change_set": cs})
-        status = sub and sub["status"]
+        names = {t.name for t in (await s.list_tools()).tools}
+        check("M6-T1 the project's agent sees the memory profile: four tools",
+              names == {"remember", "recall", "explain", "changes_since"}, f"{sorted(names)}")
+        text = f"Zanzibar ledger reconciliation runs nightly ({int(time.time() * 1000)})"
+        res, err = await tool(s, "remember", {"kind": "fact", "text": text})
+        check("M3-T1 the harness's MCP server, from .mcp.json alone, is the project's agent: it remembers",
+              res and res["status"] in ("submitted", "valid", "applied"), err or res)
+        line = ""
         for _ in range(60):
-            if status != "submitted":
+            brief, err = await tool(s, "recall", {"question": "When does Zanzibar ledger reconciliation run?"})
+            line = next((x for x in (brief or "").splitlines() if text in x), "")
+            if "belief" in line:
                 break
             await asyncio.sleep(0.5)
-            status = (await tool(s, "get_change_set", {"change_set_id": sub["id"]}))[0]["status"]
-        check("M3-T1 the harness's MCP server, from .mcp.json alone, is the project's agent: it submits and the claim is applied",
-              status == "applied", err or status)
-        found = []
-        for _ in range(40):
-            res, err = await tool(s, "search", {"text": "Zanzibar ledger"})
-            if err:
-                print(err)
-            found = [c for c in res or [] if c["subject"] == subject]
-            if found and found[0]["belief"] is not None:
-                break
-            await asyncio.sleep(0.25)
-        check("M3-T1 it cites the claim with id and belief, attributed to the project's agent",
-              found and found[0]["attributed_to"] == AGENT and found[0]["belief"] is not None,
-              found and f"claim {found[0]['id']} belief {found[0]['belief']}")
-        return found[0]["id"] if found else None
+        check("M3-T1 it recalls the memory as its own, with belief and a handle",
+              "— you; belief" in line and "#" in line, err or line)
+        handle = line.rsplit(" ", 1)[-1]
+        why, err = await tool(s, "explain", {"claim_id": handle})
+        check("M3-T1 the handle explains to the claim, attributed to the project's agent",
+              why and why["claim"]["attributed_to"] == AGENT, err or "")
+        return why["claim"]["id"] if why else None
 
 
 def hooks(project: Path, state: str, claim: str | None) -> None:

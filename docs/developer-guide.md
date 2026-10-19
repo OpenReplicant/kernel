@@ -62,7 +62,7 @@ After each change set is inserted or applied, the kernel sends `NOTIFY kernel_ch
 | **Slots**: the jobs a module can fill (encoder, verifier, recall-index, actuator, ui, trigger, …), each with a contract | `ontology/slots.yaml` | manifests, the evaluator |
 | **Vocabulary packs**: the terms claims may use (PROV, BBO, SOSA, ORG, ActivityStreams, Web Annotation, …), one home per concept | `ontology/packs.yaml`, `ontology/*.ttl` | encoders, processors, the validator |
 | **`kk.lib`** (Python): connect as your role, `run()`, `submit()`, `listen()` with pattern triggers | `kk/lib.py` | Python modules |
-| **MCP tools**: `query_claims`, `get_entity`, `search`, `explain`, `submit_change_set`, `get_change_set`, `start_run`, `finish_run`, `review_queue`, `review`, `graph`, `list_modules`, `list_slots`, `whoami` | `modules/kernel-mcp` | agents in any harness |
+| **MCP tools**, in two profiles chosen per login (M6-T1). `memory`: `remember`, `recall`, `explain`, `changes_since` (briefings: `kernel_mcp/briefing.py`). `operator`: those and `query_claims`, `get_entity`, `search`, `submit_change_set`, `get_change_set`, `start_run`, `finish_run`, `list_runs`, `list_change_sets`, `review_queue`, `review`, `graph`, `list_modules`, `list_slots`, `whoami` | `modules/kernel-mcp` | agents in any harness |
 | **Skills**: instructions an agent follows to record knowledge correctly | `modules/skill-*/SKILL.md` | harness agents |
 | **Harness hooks**: session start, prompt, session end (context in, the session's work out) | `modules/kernel-mcp/kernel_mcp/hooks.py` | Claude Code and similar harnesses |
 | **UI views**: a view is a small ES module the UI shell loads | `modules/ui`, `modules/view-*` | people |

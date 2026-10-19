@@ -33,9 +33,11 @@ def check(name, ok, detail=""):
     print(("ok  " if ok else "FAIL"), name, detail)
 
 
-def stdio(dsn):
+def stdio(dsn, profile=None):
     env = {k: v for k, v in os.environ.items() if k in ("PATH", "PYTHONPATH", "HOME")}
     env["DATABASE_URL"] = dsn
+    if profile:
+        env["KK_PROFILE"] = profile
     return stdio_client(StdioServerParameters(command=sys.executable, args=["-m", "kernel_mcp"], env=env))
 
 
@@ -170,6 +172,70 @@ async def agent_session():
         check("the agent's login cannot become the owner", not became)
 
 
+async def recalled(s, question, text, want="belief"):
+    """The briefing line holding `text`, once it carries `want` (the claim is applied and scored)."""
+    line, err = "", None
+    for _ in range(60):
+        brief, err = await tool(s, "recall", {"question": question})
+        line = next((x for x in (brief or "").splitlines() if text in x), "")
+        if want in line:
+            break
+        await asyncio.sleep(0.25)
+    return line, err
+
+
+async def memory_session():
+    """M6-T1: the memory profile, four tools; remember, recall, explain a handle, correct, changes since."""
+    t0 = await asyncio.to_thread(lambda: psycopg.connect(os.environ["AGENT_DATABASE_URL"]).execute(
+        "select now()").fetchone()[0])
+    stamp = int(time.time() * 1000)
+    text = f"We reconcile the Quokka ledger every night at two ({stamp})"
+    fixed = f"We reconcile the Quokka ledger every night at three ({stamp})"
+    async with stdio(os.environ["AGENT_DATABASE_URL"], "memory") as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        names = {t.name for t in (await s.list_tools()).tools}
+        check("M6-T1 the memory profile lists four tools", names == {"remember", "recall", "explain", "changes_since"},
+              f"{sorted(names)}")
+        _, err = await tool(s, "query_claims")
+        check("M6-T1 a tool outside the profile is refused", err and "not in your profile" in err, (err or "")[:80])
+        res, err = await tool(s, "remember", {"kind": "decision", "text": text, "about": "urn:kk:test:quokka-ledger"})
+        check("M6-T1 remember: one sentence, no change set", res and res["memory"].startswith("urn:kk:memory:"), err or res)
+        again, _ = await tool(s, "remember", {"kind": "decision", "text": text, "about": "urn:kk:test:quokka-ledger"})
+        check("M6-T1 remembering the same again is the same change set", again and again["change_set"] == res["change_set"])
+        line, err = await recalled(s, "When do we reconcile the Quokka ledger?", text)
+        check("M6-T1 recall: a briefing line with its kind, author, belief and handle",
+              line.startswith(f'- decision: "{text}"') and "— you; belief 0.50 #" in line, err or line)
+        handle = line.rsplit(" ", 1)[-1]
+        why, err = await tool(s, "explain", {"claim_id": handle})
+        check("M6-T1 explain(handle) gives the source: the agent's own words, quoted",
+              why and why["references"][0]["quote"] == text and why["claim"]["evidence_type"] == "testimony",
+              err or "")
+        named, err = await tool(s, "remember", {"kind": "fact", "text": f"The Quokka ledger lives in Hobart ({stamp})",
+                                                 "about": f"Quokka ledger {stamp}"})
+        line, _ = await recalled(s, "Where does the Quokka ledger live?", "lives in Hobart")
+        res, _ = await tool(s, "remember", {"kind": "fact", "text": f"The Quokka ledger has two owners ({stamp})",
+                                            "about": f"quokka LEDGER {stamp}"})
+        both, _ = await recalled(s, "Who owns the Quokka ledger?", "two owners")
+        check("M6-T1 about: a name becomes a labelled topic, and the same name later finds it",
+              f"(about Quokka ledger {stamp})" in line and f"(about Quokka ledger {stamp})" in both, err or both)
+        res, err = await tool(s, "remember", {"kind": "correction", "text": fixed, "replaces": handle})
+        line, err = await recalled(s, "When do we reconcile the Quokka ledger?", fixed)
+        old, _ = await recalled(s, "When do we reconcile the Quokka ledger?", text, want="never")
+        why, _ = await tool(s, "explain", {"claim_id": handle})
+        check("M6-T1 a correction supersedes the memory: recalled instead of it, the old one kept and marked",
+              line.startswith(f'- correction: "{fixed}"') and not old
+              and why["status"][-1]["status"] == "deprecated" and why["status"][-1]["reason"] == "superseded",
+              line)
+        res = await s.read_resource("kernel://recall/When%20do%20we%20reconcile%20the%20Quokka%20ledger%3F")
+        check("M6-T1 the briefing is also an MCP resource", fixed in res.contents[0].text, res.contents[0].text[:120])
+    async with stdio(os.environ["OWNER_DATABASE_URL"], "memory") as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        news, err = await tool(s, "changes_since", {"since": t0.isoformat()})
+        check("M6-T1 changes_since: another agent's memory, its superseded one, and the next cursor",
+              news and f'correction: "{fixed}"' in news and "[superseded by #" in news and "next cursor:" in news,
+              err or (news or "")[:200])
+
+
 async def http_session():
     url, secret = os.environ["KK_MCP_URL"], os.environ["KK_JWT_SECRET"]
     for _ in range(50):
@@ -192,10 +258,21 @@ async def http_session():
     check("http: forged token refused", results["forged"][1] and "invalid token" in results["forged"][1])
     check("http: valid token (kk token) reads", results["valid"][1] is None and results["valid"][0],
           f"{len(results['valid'][0] or [])} claims")
+    token = subprocess.run([sys.executable, "-m", "kk", "token", "agent_claude_code", "--days", "0.01", "--profile",
+                            "memory"], capture_output=True, text=True, check=True).stdout.strip()
+    client = httpx.AsyncClient(headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    async with client, streamable_http_client(url, http_client=client) as (r, w, *_), ClientSession(r, w) as s:
+        await s.initialize()
+        names = {t.name for t in (await s.list_tools()).tools}
+        _, err = await tool(s, "query_claims")
+    check("M6-T1 http: a token's profile (kk token --profile memory) chooses the tools",
+          names == {"remember", "recall", "explain", "changes_since"} and err and "not in your profile" in err,
+          f"{sorted(names)}")
 
 
 async def main():
     await agent_session()
+    await memory_session()
     await http_session()
     print("G4 kernel smoke", "passed" if all(checks) else "FAILED", f"({sum(checks)}/{len(checks)})")
     return 0 if all(checks) else 1

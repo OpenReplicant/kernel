@@ -15,7 +15,7 @@ sure we are, and is reviewed by a person before it counts (D-84).
 - **How it works, in plain language:** `docs/architecture.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
-- **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`), 3 (your own data, cited, in minutes: `docs/milestone-3.md`) and 4 (a demo you can sell: `docs/milestone-4.md`, `kk demo`) are done; milestone 5 (maps from conversations, interactions and code: `docs/milestone-5.md`) built the interaction encoder and the interviewer; milestone 6 (agent memory without baggage: `docs/milestone-6.md`) is next. What each module takes in and gives out: `docs/modules.md`.
+- **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`), 3 (your own data, cited, in minutes: `docs/milestone-3.md`) and 4 (a demo you can sell: `docs/milestone-4.md`, `kk demo`) are done; milestone 5 (maps from conversations, interactions and code: `docs/milestone-5.md`) built the interaction encoder and the interviewer; milestone 6 (agent memory without baggage: `docs/milestone-6.md`) is under way: the four-tool memory profile is in. What each module takes in and gives out: `docs/modules.md`.
 - **Decisions and open questions:** `docs/decisions.md`
 - **Working rules:** `CLAUDE.md`
 
@@ -27,6 +27,18 @@ With Docker and Python 3.12+, from a checkout:
 pip install -e .
 kk up ~/code/my-project        # the kernel in Docker, your and the agent's logins, MCP + skill + hooks, and the project read in
 cd ~/code/my-project && claude # approve the 'kernel' MCP server; the agent now recalls, cites and records
+```
+
+The agent sees four tools (the `memory` profile, M6-T1): `recall(question)` answers with a briefing in which
+every line says who said it and how sure the kernel is, with a handle to cite; `remember(kind, text)` records
+one sentence, such as a decision and its reason; `explain(handle)` shows the source; `changes_since()` says
+what others changed. A line in its reply that starts with `Decision:` or `Remember:` is recorded from the
+session transcript too. `kk up --profile operator` gives it every tool instead.
+
+```text
+Recalled for "which psycopg do we pin?" (who said it; belief 0-1; explain(#handle) for sources):
+- decision: "We pin psycopg 3.3.6: 3.4 drops Python 3.11" (about psycopg) — Ana (person); belief 0.80 #5a32ce36
+- knowledge-kernel · softwareRequirements · psycopg (version ==3.3.6) — repository encoder (agent); belief 0.90 #0c1d7e42
 ```
 
 `kk up` prints the UI address (http://127.0.0.1:8080/ui/) and your sign-in (name and password) for reviewing. Logins
@@ -69,7 +81,7 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | `kk status` | who you are, what you can see, what is waiting for review |
 | `kk review list \| show \| approve \| reject` | the review lane, as yourself |
 | `kk scan --repo DIR` | ingest a repository (ingest filter first; needs gitleaks) |
-| `kk token ROLE` | a bearer token for MCP over HTTP |
+| `kk token ROLE [--profile memory]` | a bearer token for MCP over HTTP; `--profile memory` shows the four memory tools |
 | `kk module install DIR` | a module from `modules/`: its own login and a locked-down container |
 | `kk export` / `kk import FILE` | every claim with its provenance as N-Quads, scopes as named graphs |
 

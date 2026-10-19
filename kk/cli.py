@@ -239,11 +239,13 @@ def b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
-def mint(role: str, secret: str, days: float) -> str:
-    """HS256 JWT with a `role` claim, as kernel-mcp --http verifies it (KK_JWT_SECRET)."""
+def mint(role: str, secret: str, days: float, profile: str | None = None) -> str:
+    """HS256 JWT with a `role` claim (and a `profile` one: memory or operator, M6-T1), as kernel-mcp --http
+    verifies it (KK_JWT_SECRET)."""
     now = int(time.time())
     head = b64url(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
-    body = b64url(json.dumps({"role": role, "iat": now, "exp": now + int(days * 86400)},
+    body = b64url(json.dumps({"role": role, "iat": now, "exp": now + int(days * 86400),
+                              **({"profile": profile} if profile else {})},
                              separators=(",", ":")).encode())
     sig = hmac.new(secret.encode(), f"{head}.{body}".encode(), hashlib.sha256).digest()
     return f"{head}.{body}.{b64url(sig)}"
@@ -253,7 +255,7 @@ def cmd_token(a) -> None:
     secret = os.environ.get("KK_JWT_SECRET", "")
     if len(secret) < 32:
         sys.exit("KK_JWT_SECRET must be set and at least 32 characters")
-    print(mint(a.role, secret, a.days))
+    print(mint(a.role, secret, a.days, a.profile))
 
 
 # ---------------------------------------------------------------- main
@@ -318,6 +320,8 @@ def main(argv=None) -> None:
     p = sub.add_parser("token", help="bearer token for MCP over HTTP (needs KK_JWT_SECRET)")
     p.add_argument("role")
     p.add_argument("--days", type=float, default=30)
+    p.add_argument("--profile", choices=("memory", "operator"),
+                   help="the MCP tools the token shows: memory (four) or operator (every tool; the default)")
     p.set_defaults(fn=cmd_token)
     a = ap.parse_args(argv)
     a.fn(a)

@@ -1,21 +1,41 @@
 ---
 name: knowledge-kernel
-description: Use when reading from or writing to the Knowledge Kernel through its MCP tools — looking up what is known about an entity, explaining where a claim came from, or recording new claims, beliefs, verifications or status changes as a change set.
+description: Use when reading from or writing to the Knowledge Kernel through its MCP tools — recalling what is known and who said it, remembering a fact or decision, seeing what changed, explaining where a claim came from, or (operator tools) recording claims as a change set.
 ---
 
 # Working with the Knowledge Kernel
 
 The kernel stores **claims**: attributed, referenced statements about entities, each with a belief score.
-You can read anything your role is cleared for. You never write directly: you submit a **change set**,
-and the kernel validates and applies it (or sends it to a person for review).
+You can read anything your role is cleared for. Which tools you see depends on your login's profile:
+`memory` (four tools, below) or `operator` (every tool).
 
-## Reading
+## Memory (the memory profile)
+
+- `recall(question, budget?)` → a briefing: one line per memory or claim, saying who said it (you, a
+  person, another agent) and its belief from 0 to 1, ending in a handle such as `#1a2b3c4d`.
+- `remember(kind, text, about?, replaces?)` → records one sentence as yours. `kind` is `fact`,
+  `decision`, `preference`, `commitment` or `correction`; `about` is what it concerns (an IRI or a
+  #handle); `replaces` is the #handle of a memory this one corrects (the old one is kept, marked
+  superseded). It shows in `recall` once the kernel has applied it, usually within a second.
+- `explain(handle)` → where a line came from: the source and quote, status history, beliefs.
+- `changes_since(since?)` → what others added, superseded or retracted since you last looked, and
+  the cursor to pass next time.
+
+You can also write a line in your reply that starts with `Decision:` or `Remember:` (or `Preference:`,
+`Commitment:`, `Correction:`); when the session transcript is recorded, the line becomes a memory
+quoting it. Remember what someone would want later: decisions and their reasons, what a person told
+you, findings about code or systems. Not plans, guesses or restatements.
+
+**Cite the #handles you rely on, with their belief.** A line said by "you" or another agent is a
+proposal, not a decision by a person: say which it is.
+
+## Reading (operator tools)
 
 - `search(text)` → claims ranked by relevance to your words (full text over values and IRIs, then
   belief); substring match on labels and IRIs when no word matches.
 - `get_entity(iri)` → the entity card: current claims with status and belief.
 - `query_claims(filters)` → claims by subject, predicate, object or scope (IRIs or CURIEs); deprecated claims only on request.
-- `explain(claim_id)` → sources and quotes, what it was derived from, what uses it, status history,
+- `explain(claim_id)` (a claim id or a #handle) → sources and quotes, what it was derived from, what uses it, status history,
   beliefs and verifications. Use this before relying on a claim you didn't make.
 - `list_slots()`, `list_modules()` → the platform's own self-model.
 - `list_runs(plan_step?, used?, module?)` → runs: who did what, for which plan step, using which claims,
@@ -28,7 +48,7 @@ their belief, and `explain` the ones you rely on.
 When you answer a question from the kernel, **cite claim ids and show their belief** (invariant 6).
 Deprecated claims are history, not current fact; say so if you mention them.
 
-## Writing
+## Writing (operator tools)
 
 1. `start_run(module, plan_step?)` → run id. Every change set names the run that produced it. If the
    session-start hook gave you a session run, use that one instead (it is finished when the session

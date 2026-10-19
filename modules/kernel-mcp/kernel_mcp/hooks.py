@@ -7,7 +7,8 @@
 Each reads the harness's hook JSON on stdin (Claude Code: session_id, prompt, cwd, ...) and prints
 Claude Code's hook JSON with `additionalContext` on stdout. KK_DATABASE_URL (or DATABASE_URL) is the
 agent's own login, as for stdio kernel-mcp; hooks inherit the harness's environment. A hook never blocks the session: on any error it reports to stderr and exits 0.
-Env: KK_RECALL_LIMIT (default 8), KK_STATE_DIR (default ~/.local/state/knowledge-kernel).
+Env: KK_RECALL_LIMIT (default 8), KK_STATE_DIR (default ~/.local/state/knowledge-kernel), KK_PROFILE (memory:
+the session-start text names the memory profile's tools, M6-T1).
 """
 from __future__ import annotations
 
@@ -80,6 +81,16 @@ def session_start(data: dict) -> None:
         fresh = freshness(conn, data.get("cwd"))
     STATE.mkdir(parents=True, exist_ok=True)
     run_file(data.get("session_id", "")).write_text(str(run))
+    if os.environ.get("KK_PROFILE") == "memory":
+        context("SessionStart",
+                f"Knowledge kernel connected as {agent} ({visible} claims visible): your memory, with sources. "
+                "Memories related to each prompt are recalled for you; recall(question) asks for more. Each line "
+                "says who said it and its belief, and ends in a #handle: cite the handles you rely on, and call "
+                "explain(handle) before relying on a line you did not write. remember(kind, text) records one "
+                "sentence (a fact, decision, preference, commitment or correction); a line in your reply that "
+                "starts with Decision: or Remember: is recorded from the session transcript too. "
+                "changes_since() says what others changed." + fresh)
+        return
     context("SessionStart",
             f"Knowledge kernel connected as {agent} ({visible} claims visible). This session's kernel run is "
             f"{run}: use it as generated_by when you submit change sets. Claims related to each prompt are "

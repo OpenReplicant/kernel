@@ -8,7 +8,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path[:0] = [str(ROOT), str(HERE.parent)]
-from interaction_encoder.encode import (AS, PROV, change_sets, encode, read_chat, read_claude_code,  # noqa: E402
+from interaction_encoder.encode import (AS, DCT, PROV, change_sets, encode, read_chat, read_claude_code,  # noqa: E402
                                         render, sniff)
 
 ok = 0
@@ -77,4 +77,26 @@ deprecated = [op for cs in sets for op in cs["ops"] if op["op"] == "set_status"]
 check(len(sets) > 1 and sets[0]["ops"][0]["op"] == "add_artifact" and len(deprecated) == len(prior)
       and all(op.get("reason") == "superseded" for op in deprecated),
       f"a grown transcript, in batches: each earlier claim superseded by its new version ({len(sets)} sets)")
+inline = ['{"id": "1", "conversation": "build", "author": "claude-code", "kind": "agent", "text": '
+          '"Pinned the driver.\\nDecision: we pin psycopg 3.3.6 because 3.4 drops Python 3.11\\n'
+          '- **Remember:** the CI runner has no Docker"}',
+          '{"id": "2", "conversation": "build", "author": "Ana", "text": "Correction: CI does have Docker now"}']
+text, sha, ops = claims(read_chat(inline), "repo")
+notes = {op["subject"] for op in ops if op["subject"].startswith("urn:kk:memory:")}
+check(notes == {"urn:kk:memory:repo:build:1:1", "urn:kk:memory:repo:build:1:2", "urn:kk:memory:repo:build:2:0"},
+      f"M6-T1 each Decision:/Remember:/Correction: line of a message is a memory of its own: {sorted(notes)}")
+d = "urn:kk:memory:repo:build:1:1"
+check(values(ops, d, AS + "content") == ["we pin psycopg 3.3.6 because 3.4 drops Python 3.11"]
+      and values(ops, d, DCT + "type") == ["urn:kk:memory-kind:decision"]
+      and values(ops, d, AS + "attributedTo") == ["urn:kk:actor:repo:claude-code"]
+      and values(ops, d, DCT + "isPartOf") == ["urn:kk:message:repo:build:1"],
+      "M6-T1 an inline decision: its words, its kind, who wrote it, the message it is part of")
+check(values(ops, "urn:kk:memory:repo:build:1:2", DCT + "type") == ["urn:kk:memory-kind:fact"]
+      and values(ops, "urn:kk:memory:repo:build:2:0", AS + "attributedTo") == ["urn:kk:actor:repo:ana"],
+      "M6-T1 Remember: is a fact, in a list item or bold; a person's line is theirs")
+lines = text.splitlines()
+mine = [op["references"][0] for op in ops if op["subject"] == d]
+check(all(r["quote"] == "Decision: we pin psycopg 3.3.6 because 3.4 drops Python 3.11"
+          and lines[r["span"]["start_line"] - 1] == r["quote"] for r in mine),
+      "M6-T1 an inline memory quotes its whole line, at its line in the transcript")
 print(f"M5-T3 interaction encoder checks passed ({ok}/{ok})")
