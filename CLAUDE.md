@@ -123,5 +123,5 @@ Milestone 6 (`docs/milestone-6.md`, D-85): agent memory without baggage. Rigour 
 passive capture, and an MCP `memory` profile of four tools. Briefings are cited and attributed within a
 token budget, with what changed since the agent last looked. Each agent has a working-memory scope.
 Terms are chosen inside the extractor, never by the agent, and a compaction verifier checks summaries.
-Reactivity is D-86 (proposed): `current_edge` and a cursor in the kernel, detectors as a module. Kernel
-changes (D-86, O-8) wait for the owner. Work one task at a time; each ends with its check passing.
+Reactivity is D-86 (proposed): `current_edge` and a cursor in the kernel, detectors as a module. The owner
+delegated decisions (D-87): D-86 is confirmed, O-8 is closed, and adoption comes first (`docs/offer.md`). Work one task at a time; each ends with its check passing.

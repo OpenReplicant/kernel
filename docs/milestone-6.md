@@ -65,10 +65,14 @@ until the owner confirms it.
 
 ## Order
 
-T1 and T7 first: they need no kernel change and give the briefing that later tasks are judged by. Then
-T4 with T5 (extraction chooses terms), then T6, T8 and T9, with T10 measuring as each lands. T0, T2's
-scopes and T3 wait for the owner's confirmation of D-86. After this milestone: distributions (M5-T9)
-and the interview demo (M5-T5) as the first one.
+1. **T1 and T7.** They need no kernel change, and they give the briefing that later tasks are judged by.
+2. **T10's LongMemEval baseline,** early: a public score is what developers compare.
+3. **T4 with T5:** extraction chooses the terms.
+4. **T0, T2 and T3.** D-86 is confirmed by D-87.
+5. **T6, T8 and T9,** with T10 measuring each as it lands.
+
+After this milestone come distributions (M5-T9) and the interview demo (M5-T5) as the first one. Paid
+pilots of the process loop (`docs/offer.md`) run alongside, on what works today.
 
 ## Carried over from milestone 5
 

@@ -11,6 +11,7 @@ sure we are, and is reviewed by a person before it counts (D-84).
   views that does one job, installed as its own stack. The first: organisation and process maps from
   conversations.
 
+- **Work with us:** `docs/offer.md`: paid pilots of process intelligence and the self-healing MAPE-K loop, memory for your agents, custom modules. Apache-2.0 (`LICENSE`).
 - **How it works, in plain language:** `docs/architecture.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
