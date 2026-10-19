@@ -3,7 +3,8 @@ through kernel-mcp over stdio, submits a claim, sees the validator apply it, fin
 the kernel refuses what that identity may not do; the shared HTTP mode refuses missing or forged tokens.
 
 Env: DATABASE_URL (kk_authenticator), AGENT_DATABASE_URL (agent_claude_code's own login),
-OWNER_DATABASE_URL (person_owner's own login), KK_MCP_URL and KK_JWT_SECRET (the running `kk serve`);
+OWNER_DATABASE_URL (person_owner's own login), KK_MCP_URL and KK_JWT_SECRET (the running `kk serve`), KK_ADMIN_URL
+(a superuser: a private scope for M6-T11);
 the knowledge-kernel package installed (pip install -e .).
 """
 import asyncio
@@ -33,11 +34,13 @@ def check(name, ok, detail=""):
     print(("ok  " if ok else "FAIL"), name, detail)
 
 
-def stdio(dsn, profile=None):
+def stdio(dsn, profile=None, scope=None):
     env = {k: v for k, v in os.environ.items() if k in ("PATH", "PYTHONPATH", "HOME")}
     env["DATABASE_URL"] = dsn
     if profile:
         env["KK_PROFILE"] = profile
+    if scope:
+        env["KK_MEMORY_SCOPE"] = scope
     return stdio_client(StdioServerParameters(command=sys.executable, args=["-m", "kernel_mcp"], env=env))
 
 
@@ -181,7 +184,7 @@ async def recalled(s, question, text, want="belief"):
         if want in line:
             break
         await asyncio.sleep(0.25)
-    return line, err
+    return line, err or (None if line else (brief or "")[:600])
 
 
 async def memory_session():
@@ -236,6 +239,68 @@ async def memory_session():
               err or (news or "")[:200])
 
 
+PRIVATE = "urn:kk:scope:e2e-memory-private"
+
+
+async def conclusion_session():
+    """M6-T11: a conclusion is recorded with its premises, as private as the most private of them."""
+    with psycopg.connect(os.environ["KK_ADMIN_URL"], autocommit=True) as admin:
+        admin.execute("insert into kernel.scope(iri, label) values (%s, 'memory smoke: private') on conflict do nothing",
+                      (PRIVATE,))
+        # The services that must: the validator and the index read it; the belief model and truth
+        # maintenance record their beliefs and verdicts there.
+        for role, write in (("person_owner", True), ("kkm_validator", False), ("kkm_belief", True),
+                            ("kkm_recall_index", False), ("kkm_truth_maintenance", True)):
+            admin.execute("""insert into kernel.scope_grant(scope, db_role, can_read, can_write) values (%s, %s, true, %s)
+                             on conflict (scope, db_role) do update set can_read = true, can_write = excluded.can_write""",
+                          (PRIVATE, role, write))
+            # kernel.readers_subset compares grant rows, not role membership: for a claim in PRIVATE to be
+            # derived from one in the default scope, each PRIVATE reader needs its own row there too.
+            admin.execute("""insert into kernel.scope_grant(scope, db_role, can_read, can_write)
+                             values ('urn:kk:scope:default', %s, true, false) on conflict (scope, db_role) do nothing""",
+                          (role,))
+    stamp = int(time.time() * 1000)
+    q = "What do we know about the Wombat payroll?"
+    owner = os.environ["OWNER_DATABASE_URL"]
+    async with stdio(owner, "memory", PRIVATE) as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        await tool(s, "remember", {"kind": "fact", "text": f"The Wombat payroll runs on the 25th ({stamp})"})
+        secret, _ = await recalled(s, q, "runs on the 25th")
+    async with stdio(owner, "memory") as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        await tool(s, "remember", {"kind": "fact", "text": f"The Wombat payroll pays forty people ({stamp})"})
+        public, _ = await recalled(s, q, "forty people")
+        _, err = await tool(s, "remember", {"kind": "conclusion", "text": "The Wombat payroll is small"})
+        check("M6-T11 a conclusion without premises is refused", err and "because" in err, (err or "")[:80])
+        both = [secret.rsplit(" ", 1)[-1], public.rsplit(" ", 1)[-1]]
+        res, err = await tool(s, "remember", {"kind": "conclusion", "because": both,
+                                              "text": f"The Wombat payroll pays forty people on the 25th ({stamp})"})
+        line, err2 = await recalled(s, q, "forty people on the 25th")
+        why, _ = await tool(s, "explain", {"claim_id": line.rsplit(" ", 1)[-1]}) if line else (None, None)
+        check("M6-T11 a conclusion: inferred from the premises it cites, marked in the briefing",
+              line.startswith("- conclusion:") and "(from 2 premises)" in line and why
+              and why["claim"]["evidence_type"] == "inferred"
+              and sorted(why["derived_from"]) == sorted(why2["claim"]["id"] for why2 in
+                                                       [(await tool(s, "explain", {"claim_id": h}))[0] for h in both]),
+              err or err2 or line)
+        check("M6-T11 it is as private as its most private premise", why and why["claim"]["scope"] == PRIVATE,
+              why and why["claim"]["scope"])
+        await tool(s, "remember", {"kind": "correction", "replaces": both[1],
+                                   "text": f"The Wombat payroll pays fifty people ({stamp})"})
+        flagged, err = await recalled(s, q, "forty people on the 25th", want="a premise was withdrawn")
+        belief = float(flagged.split("belief ")[1][:4]) if "belief " in flagged else 1
+        why, _ = await tool(s, "explain", {"claim_id": flagged.rsplit(" ", 1)[-1]}) if flagged else (None, None)
+        tms = [v for v in (why or {}).get("verifications", []) if v.get("method") == "urn:kk:module:truth-maintenance"]
+        check("M6-T12 a premise superseded: the conclusion is flagged, its belief capped, and kept",
+              "a premise was withdrawn" in flagged and belief <= 0.25 and tms and tms[-1]["verdict"] == "inconclusive"
+              and why["claim"]["status"] != "deprecated", err or flagged)
+    async with stdio(os.environ["AGENT_DATABASE_URL"], "memory") as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        brief, _ = await tool(s, "recall", {"question": q})
+        check("M6-T11 an agent without that clearance sees the public premise (now corrected), not the conclusion",
+              "fifty people (" in (brief or "") and "on the 25th" not in (brief or ""), (brief or "")[:200])
+
+
 async def http_session():
     url, secret = os.environ["KK_MCP_URL"], os.environ["KK_JWT_SECRET"]
     for _ in range(50):
@@ -273,6 +338,7 @@ async def http_session():
 async def main():
     await agent_session()
     await memory_session()
+    await conclusion_session()
     await http_session()
     print("G4 kernel smoke", "passed" if all(checks) else "FAILED", f"({sum(checks)}/{len(checks)})")
     return 0 if all(checks) else 1

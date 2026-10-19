@@ -21,7 +21,8 @@ from .server import CLAIM_COLUMNS, KernelError, connection, expand, mcp, one, ro
 
 SCOPE = os.environ.get("KK_MEMORY_SCOPE", "urn:kk:scope:default")
 DATETIME = "http://www.w3.org/2001/XMLSchema#dateTime"
-VOCAB = "urn:kk:scope:vocab"   # the packs' terms: not news to an agent
+VOCAB = "urn:kk:scope:vocab"
+TMS = "urn:kk:module:truth-maintenance"   # the packs' terms: not news to an agent
 RUN = """select id from kernel.run where agent = kernel.my_agent() and status = 'running'
          order by started_at desc limit 1"""
 
@@ -49,6 +50,11 @@ async def context(conn, claims: list[dict]) -> tuple[dict, dict, dict, dict, str
     parts = await one(conn, rows(f"select {CLAIM_COLUMNS} from api.claims where subject = any(%s)"
                                  " and predicate = any(%s) and status <> 'deprecated'"), (subjects, list(NOTE_PARTS)))
     found = briefing.notes(parts)
+    counts = await one(conn, "select coalesce(jsonb_object_agg(claim_id, n), '{}') from (select claim_id::text, count(*) n"
+                             " from kernel.claim_derivation where claim_id = any(%s::uuid[]) group by claim_id) d",
+                       ([n["content"]["id"] for n in found.values()],))
+    for n in found.values():
+        n["premises"] = counts.get(str(n["content"]["id"]), 0)
     iris = {c["subject"] for c in claims} | {c["object_entity"] for c in claims if c.get("object_entity")} \
         | {c["attributed_to"] for c in claims} | {n.get("author") for n in found.values()} \
         | {a for n in found.values() for a in n["about"]}
@@ -63,6 +69,15 @@ async def context(conn, claims: list[dict]) -> tuple[dict, dict, dict, dict, str
                             " where subject = any(%s) and predicate = %s and object_entity = any(%s)"
                             " and status <> 'deprecated'", (iris, RDF_TYPE, [AS + "Person", AS + "Application"]))
     me = await one(conn, "select kernel.my_agent()")
+    # Lines whose premises were withdrawn (truth maintenance, D-89): its latest verdict is inconclusive.
+    ids = [str(c["id"]) for c in claims] + [str(n["content"]["id"]) for n in found.values()]
+    flagged = set(await one(conn, """select coalesce(array_agg(claim_id::text), '{}') from (
+        select distinct on (claim_id) claim_id, verdict from api.verifications where method = %s
+           and claim_id = any(%s::uuid[]) order by claim_id, recorded_at desc) v where verdict = 'inconclusive'""",
+                            (TMS, ids)) if ids and await one(conn, "select to_regclass('api.verifications') is not null")
+                  else [])
+    for c in [*claims, *(n["content"] for n in found.values())]:
+        c["withdrawn"] = str(c["id"]) in flagged
     return found, labels, agents, types, me
 
 
@@ -85,25 +100,47 @@ async def subject(conn, about: str) -> tuple[str, str | None]:
     return (found[0], None) if found else (f"urn:kk:topic:{slug(about)}", about)
 
 
+# The scope a conclusion goes in: the default memory scope if every premise may be read wherever it may
+# (invariant 3), else the first premise scope that is at least as narrow as all of them and writable.
+CONCLUSION_SCOPE = """select t from unnest(%(cands)s::text[]) with ordinality as c(t, n)
+  where kernel.role_can_write(current_user, t)
+    and not exists (select 1 from api.claims p where p.id = any(%(ids)s::uuid[])
+                    and not kernel.readers_subset(t, p.scope))
+  order by n limit 1"""
+
+
 @mcp.tool()
-async def remember(ctx: Context, kind: str, text: str, about: str | None = None, replaces: str | None = None) -> dict:
-    """Remember one thing, in a sentence. kind: fact, decision, preference, commitment or correction.
-    about: what it concerns (optional): a name ("the Quokka ledger": the entity with that label, or a new
-    topic), an IRI or CURIE, or a #handle from a briefing (that claim's subject). replaces: the #handle of a memory this one corrects (the old one is kept, marked superseded).
+async def remember(ctx: Context, kind: str, text: str, about: str | None = None, replaces: str | None = None,
+                   because: list[str] | None = None) -> dict:
+    """Remember one thing, in a sentence. kind: fact, decision, preference, commitment, correction or
+    conclusion. about: what it concerns (optional): a name ("the Quokka ledger": the entity with that label,
+    or a new topic), an IRI or CURIE, or a #handle (that claim's subject). replaces: the #handle of a memory
+    this one corrects (the old one is kept, marked superseded). because: the #handles it follows from
+    (required for a conclusion): it is recorded as derived from them, kept as private as the most private of
+    them, and flagged if one of them is later withdrawn.
     It is recorded as yours, quoting your words; recall shows it once the kernel has applied it."""
     text = " ".join(text.split())
     if kind not in KINDS:
         raise KernelError(f"kind must be one of {', '.join(KINDS)}")
     if not text or len(text) > 2000:
         raise KernelError("text must be one to 2000 characters: one sentence is best")
+    if kind == "conclusion" and not because:
+        raise KernelError("a conclusion needs because: the #handles of the claims it follows from")
     async with connection(ctx) as conn:
         me = await one(conn, "select kernel.my_agent()")
-        if about and about.strip().startswith("#"):
-            about = await one(conn, "select subject from api.claims where id = %s::uuid", (await resolve(conn, about),))
         about, topic = await subject(conn, about.strip()) if about and about.strip() else (None, None)
+        premises = sorted({await resolve(conn, h) for h in because or []})
+        scope = SCOPE
+        if premises:
+            scopes = await one(conn, "select coalesce(array_agg(distinct scope), '{}') from api.claims"
+                                     " where id = any(%s::uuid[])", (premises,))
+            scope = await one(conn, CONCLUSION_SCOPE, {"cands": [SCOPE, *sorted(scopes)], "ids": premises})
+            if not scope:
+                raise KernelError("no scope you may write is at least as private as all of these premises (every "
+                                  "reader of the conclusion's scope needs its own grant on each premise's scope)")
         run = await one(conn, RUN) or await one(conn, "select api.start_run(null, null, '[]'::jsonb, %s)",
                                                   (Jsonb({"via": "remember"}),))
-        digest = hashlib.sha256("\x1f".join([me, kind, text, about or ""]).encode()).hexdigest()
+        digest = hashlib.sha256("\x1f".join([me, kind, text, about or "", *premises]).encode()).hexdigest()
         note = f"urn:kk:memory:{digest[:24]}"
         ref = {"source_uri": f"urn:kk:run:{run}", "quote": text}
         facts = [(RDF_TYPE, {"entity": NOTE}), (AS + "content", {"value": {"@value": text}}),
@@ -113,6 +150,8 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
         named = [(about, LABEL, {"value": {"@value": topic}})] if topic else []
         ops = [{"op": "add_claim", "ref": f"c{i}", "subject": note, "predicate": p, "object": o,
                 "evidence_type": "testimony", "references": [ref]} for i, (p, o) in enumerate(facts)]
+        if premises:   # the words themselves are the inference; the rest of the note is the agent's testimony
+            ops[1].update(evidence_type="inferred", derived_from=premises)
         ops += [{"op": "add_claim", "subject": s, "predicate": p, "object": o, "evidence_type": "testimony",
                  "references": [{"source_uri": f"urn:kk:run:{run}", "quote": topic}]} for s, p, o in named]
         if replaces:
@@ -127,7 +166,7 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
             ops += [{"op": "set_status", "claim": c["id"], "status": "deprecated", "expect_status": c["status"],
                      "reason": "superseded", "replaced_by": by.get(c["predicate"], "c1")} for c in prior]
         key = "memory:" + hashlib.sha256(f"{digest}|{replaces or ''}".encode()).hexdigest()[:32]
-        cs = {"idempotency_key": key, "attributed_to": me, "generated_by": str(run), "target_scope": SCOPE, "ops": ops}
+        cs = {"idempotency_key": key, "attributed_to": me, "generated_by": str(run), "target_scope": scope, "ops": ops}
         result = await one(conn, "select api.submit_change_set(%s)", (Jsonb(cs),))
     return {"memory": note, "change_set": result["id"], "status": result["status"],
             "note": "recall shows it once it is applied" if result["status"] != "applied" else "applied"}
@@ -144,12 +183,14 @@ async def recall(ctx: Context, question: str, budget: int = 800) -> str:
         model = await one(conn, ranked.DENSE) if indexed else None
         vec = await anyio.to_thread.run_sync(ranked.vector, question, model) if model else None
         limit = max(10, budget // 25)
-        args = ranked.params(question, ranked.pool(limit) if indexed else limit, vec)
+        args = ranked.params(question, ranked.pool(2 * limit) if indexed else 2 * limit, vec)
         found = await one(conn, ranked.ranked(indexed, vec), args)
         if found and indexed and ranked.reranker():
             texts = await one(conn, ranked.TEXTS, {"subjects": ranked.subjects(found)})
             found = await anyio.to_thread.run_sync(ranked.rerank, question, found, limit, texts)
-        found = (found or await one(conn, ranked.SUBSTRING, ranked.params(question, limit)) or [])[:limit]
+        found = found or await one(conn, ranked.SUBSTRING, ranked.params(question, limit)) or []
+        # The packs' term definitions answer an operator's search, not an agent's memory question.
+        found = [c for c in found if c.get("scope") != VOCAB][:limit]
         notes, labels, agents, types, me = await context(conn, found)
     if not found:
         return f'Nothing recalled for "{question}".'

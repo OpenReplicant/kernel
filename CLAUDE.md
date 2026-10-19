@@ -103,6 +103,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  milestone 5: encoder-interaction (chats and agent sessions as ActivityStreams messages and PROV activities),
                  skill-interview (an agent interviews a person: org and process maps, quoting each message),
                  map-gaps (what the maps lack, as the questions to ask next);
+                 milestone 6: truth-maintenance (flags claims whose premises were withdrawn; `docs/reasoning.md`);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
@@ -123,5 +124,6 @@ Milestone 6 (`docs/milestone-6.md`, D-85): agent memory without baggage. Rigour 
 passive capture, and an MCP `memory` profile of four tools. Briefings are cited and attributed within a
 token budget, with what changed since the agent last looked. Each agent has a working-memory scope.
 Terms are chosen inside the extractor, never by the agent, and a compaction verifier checks summaries.
-Reactivity is D-86: `current_edge` and a cursor in the kernel, detectors as a module. M6-T1 is done (D-88): `kk up` gives an agent the four-tool memory profile. The owner
+Reactivity is D-86: `current_edge` and a cursor in the kernel, detectors as a module. M6-T1 is done (D-88): `kk up` gives an agent the four-tool memory profile. Reasoning over claims
+(`docs/reasoning.md`, D-89): conclusions with premises and truth maintenance are built (D-90). The owner
 delegated decisions (D-87): D-86 is confirmed, O-8 is closed, and adoption comes first (`docs/offer.md`). Work one task at a time; each ends with its check passing.

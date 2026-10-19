@@ -1,0 +1,43 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:truth-maintenance
+name: Truth maintenance
+version: 0.1.0
+description: 'Follows derivations when a claim is withdrawn (D-89, M6-T12): every current claim derived from a
+  superseded, refuted, retracted or redacted claim, directly or through other derived claims, gets the
+  verdict inconclusive naming the withdrawn premises; when its premises are current again, supported. Belief
+  models cap the belief of a claim whose latest verdict here is inconclusive. Writes no claims and deletes
+  nothing.'
+license: Apache-2.0
+kind: processor
+slots:
+- verifier
+protected: false
+agent:
+  iri: urn:kk:agent:truth-maintenance
+  db_role: kkm_truth_maintenance
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m truth_maintenance
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_truth_maintenance (kk_authenticator)
+    KK_SWEEP_SECONDS: longest wait between passes (default 30)
+accepts:
+- 'claim (with derived_from)'
+- set_status
+produces:
+- add_verification
+triggers:
+- type: notify
+  spec: kernel_change_set
+- type: schedule
+  spec: every KK_SWEEP_SECONDS
+mcp:
+  expose: []
+migration: migration.sql

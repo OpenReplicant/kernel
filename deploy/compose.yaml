@@ -18,7 +18,7 @@
 # reaches Postgres and nothing else (D-43):
 #   KK_ADMIN_URL=postgresql://postgres:<password>@localhost:5432/kk kk module install modules/<name>
 #   docker compose -f deploy/compose.yaml -f deploy/modules/<name>.yaml --env-file deploy/.env up -d
-# KK_SERVE_PARTS chooses what the kernel container runs (default mcp,validator,belief,recall,quotes and the
+# KK_SERVE_PARTS chooses what the kernel container runs (default mcp,validator,belief,recall,quotes,tms and the
 # process loop, conformance,learner, and the map gaps an interviewer asks about, gaps; these idle without
 # processes or organisations): leave
 # out a part that runs as its own module container. The quote verifier reads the artifact store (the
@@ -72,7 +72,7 @@ services:
   # One login that switches to each part's own role; never a superuser, never given to agents (D-37).
   kernel:
     <<: *kk
-    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall,quotes,conformance,learner,gaps}"]
+    command: ["kk", "serve", "--host", "0.0.0.0", "--only", "${KK_SERVE_PARTS:-mcp,validator,belief,recall,quotes,tms,conformance,learner,gaps}"]
     environment:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}

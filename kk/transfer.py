@@ -267,6 +267,19 @@ def existing(conn, where: str = "", args: tuple = ()) -> dict[str, list[str]]:
     return out
 
 
+def ordered(groups: dict[tuple, list]) -> list[tuple]:
+    """The groups' keys, each after the groups holding the claims its claims were derived from (a conclusion
+    in one scope may rest on a premise in another, D-89); otherwise in their order. A cycle keeps its order."""
+    home = {c["old"]: g for g, members in groups.items() for c in members}
+    needs = {g: {home[d] for c in members for d in c["op"].get("derived_from", []) if home.get(d, g) != g}
+             for g, members in groups.items()}
+    out: list[tuple] = []
+    while len(out) < len(groups):
+        ready = [g for g in groups if g not in out and needs[g] <= set(out)]
+        out += ready or [next(g for g in groups if g not in out)]
+    return out
+
+
 def import_(conn, ds: Dataset, digest: str) -> dict:
     agents, scopes, claims, artifacts = read(ds)
     owner = lambda s, *a: conn.execute(s, a)  # noqa: E731
@@ -292,7 +305,8 @@ def import_(conn, ds: Dataset, digest: str) -> dict:
     for c in claims:
         groups.setdefault((c["run"], c["agent"], c["scope"]), []).append(c)
     statuses = merged = 0
-    for (run, agent, scope), members in groups.items():
+    for (run, agent, scope) in ordered(groups):
+        members = groups[(run, agent, scope)]
         ops, added = [], []
         for c in members:
             k = op_key(c["op"], agent, scope)

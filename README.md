@@ -12,7 +12,7 @@ sure we are, and is reviewed by a person before it counts (D-84).
   conversations.
 
 - **Work with us:** `docs/offer.md`: paid pilots of process intelligence and the self-healing MAPE-K loop, memory for your agents, custom modules. Apache-2.0 (`LICENSE`).
-- **How it works, in plain language:** `docs/architecture.md`
+- **How it works, in plain language:** `docs/architecture.md`; how agents reason over it: `docs/reasoning.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
 - **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`), 3 (your own data, cited, in minutes: `docs/milestone-3.md`) and 4 (a demo you can sell: `docs/milestone-4.md`, `kk demo`) are done; milestone 5 (maps from conversations, interactions and code: `docs/milestone-5.md`) built the interaction encoder and the interviewer; milestone 6 (agent memory without baggage: `docs/milestone-6.md`) is under way: the four-tool memory profile is in. What each module takes in and gives out: `docs/modules.md`.
@@ -77,7 +77,7 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 | `kk demo [--bpi]` | the process demo: `kk up` on a demo folder, then the event log, the BPMN model and the procedure (`docs/demo.md`) |
 | `kk init` | installs kernel v0, every default module's migration and the vocabulary packs (once) |
 | `kk person add NAME` / `kk agent add NAME` | an own login that can act only as itself (D-37) |
-| `kk serve [--only mcp,validator,belief,recall,quotes]` | the running kernel: one process, or one container per part; the UI at `/ui`. Add `conformance,learner` for the process loop (D-50, D-76; the compose stack runs them). `quotes` checks extracted claims' quotes against their sources (artifact store and `file:` sources under the working directory, D-67). Add `dense` for dense recall fused with BM25 (needs pgvector and `pip install -e '.[dense]'`, D-61) |
+| `kk serve [--only mcp,validator,belief,recall,quotes,tms]` | the running kernel: one process, or one container per part; the UI at `/ui`. `tms` (truth maintenance) flags claims whose premises were withdrawn (D-90). Add `conformance,learner` for the process loop (D-50, D-76; the compose stack runs them). `quotes` checks extracted claims' quotes against their sources (artifact store and `file:` sources under the working directory, D-67). Add `dense` for dense recall fused with BM25 (needs pgvector and `pip install -e '.[dense]'`, D-61) |
 | `kk status` | who you are, what you can see, what is waiting for review |
 | `kk review list \| show \| approve \| reject` | the review lane, as yourself |
 | `kk scan --repo DIR` | ingest a repository (ingest filter first; needs gitleaks) |
