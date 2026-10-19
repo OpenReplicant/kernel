@@ -172,8 +172,14 @@ def mcp_entry(login_file: Path, profile: str = "memory") -> dict:
 
 
 def with_hooks(settings: dict, login_file: Path, profile: str = "memory") -> dict:
-    """Add the kernel's three hooks unless a kernel-mcp-hook is already configured for that event."""
+    """Add the kernel's hooks unless one of ours is already configured for that event: the three session
+    hooks, and with the memory profile the pre-tool hook that brings up memories cued by a tool or a path
+    (kernel-mcp-cue, D-91; it reads no database)."""
     hooks = settings.setdefault("hooks", {})
+    if profile == "memory":
+        entries = hooks.setdefault("PreToolUse", [])
+        if not any("kernel-mcp-cue" in h.get("command", "") for e in entries for h in e.get("hooks", [])):
+            entries.append({"hooks": [{"type": "command", "timeout": 5, "command": command("kernel-mcp-cue")}]})
     for event, arg in HOOKS.items():
         entries = hooks.setdefault(event, [])
         if any("kernel-mcp-hook" in h.get("command", "") for e in entries for h in e.get("hooks", [])):

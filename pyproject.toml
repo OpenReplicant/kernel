@@ -25,6 +25,7 @@ dense = ["fastembed==0.7.3"]
 kk = "kk.cli:main"
 kernel-mcp = "kernel_mcp.__main__:main"
 kernel-mcp-hook = "kernel_mcp.hooks:main"
+kernel-mcp-cue = "kernel_mcp.pretool:main"
 
 [tool.setuptools]
 packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encoder", "ingest_filter",

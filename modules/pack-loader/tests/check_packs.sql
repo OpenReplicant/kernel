@@ -25,10 +25,10 @@ begin
     and c.object_entity in (kernel.expand('rdf:Property'), kernel.expand('owl:ObjectProperty'),
                             kernel.expand('owl:DatatypeProperty'), kernel.expand('owl:AnnotationProperty'))
     and c.subject like 'https://w3id.org/knowledge-kernel/%';
-  if n <> 32 then
-    raise exception 'T3: expected 32 kk/kkt/kkp properties typed, found %', n;
+  if n <> 33 then
+    raise exception 'T3: expected 33 kk/kkt/kkp properties typed, found %', n;
   end if;
-  raise notice 'ok: 32 kk/kkt/kkp properties typed';
+  raise notice 'ok: 33 kk/kkt/kkp properties typed';
 
   -- Milestone 2 vocabularies (D-47): the BBO and SOSA terms the process and devops modules write.
   select string_agg(p, ', ') into missing

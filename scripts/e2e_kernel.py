@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import date, timedelta
 from pathlib import Path
 
 import httpx2 as httpx
@@ -71,12 +72,13 @@ async def settle(s, cs_id):
     return row
 
 
-def hook(name, payload, state):
+def hook(name, payload, state, profile=""):
     """Run one harness hook as Claude Code would: hook JSON on stdin, the agent's own login."""
-    out = subprocess.run([sys.executable, "-m", "kernel_mcp.hooks", name], input=json.dumps(payload),
+    command = ["-m", "kernel_mcp.pretool"] if name == "pre-tool" else ["-m", "kernel_mcp.hooks", name]
+    out = subprocess.run([sys.executable, *command], input=json.dumps(payload),
                          capture_output=True, text=True,
                          env={**os.environ, "KK_DATABASE_URL": os.environ["AGENT_DATABASE_URL"],
-                              "DATABASE_URL": "", "KK_STATE_DIR": state})
+                              "DATABASE_URL": "", "KK_STATE_DIR": state, "KK_PROFILE": profile})
     ctx = json.loads(out.stdout)["hookSpecificOutput"]["additionalContext"] if out.stdout.strip() else ""
     return out.returncode, ctx, out.stderr
 
@@ -239,6 +241,39 @@ async def memory_session():
               err or (news or "")[:200])
 
 
+async def cue_session():
+    """M6-T16: recall cues bring a memory back whatever the ranking: a mention, a session start, a date, a tool."""
+    soon = date.today() + timedelta(days=3)
+    stamp = int(time.time() * 1000)
+    push = f"Run gitleaks before every push ({stamp})"
+    async with stdio(os.environ["AGENT_DATABASE_URL"], "memory") as (r, w), ClientSession(r, w) as s:
+        await s.initialize()
+        _, err = await tool(s, "remember", {"kind": "fact", "text": "x", "when": {"on": "May"}})
+        check("M6-T16 a malformed cue is refused, with the reason", err and "when:" in err, (err or "")[:90])
+        await tool(s, "remember", {"kind": "commitment", "text": push,
+                                   "when": {"always": True, "tool": "Bash(git push*)"}})
+        await tool(s, "remember", {"kind": "fact", "text": f"Dana's birthday is on {soon:%d %B} ({stamp})",
+                                   "when": {"on": f"--{soon:%m-%d}", "before": 7}})
+        await tool(s, "remember", {"kind": "fact", "text": f"Sam is on leave until March ({stamp})",
+                                   "when": {"mentions": ["Sam"]}})
+        line, err = await recalled(s, "Can Sam review my pull request?", "on leave until March", want="cue: mentions Sam")
+        brief, _ = await tool(s, "recall", {"question": "Can Sam review my pull request?"})
+        check("M6-T16 a mention brings the memory up first, saying which cue fired",
+              "(cue: mentions Sam)" in line and (brief or "").splitlines()[1] == line, err or line)
+    with tempfile.TemporaryDirectory() as state:
+        session = {"session_id": "cue-session", "cwd": str(ROOT), "source": "startup"}
+        rc, ctx, err = hook("session-start", session, state, "memory")
+        check("M6-T16 a session starts with its standing memories and the dates coming up",
+              rc == 0 and push in ctx and "(cue: always)" in ctx and "Dana's birthday" in ctx, err or ctx[:200])
+        rc, ctx, err = hook("pre-tool", {**session, "hook_event_name": "PreToolUse", "tool_name": "Bash",
+                                         "tool_input": {"command": "git push -u origin main"}}, state)
+        rc2, quiet, _ = hook("pre-tool", {**session, "hook_event_name": "PreToolUse", "tool_name": "Bash",
+                                          "tool_input": {"command": "git status"}}, state)
+        check("M6-T16 before a matching tool call the memory is brought up, and not before any other",
+              rc == 0 and push in ctx and "(cue: tool Bash(git push*))" in ctx and rc2 == 0 and not quiet,
+              err or ctx[:200])
+
+
 PRIVATE = "urn:kk:scope:e2e-memory-private"
 
 
@@ -339,6 +374,7 @@ async def main():
     await agent_session()
     await memory_session()
     await conclusion_session()
+    await cue_session()
     await http_session()
     print("G4 kernel smoke", "passed" if all(checks) else "FAILED", f"({sum(checks)}/{len(checks)})")
     return 0 if all(checks) else 1
