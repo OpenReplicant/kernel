@@ -11,10 +11,11 @@ sure we are, and is reviewed by a person before it counts (D-84).
   views that does one job, installed as its own stack. The first: organisation and process maps from
   conversations.
 
+- **Work with us:** `docs/offer.md`: paid pilots of process intelligence and the self-healing MAPE-K loop, memory for your agents, custom modules. Apache-2.0 (`LICENSE`).
 - **How it works, in plain language:** `docs/architecture.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
-- **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`), 3 (your own data, cited, in minutes: `docs/milestone-3.md`) and 4 (a demo you can sell: `docs/milestone-4.md`, `kk demo`) are done; milestone 5 (maps from conversations, interactions and code: `docs/milestone-5.md`) is under way. What each module takes in and gives out: `docs/modules.md`.
+- **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`), 3 (your own data, cited, in minutes: `docs/milestone-3.md`) and 4 (a demo you can sell: `docs/milestone-4.md`, `kk demo`) are done; milestone 5 (maps from conversations, interactions and code: `docs/milestone-5.md`) built the interaction encoder and the interviewer; milestone 6 (agent memory without baggage: `docs/milestone-6.md`) is next. What each module takes in and gives out: `docs/modules.md`.
 - **Decisions and open questions:** `docs/decisions.md`
 - **Working rules:** `CLAUDE.md`
 

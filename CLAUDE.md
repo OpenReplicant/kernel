@@ -13,7 +13,7 @@ skills and views that do one job; the first is org and process maps from convers
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
-2. `docs/milestone-5.md` — current work; milestones 1 (the kernel), 2 (BPM and devops), 3 (your own data, cited) and 4 (a demo you can sell) are done.
+2. `docs/milestone-6.md` — current work (agent memory without baggage); milestones 1 (the kernel), 2 (BPM and devops), 3 (your own data, cited) and 4 (a demo you can sell) are done, and `docs/milestone-5.md` has the interviewer and what carries over.
 3. `docs/decisions.md` — decided, adopted (confirm with the owner) and open questions.
 4. `kernel/schema/001_kernel.sql` and its tests — what the kernel actually enforces.
 5. `docs/LESSONS.md` — what earlier sessions learned the hard way. The `kernel-dev` skill
@@ -51,6 +51,16 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
 - Conditions go in qualifiers, never inside values. Ambiguous entity matches stay separate with
   `skos:closeMatch` for review. Telemetry is aggregated into observed claims per time window.
 - Licenses: permissive or LGPL-library only in the default distribution (D-11).
+
+## Working with the owner
+
+- Recommend one option and keep moving. The owner has decision fatigue; ask only for decisions that are
+  theirs (kernel changes, positioning, licences) and say what you recommend.
+- When asked to be dialectical, give the strongest objections, then a synthesis that keeps what survives.
+- Plain words. Don't write "...and it's worth...".
+- Each task ships the same way: implement, test (unit tests, `smoke_kernel.sh`, and `e2e_module.sh` and
+  `e2e_devops.sh` when relevant), gitleaks, commit, push, PR, CI green, squash merge, reset the branch to
+  main (the `kernel-dev` skill).
 
 ## Tests
 
@@ -109,8 +119,9 @@ docs/            spec, architecture (plain language), developer-guide (the movin
 
 ## Current milestone
 
-Milestone 5 (`docs/milestone-5.md`): maps from conversations, interactions and code — what each module
-takes in and gives out (`docs/modules.md`), processors woken by claim patterns, an interaction encoder,
-an interviewer that builds organisation and process maps with quotes, and a code map below packages,
-each measured with small models. Milestones 1–4 are done. Work one task at a time; each ends with its
-check passing.
+Milestone 6 (`docs/milestone-6.md`, D-85): agent memory without baggage. Rigour behind the interface:
+passive capture, and an MCP `memory` profile of four tools. Briefings are cited and attributed within a
+token budget, with what changed since the agent last looked. Each agent has a working-memory scope.
+Terms are chosen inside the extractor, never by the agent, and a compaction verifier checks summaries.
+Reactivity is D-86 (proposed): `current_edge` and a cursor in the kernel, detectors as a module. The owner
+delegated decisions (D-87): D-86 is confirmed, O-8 is closed, and adoption comes first (`docs/offer.md`). Work one task at a time; each ends with its check passing.

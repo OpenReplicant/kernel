@@ -96,7 +96,7 @@ runs one query to see whether the change set added a claim matching the worker's
 (`S P O`, e.g. `? bbo:has_nextFlowNode ?`), and a periodic sweep catches anything missed. The worker
 then recomputes what it needs and submits change sets.
 
-**Proposed (D-83, owner to confirm; the spike passed): a live graph and detectors in the kernel, reactors
+**Proposed (D-83, spike passed; amended by D-86, owner to confirm: in the kernel only a current-edge table and a cursor; the detectors described below run as a module outside the commit path, on their owners' connections): a live graph and detectors in the kernel, reactors
 outside.**
 
 ```
