@@ -155,3 +155,7 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   or the new module's container starts and exits at once (no connection, no error in the check).
 - The kernel knows only the prefixes in `kernel.prefix` (002_bootstrap.sql: rdf, rdfs, prov, oa, kk and a few more):
   writes need full IRIs for `org:`, `bbo:` and the like; the MCP read tools expand kk.lib's longer list.
+- Apache AGE (D-83 spike): `create_graph` and every Cypher query need `ag_catalog` on the search path,
+  and the query must be a dollar-quoted constant with its parameters passed as a bound `$1`. Cypher
+  `MERGE` and `x.iri IN $list`, `UNWIND` or an `OR` across pattern nodes scan every edge. Write label
+  tables in SQL, anchor with `x.iri = $anchor`, and compile each query into a function so its plan is cached.

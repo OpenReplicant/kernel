@@ -19,6 +19,9 @@ smaller models for benchmarks. Research: `docs/interaction-research.md`.
 Rules carry over: kernel v0 stays frozen; modules run sandboxed under the operator's policy (D-55);
 standard vocabularies first (D-40); permissive licenses (D-11); people decide, models propose.
 
+Milestone 6 (`docs/milestone-6.md`, D-85) comes next: agent memory without baggage. M5-T5 and M5-T9 follow
+it, M5-T6 runs inside M6-T4, and M5-T7 and M5-T8 are deferred.
+
 ## Tasks
 
 | ID | Task | Check | Status |
