@@ -16,6 +16,7 @@ RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 NOTE = AS + "Note"
 KIND = "urn:kk:memory-kind:"
+RECALL_WHEN = "https://w3id.org/knowledge-kernel/ns#recallWhen"
 # What a note is made of; recall reads these for every note it finds.
 NOTE_PARTS = (RDF_TYPE, AS + "content", AS + "attributedTo", DCT + "type", DCT + "subject")
 KINDS = ("fact", "decision", "preference", "commitment", "correction", "conclusion")
@@ -119,3 +120,33 @@ def fit(header: str, body: list[str], budget: int) -> str:
         room -= len(line) + 1
     more = len(body) - len(kept)
     return "\n".join([header, *kept] + ([f"({more} more not shown; ask with a larger budget)"] if more else []))
+
+
+# Memories with a recall cue (D-91) the caller can see: the note's words, kind, author and cue, one row each.
+CUED = f"""select coalesce(jsonb_agg(r), '[]') from (
+  select c.id, c.subject, c.object_value->>'@value' as text, c.belief, c.status, w.object_value->>'@value' as cue,
+         coalesce(substr(k.object_entity, {len(KIND) + 1}), 'note') as kind, coalesce(a.object_entity, c.attributed_to) as by,
+         coalesce(ag.label, (select l.object_value->>'@value' from api.claims l where l.subject = coalesce(a.object_entity, c.attributed_to)
+                             and l.predicate = '{LABEL}' and l.status <> 'deprecated' limit 1),
+                  coalesce(a.object_entity, c.attributed_to)) as label,
+         ag.kind as agent_kind
+    from api.claims w
+    join api.claims c on c.subject = w.subject and c.predicate = '{AS}content' and c.status <> 'deprecated'
+    left join lateral (select object_entity from api.claims x where x.subject = w.subject and x.predicate = '{DCT}type'
+                         and x.status <> 'deprecated' and starts_with(x.object_entity, '{KIND}') limit 1) k on true
+    left join lateral (select object_entity from api.claims x where x.subject = w.subject
+                         and x.predicate = '{AS}attributedTo' and x.status <> 'deprecated' limit 1) a on true
+    left join kernel.agent ag on ag.iri = coalesce(a.object_entity, c.attributed_to)
+   where w.predicate = '{RECALL_WHEN}' and w.status <> 'deprecated'
+   order by c.recorded_at desc limit 500) r"""
+
+
+def cue_line(row: dict, reason: str, me: str | None) -> str:
+    """A cued memory as a briefing line, saying which cue brought it up."""
+    if row.get("by") == me:
+        who = "you"
+    elif row.get("agent_kind"):
+        who = f"{row['label']} ({'agent' if row['agent_kind'] == 'software' else row['agent_kind']})"
+    else:
+        who = row.get("label") or "unknown"
+    return f"- {row.get('kind', 'note')}: \"{(row.get('text') or '').strip()}\" (cue: {reason}) — {who}; {tail(row)}"

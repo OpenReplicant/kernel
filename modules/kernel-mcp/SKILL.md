@@ -19,7 +19,12 @@ You can read anything your role is cleared for. Which tools you see depends on y
   old one is kept, marked superseded); `because` lists the #handles it follows from. A conclusion needs
   `because`: it is recorded as inferred from those claims, kept as private as the most private of them,
   and flagged when one of them is withdrawn. When you work something out from what you recalled,
-  record it as a conclusion so the next agent starts from it. It shows in `recall` once the kernel has applied it, usually within a second.
+  record it as a conclusion so the next agent starts from it.
+- `remember(..., when={...})` adds a recall cue, for what must come back whatever the ranking:
+  `{"always": true}` (a standing instruction or preference, at every session start),
+  `{"mentions": ["Sam"]}` (when a prompt names it), `{"on": "--05-30", "before": 7}` (a date, yearly with
+  `--`), `{"where": "deploy/*"}` (working on those files), `{"tool": "Bash(git push*)"}` (before that
+  action). Lines a cue brings up say which cue fired. It shows in `recall` once the kernel has applied it, usually within a second.
 - `explain(handle)` → where a line came from: the source and quote, status history, beliefs.
 - `changes_since(since?)` → what others added, superseded or retracted since you last looked, and
   the cursor to pass next time.

@@ -83,7 +83,7 @@ Copy `modules/kernel-mcp/SKILL.md` into the harness's skills folder (Claude Code
 
 ## 4. Hooks: recall and recording without asking
 
-`kernel-mcp-hook` implements three hooks; the Claude Code configuration is
+`kernel-mcp-hook` implements three hooks, and `kernel-mcp-cue` a fourth (PreToolUse: memories cued by the tool or the file about to be used, D-91; it reads no database); the Claude Code configuration is
 `modules/kernel-mcp/hooks/claude-code.json` (merge its `hooks` into `.claude/settings.json`).
 
 | Hook | Does |

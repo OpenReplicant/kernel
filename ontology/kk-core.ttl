@@ -24,7 +24,7 @@
 <https://w3id.org/knowledge-kernel/ns>
     a owl:Ontology ;
     rdfs:label "Knowledge Kernel core vocabulary" ;
-    owl:versionInfo "0.4.2" ;
+    owl:versionInfo "0.4.3" ;
     dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
     owl:imports <http://www.w3.org/ns/prov-o> .
 
@@ -67,6 +67,15 @@ kk:runsAs a owl:ObjectProperty ; rdfs:range prov:Agent ; rdfs:label "runs as" ;
     skos:definition "The kernel agent (database role) whose identity a module (or a chain) acts under." .
 kk:protected a owl:DatatypeProperty ; rdfs:domain kk:Module ; rdfs:range xsd:boolean ; rdfs:label "protected" ;
     skos:definition "System component: changes need review and a passing eval." .
+
+# ------------------------------------------------------------------ the recall contract (D-91)
+# When a memory must be recalled whatever the ranking: a contract between whoever writes memories and the
+# recall modules that surface them, so it is ours (no standard vocabulary owns recall cues). The value is a
+# JSON object: always, mentions [terms], on (a date YYYY-MM-DD or a yearly --MM-DD) with before (days),
+# where (a path glob), tool (a permission-rule pattern such as Bash(git push*)). Not a qualifier:
+# qualifiers say when a claim is true, a cue says when to bring it up.
+kk:recallWhen a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:label "recall when" ;
+    skos:definition "Conditions under which this memory is recalled regardless of ranking (JSON: always, mentions, on, before, where, tool)." .
 
 # ------------------------------------------------------------------ single-valued properties
 # One value per subject at a time. Belief models treat claims with different values and overlapping

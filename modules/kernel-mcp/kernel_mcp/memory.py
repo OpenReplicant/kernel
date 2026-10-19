@@ -7,6 +7,7 @@ validator like any change set). `recall` and `changes_since` answer with a brief
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from datetime import datetime, timezone
 from urllib.parse import unquote
@@ -15,7 +16,7 @@ import anyio
 from mcp.server.mcpserver import Context
 from psycopg.types.json import Jsonb
 
-from . import briefing, recall as ranked
+from . import briefing, cues, recall as ranked
 from .briefing import AS, DCT, KIND, KINDS, LABEL, NOTE, NOTE_PARTS, RDF_TYPE
 from .server import CLAIM_COLUMNS, KernelError, connection, expand, mcp, one, rows
 
@@ -111,19 +112,25 @@ CONCLUSION_SCOPE = """select t from unnest(%(cands)s::text[]) with ordinality as
 
 @mcp.tool()
 async def remember(ctx: Context, kind: str, text: str, about: str | None = None, replaces: str | None = None,
-                   because: list[str] | None = None) -> dict:
+                   because: list[str] | None = None, when: dict | None = None) -> dict:
     """Remember one thing, in a sentence. kind: fact, decision, preference, commitment, correction or
     conclusion. about: what it concerns (optional): a name ("the Quokka ledger": the entity with that label,
     or a new topic), an IRI or CURIE, or a #handle (that claim's subject). replaces: the #handle of a memory
     this one corrects (the old one is kept, marked superseded). because: the #handles it follows from
     (required for a conclusion): it is recorded as derived from them, kept as private as the most private of
-    them, and flagged if one of them is later withdrawn.
+    them, and flagged if one of them is later withdrawn. when: a recall cue, so it comes back whatever the
+    ranking: {"always": true} (every session start), {"mentions": ["Sam"]}, {"on": "--05-30", "before": 7}
+    (a date; --MM-DD yearly), {"where": "deploy/*"} (a path), {"tool": "Bash(git push*)"} (before that action).
     It is recorded as yours, quoting your words; recall shows it once the kernel has applied it."""
     text = " ".join(text.split())
     if kind not in KINDS:
         raise KernelError(f"kind must be one of {', '.join(KINDS)}")
     if not text or len(text) > 2000:
         raise KernelError("text must be one to 2000 characters: one sentence is best")
+    try:
+        cue = cues.check(when) if when else None
+    except ValueError as e:
+        raise KernelError(f"when: {e}") from None
     if kind == "conclusion" and not because:
         raise KernelError("a conclusion needs because: the #handles of the claims it follows from")
     async with connection(ctx) as conn:
@@ -140,13 +147,15 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
                                   "reader of the conclusion's scope needs its own grant on each premise's scope)")
         run = await one(conn, RUN) or await one(conn, "select api.start_run(null, null, '[]'::jsonb, %s)",
                                                   (Jsonb({"via": "remember"}),))
-        digest = hashlib.sha256("\x1f".join([me, kind, text, about or "", *premises]).encode()).hexdigest()
+        digest = hashlib.sha256("\x1f".join([me, kind, text, about or "", *premises,
+                                             json.dumps(cue, sort_keys=True) if cue else ""]).encode()).hexdigest()
         note = f"urn:kk:memory:{digest[:24]}"
         ref = {"source_uri": f"urn:kk:run:{run}", "quote": text}
         facts = [(RDF_TYPE, {"entity": NOTE}), (AS + "content", {"value": {"@value": text}}),
                  (AS + "attributedTo", {"entity": me}), (DCT + "type", {"entity": KIND + kind}),
                  (AS + "published", {"value": {"@value": datetime.now(timezone.utc).isoformat(), "@type": DATETIME}}),
-                 *([(DCT + "subject", {"entity": about})] if about else [])]
+                 *([(DCT + "subject", {"entity": about})] if about else []),
+                 *([(briefing.RECALL_WHEN, {"value": {"@value": json.dumps(cue, sort_keys=True)}})] if cue else [])]
         named = [(about, LABEL, {"value": {"@value": topic}})] if topic else []
         ops = [{"op": "add_claim", "ref": f"c{i}", "subject": note, "predicate": p, "object": o,
                 "evidence_type": "testimony", "references": [ref]} for i, (p, o) in enumerate(facts)]
@@ -192,10 +201,15 @@ async def recall(ctx: Context, question: str, budget: int = 800) -> str:
         # The packs' term definitions answer an operator's search, not an agent's memory question.
         found = [c for c in found if c.get("scope") != VOCAB][:limit]
         notes, labels, agents, types, me = await context(conn, found)
-    if not found:
+        cued = [(r, why) for r in await one(conn, briefing.CUED)
+                if (cue := cues.parse(r["cue"])) and (why := cues.fires(cue, text=question))]
+    if not found and not cued:
         return f'Nothing recalled for "{question}".'
+    first = {r["subject"] for r, _ in cued}
     return briefing.fit(f'Recalled for "{question}" (who said it; belief 0-1; explain(#handle) for sources):',
-                        briefing.lines(found, notes, labels, agents, me, types), budget)
+                        [briefing.cue_line(r, why, me) for r, why in cued]
+                        + briefing.lines([c for c in found if c["subject"] not in first], notes, labels, agents, me,
+                                         types), budget)
 
 
 @mcp.tool()

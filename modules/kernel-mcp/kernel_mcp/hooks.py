@@ -17,12 +17,13 @@ import os
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import psycopg
 from psycopg.types.json import Jsonb
 
-from . import recall
+from . import briefing, cues, recall
 from .server import PREFIXES, SWITCHING_LOGIN, database_url
 
 STATE = Path(os.environ.get("KK_STATE_DIR") or Path.home() / ".local/state/knowledge-kernel")
@@ -37,6 +38,29 @@ def connect() -> psycopg.Connection:
 
 def run_file(session_id: str) -> Path:
     return STATE / (re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "default") + ".run")
+
+
+def cue_file(session_id: str) -> Path:
+    return STATE / (re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "default") + ".cues.json")
+
+
+def cued(conn, data: dict, **situation) -> list[str]:
+    """Lines for the memories whose recall cue fires in this situation (D-91). Also refreshes the session's
+    file of tool and path cues, which the pre-tool hook (kernel-mcp-cue) reads without a database."""
+    me = conn.execute("select kernel.my_agent()").fetchone()[0]
+    rows = conn.execute(briefing.CUED).fetchone()[0]
+    lines, actions = [], []
+    for r in rows:
+        cue = cues.parse(r["cue"])
+        if not cue:
+            continue
+        if why := cues.fires(cue, **situation):
+            lines.append(briefing.cue_line(r, why, me))
+        if cue.get("tool") or cue.get("where"):
+            actions.append({"cue": cue, "row": r})
+    STATE.mkdir(parents=True, exist_ok=True)
+    cue_file(data.get("session_id", "")).write_text(json.dumps({"me": me, "cues": actions}))
+    return lines
 
 
 def context(event: str, text: str) -> None:
@@ -82,14 +106,18 @@ def session_start(data: dict) -> None:
     STATE.mkdir(parents=True, exist_ok=True)
     run_file(data.get("session_id", "")).write_text(str(run))
     if os.environ.get("KK_PROFILE") == "memory":
-        context("SessionStart",
+        with connect() as conn:
+            standing = cued(conn, data, start=True, today=date.today(), paths=(data.get("cwd") or "",))
+        context("SessionStart", ("Knowledge kernel: memories to keep in mind now:\n" + "\n".join(standing) + "\n\n"
+                                 if standing else "") +
                 f"Knowledge kernel connected as {agent} ({visible} claims visible): your memory, with sources. "
                 "Memories related to each prompt are recalled for you; recall(question) asks for more. Each line "
                 "says who said it and its belief, and ends in a #handle: cite the handles you rely on, and call "
                 "explain(handle) before relying on a line you did not write. remember(kind, text) records one "
                 "sentence (a fact, decision, preference, commitment or correction); a line in your reply that "
                 "starts with Decision: or Remember: is recorded from the session transcript too. "
-                "changes_since() says what others changed." + fresh)
+                "Give remember a when= cue (always, mentions, a date, a path, a tool) for what must come back "
+                "whatever the ranking. changes_since() says what others changed." + fresh)
         return
     context("SessionStart",
             f"Knowledge kernel connected as {agent} ({visible} claims visible). This session's kernel run is "
@@ -105,9 +133,11 @@ def prompt(data: dict) -> None:
     limit = int(os.environ.get("KK_RECALL_LIMIT", "8"))
     with connect() as conn:
         claims = recall.recall(conn, text, limit)
-    context("UserPromptSubmit", recall.render(
-        claims, PREFIXES, "Knowledge kernel: claims related to this prompt (cite ids and belief; "
-                          "explain(claim_id) gives sources):"))
+        mentioned = cued(conn, data, text=text) if os.environ.get("KK_PROFILE") == "memory" else []
+    context("UserPromptSubmit", "\n\n".join(filter(None, [
+        "Knowledge kernel: memories this prompt calls up:\n" + "\n".join(mentioned) if mentioned else "",
+        recall.render(claims, PREFIXES, "Knowledge kernel: claims related to this prompt (cite ids and belief; "
+                                        "explain(claim_id) gives sources):")])))
 
 
 def session_end(data: dict) -> None:
@@ -118,6 +148,7 @@ def session_end(data: dict) -> None:
         conn.execute("select api.finish_run(%s::uuid, 'succeeded', %s)",
                      (path.read_text().strip(), Jsonb({"reason": data.get("reason")})))
     path.unlink()
+    cue_file(data.get("session_id", "")).unlink(missing_ok=True)
 
 
 HOOKS = {"session-start": session_start, "prompt": prompt, "session-end": session_end}

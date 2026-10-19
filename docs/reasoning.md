@@ -47,6 +47,7 @@ Invariant 3 already keeps a conclusion's scope at least as narrow as its premise
 | **Argumentation** | why the kernel believes something: what supports it, what attacks it | verifications, derivations, status history (`explain`) | one view of support and attack per claim, and belief explained from it |
 | **Temporal** | what was true then; what we believed then; what changed since | valid and recorded time on every claim; `changes_since` (D-88) | `as_of` in recall |
 | **Metacognition** | what the system knows about itself and does not know | self-model (modules, slots); map-gaps turns gaps into questions (M5) | open questions as claims an agent can pick up, and answers that close them |
+| **Prospective memory** | remembering to remember: a memory that must come back in a situation (a name, a date, a path, an action), whatever its similarity to the question | recall cues (`kk:recallWhen`, D-91, M6-T16) | cues proposed by the extractor (M6-T4) |
 | **Planning** | a plan as steps, checked before it runs | P-Plan, MAPE-K, approval before an actuator acts (M2) | — |
 
 ## 3. Retrieval methods
