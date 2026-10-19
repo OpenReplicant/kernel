@@ -1,0 +1,15 @@
+# What a memory extractor should take from conversations.jsonl (M6-T4). Each expected memory names its
+# message and the words its sentence must contain (any case); `replaces` names the message whose memory it
+# supersedes; `none` lists messages that should give no memory.
+memories:
+- {message: a1, words: [vegetarian]}
+- {message: a1, words: [Sam, peanut]}
+- {message: a3, words: [parents, "11-14|November 14"]}
+- {message: a4, words: ["11-21|November 21"], replaces: a3}
+- {message: b1, words: [Postgres, row-level]}
+- {message: b2, words: [migration, Friday]}
+- {message: b3, words: [test, push], always: true}
+- {message: b4, words: [Dana, billing]}
+- {message: c3, words: [Hobart]}
+- {message: c3, words: [Pip]}
+none: [a2, c1, c2]

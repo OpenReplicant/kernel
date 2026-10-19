@@ -1,0 +1,103 @@
+{
+  "eval": "memory-extractor fixture",
+  "label": "lfm-v3-2",
+  "models": [
+    "liquid/lfm-2.5-2.6b:free"
+  ],
+  "date": "2026-10-19",
+  "metrics": {
+    "expected_found": 1.0,
+    "corrections_replace": 1.0,
+    "instructions_cued": 1.0,
+    "quiet_messages": 1.0,
+    "items_dropped": 0.176,
+    "extra_memories": 4
+  },
+  "missed": [],
+  "memories": [
+    {
+      "message": "a1",
+      "kind": "preference",
+      "text": "The user is vegetarian.",
+      "replaces_message": null
+    },
+    {
+      "message": "a1",
+      "kind": "fact",
+      "text": "Sam is allergic to peanuts.",
+      "replaces_message": null
+    },
+    {
+      "message": "a1",
+      "kind": "decision",
+      "text": "Plan vegetarian meals for next week considering Sam's peanut allergy.",
+      "replaces_message": null
+    },
+    {
+      "message": "a3",
+      "kind": "fact",
+      "text": "The user plans a dinner for their parents on 2026-11-14.",
+      "replaces_message": null
+    },
+    {
+      "message": "a3",
+      "kind": "decision",
+      "text": "The user decides to prepare something special for the dinner on 2026-11-14.",
+      "replaces_message": null
+    },
+    {
+      "message": "a4",
+      "kind": "decision",
+      "text": "The user decided to reschedule the dinner with parents to 2026-11-21.",
+      "replaces_message": "a3"
+    },
+    {
+      "message": "b1",
+      "kind": "decision",
+      "text": "The user decided to switch from MySQL to Postgres 17 to implement row-level security.",
+      "replaces_message": null
+    },
+    {
+      "message": "b2",
+      "kind": "commitment",
+      "text": "The assistant will write the first migrations by Friday.",
+      "replaces_message": null
+    },
+    {
+      "message": "b3",
+      "kind": "preference",
+      "text": "The user said to always run the tests before you push.",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "fact",
+      "text": "Dana owns the billing service.",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "commitment",
+      "text": "Ask Dana before changing the invoice schema.",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "preference",
+      "text": "Always run the tests before you push.",
+      "replaces_message": null
+    },
+    {
+      "message": "c3",
+      "kind": "fact",
+      "text": "The user moved to Hobart.",
+      "replaces_message": null
+    },
+    {
+      "message": "c3",
+      "kind": "fact",
+      "text": "The user got a dog called Pip.",
+      "replaces_message": null
+    }
+  ]
+}

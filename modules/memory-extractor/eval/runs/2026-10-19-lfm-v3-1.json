@@ -1,0 +1,103 @@
+{
+  "eval": "memory-extractor fixture",
+  "label": "lfm-v3-1",
+  "models": [
+    "liquid/lfm-2.5-2.6b:free"
+  ],
+  "date": "2026-10-19",
+  "metrics": {
+    "expected_found": 1.0,
+    "corrections_replace": 1.0,
+    "instructions_cued": 1.0,
+    "quiet_messages": 0.667,
+    "items_dropped": 0.417,
+    "extra_memories": 4
+  },
+  "missed": [],
+  "memories": [
+    {
+      "message": "a1",
+      "kind": "fact",
+      "text": "The user is vegetarian.",
+      "replaces_message": null
+    },
+    {
+      "message": "a1",
+      "kind": "preference",
+      "text": "Sam is allergic to peanuts.",
+      "replaces_message": null
+    },
+    {
+      "message": "a1",
+      "kind": "commitment",
+      "text": "The assistant will provide a vegetarian meal plan for next week (no peanuts) by 2026-10-04.",
+      "replaces_message": null
+    },
+    {
+      "message": "a2",
+      "kind": "commitment",
+      "text": "The assistant will provide a vegetarian meal plan for next week (no peanuts) by 2026-10-04.",
+      "replaces_message": "a1"
+    },
+    {
+      "message": "a3",
+      "kind": "decision",
+      "text": "The user will arrange a special dinner for parents on 2026-11-14.",
+      "replaces_message": null
+    },
+    {
+      "message": "a4",
+      "kind": "commitment",
+      "text": "The user will arrange a special dinner for parents on 2026-11-21.",
+      "replaces_message": "a3"
+    },
+    {
+      "message": "b1",
+      "kind": "decision",
+      "text": "The user decided to use Postgres 17 instead of MySQL because they need row-level security.",
+      "replaces_message": null
+    },
+    {
+      "message": "b2",
+      "kind": "commitment",
+      "text": "The assistant will write the first migrations by Friday.",
+      "replaces_message": null
+    },
+    {
+      "message": "b3",
+      "kind": "decision",
+      "text": "The user will run tests before pushing code.",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "fact",
+      "text": "Dana owns the billing service",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "commitment",
+      "text": "Ask Dana before changing the invoice schema",
+      "replaces_message": null
+    },
+    {
+      "message": "b4",
+      "kind": "decision",
+      "text": "Run tests before pushing code",
+      "replaces_message": null
+    },
+    {
+      "message": "c3",
+      "kind": "fact",
+      "text": "The user moved to Hobart.",
+      "replaces_message": null
+    },
+    {
+      "message": "c3",
+      "kind": "fact",
+      "text": "The user has a dog named Pip.",
+      "replaces_message": null
+    }
+  ]
+}

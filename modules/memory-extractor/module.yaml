@@ -1,0 +1,52 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:memory-extractor
+name: Memory extractor
+version: 0.1.0
+description: 'The memories each recorded message holds (M6-T4): facts, preferences, decisions, commitments
+  and corrections about the people in a conversation, one sentence each, quoting the words of the message
+  they rest on (as:Note memories, the shape `remember` writes). A memory that updates an earlier one
+  supersedes it. A small model reads one message at a time, with the message before it and the earlier
+  memories recall finds for it; any OpenAI-compatible endpoint.'
+license: Apache-2.0
+kind: processor
+slots:
+- consolidator
+protected: false
+agent:
+  iri: urn:kk:agent:memory-extractor
+  db_role: kkm_memory_extractor
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+budget:
+  max_cost_usd_per_day: 0.0
+runtime:
+  type: python-service
+  entrypoint: python -m memory_extractor
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_memory_extractor (kk_authenticator)
+    KK_EXTRACT_MODEL: the model (default liquid/lfm-2.5-2.6b:free)
+    KK_EXTRACT_URL: an OpenAI-compatible endpoint (default https://openrouter.ai/api/v1)
+    KK_EXTRACT_KEY: its key (or OPENROUTER_API_KEY)
+    KK_EXTRACT_BATCH: messages per pass (default 20)
+    KK_SWEEP_SECONDS: longest wait between passes (default 30)
+requires:
+- slot: recall-index
+  optional: true
+accepts:
+- as:Note
+produces:
+- add_claim
+- set_status
+triggers:
+- type: notify
+  spec: kernel_change_set
+- type: schedule
+  spec: every KK_SWEEP_SECONDS
+mcp:
+  expose: []
+migration: migration.sql

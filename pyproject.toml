@@ -32,7 +32,7 @@ packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encod
             "eventlog_encoder", "bpmn_encoder", "conformance", "observer_prometheus", "anomaly",
             "actuator_compose", "paper_encoder", "recall_index", "recall_dense",
             "verifier_quotes", "evaluator", "process_learner", "interaction_encoder",
-            "map_gaps", "truth_maintenance"]
+            "map_gaps", "truth_maintenance", "memory_extractor"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -55,3 +55,4 @@ process_learner = "modules/learner-process/process_learner"
 interaction_encoder = "modules/encoder-interaction/interaction_encoder"
 map_gaps = "modules/map-gaps/map_gaps"
 truth_maintenance = "modules/truth-maintenance/truth_maintenance"
+memory_extractor = "modules/memory-extractor/memory_extractor"

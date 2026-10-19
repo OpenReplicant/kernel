@@ -31,6 +31,9 @@ DATABASE_URL=postgresql://kk_authenticator:<service secret>@localhost/kk KK_JWT_
 
 `kk serve` runs the validator and the belief model (and MCP over HTTP); without the validator nothing
 submitted is ever applied. `kk serve --only validator,belief` leaves MCP to the harness's stdio server.
+To have memories taken from recorded conversations as well (M6-T4), add the `extract` part:
+`kk serve --only mcp,validator,belief,recall,quotes,tms,extract`, with `KK_EXTRACT_KEY` (an OpenRouter key by
+default; `KK_EXTRACT_URL` and `KK_EXTRACT_MODEL` point it at any OpenAI-compatible endpoint, a local one too).
 
 Who holds which login (D-37):
 
