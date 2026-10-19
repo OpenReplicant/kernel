@@ -9,11 +9,14 @@
                                                 question's history, scored as LongMemEval's own retrieval
                                                 code does: recall_any, recall_all and NDCG at 5 and 10, by turn
                                                 and by session (turns ranked, then collapsed to sessions)
-  python eval/longmemeval/run.py answer [--n N] [--k K] [--label L]
+  python eval/longmemeval/run.py answer [--n N] [--k K] [--label L] [--mode kernel|none|full|oracle]
                                                 end to end: the K sessions the kernel recalls first (default 5), in
                                                 date order, read by a small model with the paper's reader prompt
                                                 (KK_EVAL_MODEL, default liquid/lfm-2.5-2.6b:free on OpenRouter; key
-                                                OPENROUTER_API_KEY or KK_EVAL_MODEL_KEY); answers to <cache>/answers/<L>.answers.jsonl
+                                                OPENROUTER_API_KEY or KK_EVAL_MODEL_KEY); answers to <cache>/answers/<L>.answers.jsonl.
+                                                Baselines with the same reader: --mode none (the question alone),
+                                                full (the most recent sessions that fit its window), oracle (only
+                                                the sessions holding the answer)
   python eval/longmemeval/run.py judge-prompts --label L
                                                 the paper's judge prompt per answer (MIT, src/evaluation/
                                                 evaluate_qa.py), as JSON lines for a judge: Haiku sub-agents write
@@ -243,6 +246,8 @@ READER = ("I will give you several history chats between you and a user. Please 
           "relevant chat history. Answer the question step by step: first extract all the relevant information, and "
           "then reason over the information to get the answer.\n\n\nHistory Chats:\n\n{}\n\nCurrent Date: {}\n"
           "Question: {}\nAnswer (step by step):")
+# Without memory: the same reader, the question alone (the paper's no-retrieval setting, step by step).
+CLOSED = "Current Date: {}\nQuestion: {}\nAnswer the question step by step.\nAnswer (step by step):"
 _JUDGE = ("I will give you a question, a correct answer, and a response from a model. Please answer yes if the response "
           "contains the correct answer. Otherwise, answer no. If the response is equivalent to the correct answer or "
           "contains all the intermediate steps to get the correct answer, you should also answer yes. If the response "
@@ -306,10 +311,37 @@ def history(q: dict, ranked_sessions: list[str], k: int) -> str:
     return out
 
 
-def answer(n: int, k: int, label: str) -> dict:
-    import psycopg
+MODES = ("kernel", "none", "full", "oracle")
+FULL_CHARS = 200_000   # about 50k tokens: the reader's 65k window, less the prompt and its answer
 
+
+def context_for(q: dict, mode: str, k: int, admin=None) -> str | None:
+    """The history the reader gets: what the kernel recalls (top k sessions), nothing, the most recent
+    sessions that fit the window (full), or only the sessions holding the answer (oracle)."""
+    qh = h(q["question_id"])
+    keys = [h(qh + sid) for sid in q["haystack_session_ids"]]
+    if mode == "none":
+        return None
+    if mode == "oracle":
+        return history(q, [h(qh + sid) for sid in q["answer_session_ids"]], len(q["answer_session_ids"]))
+    if mode == "full":
+        dated = sorted(zip(keys, q["haystack_dates"]), key=lambda x: when(x[1]), reverse=True)
+        chosen = []
+        for key, _ in dated:
+            if len(history(q, chosen + [key], len(chosen) + 1)) > FULL_CHARS:
+                break
+            chosen.append(key)
+        return history(q, chosen, len(chosen))
     from kernel_mcp import recall
+    admin.execute(f"set role {reader(q)}")
+    found = recall.recall(admin, q["question"], 60)
+    admin.execute("reset role")
+    ranked = sessions([c["subject"] for c in found if c.get("scope") == scope(q)], k)
+    return history(q, [s.rsplit(":", 1)[1] for s in ranked], k)
+
+
+def answer(n: int, k: int, label: str, mode: str = "kernel") -> dict:
+    import psycopg
     qs = sample(n)
     path = CACHE / "answers" / f"{label}.answers.jsonl"
     path.parent.mkdir(exist_ok=True)
@@ -318,15 +350,14 @@ def answer(n: int, k: int, label: str) -> dict:
         for q in qs:
             if q["question_id"] in done:
                 continue
-            admin.execute(f"set role {reader(q)}")
-            found = recall.recall(admin, q["question"], 60)
-            admin.execute("reset role")
-            ranked = sessions([c["subject"] for c in found if c.get("scope") == scope(q)], k)
-            text, model = ask(READER.format(history(q, [s.rsplit(":", 1)[1] for s in ranked], k),
-                                            q["question_date"], q["question"]))
-            out.write(json.dumps({"question_id": q["question_id"], "hypothesis": text.strip(), "model": model}) + "\n")
+            ctx = context_for(q, mode, k, admin)
+            prompt = (READER.format(ctx, q["question_date"], q["question"]) if ctx is not None
+                      else CLOSED.format(q["question_date"], q["question"]))
+            text, model = ask(prompt)
+            out.write(json.dumps({"question_id": q["question_id"], "hypothesis": text.strip(), "model": model,
+                                  "mode": mode, "context_chars": len(ctx or "")}) + "\n")
             out.flush()
-            print(f"{q['question_id']}: {model} {len(text)} chars", file=sys.stderr)
+            print(f"{q['question_id']}: {mode} {len(ctx or '')} chars in, {model} {len(text)} chars out", file=sys.stderr)
     return {"answers": str(path)}
 
 
@@ -371,13 +402,16 @@ def main() -> int:
     ap.add_argument("--k", type=int, default=5)
     ap.add_argument("--label", default="retrieval")
     ap.add_argument("--judgments")
+    ap.add_argument("--mode", choices=MODES, default="kernel",
+                    help="answer: the reader gets what the kernel recalls (default), nothing, the most recent "
+                         "history that fits its window (full), or the sessions holding the answer (oracle)")
     a = ap.parse_args()
     if a.stage == "fetch":
         fetch()
     elif a.stage == "load":
         load(a.n)
     elif a.stage == "answer":
-        print(json.dumps(answer(a.n, a.k, a.label)))
+        print(json.dumps(answer(a.n, a.k, a.label, a.mode)))
     elif a.stage == "judge-prompts":
         judge_prompts(a.label)
     elif a.stage == "score":
