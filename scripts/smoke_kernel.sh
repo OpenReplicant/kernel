@@ -38,7 +38,7 @@ export KK_MCP_URL="http://127.0.0.1:$port/mcp"
 log=$(mktemp)
 # D-61: dense recall when Postgres has pgvector and python has fastembed (KK_REQUIRE_DENSE=1 makes their
 # absence a failure, as in CI); KK_RERANK=1: the dense worker also downloads the cross-encoder (D-66).
-parts=mcp,validator,belief,recall,quotes
+parts=mcp,validator,belief,recall,quotes,tms
 # M3-T6: the quote verifier reads file: sources under the repository and artifacts from a fresh store.
 export KK_SOURCE_ROOT="$root" KK_ARTIFACTS="$(mktemp -d)"
 if [ "$(psql -d "$db" -tAc "select to_regclass('recall_dense.vec') is not null")" = t ] \
@@ -59,7 +59,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-$py "$root/scripts/e2e_kernel.py"
+KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_kernel.py"
 # T13: ingestion without a runner (needs gitleaks on PATH for the ingest filter).
 $py "$root/scripts/e2e_ingest.py"
 # Milestone 2, BPM: event-log encoder (M2-T1).

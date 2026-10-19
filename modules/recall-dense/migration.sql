@@ -49,8 +49,12 @@ do $migration$ begin
   grant select on recall_dense.vec, recall_dense.state to kk_agent;
   reset role;
 
-  -- BM25 (api.recall, from the recall index) and cosine similarity, each over its top 200, min-max
-  -- normalised and averaged (a convex combination, alpha 0.5: Bruch et al. 2023). As the caller:
+  -- BM25 (api.recall, from the recall index) and cosine similarity, each over its top 200, normalised and
+  -- averaged (a convex combination, alpha 0.5: Bruch et al. 2023). Cosine is min-max normalised; BM25 is
+  -- divided by its best score, since its list holds only matching claims: min-max would give the weakest
+  -- match 0, the same as no match, and with few matches drop a relevant claim below unrelated ones (D-89). A claim the dense worker
+  -- has not embedded yet (a memory written a moment ago) counts its BM25 score for both halves: missing
+  -- is not irrelevant (D-89). As the caller:
   -- row-level security applies to both lists. Same row shape as api.recall; `rank` is the fused score.
   set local role kk_owner;
   set local check_function_bodies = off;
@@ -60,9 +64,12 @@ do $migration$ begin
     with b as (select (e->>'id')::uuid as id, (e->>'rank')::float8 as s from jsonb_array_elements(api.recall(p_text, 200)) e),
     d as (select v.claim_id as id, 1 - (v.embedding <=> p_vec) as s from recall_dense.vec v
           order by v.embedding <=> p_vec limit 200),
-    nb as (select id, coalesce((s - min(s) over ()) / nullif(max(s) over () - min(s) over (), 0), 1) as n from b),
+    nb as (select id, coalesce(s / nullif(max(s) over (), 0), 1) as n from b),
     nd as (select id, coalesce((s - min(s) over ()) / nullif(max(s) over () - min(s) over (), 0), 1) as n from d),
-    f as (select id, 0.5 * coalesce(nb.n, 0) + 0.5 * coalesce(nd.n, 0) as rank from nb full join nd using (id))
+    f as (select id, 0.5 * coalesce(nb.n, 0)
+                     + 0.5 * coalesce(nd.n, case when not exists (select 1 from recall_dense.vec v where v.claim_id = id)
+                                                 then nb.n end, 0) as rank
+          from nb full join nd using (id))
     select coalesce(jsonb_agg(to_jsonb(r) order by r.rank desc, r.belief desc nulls last), '[]'::jsonb) from (
       select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.qualifiers, c.scope, c.evidence_type,
              c.attributed_to, c.status, c.belief, c.valid_from, c.valid_to, round(f.rank::numeric, 3) as rank

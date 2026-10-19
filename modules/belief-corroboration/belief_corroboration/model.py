@@ -21,6 +21,10 @@ cannot be wrong otherwise):
 
 Verification (D-67): a claim that a verifier refuted (its quote is not in its source, say) keeps at most
 REFUTED_CAP, whatever its corroboration: a verifier is never the claim's producer (invariant 5).
+
+Truth maintenance (D-89, M6-T12): a claim derived from a premise that was since superseded, refuted,
+retracted or redacted (the truth-maintenance module's latest verdict on it is inconclusive) keeps at most
+PREMISE_CAP until its premises are current again.
 """
 from __future__ import annotations
 
@@ -29,6 +33,7 @@ from datetime import datetime
 
 MODEL = "urn:kk:module:belief-corroboration-v0"
 REFUTED_CAP = 0.1
+PREMISE_CAP = 0.25
 
 
 @dataclass(frozen=True)
@@ -45,6 +50,7 @@ class Claim:
     deprecated: bool = False
     entity: str | None = None     # the object entity's IRI, if the object is an entity
     refuted_by: tuple = ()        # verifier modules that refuted the claim
+    undermined: bool = False      # a premise it was derived from has been withdrawn
 
 
 CITO = "http://purl.org/spar/cito/"
@@ -86,6 +92,10 @@ def score(claims: list[Claim], functional: set[str]) -> dict[str, tuple[float, d
         if c.id in out and c.refuted_by:
             value, why = out[c.id]
             out[c.id] = (min(value, REFUTED_CAP), {**why, "refuted_by": sorted(c.refuted_by), "cap": REFUTED_CAP})
+        if c.id in out and c.undermined:
+            value, why = out[c.id]
+            out[c.id] = (min(value, PREMISE_CAP), {**why, "premise_withdrawn": True,
+                                                   "cap": min(why.get("cap", 1), PREMISE_CAP)})
     return out
 
 

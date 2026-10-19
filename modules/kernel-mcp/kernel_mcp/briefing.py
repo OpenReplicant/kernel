@@ -18,7 +18,7 @@ NOTE = AS + "Note"
 KIND = "urn:kk:memory-kind:"
 # What a note is made of; recall reads these for every note it finds.
 NOTE_PARTS = (RDF_TYPE, AS + "content", AS + "attributedTo", DCT + "type", DCT + "subject")
-KINDS = ("fact", "decision", "preference", "commitment", "correction")
+KINDS = ("fact", "decision", "preference", "commitment", "correction", "conclusion")
 HANDLE = 8
 
 
@@ -76,7 +76,8 @@ def who(iri: str | None, me: str | None, agents: dict[str, dict], labels: dict[s
 
 def tail(c: dict) -> str:
     belief = "unscored" if c.get("belief") is None else f"belief {float(c['belief']):.2f}"
-    mark = ", preferred" if c.get("status") == "preferred" else ""
+    mark = (", preferred" if c.get("status") == "preferred" else "") \
+        + (", a premise was withdrawn" if c.get("withdrawn") else "")
     return f"{belief}{mark} {handle(c['id'])}"
 
 
@@ -95,7 +96,9 @@ def lines(claims: list[dict], found: dict[str, dict], labels: dict[str, str], ag
             about = ", ".join(name(a, labels) for a in n["about"])
             text = value(content).replace("\n", " ")
             author = who(n.get("author") or content["attributed_to"], me, agents, labels, types)
+            premises = n.get("premises") or 0
             out.append(f"- {n.get('kind', 'note')}: \"{text}\"" + (f" (about {about})" if about else "")
+                       + (f" (from {premises} premise{'s' if premises > 1 else ''})" if premises else "")
                        + f" — {author}; {tail(content)}")
         else:
             obj = name(c["object_entity"], labels) if c.get("object_entity") else f"\"{value(c)[:300]}\""

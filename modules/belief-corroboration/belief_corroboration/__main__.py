@@ -20,7 +20,7 @@ import psycopg
 from kk.lib import connect, listen, run
 from kk.lib import submit as kernel_submit
 
-from .model import AGAINST, FOR, MODEL, REFUTED_CAP, Claim, score
+from .model import AGAINST, FOR, MODEL, PREMISE_CAP, REFUTED_CAP, Claim, score
 
 AGENT = "urn:kk:agent:belief-corroboration"
 MODULE = "urn:kk:module:belief-corroboration-v0"
@@ -31,10 +31,19 @@ COLUMNS = ("id, subject, predicate, object_entity, object_value, statement_key, 
            "valid_from, valid_to, status, belief")
 
 
-REFUTED = """select claim_id, method from api.verifications where verdict = 'refuted' and claim_id = any(%s)"""
-# Claims a verifier refuted whose belief is still above the cap (D-67), when a verifier is installed.
+TMS = "urn:kk:module:truth-maintenance"
+# Each verifier's latest verdict on each claim (a later verdict by the same method replaces an earlier one).
+VERDICTS = """select distinct on (claim_id, method) claim_id, method, verdict from api.verifications
+              where claim_id = any(%s) order by claim_id, method, recorded_at desc"""
+LATEST_TMS = f"""(select v.verdict from api.verifications v where v.claim_id = api.claims.id and v.method = '{TMS}'
+                 order by v.recorded_at desc limit 1)"""
+# Claims whose belief is out of step with their verdicts: refuted by a verifier but above that cap (D-67);
+# a premise withdrawn but above that cap; premises current again but still capped (D-89).
 STALE = f""" or (belief > {REFUTED_CAP} and exists (select 1 from api.verifications v
-                                                  where v.claim_id = api.claims.id and v.verdict = 'refuted'))"""
+                                                  where v.claim_id = api.claims.id and v.verdict = 'refuted'))
+            or (belief > {PREMISE_CAP} and {LATEST_TMS} = 'inconclusive')
+            or ({LATEST_TMS} = 'supported' and (select b.explanation ? 'premise_withdrawn' from kernel.belief b
+                where b.claim_id = api.claims.id order by b.computed_at desc limit 1))"""
 
 
 def change_sets(cur, watermark) -> tuple[list[dict], object]:
@@ -62,17 +71,22 @@ def change_sets(cur, watermark) -> tuple[list[dict], object]:
     for claim_id, source in cur.fetchall():
         sources.setdefault(claim_id, set()).add(source)
     refuted: dict = {}
+    undermined: set = set()
     if verified:
-        cur.execute(REFUTED, ([r["id"] for r in rows],))
-        for claim_id, method in cur.fetchall():
-            refuted.setdefault(claim_id, set()).add(method)
+        cur.execute(VERDICTS, ([r["id"] for r in rows],))
+        for claim_id, method, verdict in cur.fetchall():
+            if verdict == "refuted":
+                refuted.setdefault(claim_id, set()).add(method)
+            if method == TMS and verdict == "inconclusive":
+                undermined.add(claim_id)
     cur.execute("select subject from api.claims where predicate = %s and object_entity = %s and status <> 'deprecated'",
                 (RDF_TYPE, FUNCTIONAL_TYPE))
     functional = {r[0] for r in cur.fetchall()}
     claims = [Claim(str(r["id"]), r["statement_key"], r["subject"], r["predicate"],
                     json.dumps(r["object_entity"] or r["object_value"], sort_keys=True), r["attributed_to"],
                     frozenset(sources.get(r["id"], ())), r["valid_from"], r["valid_to"],
-                    r["status"] == "deprecated", r["object_entity"], tuple(sorted(refuted.get(r["id"], ())))) for r in rows]
+                    r["status"] == "deprecated", r["object_entity"], tuple(sorted(refuted.get(r["id"], ()))),
+                    r["id"] in undermined) for r in rows]
     beliefs = score(claims, functional)
     ops_by_scope: dict[str, list] = {}
     for r in rows:

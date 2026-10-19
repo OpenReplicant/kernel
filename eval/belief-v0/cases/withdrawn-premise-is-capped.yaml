@@ -1,0 +1,28 @@
+id: urn:kk:eval:belief-v0/withdrawn-premise-is-capped
+description: 'Two independent agents concluded the same thing, but a premise of one conclusion was since
+  superseded (truth maintenance, D-89): that claim keeps at most 0.25 until its premises are current again;
+  the other keeps its corroboration.'
+input:
+  functional: []
+  claims:
+  - id: a
+    key: k1
+    subject: urn:x:payroll
+    predicate: rdfs:comment
+    object: '"small"'
+    agent: agent-1
+    sources:
+    - urn:kk:run:1
+    undermined: true
+  - id: b
+    key: k1
+    subject: urn:x:payroll
+    predicate: rdfs:comment
+    object: '"small"'
+    agent: agent-2
+    sources:
+    - urn:kk:run:2
+expect:
+  beliefs:
+    a: 0.25
+    b: 0.6667

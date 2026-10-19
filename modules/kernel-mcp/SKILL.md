@@ -13,10 +13,13 @@ You can read anything your role is cleared for. Which tools you see depends on y
 
 - `recall(question, budget?)` → a briefing: one line per memory or claim, saying who said it (you, a
   person, another agent) and its belief from 0 to 1, ending in a handle such as `#1a2b3c4d`.
-- `remember(kind, text, about?, replaces?)` → records one sentence as yours. `kind` is `fact`,
-  `decision`, `preference`, `commitment` or `correction`; `about` is what it concerns (an IRI or a
-  #handle); `replaces` is the #handle of a memory this one corrects (the old one is kept, marked
-  superseded). It shows in `recall` once the kernel has applied it, usually within a second.
+- `remember(kind, text, about?, replaces?, because?)` → records one sentence as yours. `kind` is
+  `fact`, `decision`, `preference`, `commitment`, `correction` or `conclusion`; `about` is what it
+  concerns (a name, an IRI or a #handle); `replaces` is the #handle of a memory this one corrects (the
+  old one is kept, marked superseded); `because` lists the #handles it follows from. A conclusion needs
+  `because`: it is recorded as inferred from those claims, kept as private as the most private of them,
+  and flagged when one of them is withdrawn. When you work something out from what you recalled,
+  record it as a conclusion so the next agent starts from it. It shows in `recall` once the kernel has applied it, usually within a second.
 - `explain(handle)` → where a line came from: the source and quote, status history, beliefs.
 - `changes_since(since?)` → what others added, superseded or retracted since you last looked, and
   the cursor to pass next time.

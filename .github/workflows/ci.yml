@@ -87,6 +87,8 @@ jobs:
         run: python modules/map-gaps/tests/test_gaps.py
       - name: Briefing tests (M6-T1)
         run: python modules/kernel-mcp/tests/test_briefing.py
+      - name: Truth maintenance tests (M6-T12)
+        run: python modules/truth-maintenance/tests/test_plan.py
       - name: Generated pack migration is up to date
         run: |
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql

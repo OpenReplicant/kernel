@@ -159,3 +159,11 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   and the query must be a dollar-quoted constant with its parameters passed as a bound `$1`. Cypher
   `MERGE` and `x.iri IN $list`, `UNWIND` or an `OR` across pattern nodes scan every edge. Write label
   tables in SQL, anchor with `x.iri = $anchor`, and compile each query into a function so its plan is cached.
+- Score fusion: never min-max normalise a list that holds only matches (BM25 hits): its weakest match
+  becomes 0, the same as a non-match, and with few hits a relevant claim drops below unrelated ones. Divide
+  by the best score instead (D-90). Test recall with three or fewer hits, not only large corpora.
+- `kernel.readers_subset` compares scope-grant rows literally, not role membership. Deriving a claim in a
+  private scope from one in the default scope (granted to `kk_agent`) needs every reader of the private
+  scope to hold its own row on the default scope too (D-90).
+- Any feature that links claims across scopes (derivations, replacements) must be checked against
+  `kk export` / `kk import`: import installs per scope and must order by dependency (D-90).
