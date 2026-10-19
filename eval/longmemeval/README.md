@@ -22,7 +22,13 @@ python eval/longmemeval/run.py fetch
 KK_ADMIN_URL=... python eval/longmemeval/run.py load --n 100        # with kk serve (validator, recall) running
 KK_RERANK=0 KK_ADMIN_URL=... python eval/longmemeval/run.py retrieval --n 100 --label bm25
 KK_ADMIN_URL=... python eval/longmemeval/run.py retrieval --n 100 --label bm25-rerank
+OPENROUTER_API_KEY=... KK_ADMIN_URL=... python eval/longmemeval/run.py answer --n 100 --label lfm-k5
+python eval/longmemeval/run.py judge-prompts --label lfm-k5 > prompts.jsonl   # judged by Haiku sub-agents
+python eval/longmemeval/run.py score --label lfm-k5 --judgments verdicts.jsonl
 ```
+
+Models follow the owner's rule (CLAUDE.md): a reader under 10B parameters on OpenRouter's free tier, and Haiku
+as harness sub-agents for judging.
 
 ## Results (Oct 2026, 100 questions stratified by type, 93 with evidence)
 
@@ -42,4 +48,31 @@ Runs: `runs/2026-10-19-bm25.json`, `runs/2026-10-19-bm25-rerank.json`.
   comes next.
 - **Comparison.** The paper's retrieval tables are on LongMemEval_M (500 sessions a question; BM25
   session R@5 0.634 there). Ours is on S, so the two compare only in direction, not value.
-- **Not measured yet.** End-to-end QA accuracy, which needs a reader model and the paper's GPT-4o judge.
+
+## End to end (Oct 2026, the same 100 questions plus abstention: 101)
+
+The kernel recalls (BM25 with re-ranking) and the top 5 sessions go, in date order, to
+`liquid/lfm-2.5-2.6b:free` (2.6B parameters) with the paper's reader prompt. Haiku judges each answer
+with the paper's judge prompt for its question type. Five verdicts were checked by hand, and all five
+were right. Run: `runs/2026-10-19-lfm-k5-qa.json`.
+
+| Type | n | accuracy |
+| --- | --- | --- |
+| single-session-assistant | 11 | 1.00 |
+| single-session-user | 12 | 0.92 |
+| abstention | 8 | 0.75 |
+| temporal-reasoning | 26 | 0.62 |
+| knowledge-update | 13 | 0.54 |
+| single-session-preference | 6 | 0.50 |
+| multi-session | 25 | 0.44 |
+| **all** | 101 | **0.644** |
+
+- **Context.** On the full 500 questions with GPT-4o judging, the paper and Zep report 0.60 for GPT-4o
+  reading the whole history, and 0.71 for Zep with GPT-4o. Ours is a 2.6B reader on a 100-question subset
+  with a different judge, so the numbers are not a ranking. They do say that a small model with the
+  kernel's recall is in the same range as a large model given everything.
+- **3 answers were empty.** The reasoning model ran out of tokens; they count as wrong.
+- **Where it loses: multi-session (0.44) and knowledge update (0.54).** These need several sessions
+  combined, or the latest value chosen over an earlier one. That is the ground for conclusions with
+  premises and supersede (D-90), and for M6-T13's time-aware recall. Five sessions also leave little room
+  for counting questions.
