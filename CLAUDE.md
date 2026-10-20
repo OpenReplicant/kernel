@@ -1,5 +1,13 @@
 # Knowledge Kernel
 
+**Direction (D-94, Oct 2026): products are built on [Cognee](https://github.com/topoteretes/cognee), not on this kernel.**
+New work goes in `distributions/<name>/` as Python on Cognee (pinned, 1.6.3), starting with
+`distributions/process-interview/` (interviews to organisation and process maps, quoted, gaps as questions, BPMN).
+Carried over as conventions in our own tasks: facts quote their source and code checks the quote; nothing a model
+proposes is kept unchecked; facts say who said them and when; the ontology packs stay the vocabularies. The kernel,
+its modules and their CI stay as they are until each module is ported or dropped; no new kernel work. The rest of
+this file describes the kernel.
+
 A small knowledge kernel that drops into any agent harness. One Postgres holds every claim
 (attributed, referenced, belief-scored, scoped); its three jobs are ingestion, processing and recall,
 each done by a swappable default module; everything else is a module too. Integration is a ladder:
@@ -116,6 +124,7 @@ scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mj
                  e2e_devops.sh/.py + e2e_devops_ui.mjs, eval_self.py,
                  check_manifests.py, vocab_subset.py
 examples/        demo data (order-to-cash: event log and its generator, BPMN model, written procedure; bpi2019: the documented model)
+distributions/   products on Cognee (D-94): process-interview/ (process_interview/, tests/, eval/)
 parked/          modules and scripts outside the kernel (runners, decoders, UI), not in CI (D-36)
 eval/            eval sets (data): validator, belief-v0, self-model (questions.yaml, runs/), scifact, rcaeval, bpi2019 and longmemeval (run.py; data fetched, not committed)
 docs/            spec, architecture (plain language), developer-guide (the moving parts and interfaces), milestone-1..5, decisions, modules (generated catalog), demo, interaction-research, harness (drop-in guide), mcp-servers, sources, recall-research, benchmarks; spikes/

@@ -1,0 +1,10 @@
+{"id": "1", "conversation": "acme-purchasing", "author": "interviewer", "kind": "agent", "time": "2026-10-18T10:00:00Z", "text": "To start: what is your role, and whom do you report to?"}
+{"id": "2", "conversation": "acme-purchasing", "author": "Dana Reyes", "kind": "person", "time": "2026-10-18T10:01:00Z", "text": "I'm the procurement lead at Acme, in the purchasing team. I report to the finance director, Sam Okafor."}
+{"id": "3", "conversation": "acme-purchasing", "author": "interviewer", "kind": "agent", "time": "2026-10-18T10:02:00Z", "text": "What happens when a purchase request comes in?"}
+{"id": "4", "conversation": "acme-purchasing", "author": "Dana Reyes", "kind": "person", "time": "2026-10-18T10:03:00Z", "text": "Every request lands in the purchasing inbox first. I check the budget code, then the buyer raises a purchase order."}
+{"id": "5", "conversation": "acme-purchasing", "author": "interviewer", "kind": "agent", "time": "2026-10-18T10:04:00Z", "text": "Who holds the post of buyer, and whom does the buyer report to?"}
+{"id": "6", "conversation": "acme-purchasing", "author": "Dana Reyes", "kind": "person", "time": "2026-10-18T10:05:00Z", "text": "That's Lee Chen. Lee reports to me, and sits in purchasing too."}
+{"id": "7", "conversation": "acme-purchasing", "author": "interviewer", "kind": "agent", "time": "2026-10-18T10:06:00Z", "text": "What happens after the buyer raises a purchase order, or does the process end there?"}
+{"id": "8", "conversation": "acme-purchasing", "author": "Dana Reyes", "kind": "person", "time": "2026-10-18T10:07:00Z", "text": "Once the purchase order is raised, the process is finished."}
+{"id": "9", "conversation": "acme-purchasing", "author": "interviewer", "kind": "agent", "time": "2026-10-18T10:08:00Z", "text": "Which team is the finance director part of?"}
+{"id": "10", "conversation": "acme-purchasing", "author": "Dana Reyes", "kind": "person", "time": "2026-10-18T10:09:00Z", "text": "Sam runs the finance department."}

@@ -1,0 +1,644 @@
+diff --git a/docs/decisions.md b/docs/decisions.md
+index 14f5faf..53152c2 100644
+--- a/docs/decisions.md
++++ b/docs/decisions.md
+@@ -99,6 +99,7 @@ or overturn), **open** (needs the owner).
+ | D-91 | **Recall cues: memories that come back on a condition, not a ranking** (owner, Oct 2026: "explicit recall conditions can be registered with each memory/claim ... if there was some specific thing said that might not be recalled by default ranking but when forming a memory associate a recall condition set (birthdays, instructions, etc)"). Ranking is a bet on similarity; some memories must come back because of a situation (prospective memory: "when X, remember Y"). (a) A cue is one claim on the memory, `kk:recallWhen`, a JSON object whose keys are alternative triggers: `always` (every session start), `mentions` (whole words or phrases in a prompt or question), `on` (a date, or `--MM-DD` yearly) with `before` (days of notice, default 7), `where` (a path glob), `tool` (a tool-name glob with an optional argument glob, Claude Code permission-rule style: `Bash(git push*)`). It is a module-contract term in kk-core (D-40): no standard vocabulary owns recall cues (schema.org `Schedule` is mappings-only under its licence). Not a qualifier: qualifiers say when a claim is true, a cue says when to bring it up. (b) Written with `remember(..., when={...})`, checked when written; the memory extractor (M6-T4) will propose cues itself (dates, "always/never/before you"). (c) Fired by what already runs: `recall` puts memories whose mention cue fires first, marked with the cue; the session-start hook lists `always`, near `on` and matching `where` cues; the prompt hook, mentions; a new pre-tool hook (`kernel-mcp-cue`, Claude Code PreToolUse) brings up `tool` and `where` cues before the action. The pre-tool hook reads no database (83 ms): the session hooks write the session's tool and path cues to its state file. (d) This is the D-86 detector idea pointed at the agent's own situation instead of the kernel's data. (e) Measured where ranking is weakest: the LongMemEval baseline (BM25) recalls the evidence session in the top 5 for 0.17 of preference questions against 0.96–1.0 for every other type (0.67 with re-ranking; `eval/longmemeval/README.md`). | decided |
+ | D-92 | **Recall briefs turns with their neighbours, grouped by conversation in time order** (M6-T13). A ranked hit in a long chat is one message; the answer often sits in the message before or after it, and a 2.6B reader given five whole sessions is distracted by the rest of them. (a) Kernel `recall` (memory profile) adds to each recalled message the messages just before and after it (`as:inReplyTo` either way), and shows these excerpts after the other lines, grouped by conversation (`as:context`), oldest first, each in time order (`as:published`), with `[...]` where messages were skipped. Lines are chosen in rank order within the budget; memories and claims keep their own lines, now with the date when a note has one. (b) Measured on LongMemEval (101 questions, `liquid/lfm-2.5-2.6b:free` reading, Haiku judging blind): 0.683 against 0.624 for the top 5 whole sessions and 0.703 for the oracle, at about the same context size; knowledge update 0.54 to 0.85, preference 0.33 to 0.67, multi-session 0.44 to 0.36 (two questions). (c) `KK_DENSE=0` keeps recall on BM25 with dense embeddings installed, as `KK_RERANK=0` turns re-ranking off, so the two can be compared on one database. | decided |
+ | D-93 | **Memory extractor: one message at a time, a small model, quotes checked in code** (M6-T4). (a) A processor (`modules/memory-extractor`, `kk serve` part `extract`, opt-in) reads each recorded message (an as:Note in a conversation) once, oldest first per conversation, after its own earlier change sets are decided, so a correction sees the memory it corrects. The model gets the message, the message before it (to read short answers), and up to 8 earlier memories in its scope (the conversation's latest, then what recall finds), numbered. It answers a JSON array: kind, a sentence that stands alone, a quote, which earlier memory it replaces, a topic, a date ahead, a standing instruction. (b) The memories are the shape `remember` writes (D-88), attributed to the message's author, `dcterms:isPartOf` the message, evidence `extracted`, quoting the message in its transcript; a replaced memory is superseded claim by claim; a date ahead becomes an `on` cue and an always/never instruction an `always` cue (D-91). (c) A small model is unreliable, so code checks what it can: a quote must be in the message (else the message sentence sharing most words with the memory is quoted); a memory sharing no word with the message is dropped (the model repeats memories from other messages); from an agent's message only commitments are kept (the rest of what it said is in the message itself, which recall briefs with its neighbours, D-92); an unknown kind becomes a fact, or a preference for a standing instruction; a cut-off JSON array keeps its complete items. (d) Any OpenAI-compatible endpoint (`KK_EXTRACT_URL`, `KK_EXTRACT_MODEL`, default `liquid/lfm-2.5-2.6b:free` on OpenRouter); the smoke test uses a stand-in model. (e) Measured on a fixture of three conversations (`eval/expected.yaml`, 10 expected memories, a correction, an instruction, three messages that should give nothing): 1.0, 1.0 and 0.8 of the expected memories over three runs of the 2.6B model, every correction replacing the right memory, every instruction cued. The checks in (c) were tuned on these runs; LongMemEval is the held-out test. | decided |
++| D-94 | **One briefing, three deliveries** (M6-T7). The memory profile's `recall` briefing (who said it, belief, #handle, messages with their neighbours, D-92) is what an agent gets however it is delivered: (a) the per-prompt hook gives it within 400 tokens, keeping only lines the cross-encoder scores at -2.5 or more (calibrated on a handful of pairs: related prompts scored -2.0 to 0.0, unrelated -3.2 and lower), so a prompt about something else brings nothing; `recall` itself keeps no threshold. Without a cross-encoder, BM25's matches are kept as before. (b) The session-start hook adds what others changed since the agent's last finished session (`changes_since`) after the standing memories. (c) `kk brief --write AGENTS.md` (or CLAUDE.md) writes the standing memories and the last week's changes between markers, for agents with neither MCP nor hooks. The hooks call the MCP tools' own functions, so the three never drift apart. | decided |
+ 
+ ## Open
+ 
+diff --git a/docs/harness.md b/docs/harness.md
+index b7b5a2f..b86a5c1 100644
+--- a/docs/harness.md
++++ b/docs/harness.md
+@@ -91,8 +91,8 @@ Copy `modules/kernel-mcp/SKILL.md` into the harness's skills folder (Claude Code
+ 
+ | Hook | Does |
+ | --- | --- |
+-| `session-start` | starts a kernel run for the session and tells the agent its identity and run id |
+-| `prompt` | recalls up to `KK_RECALL_LIMIT` (8) claims ranked by relevance to the prompt, with ids and belief |
++| `session-start` | starts a kernel run for the session and tells the agent its identity and run id; in the memory profile, also the memories to keep in mind (`always` cues, dates coming up) and what others changed since the agent's last session |
++| `prompt` | recalls up to `KK_RECALL_LIMIT` (8) claims ranked by relevance to the prompt, with ids and belief; in the memory profile, `recall`'s briefing within `KK_PROMPT_BUDGET` tokens (400), only lines the cross-encoder scores at least `KK_PROMPT_MIN_RELEVANCE` (-2.5), so a prompt about something else brings nothing |
+ | `session-end` | finishes the session's run |
+ 
+ Hooks inherit the harness's environment, so export `KK_DATABASE_URL` (the agent's own login) before
+@@ -100,6 +100,11 @@ starting the harness. A hook never blocks the session: on any error it writes to
+ Session runs are remembered in `KK_STATE_DIR` (default `~/.local/state/knowledge-kernel`). Other
+ harnesses call the same commands with their own hook JSON (`session_id`, `prompt`, `reason`).
+ 
++**Agents without MCP or hooks (M6-T7).** `kk brief --write AGENTS.md` (or `CLAUDE.md`) writes the same
++briefing into the file the agent already reads: the memories to keep in mind and the last week's changes,
++cited and attributed, between `<!-- kk brief -->` markers that the next run replaces. Run it as the agent's
++own login (`KK_DATABASE_URL`), from a scheduled job or a git hook.
++
+ ## The UI
+ 
+ `kk serve` also serves the UI at `/ui/` (behind Caddy: http://127.0.0.1:8080/ui/). Sign in with your
+diff --git a/docs/milestone-6.md b/docs/milestone-6.md
+index 36d1d0a..166d25d 100644
+--- a/docs/milestone-6.md
++++ b/docs/milestone-6.md
+@@ -49,7 +49,7 @@ until the owner confirms it.
+ | M6-T4 | **Memory extractor** (a processor using a small model, or a skill): from recorded sessions and messages, facts, preferences, decisions with rationale, commitments and corrections, each quoting its message. A change supersedes the old claim instead of overwriting it. Terms are chosen inside the extractor (T5). The interviewer becomes a profile of it: the agent just interviews, the extractor builds the maps (this absorbs M5-T6's eval) | fixture sessions give the expected claims; the quote verifier supports every quote; a correction supersedes; the scripted interview still yields M5-T4's maps  | started (D-93): the `memory-extractor` processor (fact, preference, decision, commitment, correction; quotes checked; corrections supersede; cues for dates and standing instructions); fixture eval 0.93 of expected memories over three runs with `liquid/lfm-2.5-2.6b:free`. Open: terms (T5), the interviewer as its profile, LongMemEval |
+ | M6-T5 | **Vocabulary access**. `find_term(text)` searches installed packs (labels, definitions), then the catalogs' search APIs (LOV, schema.org, EBI OLS). `propose_term` puts a standard term or pack subset into the review lane. KK030 reports carry the nearest standard terms. A schema.org subset pack for everyday memory (people, places, events, products), mapped with SSSOM where it overlaps ORG, PROV and FOAF. A vocabulary view in the UI. *Provisional terms* (unknown concepts get a provisional IRI and wait in review instead of failing with KK030) are a kernel change: owner decision (O-8) | `find_term` ranks the right term first on a fixture list; an approved proposal makes the term usable without a migration; the view lists packs, ownership, usage and pending proposals | |
+ | M6-T6 | **Git and PR encoder**: commits, pull requests and review threads (and `decisions.md`-style decision logs) as claims. Decisions keep their rationale; each claim is referenced by commit or PR and quote | this repository's history gives its decisions with rationale; re-running changes nothing | |
+-| M6-T7 | **Context pack decoder**: a briefing for the current task within a token budget. Lines carry who said them (owner, person, this agent, another agent) and belief, and short handles that expand on request; IRIs are shortened with a legend. Delivered at session start (hooks), per prompt (only above a relevance threshold) and as an MCP resource. An `AGENTS.md` / `CLAUDE.md` decoder writes the same for agents without MCP | on fixture memories, the briefing stays within budget, attributes every line correctly and cites every claim; an owner decision and an agent proposal are never confused | |
++| M6-T7 | **Context pack decoder**: a briefing for the current task within a token budget. Lines carry who said them (owner, person, this agent, another agent) and belief, and short handles that expand on request; IRIs are shortened with a legend. Delivered at session start (hooks), per prompt (only above a relevance threshold) and as an MCP resource. An `AGENTS.md` / `CLAUDE.md` decoder writes the same for agents without MCP | on fixture memories, the briefing stays within budget, attributes every line correctly and cites every claim; an owner decision and an agent proposal are never confused  | started (D-94): the prompt hook gives `recall`'s briefing above a relevance threshold; session start adds what changed since the last session; `kk brief --write AGENTS.md` for agents without MCP. Open: IRIs shortened with a legend; the compaction verifier |
+ | M6-T8 | **Compaction verifier**: the harness's pre-compaction hook records the full transcript (the interaction encoder); after compaction the summary is checked line by line against it with the quote verifier's method: supported, unsupported, or said by the agent and not by the person. Look up the current hook events at build time | on a fixture session, an injected false line "the owner approved X" is flagged; true lines are supported | |
+ | M6-T9 | **Entity resolution and contradictions** (processors). Resolution: names, roles and mentions of the same thing linked, `skos:exactMatch` when certain and `closeMatch` for review (Splink, MIT, plus embeddings). Contradictions: claims that cannot both hold (functional properties from the packs) become annotations, lower belief and questions, as map-gaps does | fixture people and organisations resolve as expected; an injected contradiction becomes a question and nothing is deleted | |
+ | M6-T10 | **Evals**: LongMemEval (check its licence first; data fetched, not committed), answers cited, scores as DQV claims next to published baselines. Tokens per task for an agent with and without the kernel on scripted multi-session tasks. A fixture agent session (written for the eval; real session transcripts are never committed) replayed through compaction: briefing against summary | scores recorded; the token comparison and the replay reported as they come out | started (D-91): LongMemEval_S retrieval baseline, `eval/longmemeval/README.md` (session R_any@5 0.935 BM25, 0.968 re-ranked); end to end with a 2.6B reader and blind Haiku judging: kernel 0.624, against no memory 0.099, full history 0.198, oracle 0.703; dense recall to come |
+diff --git a/eval/longmemeval/README.md b/eval/longmemeval/README.md
+index 18701c7..8329fa6 100644
+--- a/eval/longmemeval/README.md
++++ b/eval/longmemeval/README.md
+@@ -92,6 +92,13 @@ Runs: `runs/2026-10-19-lfm-{none,full,k5,turns,oracle}-qa.json`.
+ - **Rough context, not a ranking.** On all 500 questions with GPT-4o judging, the paper and Zep report 0.60
+   for GPT-4o reading the whole history, and 0.71 for Zep with GPT-4o.
+ - **3 answers were empty.** The reasoning model ran out of tokens; they count as wrong.
++- **Extracted memories add nothing measurable on knowledge update (M6-T4).** The memory extractor (the same
++  2.6B model) read every user turn of the sessions in each question's turns context: 373 calls for the 16
++  knowledge-update questions (13 plus 3 abstention), 40 to 60 memories a question, a later one superseding
++  an earlier one. Given the same turns plus those memories, dated, the reader scored 13 of 16, as with the
++  turns alone (re-judged together, blind, under opaque ids; the re-judging of the turns agreed with the
++  first on all 16). Each setting won two questions the other lost. Run: `runs/2026-10-19-lfm-memories-ku-qa.json`
++  (`run.py extract`, then `answer --mode kernel-memories --types knowledge-update`).
+ - **Where the kernel still loses: multi-session (0.44; 0.36 with turns) and, with whole sessions,
+   knowledge update (0.54).** Multi-session is low
+   even for the oracle (0.40), so part of it is the reader. These need several sessions
+diff --git a/eval/longmemeval/run.py b/eval/longmemeval/run.py
+index 816b855..435ebef 100644
+--- a/eval/longmemeval/run.py
++++ b/eval/longmemeval/run.py
+@@ -312,7 +312,8 @@ def history(q: dict, ranked_sessions: list[str], k: int) -> str:
+     return out
+ 
+ 
+-MODES = ("kernel", "kernel-turns", "none", "full", "oracle")
++MODES = ("kernel", "kernel-turns", "kernel-memories", "none", "full", "oracle")
++MEMORIES = "Memories taken from these chats (dated, oldest first; a later one may update an earlier one):"
+ TURN_CHARS = int(os.environ.get("KK_EVAL_TURN_CHARS", "24000"))   # kernel-turns: about 6k tokens of turns
+ FULL_CHARS = 200_000   # about 50k tokens: the reader's 65k window, less the prompt and its answer
+ 
+@@ -334,38 +335,51 @@ def context_for(q: dict, mode: str, k: int, admin=None) -> str | None:
+                 break
+             chosen.append(key)
+         return history(q, chosen, len(chosen))
+-    from kernel_mcp import recall
+-    admin.execute(f"set role {reader(q)}")
+-    found = recall.recall(admin, q["question"], 60)
+-    admin.execute("reset role")
+-    turns_ranked = [c["subject"] for c in found if c.get("scope") == scope(q)]
++    turns_ranked = recalled(q, admin)
+     if mode == "kernel-turns":
+         return turn_history(q, turns_ranked)
++    if mode == "kernel-memories":
++        notes = memories_for(q, list(picked(q, turns_ranked)), ask_model=False)
++        if notes is None:
++            raise SystemExit(f"{q['question_id']}: run the extract stage first")
++        return (MEMORIES + "".join(f"\n- {x}" for x in notes) + "\n" if notes else "") + turn_history(q, turns_ranked)
+     ranked = sessions(turns_ranked, k)
+     return history(q, [s.rsplit(":", 1)[1] for s in ranked], k)
+ 
+ 
+-def turn_history(q: dict, ranked: list[str]) -> str:
+-    """The recalled turns, each with the turn before and after it, grouped by session in date order (with
+-    dates), until TURN_CHARS: less of each session, from more sessions."""
++def picked(q: dict, ranked: list[str]) -> dict[str, set[int]]:
++    """The recalled turns with the turn before and after each, per session key, until TURN_CHARS."""
+     qh = h(q["question_id"])
+-    by_key = {h(qh + sid): (stamp, s) for sid, stamp, s in
+-              zip(q["haystack_session_ids"], q["haystack_dates"], q["haystack_sessions"])}
+-    picked: dict[str, set[int]] = {}
++    by_key = {h(qh + sid): s for sid, s in zip(q["haystack_session_ids"], q["haystack_sessions"])}
++    out: dict[str, set[int]] = {}
+     size = 0
+     for subject in ranked:
+         sh, i = subject.split(":")[-2], int(subject.split(":")[-1])
+-        stamp, session = by_key[sh]
+-        new = {j for j in (i - 1, i, i + 1) if 0 <= j < len(session)} - picked.get(sh, set())
++        session = by_key[sh]
++        new = {j for j in (i - 1, i, i + 1) if 0 <= j < len(session)} - out.get(sh, set())
+         add = sum(len(session[j]["content"]) + 12 for j in new)
+-        if size + add > TURN_CHARS and picked:
++        if size + add > TURN_CHARS and out:
+             break
+-        picked.setdefault(sh, set()).update(new)
++        out.setdefault(sh, set()).update(new)
+         size += add
++    return out
++
++
++def dated(q: dict) -> dict[str, tuple[str, list]]:
++    """Per session key: its date and its turns."""
++    qh = h(q["question_id"])
++    return {h(qh + sid): (stamp, s) for sid, stamp, s in
++            zip(q["haystack_session_ids"], q["haystack_dates"], q["haystack_sessions"])}
++
++
++def turn_history(q: dict, ranked: list[str]) -> str:
++    """The recalled turns, each with the turn before and after it, grouped by session in date order (with
++    dates), until TURN_CHARS: less of each session, from more sessions."""
++    by_key, chosen = dated(q), picked(q, ranked)
+     out = ""
+-    for n, sh in enumerate(sorted(picked, key=lambda x: when(by_key[x][0]))):
++    for n, sh in enumerate(sorted(chosen, key=lambda x: when(by_key[x][0]))):
+         stamp, session = by_key[sh]
+-        idx = sorted(picked[sh])
++        idx = sorted(chosen[sh])
+         text, last = "", None
+         for j in idx:
+             if last is not None and j != last + 1:
+@@ -376,9 +390,65 @@ def turn_history(q: dict, ranked: list[str]) -> str:
+     return out
+ 
+ 
+-def answer(n: int, k: int, label: str, mode: str = "kernel") -> dict:
++def memories_for(q: dict, sessions: list[str], ask_model: bool = True) -> list[str] | None:
++    """The memory extractor (M6-T4) over every user turn of these sessions, in date order: each turn sees
++    the 8 latest current memories, as the worker sees its conversation's; a memory that replaces one
++    supersedes it. Answers are cached per turn (CACHE/memories); without ask_model, None when one is
++    missing. Returns the current memories, dated, oldest first."""
++    from memory_extractor.__main__ import ask as extract_ask
++    from memory_extractor.extract import memories, parse, prompt
++    path = CACHE / "memories" / f"{h(q['question_id'])}.jsonl"
++    path.parent.mkdir(exist_ok=True)
++    cached = {r["turn"]: r for r in map(json.loads, path.open())} if path.exists() else {}
++    by_key, taken = dated(q), []
++    for sh in sorted(sessions, key=lambda x: when(by_key[x][0])):
++        stamp, session = by_key[sh]
++        for i, t in enumerate(session):
++            if t["role"] != "user":
++                continue
++            key, before = f"{sh}:{i}", session[i - 1]["content"] if i else ""
++            earlier = [x for x in reversed(taken) if not x["replaced"]][:8]
++            if key not in cached:
++                if not ask_model:
++                    return None
++                text, model = extract_ask(prompt(t["content"], "user", when(stamp), before, "assistant",
++                                                 [f"({x['when']}) {x['text']}" for x in earlier]))
++                cached[key] = {"turn": key, "answer": text, "model": model}
++                with path.open("a") as f:
++                    f.write(json.dumps(cached[key]) + "\n")
++            for m in memories(parse(cached[key]["answer"]), t["content"], len(earlier)):
++                if m["replaces"]:
++                    earlier[m["replaces"] - 1]["replaced"] = True
++                taken.append({"text": m["text"], "when": when(stamp)[:10], "replaced": False})
++    return [f"({x['when']}) {x['text']}" for x in taken if not x["replaced"]]
++
++
++def extract(n: int, types: set[str] | None) -> dict:
++    """Memories for each question's kernel-turns sessions (stage `extract`), so `--mode kernel-memories`
++    answers without the extractor's calls; resumable (cached per turn)."""
+     import psycopg
+-    qs = sample(n)
++    done = 0
++    with psycopg.connect(os.environ["KK_ADMIN_URL"], autocommit=True) as admin:
++        for q in sample(n):
++            if types and q["question_type"] not in types:
++                continue
++            got = memories_for(q, list(picked(q, recalled(q, admin))))
++            done += 1
++            print(f"{q['question_id']}: {len(got)} memories", file=sys.stderr)
++    return {"questions": done}
++
++
++def recalled(q: dict, admin) -> list[str]:
++    from kernel_mcp import recall
++    admin.execute(f"set role {reader(q)}")
++    found = recall.recall(admin, q["question"], 60)
++    admin.execute("reset role")
++    return [c["subject"] for c in found if c.get("scope") == scope(q)]
++
++
++def answer(n: int, k: int, label: str, mode: str = "kernel", types: set[str] | None = None) -> dict:
++    import psycopg
++    qs = [q for q in sample(n) if not types or q["question_type"] in types]
+     path = CACHE / "answers" / f"{label}.answers.jsonl"
+     path.parent.mkdir(exist_ok=True)
+     done = {json.loads(line)["question_id"] for line in path.open()} if path.exists() else set()
+@@ -433,7 +503,7 @@ def score_qa(label: str, judgments: str) -> dict:
+ 
+ def main() -> int:
+     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+-    ap.add_argument("stage", choices=("fetch", "load", "retrieval", "answer", "judge-prompts", "score"))
++    ap.add_argument("stage", choices=("fetch", "load", "retrieval", "extract", "answer", "judge-prompts", "score"))
+     ap.add_argument("--n", type=int, default=100)
+     ap.add_argument("--k", type=int, default=5)
+     ap.add_argument("--label", default="retrieval")
+@@ -441,13 +511,17 @@ def main() -> int:
+     ap.add_argument("--mode", choices=MODES, default="kernel",
+                     help="answer: the reader gets what the kernel recalls (default), nothing, the most recent "
+                          "history that fits its window (full), or the sessions holding the answer (oracle)")
++    ap.add_argument("--types", help="extract, answer: only these question types (comma-separated)")
+     a = ap.parse_args()
++    types = set(a.types.split(",")) if a.types else None
+     if a.stage == "fetch":
+         fetch()
+     elif a.stage == "load":
+         load(a.n)
+     elif a.stage == "answer":
+-        print(json.dumps(answer(a.n, a.k, a.label, a.mode)))
++        print(json.dumps(answer(a.n, a.k, a.label, a.mode, types)))
++    elif a.stage == "extract":
++        print(json.dumps(extract(a.n, types)))
+     elif a.stage == "judge-prompts":
+         judge_prompts(a.label)
+     elif a.stage == "score":
+diff --git a/eval/longmemeval/runs/2026-10-19-lfm-memories-ku-qa.json b/eval/longmemeval/runs/2026-10-19-lfm-memories-ku-qa.json
+new file mode 100644
+index 0000000..39170d0
+--- /dev/null
++++ b/eval/longmemeval/runs/2026-10-19-lfm-memories-ku-qa.json
+@@ -0,0 +1,23 @@
++{
++  "eval": "longmemeval_s qa",
++  "label": "lfm-memories-ku",
++  "questions": 16,
++  "accuracy": 0.812,
++  "by_type": {
++    "abstention": {
++      "n": 3,
++      "accuracy": 0.667
++    },
++    "knowledge-update": {
++      "n": 13,
++      "accuracy": 0.846
++    }
++  },
++  "unanswered": 0,
++  "unjudged": 0,
++  "reader": [
++    "liquid/lfm-2.5-2.6b:free"
++  ],
++  "judge": "haiku",
++  "date": "2026-10-19"
++}
+diff --git a/kk/cli.py b/kk/cli.py
+index 07dc7f1..d4b948a 100644
+--- a/kk/cli.py
++++ b/kk/cli.py
+@@ -263,6 +263,44 @@ def cmd_token(a) -> None:
+     print(mint(a.role, secret, a.days, a.profile))
+ 
+ 
++BRIEF_START, BRIEF_END = "<!-- kk brief: start -->", "<!-- kk brief: end -->"
++
++
++def cmd_brief(a) -> None:
++    """The memory briefing for agents without MCP (M6-T7): standing memories and the last days' changes,
++    printed, or written between markers into AGENTS.md or CLAUDE.md (replacing the last one)."""
++    import asyncio
++    from datetime import date, timedelta
++
++    from kernel_mcp.memory import changes_since, standing
++    url = os.environ.get("KK_DATABASE_URL") or os.environ.get("DATABASE_URL")
++    if not url:
++        sys.exit("set KK_DATABASE_URL (or DATABASE_URL) to your own login")
++    os.environ.setdefault("KK_DATABASE_URL", url)
++
++    async def lines():
++        async with await psycopg.AsyncConnection.connect(url, autocommit=True) as conn:
++            keep = await standing(conn)
++            since = await (await conn.execute("select now() - %s::interval", (timedelta(days=a.days),))).fetchone()
++        changed = await changes_since(None, since[0].isoformat(), a.budget)
++        return keep, changed
++    keep, changed = asyncio.run(lines())
++    body = "\n".join([BRIEF_START, f"## What the knowledge kernel remembers (kk brief, {date.today()})", "",
++                       "Lines say who said it and how sure the kernel is (belief 0-1); the #handle is the claim.",
++                       *(["", "Keep in mind:", *keep] if keep else []), "", changed, BRIEF_END])
++    if not a.write:
++        print(body)
++        return
++    path = Path(a.write)
++    text = path.read_text() if path.exists() else ""
++    if BRIEF_START in text and BRIEF_END in text:
++        text = text[:text.index(BRIEF_START)] + body + text[text.index(BRIEF_END) + len(BRIEF_END):]
++    else:
++        text = (text.rstrip() + "\n\n" if text.strip() else "") + body + "\n"
++    path.write_text(text)
++    print(f"wrote the briefing to {path}")
++
++
+ # ---------------------------------------------------------------- main
+ def name(value: str) -> str:
+     if not NAME.match(value):
+@@ -322,6 +360,11 @@ def main(argv=None) -> None:
+     sub.add_parser("module", help="install a module from this repository, sandboxed")
+     sub.add_parser("export", help="every claim with provenance as N-Quads, scopes as named graphs")
+     sub.add_parser("import", help="claims from a kk export, keeping attribution")
++    p = sub.add_parser("brief", help="the memory briefing for agents without MCP (into AGENTS.md or CLAUDE.md)")
++    p.add_argument("--write", metavar="FILE", help="write it between markers into FILE, replacing the last one")
++    p.add_argument("--days", type=float, default=7, help="changes from the last DAYS days (default 7)")
++    p.add_argument("--budget", type=int, default=1500, help="tokens for the changes (default 1500)")
++    p.set_defaults(fn=cmd_brief)
+     p = sub.add_parser("token", help="bearer token for MCP over HTTP (needs KK_JWT_SECRET)")
+     p.add_argument("role")
+     p.add_argument("--days", type=float, default=30)
+diff --git a/modules/kernel-mcp/kernel_mcp/hooks.py b/modules/kernel-mcp/kernel_mcp/hooks.py
+index d96ff0a..6813bef 100644
+--- a/modules/kernel-mcp/kernel_mcp/hooks.py
++++ b/modules/kernel-mcp/kernel_mcp/hooks.py
+@@ -8,7 +8,9 @@ Each reads the harness's hook JSON on stdin (Claude Code: session_id, prompt, cw
+ Claude Code's hook JSON with `additionalContext` on stdout. KK_DATABASE_URL (or DATABASE_URL) is the
+ agent's own login, as for stdio kernel-mcp; hooks inherit the harness's environment. A hook never blocks the session: on any error it reports to stderr and exits 0.
+ Env: KK_RECALL_LIMIT (default 8), KK_STATE_DIR (default ~/.local/state/knowledge-kernel), KK_PROFILE (memory:
+-the session-start text names the memory profile's tools, M6-T1).
++the session-start text names the memory profile's tools, M6-T1, and adds what changed since the last session;
++each prompt gets recall's briefing, M6-T7), KK_PROMPT_BUDGET (tokens, default 400) and KK_PROMPT_MIN_RELEVANCE
++(the cross-encoder score a line needs to come up on a prompt, default -2.5; recall itself has no threshold).
+ """
+ from __future__ import annotations
+ 
+@@ -63,6 +65,16 @@ def cued(conn, data: dict, **situation) -> list[str]:
+     return lines
+ 
+ 
++def memory(call):
++    """Run one of the memory profile's async functions (memory.py) on the agent's own login."""
++    import asyncio
++
++    async def go():
++        async with await psycopg.AsyncConnection.connect(database_url(), autocommit=True) as conn:
++            return await call(conn)
++    return asyncio.run(go())
++
++
+ def context(event: str, text: str) -> None:
+     if text:
+         print(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": text}}))
+@@ -108,8 +120,12 @@ def session_start(data: dict) -> None:
+     if os.environ.get("KK_PROFILE") == "memory":
+         with connect() as conn:
+             standing = cued(conn, data, start=True, today=date.today(), paths=(data.get("cwd") or "",))
++        import asyncio
++        from .memory import changes_since   # since the end of this agent's last finished session
++        changed = asyncio.run(changes_since(None, None, int(os.environ.get("KK_CHANGES_BUDGET", "300"))))
+         context("SessionStart", ("Knowledge kernel: memories to keep in mind now:\n" + "\n".join(standing) + "\n\n"
+                                  if standing else "") +
++                ("Knowledge kernel: " + changed + "\n\n" if "\n" in changed else "") +
+                 f"Knowledge kernel connected as {agent} ({visible} claims visible): your memory, with sources. "
+                 "Memories related to each prompt are recalled for you; recall(question) asks for more. Each line "
+                 "says who said it and its belief, and ends in a #handle: cite the handles you rely on, and call "
+@@ -130,14 +146,20 @@ def prompt(data: dict) -> None:
+     text = (data.get("prompt") or "").strip()
+     if not text:
+         return
++    if os.environ.get("KK_PROFILE") == "memory":
++        from .memory import brief
++        with connect() as conn:
++            cued(conn, data, text=text)   # refreshes the session's tool and path cues for the pre-tool hook
++        out = memory(lambda conn: brief(conn, text, int(os.environ.get("KK_PROMPT_BUDGET", "400")),
++                                        float(os.environ.get("KK_PROMPT_MIN_RELEVANCE", "-2.5"))))
++        if out:
++            context("UserPromptSubmit", "Knowledge kernel: " + out)
++        return
+     limit = int(os.environ.get("KK_RECALL_LIMIT", "8"))
+     with connect() as conn:
+         claims = recall.recall(conn, text, limit)
+-        mentioned = cued(conn, data, text=text) if os.environ.get("KK_PROFILE") == "memory" else []
+-    context("UserPromptSubmit", "\n\n".join(filter(None, [
+-        "Knowledge kernel: memories this prompt calls up:\n" + "\n".join(mentioned) if mentioned else "",
+-        recall.render(claims, PREFIXES, "Knowledge kernel: claims related to this prompt (cite ids and belief; "
+-                                        "explain(claim_id) gives sources):")])))
++    context("UserPromptSubmit", recall.render(claims, PREFIXES, "Knowledge kernel: claims related to this prompt "
++                                                                "(cite ids and belief; explain(claim_id) gives sources):"))
+ 
+ 
+ def session_end(data: dict) -> None:
+diff --git a/modules/kernel-mcp/kernel_mcp/memory.py b/modules/kernel-mcp/kernel_mcp/memory.py
+index f076f7d..9949706 100644
+--- a/modules/kernel-mcp/kernel_mcp/memory.py
++++ b/modules/kernel-mcp/kernel_mcp/memory.py
+@@ -188,43 +188,62 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
+             "note": "recall shows it once it is applied" if result["status"] != "applied" else "applied"}
+ 
+ 
+-@mcp.tool()
+-async def recall(ctx: Context, question: str, budget: int = 800) -> str:
+-    """What the kernel knows about the question, as a briefing within `budget` tokens (default 800): one
+-    line per memory or claim, saying who said it and its belief (0 to 1), ending in a #handle. Cite the
+-    handles you rely on; explain(handle) gives a line's sources and history."""
+-    budget = max(100, min(budget, 8000))
+-    async with connection(ctx) as conn:
+-        indexed = bool(await one(conn, ranked.INSTALLED) and await one(conn, ranked.READY))
+-        model = await one(conn, ranked.DENSE) if indexed and ranked.dense_on() else None
+-        vec = await anyio.to_thread.run_sync(ranked.vector, question, model) if model else None
+-        limit = max(10, budget // 25)
+-        args = ranked.params(question, ranked.pool(2 * limit) if indexed else 2 * limit, vec)
+-        found = await one(conn, ranked.ranked(indexed, vec), args)
+-        if found and indexed and ranked.reranker():
+-            texts = await one(conn, ranked.TEXTS, {"subjects": ranked.subjects(found)})
+-            found = await anyio.to_thread.run_sync(ranked.rerank, question, found, limit, texts)
+-        found = found or await one(conn, ranked.SUBSTRING, ranked.params(question, limit)) or []
+-        # The packs' term definitions answer an operator's search, not an agent's memory question.
+-        found = [c for c in found if c.get("scope") != VOCAB][:limit]
+-        near = await one(conn, NEAR, {"s": list({c["subject"] for c in found})}) if found else {}
+-        around = sorted({s for ns in near.values() for s in ns})
+-        extra = await one(conn, rows(f"select {CLAIM_COLUMNS} from api.claims where subject = any(%s)"
+-                                     " and predicate = %s and status <> 'deprecated'"),
+-                          (around, AS + "content")) if around else []
+-        notes, labels, agents, types, me = await context(conn, found + extra)
+-        cued = [(r, why) for r in await one(conn, briefing.CUED)
+-                if (cue := cues.parse(r["cue"])) and (why := cues.fires(cue, text=question))]
++async def brief(conn, question: str, budget: int = 800, min_relevance: float | None = None) -> str | None:
++    """The recall briefing for `question` within `budget` tokens, or None when nothing is recalled. With
++    `min_relevance` (and a cross-encoder to score with), lines below it are left out: the per-prompt
++    hook's threshold (M6-T7), so a prompt about something else brings nothing."""
++    indexed = bool(await one(conn, ranked.INSTALLED) and await one(conn, ranked.READY))
++    model = await one(conn, ranked.DENSE) if indexed and ranked.dense_on() else None
++    vec = await anyio.to_thread.run_sync(ranked.vector, question, model) if model else None
++    limit = max(10, budget // 25)
++    args = ranked.params(question, ranked.pool(2 * limit) if indexed else 2 * limit, vec)
++    found = await one(conn, ranked.ranked(indexed, vec), args)
++    if found and indexed and ranked.reranker():
++        texts = await one(conn, ranked.TEXTS, {"subjects": ranked.subjects(found)})
++        found = await anyio.to_thread.run_sync(ranked.rerank, question, found, limit, texts)
++        if min_relevance is not None and any("relevance" in c for c in found):   # past the pool: unscored
++            found = [c for c in found if c.get("relevance", min_relevance - 1) >= min_relevance]
++    if not found and min_relevance is None:   # a word or name the ranking does not match: its label
++        found = await one(conn, ranked.SUBSTRING, ranked.params(question, limit)) or []
++    # The packs' term definitions answer an operator's search, not an agent's memory question.
++    found = [c for c in found or [] if c.get("scope") != VOCAB][:limit]
++    near = await one(conn, NEAR, {"s": list({c["subject"] for c in found})}) if found else {}
++    around = sorted({s for ns in near.values() for s in ns})
++    extra = await one(conn, rows(f"select {CLAIM_COLUMNS} from api.claims where subject = any(%s)"
++                                 " and predicate = %s and status <> 'deprecated'"),
++                      (around, AS + "content")) if around else []
++    notes, labels, agents, types, me = await context(conn, found + extra)
++    cued = [(r, why) for r in await one(conn, briefing.CUED)
++            if (cue := cues.parse(r["cue"])) and (why := cues.fires(cue, text=question))]
+     if not found and not cued:
+-        return f'Nothing recalled for "{question}".'
++        return None
+     first = {r["subject"] for r, _ in cued}
+-    header = f'Recalled for "{question}" (who said it; belief 0-1; explain(#handle) for sources):'
++    asked = question if len(question) <= 100 else question[:97].rstrip() + "..."
++    header = f'Recalled for "{asked}" (who said it; belief 0-1; explain(#handle) for sources):'
+     top = [briefing.cue_line(r, why, me) for r, why in cued]
+     room = budget * 4 - len(header) - 80 - sum(len(x) + 1 for x in top)
+     return briefing.fit(header, top + briefing.recalled([c for c in found if c["subject"] not in first], near, notes,
+                                                         labels, agents, me, types, room), budget)
+ 
+ 
++async def standing(conn, today=None) -> list[str]:
++    """The memories to keep in mind whatever the task: `always` cues and dates coming up (D-91)."""
++    from datetime import date
++    me = await one(conn, "select kernel.my_agent()")
++    return [briefing.cue_line(r, why, me) for r in await one(conn, briefing.CUED)
++            if (cue := cues.parse(r["cue"])) and (why := cues.fires(cue, start=True, today=today or date.today()))]
++
++
++@mcp.tool()
++async def recall(ctx: Context, question: str, budget: int = 800) -> str:
++    """What the kernel knows about the question, as a briefing within `budget` tokens (default 800): one
++    line per memory or claim, saying who said it and its belief (0 to 1), ending in a #handle. Cite the
++    handles you rely on; explain(handle) gives a line's sources and history."""
++    async with connection(ctx) as conn:
++        out = await brief(conn, question, max(100, min(budget, 8000)))
++    return out or f'Nothing recalled for "{question}".'
++
++
+ @mcp.tool()
+ async def changes_since(ctx: Context, since: str | None = None, budget: int = 800) -> str:
+     """What others changed since you last looked: claims added and claims superseded or retracted, newest
+diff --git a/modules/kernel-mcp/kernel_mcp/recall.py b/modules/kernel-mcp/kernel_mcp/recall.py
+index af2cb31..8f5b71d 100644
+--- a/modules/kernel-mcp/kernel_mcp/recall.py
++++ b/modules/kernel-mcp/kernel_mcp/recall.py
+@@ -144,7 +144,8 @@ def rerank(text: str, claims: list[dict], limit: int, texts: dict[str, str] | No
+     """The first `limit` claims, re-ordered by the cross-encoder when there is one. It reads per subject:
+     the subject's text (`texts`, from TEXTS: all its literal claims, shortest first, so a paper's title then
+     its abstract; else its recalled claims' passages) scored against `text`. Subjects go in score order, each
+-    with its recalled claims; the claims after the first POOL keep their place (the cost stays bounded)."""
++    with its recalled claims; the claims after the first POOL keep their place (the cost stays bounded).
++    Each re-scored claim carries its subject's score as `relevance` (the cross-encoder's logit)."""
+     ce = reranker()
+     if ce is None or len(claims) < 2:
+         return claims[:limit]
+@@ -159,6 +160,9 @@ def rerank(text: str, claims: list[dict], limit: int, texts: dict[str, str] | No
+                                                                           if not (texts and literal(c)))])))[:3000]
+             for k in keys]
+     scores = list(ce.rerank(text, docs))
++    for k, score in zip(keys, scores):
++        for c in groups[k]:
++            c["relevance"] = round(float(score), 3)
+     order = sorted(range(len(keys)), key=lambda i: -scores[i])
+     return ([c for i in order for c in groups[keys[i]]] + tail)[:limit]
+ 
+diff --git a/scripts/e2e_g1.py b/scripts/e2e_g1.py
+index ef392da..d1552c5 100644
+--- a/scripts/e2e_g1.py
++++ b/scripts/e2e_g1.py
+@@ -58,7 +58,11 @@ def harness(project: Path, state: str):
+     def fire(event, payload):
+         out = subprocess.run(ours[event], shell=True, input=json.dumps(payload), capture_output=True, text=True,
+                              env=env, cwd=project)
+-        return out.stdout + out.stderr
++        try:   # the hook's JSON, decoded: the briefing's text as the agent reads it
++            text = json.loads(out.stdout)["hookSpecificOutput"]["additionalContext"]
++        except (ValueError, KeyError, TypeError):
++            text = out.stdout
++        return text + out.stderr
+     return fire
+ 
+ 
+@@ -72,9 +76,12 @@ def settle(fire, project: Path, want, timeout: float = 120, question: str = QUES
+         time.sleep(1)
+ 
+ 
++LINE = r"; (?:belief ([0-9.]+)|(unscored))[^\n]* (#[0-9a-f]{8})"   # a briefing line's end: belief, handle (D-94)
++
++
+ def cited(text: str, obj: str) -> list[tuple[str, str]]:
+-    """(claim id, belief) of each recalled line whose object is `obj`."""
+-    return re.findall(rf"{re.escape(obj)}[^\[\n]*\[claim ([0-9a-f-]+), belief ([0-9.]+|unscored)\]", text)
++    """(handle, belief or "unscored") of each briefing line whose object is `obj`."""
++    return [(h, b or u) for b, u, h in re.findall(rf"· {re.escape(obj)}\b[^\n]*?{LINE}", text)]
+ 
+ 
+ def main() -> int:
+@@ -93,13 +100,13 @@ def main() -> int:
+         check("M3-G1 the session connects as the project's agent; the kernel has this commit",
+               "urn:kk:agent:g1" in started and "stale" not in started and "not in the kernel" not in started,
+               started[:160])
+-        scored = lambda t: (c := cited(t, "pkg:pypi/psycopg")) and all(b != "unscored" for _, b in c)
++        scored = lambda t: (c := cited(t, "psycopg")) and all(b != "unscored" for _, b in c)
+         answer = settle(fire, project, scored, timeout=LIMIT - (time.time() - t0))
+         elapsed = time.time() - t0
+-        psycopg = cited(answer, "pkg:pypi/psycopg")
+-        check("M3-G1 the first prompt recalls the project's requirements, cited by claim id with belief",
+-              psycopg and all(b != "unscored" for _, b in psycopg) and len(re.findall(r"\[claim [0-9a-f-]+, belief", answer)) >= 3,
+-              f"{psycopg[:1]}")
++        psycopg = cited(answer, "psycopg")
++        check("M3-G1 the first prompt recalls the project's requirements, cited by handle with belief",
++              psycopg and all(b != "unscored" for _, b in psycopg) and len(re.findall(LINE, answer)) >= 3,
++              f"{psycopg[:1]} {answer[:400]}")
+         check(f"M3-G1 clone to a cited answer in at most {LIMIT // 60} minutes, three commands", elapsed < LIMIT,
+               f"{elapsed:.0f} s")
+ 
+@@ -110,7 +117,7 @@ def main() -> int:
+         check("M3-G1 a moved checkout: the session hook says the kernel's copy is stale", "stale" in moved, moved[-200:])
+         again = up(project, env)
+         refreshed = fire("SessionStart", {"session_id": "g1c", "cwd": str(project), "source": "startup"})
+-        mine = lambda t: re.findall(r"pkg:pypi/knowledge-kernel \S+ pkg:pypi/psycopg \(version ([^)]+)\)", t)
++        mine = lambda t: re.findall(r"- knowledge-kernel · softwareRequirements · psycopg \(version ([^)]+)\)", t)
+         answer = settle(fire, project, lambda t: mine(t) == ["==9.9.9"], timeout=60,
+                         question="Which version of psycopg does knowledge-kernel require?")
+         check("M3-G1 kk up again refreshes it: no longer stale, the package's new requirement replaces the old",
+diff --git a/scripts/e2e_kernel.py b/scripts/e2e_kernel.py
+index 3ed0732..998c3a7 100644
+--- a/scripts/e2e_kernel.py
++++ b/scripts/e2e_kernel.py
+@@ -260,11 +260,36 @@ async def cue_session():
+         brief, _ = await tool(s, "recall", {"question": "Can Sam review my pull request?"})
+         check("M6-T16 a mention brings the memory up first, saying which cue fired",
+               "(cue: mentions Sam)" in line and (brief or "").splitlines()[1] == line, err or line)
++    moved = f"The office moves to Hobart on Monday ({stamp})"
++    async with stdio(os.environ["OWNER_DATABASE_URL"], "memory") as (r, w), ClientSession(r, w) as s:
++        await s.initialize()
++        await tool(s, "remember", {"kind": "decision", "text": moved})
++        await recalled(s, "Where does the office move?", moved)
+     with tempfile.TemporaryDirectory() as state:
+         session = {"session_id": "cue-session", "cwd": str(ROOT), "source": "startup"}
+         rc, ctx, err = hook("session-start", session, state, "memory")
+         check("M6-T16 a session starts with its standing memories and the dates coming up",
+               rc == 0 and push in ctx and "(cue: always)" in ctx and "Dana's birthday" in ctx, err or ctx[:200])
++        check("M6-T7 and with what others changed since this agent's last session",
++              "Changes since" in ctx and f'decision: "{moved}"' in ctx and "(person)" in ctx.split(moved, 1)[1][:80],
++              err or ctx[:400])
++        rc, ctx, err = hook("prompt", {**session, "prompt": "Can Sam review my pull request?"}, state, "memory")
++        check("M6-T7 a prompt gets recall's briefing: the cued memory first, cited, attributed",
++              rc == 0 and ctx.startswith('Knowledge kernel: Recalled for "Can Sam review my pull request?"')
++              and "on leave until March" in ctx.splitlines()[1] and "(cue: mentions Sam)" in ctx and "— you;" in ctx,
++              err or ctx[:300])
++        rc, quiet, err = hook("prompt", {**session, "prompt": "Tell me a joke about penguins"}, state, "memory")
++        check("M6-T7 a prompt about nothing the kernel holds brings nothing", rc == 0 and not quiet, err or quiet[:200])
++        agents_md = Path(state) / "AGENTS.md"
++        agents_md.write_text("# Project notes\n")
++        env = {**os.environ, "KK_DATABASE_URL": os.environ["AGENT_DATABASE_URL"], "DATABASE_URL": ""}
++        for _ in range(2):   # the second run replaces the first briefing
++            out = subprocess.run([sys.executable, "-m", "kk", "brief", "--write", str(agents_md)],
++                                 capture_output=True, text=True, env=env)
++        text = agents_md.read_text()
++        check("M6-T7 kk brief writes the briefing into AGENTS.md for agents without MCP, replacing the last one",
++              out.returncode == 0 and text.startswith("# Project notes") and text.count("kk brief: start") == 1
++              and push in text and moved in text, out.stderr[-300:] or text[:300])
+         rc, ctx, err = hook("pre-tool", {**session, "hook_event_name": "PreToolUse", "tool_name": "Bash",
+                                          "tool_input": {"command": "git push -u origin main"}}, state)
+         rc2, quiet, _ = hook("pre-tool", {**session, "hook_event_name": "PreToolUse", "tool_name": "Bash",
+diff --git a/scripts/e2e_up.py b/scripts/e2e_up.py
+index d83d97f..ed402c5 100644
+--- a/scripts/e2e_up.py
++++ b/scripts/e2e_up.py
+@@ -95,7 +95,7 @@ def hooks(project: Path, state: str, claim: str | None) -> None:
+     recalled = fire("UserPromptSubmit", {"session_id": "up-smoke", "prompt": "How do we do Zanzibar ledger reconciliation?"})
+     fire("SessionEnd", {"session_id": "up-smoke", "reason": "other"})
+     check("M3-T1 the hooks, as the settings name them, connect as the project's agent and recall its claim",
+-          AGENT in started and claim and claim in recalled, started[:100])
++          AGENT in started and claim and f"#{claim[:8]}" in recalled, (started[:100], recalled[:300]))
+ 
+ 
+ def main() -> int:
