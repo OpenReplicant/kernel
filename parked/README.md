@@ -12,6 +12,7 @@ Work that is not part of the kernel (D-36), kept as it was when parked. Nothing 
 | `modules/evaluator` | evaluator manifest |
 | `deploy/rulego` | RuleGo-Server notes |
 | `scripts/smoke_stack.sh` and its gate scripts | the full-stack smoke test (T2–T10) |
+| `briefing-m6-t7` | the unmerged briefing hooks and `kk brief` (M6-T7), as a patch; parked when products moved to Cognee (D-94) |
 
 To revive one: move it back under `modules/` (or `scripts/`, `deploy/`), make it talk to the kernel the
 way D-36 describes (no runner required, the api schema under its own role), and bring its tests back

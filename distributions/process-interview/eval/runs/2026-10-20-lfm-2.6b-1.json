@@ -1,0 +1,147 @@
+{
+ "eval": "process interview (acme)",
+ "label": "lfm-2.6b-1",
+ "date": "2026-10-20",
+ "metrics": {
+  "recall": 0.062,
+  "precision": 0.5,
+  "facts": 9,
+  "dropped": 7,
+  "open_questions_left": 3
+ },
+ "missed": [
+  [
+   "person:lee-chen",
+   "holds",
+   "post:buyer"
+  ],
+  [
+   "person:sam-okafor",
+   "holds",
+   "post:finance-director"
+  ],
+  [
+   "post:buyer",
+   "post_in",
+   "unit:purchasing"
+  ],
+  [
+   "post:buyer",
+   "reports_to",
+   "post:procurement-lead"
+  ],
+  [
+   "post:finance-director",
+   "post_in",
+   "unit:finance"
+  ],
+  [
+   "post:procurement-lead",
+   "post_in",
+   "unit:purchasing"
+  ],
+  [
+   "post:procurement-lead",
+   "reports_to",
+   "post:finance-director"
+  ],
+  [
+   "process:purchasing",
+   "ends_after",
+   "step:raise-a-purchase-order"
+  ],
+  [
+   "process:purchasing",
+   "starts_with",
+   "step:check-the-budget-code"
+  ],
+  [
+   "step:check-the-budget-code",
+   "next",
+   "step:raise-a-purchase-order"
+  ],
+  [
+   "step:check-the-budget-code",
+   "performed_by",
+   "post:procurement-lead"
+  ],
+  [
+   "step:check-the-budget-code",
+   "step_of",
+   "process:purchasing"
+  ],
+  [
+   "step:raise-a-purchase-order",
+   "performed_by",
+   "post:buyer"
+  ],
+  [
+   "step:raise-a-purchase-order",
+   "step_of",
+   "process:purchasing"
+  ],
+  [
+   "unit:purchasing",
+   "unit_of",
+   "organisation:acme"
+  ]
+ ],
+ "wrong": [
+  [
+   "post:procurement-lead",
+   "reports_to",
+   "post:sam-okafor"
+  ]
+ ],
+ "dropped": [
+  {
+   "message": "4",
+   "subject": "purchase request",
+   "relation": "step_of",
+   "object": "purchasing inbox",
+   "why": "unknown relation or kind"
+  },
+  {
+   "message": "4",
+   "subject": "checking budget code",
+   "relation": "step_of",
+   "object": "budget code",
+   "why": "unknown relation or kind"
+  },
+  {
+   "message": "4",
+   "subject": "raising purchase order",
+   "relation": "step_of",
+   "object": "purchase order",
+   "why": "unknown relation or kind"
+  },
+  {
+   "message": "6",
+   "subject": "Lee Chen",
+   "relation": "holds",
+   "object": "post of buyer",
+   "why": "a name not in the answer, or of the wrong kind"
+  },
+  {
+   "message": "6",
+   "subject": "Lee Chen",
+   "relation": "reports_to",
+   "object": "Dana Reyes",
+   "why": "a name not in the answer, or of the wrong kind"
+  },
+  {
+   "message": "8",
+   "subject": "process",
+   "relation": "ends_after",
+   "object": "purchase order",
+   "why": "unknown relation or kind"
+  },
+  {
+   "message": "10",
+   "subject": "Sam okafor",
+   "relation": "post_in",
+   "object": "finance department",
+   "why": "a name not in the answer, or of the wrong kind"
+  }
+ ]
+}

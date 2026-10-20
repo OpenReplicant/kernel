@@ -98,6 +98,18 @@ jobs:
           PYTHONPATH=modules/pack-loader python -m pack_loader > /tmp/packs.sql
           diff -q /tmp/packs.sql modules/pack-loader/packs.sql
 
+  process-interview:
+    name: process interview on Cognee (D-94)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.13"
+      - run: pip install -r distributions/process-interview/requirements.txt
+      - name: The scripted interview, the checks and the BPMN, then the same through Cognee (no model, local embeddings)
+        run: python distributions/process-interview/tests/test_interview.py --cognee
+
   kernel-smoke:
     name: kernel alone (G3, G4, T13, T17, T18, T20)
     runs-on: ubuntu-24.04
