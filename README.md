@@ -41,6 +41,8 @@ Recalled for "which psycopg do we pin?" (who said it; belief 0-1; explain(#handl
 - knowledge-kernel · softwareRequirements · psycopg (version ==3.3.6) — repository encoder (agent); belief 0.90 #0c1d7e42
 ```
 
+With Podman instead of Docker, set `KK_CONTAINER_ENGINE=podman` before `kk up` or `kk demo`.
+
 `kk up` prints the UI address (http://127.0.0.1:8080/ui/) and your sign-in (name and password) for reviewing. Logins
 stay in `~/.config/knowledge-kernel`, never in the project; running it again changes nothing but what
 changed in the project (D-57). It reads the project's packages, dependencies and documents in (D-68,
