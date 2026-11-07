@@ -137,7 +137,7 @@ def main(argv: list[str]) -> None:
         os.environ["DATABASE_URL"] = out["admin_url"]
         loaded = load(bpi, a.agent)
     else:
-        cmd = ["docker", "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(ROOT / "deploy/.env"),
+        cmd = [up.engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(ROOT / "deploy/.env"),
                "run", "--rm", "--no-deps", "-T", "-v", "kk-artifacts:/artifacts", "-e", "KK_ARTIFACTS=/artifacts",
                *(["-v", f"{bpi.parent}:/data:ro"] if bpi else []),
                "kernel", "kk", "demo", "--agent", a.agent, *(["--bpi", "--load", f"/data/{bpi.name}"] if bpi else ["--load"])]

@@ -66,6 +66,11 @@ def shown(path: Path) -> str:
 
 
 # ---------------------------------------------------------------- the stack
+def engine() -> str:
+    """The container engine that runs the stack: KK_CONTAINER_ENGINE, docker by default (podman works too)."""
+    return os.environ.get("KK_CONTAINER_ENGINE") or "docker"
+
+
 def stack(env_file: Path) -> tuple[str, str]:
     """Start the compose stack (secrets generated once); return the admin URL and the JWT secret."""
     env = read_env(env_file)
@@ -77,12 +82,12 @@ def stack(env_file: Path) -> tuple[str, str]:
                "KK_JWT_SECRET": env.get("KK_JWT_SECRET") or secrets.token_urlsafe(48),
                **({"KK_DB_PORT": os.environ["KK_DB_PORT"]} if os.environ.get("KK_DB_PORT") else {})}
         write_secret(env_file, env)
-    # Built every time: Docker's layer cache makes an unchanged checkout a no-op, and an updated one is
+    # Built every time: the engine's layer cache makes an unchanged checkout a no-op, and an updated one is
     # never run on an image of older code.
     ca = os.environ.get("KK_BUILD_CA")    # a TLS-intercepting proxy's CA, as a build secret
-    subprocess.run(["docker", "build", "-q", "-t", "knowledge-kernel:local",
+    subprocess.run([engine(), "build", "-q", "-t", "knowledge-kernel:local",
                     *(["--secret", f"id=ca,src={ca}"] if ca else []), str(ROOT)], check=True, stdout=subprocess.DEVNULL)
-    subprocess.run(["docker", "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file),
+    subprocess.run([engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file),
                     "up", "-d", "--wait", "db", "kernel", "caddy"], check=True, stdout=subprocess.DEVNULL)
     port = os.environ.get("KK_DB_PORT") or env.get("KK_DB_PORT") or "5432"
     return f"postgresql://postgres:{env['POSTGRES_PASSWORD']}@127.0.0.1:{port}/kk", env["KK_JWT_SECRET"]
@@ -99,7 +104,7 @@ def ready(url: str, timeout: float = 120) -> None:
             return
         except OSError:
             if time.time() > deadline:
-                sys.exit(f"the kernel did not answer at {url}: docker compose -f deploy/compose.yaml logs kernel")
+                sys.exit(f"the kernel did not answer at {url}: {engine()} compose -f deploy/compose.yaml logs kernel")
             time.sleep(1)
 
 
@@ -135,7 +140,7 @@ def encode(folder: Path, admin_url: str, env_file: Path | None) -> dict:
     from self_encoder.repo import commit
     args = ["--name", folder.name] + (["--commit", c] if (c := commit(folder)) else [])
     if env_file:   # the stack: the kernel image, the project read-only, artifacts in their volume
-        cmd = ["docker", "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file), "run",
+        cmd = [engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file), "run",
                "--rm", "--no-deps", "-v", f"{folder}:/repo:ro", "-v", "kk-artifacts:/artifacts",
                "-e", "KK_ARTIFACTS=/artifacts", "-e", "KK_ROLE=kkm_self_encoder",
                "kernel", "kk", "scan", "--repo", "/repo", *args]
