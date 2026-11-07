@@ -10,6 +10,8 @@
    profile: memory by default, four tools; --profile operator for every tool, M6-T1), the
    knowledge-kernel skill in .claude/skills/, and the hooks in .claude/settings.local.json. Merged
    into what is there: other servers, hooks and settings are kept; a file is written only if it changes.
+   The commands are the installed kernel-mcp, kernel-mcp-hook and kernel-mcp-cue, or with --commands-dir
+   (KK_COMMANDS_DIR) that folder's, for a harness that reaches them through wrappers (D-95).
 4. The project's contents (M3-G1, D-69): the repository encoder reads it as its own role (kk scan;
    the ingest filter first), in the kernel image with the stack (it carries gitleaks), here with
    --no-stack. Unchanged files change nothing; the session hook says when the checkout moved on.
@@ -162,7 +164,12 @@ def load_json(path: Path) -> dict:
 
 
 def command(name: str) -> str:
-    """The installed kernel-mcp command next to this Python, else on PATH."""
+    """The command the harness runs for kernel-mcp, kernel-mcp-hook or kernel-mcp-cue: in KK_COMMANDS_DIR when
+    set (`--commands-dir`; a harness that reaches the kernel through wrappers, such as commands run in a container,
+    D-95), else the installed one next to this Python, else on PATH."""
+    where = os.environ.get("KK_COMMANDS_DIR")
+    if where:
+        return str(Path(where).expanduser().resolve() / name)
     here = Path(sys.executable).parent / name
     return str(here) if here.exists() else shutil.which(name) or name
 
@@ -252,7 +259,11 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--profile", choices=("memory", "operator"), default="memory",
                     help="the agent's MCP tools: memory (four: remember, recall, explain, changes_since; default)"
                          " or operator (every tool)")
+    ap.add_argument("--commands-dir", type=Path, help="write the harness's kernel-mcp, kernel-mcp-hook and kernel-mcp-cue"
+                    " commands as this folder's (wrappers); also KK_COMMANDS_DIR")
     a = ap.parse_args(argv)
+    if a.commands_dir:
+        os.environ["KK_COMMANDS_DIR"] = str(a.commands_dir)
     out = connect(a.project.resolve(), a.agent, a.no_stack, a.db_host, a.no_scan, a.profile)
     folder = Path(out["project"])
     print(json.dumps({k: v for k, v in out.items() if k != "admin_url"}, indent=2))

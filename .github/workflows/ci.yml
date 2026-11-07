@@ -132,6 +132,8 @@ jobs:
           gitleaks version
       - name: Trigger patterns (D-79)
         run: python kk/tests/test_patterns.py
+      - name: kk up writes the harness's commands where asked (D-95)
+        run: python kk/tests/test_up.py
       - name: Ingest filter tests (M3-T4, large files in chunks)
         run: python modules/ingest-filter-gitleaks/tests/test_filter.py
       - name: Playwright and Chromium for the UI check (pinned)
