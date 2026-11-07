@@ -26,7 +26,8 @@ RUN git clone --depth 1 --branch "v${PGMQ_VERSION}" https://github.com/pgmq/pgmq
 # pgGraph is a pgrx (Rust) extension. Its release images are built on postgres:17-bookworm, the same Debian
 # and Postgres major as this image, so the compiled files are copied from the versioned release image rather
 # than compiled here (a pgrx build adds Rust, cargo-pgrx and several minutes to every build).
-FROM ghcr.io/evokoa/pggraph:pg17-1.2.1 AS pggraph
+# Pinned by the digest CI resolved for the tag on 2026-11-07 (PR #103).
+FROM ghcr.io/evokoa/pggraph:pg17-1.2.1@sha256:2c85eb0f6b3abe5701edaa9cdb0265da56efd7bbb5202108113d02db8bd6faf5 AS pggraph
 
 FROM ${PG_IMAGE}
 RUN apt-get update \
