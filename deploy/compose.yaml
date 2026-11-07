@@ -39,6 +39,8 @@ services:
   # The kernel's store: plain Postgres. Extensions are installed by module migrations.
   db:
     build: ./postgres
+    # pg_cron and pgGraph load at start (D-94): pg_cron cannot be created without it, pgGraph pre-warms its graph
+    command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=kk"]
     environment:
       POSTGRES_DB: kk
       POSTGRES_USER: postgres

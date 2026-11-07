@@ -110,7 +110,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
-deploy/          compose.yaml (db, init, kernel = kk serve, caddy), policy.yaml (sandbox grants), demo/ (devops demo overlay), postgres/ (image),
+deploy/          compose.yaml (db, init, kernel = kk serve, caddy), policy.yaml (sandbox grants), demo/ (devops demo overlay), postgres/ (image: pgvector, pg_cron, pgmq, pgGraph; D-94),
                  modules/ (installed), mcp/
 scripts/         smoke_kernel.sh + e2e_kernel/ingest/transfer/bpm.py + e2e_ui.mjs, e2e_module.sh/.py/_m3.py,
                  e2e_devops.sh/.py + e2e_devops_ui.mjs, eval_self.py,

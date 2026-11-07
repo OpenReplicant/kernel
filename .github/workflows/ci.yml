@@ -159,6 +159,19 @@ jobs:
         run: KK_G1_STACK=1 KK_DB_PORT=55432 python scripts/e2e_g1.py
       - name: The process demo with the Docker stack (M4-G1)
         run: KK_DEMO_STACK=1 KK_DB_PORT=55432 python scripts/e2e_demo.py
+      - name: The Postgres image carries its extensions (D-94)
+        run: |
+          docker build -t knowledge-kernel-db:ci deploy/postgres
+          docker run -d --name kkdb -e POSTGRES_PASSWORD=postgres knowledge-kernel-db:ci \
+            postgres -c shared_preload_libraries=pg_cron,graph -c cron.database_name=postgres
+          for i in $(seq 1 60); do [ "$(docker logs kkdb 2>&1 | grep -c 'ready to accept connections')" -ge 2 ] && break; sleep 1; done
+          docker exec kkdb psql -U postgres -v ON_ERROR_STOP=1 \
+            -c "create extension vector" -c "create extension pg_cron" -c "create extension pgmq" -c "create extension graph" \
+            -c "select pgmq.create('ci')" -c "select pgmq.send('ci', '{}'::jsonb)" -c "select * from graph.status()" \
+            -c "select extname, extversion from pg_extension order by 1" | tee /tmp/ext.txt
+          grep -Eq 'pgmq +\| 1\.13\.1' /tmp/ext.txt
+          grep -Eq 'graph +\| 1\.2\.1' /tmp/ext.txt
+          docker rm -f kkdb
       - name: Compose file is valid
         run: |
           sed 's/=$/=placeholder/' deploy/.env.example > /tmp/ci.env
