@@ -206,6 +206,8 @@ def cmd_serve(a) -> None:
             os._exit(1)
 
     os.environ.pop("KK_ROLE", None)  # each worker switches to its own role
+    from kernel_mcp.telemetry import setup as telemetry
+    telemetry("kernel")  # before the workers start, so their Postgres statements are traced too (D-97)
     for name in parts:
         if name in WORKERS or name in OPTIONAL:
             threading.Thread(target=guard, args=(name, worker(name)), name=name, daemon=True).start()

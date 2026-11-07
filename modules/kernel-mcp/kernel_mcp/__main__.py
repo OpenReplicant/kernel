@@ -7,7 +7,8 @@
 HTTP env: PORT (default 8000), KK_MCP_ALLOWED_HOSTS (comma-separated Host values accepted, for
 DNS-rebinding protection; default: localhost and 127.0.0.1 on any port, and kernel:8000), KK_SITE (the public
 host name Caddy serves over HTTPS, deploy/public.yaml: accepted as a Host and as https://KK_SITE an Origin).
-`kk serve` runs this together with the validator and the belief model.
+`kk serve` runs this together with the validator and the belief model. With an OTLP endpoint in the environment,
+requests, Postgres statements and outbound calls are traced (telemetry.py, D-97).
 """
 import os
 import sys
@@ -32,7 +33,8 @@ def http(host: str = "0.0.0.0", port: int | None = None, extra_routes: list | No
                                                      allowed_origins=origins))
     if extra_routes:
         app.router.routes[0:0] = extra_routes
-    uvicorn.run(app, host=host, port=port or int(os.environ.get("PORT", "8000")), log_level="info")
+    from .telemetry import wrap
+    uvicorn.run(wrap(app), host=host, port=port or int(os.environ.get("PORT", "8000")), log_level="info")
 
 
 def main() -> None:

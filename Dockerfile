@@ -9,9 +9,10 @@ WORKDIR /kk
 COPY modules/kernel-mcp/requirements.txt req-mcp.txt
 COPY modules/validator-shacl/requirements.txt req-validator.txt
 COPY modules/self-encoder/requirements.txt req-encoder.txt
+COPY modules/kernel-mcp/requirements-otel.txt req-otel.txt
 RUN --mount=type=secret,id=ca,required=false \
     if [ -f /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi; \
-    pip install --no-cache-dir -r req-mcp.txt -r req-validator.txt -r req-encoder.txt
+    pip install --no-cache-dir -r req-mcp.txt -r req-validator.txt -r req-encoder.txt -r req-otel.txt
 COPY pyproject.toml ./
 COPY kk kk
 COPY kernel kernel
