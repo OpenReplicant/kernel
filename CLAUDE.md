@@ -106,7 +106,8 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  skill-interview (an agent interviews a person: org and process maps, quoting each message),
                  map-gaps (what the maps lack, as the questions to ask next);
                  milestone 6: truth-maintenance (flags claims whose premises were withdrawn; `docs/reasoning.md`),
-                 memory-extractor (memories from recorded messages, quoting them, with a small model);
+                 memory-extractor (memories from recorded messages, quoting them, with a small model),
+                 encoder-morphogen (Morphogen's verdicts as DQV measurements and PROV, D-99);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)

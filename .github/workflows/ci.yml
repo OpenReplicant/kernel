@@ -79,6 +79,8 @@ jobs:
         run: python modules/verifier-quotes/tests/test_check.py
       - name: Evaluator tests (M3-G2)
         run: python modules/evaluator/tests/test_measure.py
+      - name: Morphogen verdicts as claims (D-99)
+        run: python modules/encoder-morphogen/tests/test_encode.py
       - name: Process learner tests (M4-T3)
         run: python modules/learner-process/tests/test_learn.py
       - name: Interaction encoder tests (M5-T3)
