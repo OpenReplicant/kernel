@@ -1,0 +1,47 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-morphogen
+name: Morphogen encoder
+version: 0.1.0
+description: 'Records Morphogen''s verdicts as claims (D-99): its evidence log''s hash chain is checked first,
+  then each verdict the judge wrote becomes claims about `urn:kk:verdict:<project>:<seq>`: its label,
+  outcome and gate (dcterms:type), the part judged (dcterms:subject, a kk-tosca node), the base and
+  candidate commits (prov:used), and per metric the gain, the sign test''s p and each commit''s median as
+  dqv:value measurements (dqv:isMeasurementOf, dqv:computedOn the commit). Measured verdicts are observed,
+  simulated ones inferred; every claim cites the stored record by JSON pointer. Running again submits
+  nothing new.'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-morphogen
+  db_role: kkm_encoder_morphogen
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m encoder_morphogen --project <name> <evidence.db>
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_morphogen
+    KK_ARTIFACTS: the artifact store (default ~/.local/share/knowledge-kernel/artifacts)
+requires:
+- slot: artifact-store
+accepts:
+- application/vnd.sqlite3 (Morphogen's evidence log, <git common dir>/morphogen/evidence.db)
+produces:
+- add_artifact
+- add_claim
+- 'dqv:value (dqv:isMeasurementOf, dqv:computedOn as qualifiers)'
+- 'prov:used'
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql
