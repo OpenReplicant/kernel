@@ -23,6 +23,7 @@ finding, never raised; a dangling ref is still claimed, as the file states it.
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -172,3 +173,23 @@ def change_set(path: Path, project: str, rel: str, store: Path) -> tuple[dict, l
                    "location": f"file://{store / sha}", "source_uri": f"file:{rel}",
                    "retrieved_at": datetime.now(timezone.utc).isoformat()}, *ops]}
     return cs, findings, counts
+
+
+def same(s, p, entity, value, qualifiers) -> str:
+    return json.dumps([s, p, entity, value, qualifiers or {}], sort_keys=True, default=str)
+
+
+def supersede(cs: dict, prior: list[dict]) -> None:
+    """Deprecate `prior`: superseded by the same statement in `cs` when it states it again, else retracted."""
+    new = {}
+    for i, op in enumerate(cs["ops"]):
+        if op["op"] == "add_claim":
+            op["ref"] = f"c{i}"
+            o = op["object"]
+            new[same(op["subject"], op["predicate"], o.get("entity"), (o.get("value") or {}).get("@value"),
+                     op.get("qualifiers"))] = op["ref"]
+    for c in prior:
+        by = new.get(same(c["subject"], c["predicate"], c["object_entity"],
+                          (c["object_value"] or {}).get("@value"), c["qualifiers"]))
+        cs["ops"].append({"op": "set_status", "claim": str(c["id"]), "status": "deprecated", "expect_status": c["status"],
+                          **({"reason": "superseded", "replaced_by": by} if by else {"reason": "retracted"})})

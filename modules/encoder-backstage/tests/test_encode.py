@@ -7,8 +7,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-from encoder_backstage.__main__ import supersede  # noqa: E402
-from encoder_backstage.encode import BS, RDF_TYPE, RDFS_LABEL, encode, parse_ref  # noqa: E402
+from encoder_backstage.encode import BS, RDF_TYPE, RDFS_LABEL, encode, parse_ref, supersede  # noqa: E402
 
 checks = []
 

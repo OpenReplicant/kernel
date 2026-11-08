@@ -21,33 +21,13 @@ from pathlib import Path
 
 from kk.lib import connect, run, submit
 
-from .encode import AGENT, change_set, key_prefix
+from .encode import AGENT, change_set, key_prefix, supersede
 
 MODULE = "urn:kk:module:encoder-backstage"
 PRIOR = """select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.qualifiers, c.status
            from api.claims c join api.change_sets s on s.id = c.change_set
            where c.attributed_to = %s and c.status <> 'deprecated'
              and starts_with(s.idempotency_key, %s) and s.idempotency_key <> %s"""
-
-
-def same(s, p, entity, value, qualifiers) -> str:
-    return json.dumps([s, p, entity, value, qualifiers or {}], sort_keys=True, default=str)
-
-
-def supersede(cs: dict, prior: list[dict]) -> None:
-    """Deprecate `prior`: superseded by the same statement in `cs` when it states it again, else retracted."""
-    new = {}
-    for i, op in enumerate(cs["ops"]):
-        if op["op"] == "add_claim":
-            op["ref"] = f"c{i}"
-            o = op["object"]
-            new[same(op["subject"], op["predicate"], o.get("entity"), (o.get("value") or {}).get("@value"),
-                     op.get("qualifiers"))] = op["ref"]
-    for c in prior:
-        by = new.get(same(c["subject"], c["predicate"], c["object_entity"],
-                          (c["object_value"] or {}).get("@value"), c["qualifiers"]))
-        cs["ops"].append({"op": "set_status", "claim": str(c["id"]), "status": "deprecated", "expect_status": c["status"],
-                          **({"reason": "superseded", "replaced_by": by} if by else {"reason": "retracted"})})
 
 
 def encode_file(cur, path: Path, project: str, rel: str, store: Path) -> dict:
