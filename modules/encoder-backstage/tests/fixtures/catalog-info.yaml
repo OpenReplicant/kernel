@@ -1,0 +1,60 @@
+# A small catalog: a gateway and a service that calls it, in one system.
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: engine
+  description: The parts that answer.
+spec: {owner: group:platform}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: model-gateway
+  title: Bifrost
+  description: Every model call passes here.
+  tags: [gateway]
+  annotations:
+    example.dev/otel-service: bifrost
+spec:
+  type: service
+  lifecycle: experimental
+  owner: platform
+  system: engine
+  providesApis: [model-api]
+  dependsOn: [resource:postgres]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: agent
+spec:
+  type: service
+  owner: platform
+  system: engine
+  consumesApis: [model-api, vector-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: model-api
+spec: {type: openapi, lifecycle: experimental, owner: platform, system: engine, definition: "POST /v1/chat"}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: postgres
+spec: {type: database, owner: platform, system: engine}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Template
+metadata:
+  name: new-service
+spec: {}

@@ -32,11 +32,13 @@ runtime:
     DATABASE_URL: the module's own login
     PROMETHEUS_URL: Prometheus base URL (default http://prometheus:9090)
     KK_WINDOW_SECONDS: observation window (default 60)
+    KK_QUERIES: a queries file of your own instead of queries.yaml (D-100)
 accepts:
 - application/json (Prometheus HTTP API query results)
 produces:
 - add_claim
 - 'sosa:hasSimpleResult (per window, sosa:observedProperty urn:kk:property:*)'
+- 'kkt:connectsTo (calls, per window, from queries with an edge: an OpenTelemetry service graph; D-100)'
 triggers:
 - type: schedule
   spec: every KK_WINDOW_SECONDS

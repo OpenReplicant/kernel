@@ -9,7 +9,7 @@
 <https://w3id.org/knowledge-kernel/conformance>
     a owl:Ontology ;
     rdfs:label "Discrepancy, revision, anomaly and action kinds" ;
-    owl:versionInfo "0.3.0" .
+    owl:versionInfo "0.4.0" .
 
 <urn:kk:discrepancy-kind> a skos:ConceptScheme ; rdfs:label "discrepancy kinds" .
 <urn:kk:discrepancy-kind:skip> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "skipped step" ;
@@ -26,6 +26,13 @@
     skos:definition "An observed wait between two steps exceeded the documented limit." .
 <urn:kk:discrepancy-kind:rare> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "rare paths" ;
     skos:definition "Paths outside the documented process, each taken in a smaller share of cases than the reporting threshold, reported together as one discrepancy targeting the process (D-75)." .
+
+# Gaps between a declared map and the calls observed (D-100): an oa:Annotation targeting both nodes, inferred and
+# derived from the declared claims and the observed calls on either side.
+<urn:kk:discrepancy-kind:undeclared-call> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "undeclared call" ;
+    skos:definition "One part was observed calling another, and the declared map has no dependency between them." .
+<urn:kk:discrepancy-kind:unobserved-call> a skos:Concept ; skos:inScheme <urn:kk:discrepancy-kind> ; skos:prefLabel "unobserved call" ;
+    skos:definition "The declared map says one part calls another; both were observed taking part in calls, and this call was not observed." .
 
 # Revisions the process learner proposes (D-76): an oa:Annotation targeting the steps, inferred and
 # derived from the confirmed discrepancy, next to the documented path it adds; a person approves it.

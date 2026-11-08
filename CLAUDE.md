@@ -92,7 +92,7 @@ kernel/
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, activitystreams.ttl, org.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,
-                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, codemeta.ttl (packages), dqv.ttl (eval scores),
+                 observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, backstage.ttl (Backstage's catalog model), codemeta.ttl (packages), dqv.ttl (eval scores),
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
@@ -107,7 +107,9 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  map-gaps (what the maps lack, as the questions to ask next);
                  milestone 6: truth-maintenance (flags claims whose premises were withdrawn; `docs/reasoning.md`),
                  memory-extractor (memories from recorded messages, quoting them, with a small model),
-                 encoder-morphogen (Morphogen's verdicts as DQV measurements and PROV, D-99);
+                 encoder-morphogen (Morphogen's verdicts as DQV measurements and PROV, D-99),
+                 encoder-backstage (Backstage catalogs in Backstage's terms) and map-drift (declared map against
+                 observed calls, gaps to review; D-100);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)

@@ -1,0 +1,68 @@
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix skos:      <http://www.w3.org/2004/02/skos/core#> .
+@prefix backstage: <https://w3id.org/knowledge-kernel/backstage#> .
+
+# Backstage's software catalog model, in its own names (D-100). Backstage publishes no RDF namespace, so this
+# mirror lives under the kernel's, as kk-tosca mirrors TOSCA; every term keeps Backstage's name. The kinds are
+# the catalog's entity kinds; the relations are its well-known relations with the inverses Backstage names
+# (RELATION_* in @backstage/catalog-model 1.10.2, Apache-2.0, src/kinds/relations.ts); the rest are the entity
+# fields that are neither a label nor a description. Where another pack names the same concept, mappings.ttl
+# says so; nothing here is translated.
+
+<https://w3id.org/knowledge-kernel/backstage>
+    a owl:Ontology ;
+    rdfs:label "Backstage software catalog" ;
+    owl:versionInfo "0.1.0" .
+
+# ------------------------------------------------------------------ kinds
+backstage:Component a owl:Class ; rdfs:label "Component" ;
+    skos:definition "A piece of software: a service, website, library and so on." .
+backstage:Resource a owl:Class ; rdfs:label "Resource" ;
+    skos:definition "Infrastructure a component needs at runtime: a database, a bucket, a cluster." .
+backstage:System a owl:Class ; rdfs:label "System" ;
+    skos:definition "A collection of components, resources and APIs that together expose some functionality." .
+backstage:Domain a owl:Class ; rdfs:label "Domain" ;
+    skos:definition "A collection of systems that share terminology, domain models or a business purpose." .
+backstage:API a owl:Class ; rdfs:label "API" ;
+    skos:definition "A boundary between components: an interface one provides and others consume." .
+backstage:Group a owl:Class ; rdfs:label "Group" ;
+    skos:definition "An organisational entity such as a team, business unit or loose collection of people." .
+backstage:User a owl:Class ; rdfs:label "User" ;
+    skos:definition "A person, such as an employee or contractor." .
+
+# ------------------------------------------------------------------ well-known relations
+backstage:ownedBy a owl:ObjectProperty ; rdfs:label "owned by" ; owl:inverseOf backstage:ownerOf ;
+    skos:definition "The entity's owner (spec.owner), a group or user that has authority over it." .
+backstage:ownerOf a owl:ObjectProperty ; rdfs:label "owner of" .
+backstage:partOf a owl:ObjectProperty ; rdfs:label "part of" ; owl:inverseOf backstage:hasPart ;
+    skos:definition "The entity belongs to a larger one: a component, API or resource to its system (spec.system), a system to its domain (spec.domain), a component to its parent component (spec.subcomponentOf)." .
+backstage:hasPart a owl:ObjectProperty ; rdfs:label "has part" .
+backstage:providesApi a owl:ObjectProperty ; rdfs:label "provides API" ; owl:inverseOf backstage:apiProvidedBy ;
+    skos:definition "A component provides an API (spec.providesApis)." .
+backstage:apiProvidedBy a owl:ObjectProperty ; rdfs:label "API provided by" .
+backstage:consumesApi a owl:ObjectProperty ; rdfs:label "consumes API" ; owl:inverseOf backstage:apiConsumedBy ;
+    skos:definition "A component consumes an API (spec.consumesApis)." .
+backstage:apiConsumedBy a owl:ObjectProperty ; rdfs:label "API consumed by" .
+backstage:dependsOn a owl:ObjectProperty ; rdfs:label "depends on" ; owl:inverseOf backstage:dependencyOf ;
+    skos:definition "A component or resource depends on another at runtime (spec.dependsOn)." .
+backstage:dependencyOf a owl:ObjectProperty ; rdfs:label "dependency of" .
+backstage:memberOf a owl:ObjectProperty ; rdfs:label "member of" ; owl:inverseOf backstage:hasMember ;
+    skos:definition "A user is a member of a group (spec.memberOf)." .
+backstage:hasMember a owl:ObjectProperty ; rdfs:label "has member" .
+backstage:childOf a owl:ObjectProperty ; rdfs:label "child of" ; owl:inverseOf backstage:parentOf ;
+    skos:definition "A group sits under its parent group (spec.parent)." .
+backstage:parentOf a owl:ObjectProperty ; rdfs:label "parent of" .
+
+# ------------------------------------------------------------------ fields
+backstage:type a owl:DatatypeProperty ; rdfs:label "type" ;
+    skos:definition "The entity's type within its kind (spec.type): service, website, library, openapi, team." .
+backstage:lifecycle a owl:DatatypeProperty ; rdfs:label "lifecycle" ;
+    skos:definition "Where the entity stands (spec.lifecycle): experimental, production, deprecated." .
+backstage:tag a owl:DatatypeProperty ; rdfs:label "tag" ;
+    skos:definition "One of the entity's tags (metadata.tags)." .
+backstage:annotation a owl:DatatypeProperty ; rdfs:label "annotation" ;
+    skos:definition "The value of one of the entity's annotations (metadata.annotations); its key is the qualifier backstage:annotationKey." .
+backstage:annotationKey a owl:DatatypeProperty ; rdfs:label "annotation key" ;
+    skos:definition "The key of an annotation, as a qualifier on backstage:annotation." .
