@@ -178,12 +178,14 @@ async def agent_session():
 
 
 async def recalled(s, question, text, want="belief"):
-    """The briefing line holding `text`, once it carries `want` (the claim is applied and scored)."""
+    """The briefing line holding `text`, once it carries `want` (the claim is applied and scored); `want` is a
+    substring or a test of the line."""
+    ok = want if callable(want) else (lambda x: want in x)
     line, err = "", None
     for _ in range(60):
         brief, err = await tool(s, "recall", {"question": question})
         line = next((x for x in (brief or "").splitlines() if text in x), "")
-        if want in line:
+        if ok(line):
             break
         await asyncio.sleep(0.25)
     return line, err or (None if line else (brief or "")[:600])
@@ -322,8 +324,12 @@ async def conclusion_session():
               why and why["claim"]["scope"])
         await tool(s, "remember", {"kind": "correction", "replaces": both[1],
                                    "text": f"The Wombat payroll pays fifty people ({stamp})"})
-        flagged, err = await recalled(s, q, "forty people on the 25th", want="a premise was withdrawn")
-        belief = float(flagged.split("belief ")[1][:4]) if "belief " in flagged else 1
+        def belief_of(x):
+            return float(x.split("belief ")[1][:4]) if "belief " in x else 1
+        # the flag and the capped belief are separate writes: wait for both
+        flagged, err = await recalled(s, q, "forty people on the 25th",
+                                      want=lambda x: "a premise was withdrawn" in x and belief_of(x) <= 0.25)
+        belief = belief_of(flagged)
         why, _ = await tool(s, "explain", {"claim_id": flagged.rsplit(" ", 1)[-1]}) if flagged else (None, None)
         tms = [v for v in (why or {}).get("verifications", []) if v.get("method") == "urn:kk:module:truth-maintenance"]
         check("M6-T12 a premise superseded: the conclusion is flagged, its belief capped, and kept",
