@@ -5,6 +5,9 @@
 @prefix pplan: <http://purl.org/net/p-plan#> .
 @prefix bbo:   <https://www.irit.fr/recherches/MELODI/ontologies/BBO#> .
 @prefix sosa:  <http://www.w3.org/ns/sosa/> .
+@prefix kkt:   <https://w3id.org/knowledge-kernel/tosca#> .
+@prefix org:   <http://www.w3.org/ns/org#> .
+@prefix backstage: <https://w3id.org/knowledge-kernel/backstage#> .
 
 # Mappings between the packs (D-47): one concept, one home; where two packs name the same concept,
 # the mapping says so instead of a second definition. BPMN models use BBO terms (the documented
@@ -13,7 +16,7 @@
 <https://w3id.org/knowledge-kernel/mappings>
     a owl:Ontology ;
     rdfs:label "Mappings between vocabulary packs" ;
-    owl:versionInfo "0.1.0" .
+    owl:versionInfo "0.2.0" .
 
 bbo:Process              skos:closeMatch pplan:Plan .
 bbo:FlowNode             skos:closeMatch pplan:Step .
@@ -23,3 +26,21 @@ sosa:Observation         skos:broadMatch prov:Activity .
 sosa:Actuation           skos:broadMatch prov:Activity .
 sosa:Sensor              skos:broadMatch prov:Agent .
 sosa:Actuator            skos:broadMatch prov:Agent .
+
+# A Backstage catalog (D-100) keeps its own terms; these say where kk-tosca's system structure and ORG's
+# organisations name the same thing. A consumed API is related to, not the same as, a requirement: Backstage
+# names the API, TOSCA the need.
+backstage:Component   skos:closeMatch   kkt:NodeTemplate .
+backstage:Resource    skos:closeMatch   kkt:NodeTemplate .
+backstage:System      skos:closeMatch   kkt:ServiceTemplate .
+backstage:Domain      skos:broadMatch   kkt:ServiceTemplate .
+backstage:API         skos:closeMatch   kkt:CapabilityDefinition .
+backstage:Group       skos:closeMatch   org:OrganizationalUnit .
+backstage:User        skos:closeMatch   prov:Person .
+backstage:dependsOn   skos:closeMatch   kkt:dependsOn .
+backstage:partOf      skos:closeMatch   kkt:memberOf .
+backstage:providesApi skos:closeMatch   kkt:hasCapability .
+backstage:consumesApi skos:relatedMatch kkt:hasRequirement .
+backstage:memberOf    skos:closeMatch   org:memberOf .
+backstage:hasMember   skos:closeMatch   org:hasMember .
+backstage:childOf     skos:closeMatch   org:subOrganizationOf .

@@ -7,7 +7,8 @@ Each window (KK_WINDOW_SECONDS, default 60, aligned to the clock) gives one chan
 Prometheus URL and the window end, so a restart never records a window twice. It reaches Prometheus
 over the kk-reach-prometheus network only (manifest network.reach).
 Env: DATABASE_URL (the module's own login, or one that may SET ROLE to KK_ROLE), KK_ROLE (default
-kkm_observer_prometheus), PROMETHEUS_URL (default http://prometheus:9090), KK_WINDOW_SECONDS.
+kkm_observer_prometheus), PROMETHEUS_URL (default http://prometheus:9090), KK_WINDOW_SECONDS, KK_QUERIES (a
+queries file of your own instead of queries.yaml; an entry with `edge: {from, to}` records calls, D-100).
 """
 from __future__ import annotations
 
@@ -37,7 +38,7 @@ def observe(conn, base: str, seconds: int, queries: list[dict]) -> dict:
     for q in queries:
         url = query_url(base, q["query"].replace("{w}", str(seconds)), end)
         with urllib.request.urlopen(url, timeout=10) as r:
-            results.append((q["property"], url, json.load(r)))
+            results.append((q.get("edge") or q["property"], url, json.load(r)))
     found = ops(results, start, end)
     if not found:
         return {"window_end": end, "observations": 0}
@@ -49,12 +50,13 @@ def observe(conn, base: str, seconds: int, queries: list[dict]) -> dict:
 
 
 def main(argv=None) -> int:
+    """Also `kk serve` part `observer` (opt in)."""
     ap = argparse.ArgumentParser(description="Record Prometheus metrics as observations, once per window.")
     ap.add_argument("--once", action="store_true", help="observe the last complete window and exit")
     a = ap.parse_args(argv)
     base = os.environ.get("PROMETHEUS_URL", "http://prometheus:9090")
     seconds = int(os.environ.get("KK_WINDOW_SECONDS", "60"))
-    queries = yaml.safe_load(QUERIES.read_text())
+    queries = yaml.safe_load(Path(os.environ.get("KK_QUERIES") or QUERIES).read_text())
     conn = connect(os.environ.get("KK_ROLE", "kkm_observer_prometheus"))
     while True:
         try:

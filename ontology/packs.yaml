@@ -172,6 +172,16 @@ profile:
     note: a process step's performer (bbo:has_resource) is the org:Post that does it, so the process and the
       organisation maps meet; schema.org Organization and Role are mappings only (CC BY-SA)
     load_when: always (milestone 5 — interviews)
+  - id: backstage
+    owns: software catalogs as Backstage models them — its entity kinds, its well-known relations (owner, part of,
+      provides and consumes API, depends on, member, child) and entity fields (type, lifecycle, tags, annotations) (D-100)
+    iri: https://w3id.org/knowledge-kernel/backstage#
+    file: backstage.ttl
+    license: Apache-2.0
+    pin: '@backstage/catalog-model 1.10.2 (2026-10-20): relation names from src/kinds/relations.ts'
+    note: kept in Backstage's own terms, as BPMN is kept in BBO's; where kk-tosca or ORG name the same concept,
+      mappings.ttl says so (catalog-info.yaml is read by encoder-backstage)
+    load_when: always (Substrate's map; any team that keeps a Backstage catalog)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

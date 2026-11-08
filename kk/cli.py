@@ -45,10 +45,12 @@ from psycopg import sql
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[1])
 NAME = re.compile(r"^[a-z][a-z0-9-]{0,40}$")
 WORKERS = ("validator", "belief", "recall", "quotes", "tms")
-OPTIONAL = ("dense", "conformance", "learner", "gaps", "extract")   # opt in: dense needs pgvector and fastembed
+OPTIONAL = ("dense", "conformance", "learner", "gaps", "extract", "observer", "drift")   # opt in: dense needs pgvector and fastembed
                                                          # (D-61); the process loop (D-50, D-76) for kernels holding
                                                          # processes; the map gaps an interviewer asks about (M5-T4);
-                                                         # the memory extractor needs a model endpoint (M6-T4)
+                                                         # the memory extractor needs a model endpoint (M6-T4);
+                                                         # the metrics observer needs Prometheus, and map drift
+                                                         # compares the declared map with its calls (D-100)
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 KK_MODULE = "https://w3id.org/knowledge-kernel/ns#Module"
 OWL_VERSION = "http://www.w3.org/2002/07/owl#versionInfo"
@@ -187,6 +189,12 @@ def worker(name: str):
         return lambda: loop([])
     elif name == "extract":
         from memory_extractor.__main__ import main
+    elif name == "observer":
+        from observer_prometheus.__main__ import main as loop
+        return lambda: loop([])
+    elif name == "drift":
+        from map_drift.__main__ import main as loop
+        return lambda: loop([])
     else:
         from belief_corroboration.__main__ import main
     return main
@@ -314,7 +322,7 @@ def main(argv=None) -> None:
             p.add_argument("--steward", action="store_true", help="may also redact")
         p.set_defaults(fn=fn)
     p = sub.add_parser("serve", help="MCP over HTTP + validator + belief")
-    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, tms, dense, conformance, learner, gaps (default: the first six)")
+    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, tms, dense, conformance, learner, gaps, extract, observer, drift (default: the first six)")
     p.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     p.set_defaults(fn=cmd_serve)

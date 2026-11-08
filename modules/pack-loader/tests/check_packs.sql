@@ -25,10 +25,10 @@ begin
     and c.object_entity in (kernel.expand('rdf:Property'), kernel.expand('owl:ObjectProperty'),
                             kernel.expand('owl:DatatypeProperty'), kernel.expand('owl:AnnotationProperty'))
     and c.subject like 'https://w3id.org/knowledge-kernel/%';
-  if n <> 33 then
-    raise exception 'T3: expected 33 kk/kkt/kkp properties typed, found %', n;
+  if n <> 52 then
+    raise exception 'T3: expected 52 kk/kkt/kkp/backstage properties typed, found %', n;
   end if;
-  raise notice 'ok: 33 kk/kkt/kkp properties typed';
+  raise notice 'ok: 52 kk/kkt/kkp/backstage properties typed';
 
   -- Milestone 2 vocabularies (D-47): the BBO and SOSA terms the process and devops modules write.
   select string_agg(p, ', ') into missing
@@ -57,6 +57,23 @@ begin
     raise exception 'M2-T0: bbo:Process is not mapped to pplan:Plan';
   end if;
   raise notice 'ok: pack mappings installed';
+
+  -- D-100: Backstage's catalog in its own terms, mapped to kk-tosca and ORG.
+  select string_agg(p, ', ') into missing
+  from unnest(array['ownedBy', 'partOf', 'providesApi', 'consumesApi', 'dependsOn', 'memberOf', 'childOf',
+                    'type', 'lifecycle', 'tag', 'annotation', 'annotationKey']) p
+  where not kernel.is_approved_property('https://w3id.org/knowledge-kernel/backstage#' || p);
+  if missing is not null then
+    raise exception 'D-100: Backstage properties not approved: %', missing;
+  end if;
+  select count(*) into n from kernel.claim
+  where predicate = kernel.expand('skos:closeMatch')
+    and subject = 'https://w3id.org/knowledge-kernel/backstage#dependsOn'
+    and object_entity = kernel.expand('kkt:dependsOn');
+  if n <> 1 then
+    raise exception 'D-100: backstage:dependsOn is not mapped to kkt:dependsOn';
+  end if;
+  raise notice 'ok: Backstage terms approved and mapped';
 
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = 'http://www.w3.org/ns/sosa/ObservableProperty';

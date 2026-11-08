@@ -64,14 +64,17 @@ def main(argv=None) -> int:
                            "source_uri": f"file:{Path(a.log).name}#seq={rec['seq']}",
                            "retrieved_at": datetime.now(timezone.utc).isoformat()},
                           *claims(rec, a.project, sha)]}
+            cur.execute("select exists (select 1 from api.change_sets where idempotency_key = %s)",
+                        (cs["idempotency_key"],))
+            if cur.fetchone()[0]:   # recorded before: the kernel would answer with the same change set
+                continue
             with run(cur, MODULE, {"project": a.project, "seq": rec["seq"]}) as (run_id, outputs):
                 res = submit(cur, cs, run_id)
                 outputs.update(claims=len(cs["ops"]) - 1, status=res["status"])
-            if not res.get("duplicate"):
-                new += 1
+            new += 1
             print(json.dumps({"verdict": f"urn:kk:verdict:{slug(a.project)}:{rec['seq']}", "outcome": rec.get("verdict"),
                               "claims": len(cs["ops"]) - 1, "change_set": str(res["id"]), "status": res["status"]}))
-        print(json.dumps({"project": a.project, "verdicts": len(verdicts), "records": len(records)}))
+        print(json.dumps({"project": a.project, "verdicts": len(verdicts), "new": new, "records": len(records)}))
     return 0
 
 

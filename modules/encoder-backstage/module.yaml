@@ -1,0 +1,60 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-backstage
+name: Backstage encoder
+version: 0.1.0
+description: 'Records Backstage catalog files (catalog-info.yaml) as claims in Backstage''s own terms (the
+  backstage pack, D-100): each entity typed by its kind, labelled and described, with the relations Backstage
+  derives from its spec (ownedBy, partOf, providesApi, consumesApi, dependsOn, memberOf, childOf), its type,
+  lifecycle, tags and annotations. Components and resources are urn:kk:node:<name>, where other modules''
+  claims about the same part meet; the mappings pack relates the terms to kk-tosca and ORG. Every claim is
+  deterministic and cites the file and line it came from. Reading a changed file supersedes what the earlier
+  version said; an unchanged one submits nothing.'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-backstage
+  db_role: kkm_encoder_backstage
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m encoder_backstage --project <name> catalog-info.yaml
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_backstage
+    KK_ARTIFACTS: the artifact store (default ~/.local/share/knowledge-kernel/artifacts)
+requires:
+- slot: artifact-store
+accepts:
+- application/yaml (Backstage catalog descriptors, catalog-info.yaml)
+produces:
+- add_artifact
+- add_claim
+- set_status
+- 'backstage:Component (and Resource, System, Domain, API, Group, User: rdf:type)'
+- 'backstage:ownedBy'
+- 'backstage:partOf'
+- 'backstage:providesApi'
+- 'backstage:consumesApi'
+- 'backstage:dependsOn'
+- 'backstage:memberOf'
+- 'backstage:childOf'
+- 'backstage:type'
+- 'backstage:lifecycle'
+- 'backstage:tag'
+- 'backstage:annotation (backstage:annotationKey as qualifier)'
+- 'rdfs:label'
+- 'dcterms:description'
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql

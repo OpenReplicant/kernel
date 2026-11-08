@@ -1,0 +1,55 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:map-drift
+name: Map drift processor
+version: 0.1.0
+description: 'Compares the declared map (dependencies and the interfaces between parts, in any vocabulary the
+  mappings pack relates to kk-tosca, such as a Backstage catalog) with the calls observed (kkt:connectsTo
+  observations, the metrics observer''s service graph) and claims every gap where its evidence could exist: a
+  call observed that the map does not declare, or a declared call between two active parts that was not
+  observed. Each gap is an oa:Annotation targeting both parts, inferred and derived from the claims on both
+  sides, and waits in the review lane, where a person decides which side is right (D-100).'
+license: Apache-2.0
+kind: processor
+slots:
+- reasoner
+protected: false
+agent:
+  iri: urn:kk:agent:map-drift
+  db_role: kkm_map_drift
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m map_drift
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_map_drift
+    KK_SWEEP_SECONDS: sweep interval (default 30)
+    KK_LOOKBACK_SECONDS: how recent an observed call must be to count (default 3600)
+accepts:
+- 'kkt:dependsOn (declared, and every predicate mapped to it, e.g. backstage:dependsOn)'
+- 'kkt:hasRequirement (declared, and every predicate mapped to it, e.g. backstage:consumesApi)'
+- 'kkt:hasCapability (declared, and every predicate mapped to it, e.g. backstage:providesApi)'
+- 'kkt:connectsTo (calls: observed by the metrics observer)'
+- 'skos:closeMatch (the mappings pack)'
+produces:
+- add_claim
+- set_status
+- 'oa:Annotation (a gap: dcterms:type urn:kk:discrepancy-kind:undeclared-call or unobserved-call, oa:hasTarget both parts, oa:bodyValue)'
+triggers:
+- type: pattern
+  spec: '? kkt:connectsTo ?'
+- type: pattern
+  spec: '? kkt:dependsOn ?'
+- type: pattern
+  spec: '? backstage:* ?'
+- type: schedule
+  spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
+mcp:
+  expose: []
+migration: migration.sql
