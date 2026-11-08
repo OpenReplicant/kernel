@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from map_drift.compare import KKT, SKOS, declared, discrepancies, observed, predicates, settings  # noqa: E402
+from map_drift.compare import KKT, SKOS, components, declared, discrepancies, observed, predicates, settings  # noqa: E402
 
 BS = "https://w3id.org/knowledge-kernel/backstage#"
 N = "urn:kk:node:"
@@ -71,6 +71,26 @@ check("declared and observed calls agree: no gap", not any(k[1:] in {(N + "agent
 check("exactly these three gaps", len(gaps) == 3)
 again = {d["iri"] for d in discrepancies(want, seen, untraced)}
 check("a gap keeps its identity", again == {d["iri"] for d in gaps.values()})
+
+# components (D-102): what the map declares against what the self-encoder found in the repository
+T = "urn:kk:node-type:"
+decl = [{"id": "d1", "subject": N + "setup"}, {"id": "d2", "subject": N + "deploy"}, {"id": "d3", "subject": N + "old"},
+        {"id": "d4", "subject": N + "postgres"}]
+kinds = {N + "setup": ("skill", "production"), N + "deploy": ("skill", "experimental"), N + "old": ("skill", "deprecated"),
+         N + "postgres": ("database", None)}
+found = [{"id": "o1", "subject": N + "setup", "object_entity": T + "skill"},
+         {"id": "o2", "subject": N + "map-hook", "object_entity": T + "hook"}]
+cg = {(d["kind"].rsplit(":", 1)[-1], d["source"]): d for d in components(decl, kinds, found)}
+check("a part the repository has and the map does not declare is a gap", ("undeclared-component", N + "map-hook") in cg
+      and cg[("undeclared-component", N + "map-hook")]["premises"] == ["o2"])
+check("a declared skill the repository lacks is a gap, citing both sides",
+      cg.get(("unobserved-component", N + "deploy"), {}).get("premises") == ["d2", "o1"])
+check("declared and found: no gap; deprecated: no gap", not any(k[1] in (N + "setup", N + "old") for k in cg))
+check("a kind the self-encoder cannot see (a database) is never unobserved", not any(k[1] == N + "postgres" for k in cg))
+check("exactly these two component gaps, each targeting its part", len(cg) == 2
+      and all(d["targets"] == [d["source"]] for d in cg.values()))
+check("no catalog read yet: no component gaps", components([], kinds, found) == [])
+check("a component gap keeps its identity", {d["iri"] for d in components(decl, kinds, found)} == {d["iri"] for d in cg.values()})
 
 print(f"{sum(checks)}/{len(checks)} checks passed")
 sys.exit(0 if all(checks) else 1)

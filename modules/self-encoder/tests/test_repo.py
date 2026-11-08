@@ -65,11 +65,23 @@ def main() -> int:
         (f"{R}/README.md#usage", "dcterms:isPartOf", f"{R}/README.md", None),
         (f"{R}/docs/guide.md", "dcterms:title", "docs/guide.md", None),
         (f"{R}/docs/guide.md#configuring-the-service", "rdfs:label", "Configuring the service", None),
+        # Claude Code's project files: skills and hooks are components (D-102)
+        ("urn:kk:node:deploy", "rdf:type", "kkt:NodeTemplate", None),
+        ("urn:kk:node:deploy", "kkt:nodeType", "urn:kk:node-type:skill", None),
+        ("urn:kk:node:deploy", "dcterms:description", "Ship the service to staging, then production", None),
+        ("urn:kk:node:deploy", "dcterms:isPartOf", R, None),
+        ("urn:kk:node:posttooluse-lint", "kkt:nodeType", "urn:kk:node-type:hook", None),
+        ("urn:kk:node:posttooluse-lint", "kkt:propertyValue", "Edit|Write", None),
+        ("urn:kk:node:stop-1", "kkt:nodeType", "urn:kk:node-type:hook", None),
     }
     checks = [
         ("the expected claims are there", not (expect - got), sorted(expect - got)),
         ("dependency folders are skipped", not any("node_modules" in f for f in files), files),
         ("no package from node_modules", not any("leftpad" == c[2] for c in got), None),
+        ("the machine's settings.local.json is not read", not any("private" in str(c[2]) for c in got)
+         and ".claude/settings.local.json" not in files, None),
+        ("a skill's name comes from its frontmatter, at its line",
+         where[("urn:kk:node:deploy", "kkt:nodeType", "urn:kk:node-type:skill", None)] == (".claude/skills/deploy/SKILL.md", 2), None),
         ("a heading inside a code fence is not a heading",
          not any(c[2] == "not a heading" for c in got), None),
         ("spans point at the line: requests in pyproject.toml line 9",
