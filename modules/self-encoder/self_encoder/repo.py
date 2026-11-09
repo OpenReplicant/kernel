@@ -8,6 +8,14 @@ parsers, standard library only; every claim references its file and line span (B
   go.mod                  module path, go version, require
   Cargo.toml              [package], [dependencies] (+ build); dev ones as suggestions
   *.md                    the document and its headings (#, ##, ###), outside code fences
+  .claude/skills/*/SKILL.md   a Claude Code skill: a node (kkt:NodeTemplate, node type skill) named by its
+                          frontmatter name, with its description (D-102)
+  .claude/settings.json   each Claude Code hook: a node (node type hook) named <event>-<script>, the event, the
+                          matcher and the command as written (D-102)
+
+Skills and hooks are components like any other (D-102): `urn:kk:node:<name>`, the name a catalog uses for the
+same part, so map-drift can compare what the repository has with what its map declares. Only the project's own
+files count (settings.local.json is the machine's, and usually untracked).
 
 A package is its Package URL (pkg:pypi/..., pkg:npm/..., pkg:golang/..., pkg:cargo/...), typed
 schema:SoftwareSourceCode and dcterms:isPartOf the repository (urn:kk:repo:<name>); a dependency is
@@ -32,6 +40,14 @@ SKIP_DIRS = {".git", "fixtures", "node_modules", "vendor", "target", "dist", "bu
 MAX_BYTES = 512 * 1024
 PEP508 = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?\s*(.*)$")
 HEADING = re.compile(r"^(#{1,3})\s+(.+?)\s*#*\s*$")
+SKILL_FILE = re.compile(r"^\.claude/skills/[^/]+/SKILL\.md$")
+SETTINGS_FILE = ".claude/settings.json"
+NODE_TYPE = "urn:kk:node-type:"
+
+
+def harness(rel: str) -> bool:
+    """A Claude Code project file the self-model reads: a skill, or the project's settings (its hooks)."""
+    return rel == SETTINGS_FILE or bool(SKILL_FILE.match(rel))
 
 
 def repo_name(repo: Path, name: str | None = None) -> str:
@@ -60,7 +76,7 @@ def purl(kind: str, name: str) -> str:
 
 def wanted(rel: str) -> bool:
     name = PurePosixPath(rel).name
-    return (name in MANIFESTS or bool(REQUIREMENTS.search(rel)) or name.lower().endswith(".md")) \
+    return harness(rel) or (name in MANIFESTS or bool(REQUIREMENTS.search(rel)) or name.lower().endswith(".md")) \
         and not any(p in SKIP_DIRS or p.startswith(".") for p in PurePosixPath(rel).parts[:-1])
 
 
@@ -233,6 +249,69 @@ def encode_markdown(b, repo: str, text: str, rel: str) -> None:
         b.claim(doc, "dcterms:title", rel, (1, max(1, len(lines))))
 
 
+def component(b, repo: str, name: str, kind: str, span) -> str:
+    n = f"urn:kk:node:{name}"
+    b.claim(n, "rdf:type", "kkt:NodeTemplate", span)
+    b.claim(n, "kkt:nodeType", NODE_TYPE + kind, span)
+    b.claim(n, "rdfs:label", name, span)
+    b.claim(n, "dcterms:isPartOf", repo, span)
+    return n
+
+
+def frontmatter(lines: list[str]) -> dict[str, tuple[str, int]]:
+    """The `key: value` lines of a leading --- block: key -> (value, 1-based line). Plain scalars only."""
+    out: dict[str, tuple[str, int]] = {}
+    if not lines or lines[0].strip() != "---":
+        return out
+    for i, line in enumerate(lines[1:], 2):
+        if line.strip() == "---":
+            break
+        m = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
+        if m:
+            out[m.group(1)] = (m.group(2).strip().strip('"').strip("'"), i)
+    return out
+
+
+def encode_skill(b, repo: str, text: str, rel: str) -> None:
+    lines = text.splitlines()
+    fm = frontmatter(lines)
+    name, at = fm.get("name", (PurePosixPath(rel).parent.name, 1))
+    n = component(b, repo, name, "skill", (at, at))
+    if "description" in fm:
+        b.claim(n, "dcterms:description", fm["description"][0], (fm["description"][1], fm["description"][1]))
+
+
+def hook_name(event: str, command: str, i: int) -> str:
+    """<event>-<script>: the first word of the command that names a file, without folder or extension."""
+    for word in re.split(r"\s+", command.replace('"', " ").replace("'", " ")):
+        if "/" in word or re.search(r"\.(py|sh|js|ts|mjs|rb)$", word):
+            stem = PurePosixPath(word).name.rsplit(".", 1)[0]
+            if stem:
+                return slug(f"{event}-{stem}")
+    return slug(f"{event}-{i + 1}")
+
+
+def encode_settings(b, repo: str, text: str) -> None:
+    lines = text.splitlines()
+    try:
+        hooks = (json.loads(text) or {}).get("hooks") or {}
+    except ValueError:
+        return
+    for event, groups in hooks.items():
+        at = line_of(lines, f'"{event}"')
+        n = 0
+        for group in groups or []:
+            for h in group.get("hooks") or []:
+                command = h.get("command") or h.get("prompt") or ""
+                span = line_of(lines, command[:60], at[0] - 1) if command else at
+                node = component(b, repo, hook_name(event, command, n), "hook", span)
+                b.claim(node, "dcterms:description", f"{event} hook: {command}" if command else f"{event} hook", span)
+                if group.get("matcher"):
+                    b.claim(node, "kkt:propertyValue", group["matcher"], span, {"kkt:propertyName": "matcher"})
+                b.claim(node, "kkt:propertyValue", event, at, {"kkt:propertyName": "event"})
+                n += 1
+
+
 def encode(b, repo_dir: Path, rel: str, text: str, name: str | None = None) -> None:
     """Dispatch one repository file to its encoder; the repository itself is typed from its root files."""
     repo = repo_iri(repo_dir, name)
@@ -240,7 +319,11 @@ def encode(b, repo_dir: Path, rel: str, text: str, name: str | None = None) -> N
     if "/" not in rel:
         b.claim(repo, "rdf:type", SOURCE_CODE, (1, 1))
         b.claim(repo, "rdfs:label", repo_name(repo_dir, name), (1, 1))
-    if file == "pyproject.toml":
+    if SKILL_FILE.match(rel):
+        encode_skill(b, repo, text, rel)
+    elif rel == SETTINGS_FILE:
+        encode_settings(b, repo, text)
+    elif file == "pyproject.toml":
         encode_pyproject(b, repo, text)
     elif REQUIREMENTS.search(rel):
         here = repo_dir / PurePosixPath(rel).parent / "pyproject.toml"

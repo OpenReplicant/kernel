@@ -1,12 +1,13 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:encoder-backstage
 name: Backstage encoder
-version: 0.1.0
+version: 0.2.0
 description: 'Records Backstage catalog files (catalog-info.yaml) as claims in Backstage''s own terms (the
   backstage pack, D-100): each entity typed by its kind, labelled and described, with the relations Backstage
   derives from its spec (ownedBy, partOf, providesApi, consumesApi, dependsOn, memberOf, childOf), its type,
   lifecycle, tags and annotations. Components and resources are urn:kk:node:<name>, where other modules''
-  claims about the same part meet; the mappings pack relates the terms to kk-tosca and ORG. Every claim is
+  claims about the same part meet; so are AI resources (skills, rules, hooks; Backstage 1.51''s AiResource kind,
+  D-102). The mappings pack relates the terms to kk-tosca and ORG. Every claim is
   deterministic and cites the file and line it came from. Reading a changed file supersedes what the earlier
   version said; an unchanged one submits nothing.'
 license: Apache-2.0

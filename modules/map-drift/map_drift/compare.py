@@ -12,6 +12,14 @@ A discrepancy is claimed only where its evidence could exist:
   unobserved-call  the map declares a call from a node that is sending calls to one that is seen, and no such
                    call was observed (an interface the source marks as untraced does not count)
 
+Components (D-102): the parts a catalog declares (any class the mappings relate to kkt:NodeTemplate, such as
+backstage:Component, Resource, AiResource) against the parts the self-encoder found in the repository (kkt:nodeType;
+today a Claude Code skill or hook):
+
+  undeclared-component  the repository has a part of a kind the map can declare, and the map does not declare it
+  unobserved-component  the map declares a part of a kind the self-encoder reads (its type, e.g. skill or hook), the
+                        self-encoder has found parts of that kind, and not this one
+
 Names: an observed node may be named by the service name its telemetry carries; a node's annotation or
 property whose key ends in `otel-service` (or is `service.name`) gives that name. One whose key ends in
 `untraced` lists the interfaces (by name) the node uses without traced calls.
@@ -124,4 +132,35 @@ def discrepancies(want: dict, seen: dict, untraced: dict) -> list[dict]:
     for d in out:
         tag = hashlib.sha256(f"{d['kind']}|{d['source']}|{d['target']}".encode()).hexdigest()[:16]
         d.update(iri=f"urn:kk:drift:{tag}", targets=[d["source"], d["target"]])
+    return out
+
+
+def components(declared_nodes: list[dict], kinds: dict, observed_nodes: list[dict]) -> list[dict]:
+    """Component gaps (D-102). declared_nodes: rows (id, subject) typed by the map; kinds: subject -> (type, lifecycle)
+    as the map states them; observed_nodes: rows (id, subject, object_entity) of the self-encoder's kkt:nodeType.
+    Nothing is claimed while the map declares no part at all (no catalog has been read)."""
+    if not declared_nodes:
+        return []
+    declared = {}
+    for c in declared_nodes:
+        declared.setdefault(c["subject"], str(c["id"]))
+    seen, by_kind = {}, {}
+    for c in observed_nodes:
+        kind = name(c["object_entity"])
+        seen.setdefault(c["subject"], (kind, str(c["id"])))
+        by_kind.setdefault(kind, str(c["id"]))
+    out = []
+    for node, (kind, oid) in sorted(seen.items()):
+        if node not in declared:
+            out.append({"kind": KIND + "undeclared-component", "source": node, "premises": [oid],
+                        "text": f"The repository has the {kind} {label(node)}, which the map does not declare."})
+    for node, did in sorted(declared.items()):
+        kind, lifecycle = kinds.get(node, (None, None))
+        if node in seen or kind not in by_kind or lifecycle == "deprecated":
+            continue
+        out.append({"kind": KIND + "unobserved-component", "source": node, "premises": [did, by_kind[kind]],
+                    "text": f"The map declares the {kind} {label(node)}; the repository has {kind}s, and not this one."})
+    for d in out:
+        tag = hashlib.sha256(f"{d['kind']}|{d['source']}".encode()).hexdigest()[:16]
+        d.update(iri=f"urn:kk:drift:{tag}", targets=[d["source"]])
     return out

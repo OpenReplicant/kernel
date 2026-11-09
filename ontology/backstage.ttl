@@ -14,7 +14,7 @@
 <https://w3id.org/knowledge-kernel/backstage>
     a owl:Ontology ;
     rdfs:label "Backstage software catalog" ;
-    owl:versionInfo "0.1.0" .
+    owl:versionInfo "0.2.0" .
 
 # ------------------------------------------------------------------ kinds
 backstage:Component a owl:Class ; rdfs:label "Component" ;
@@ -31,6 +31,8 @@ backstage:Group a owl:Class ; rdfs:label "Group" ;
     skos:definition "An organisational entity such as a team, business unit or loose collection of people." .
 backstage:User a owl:Class ; rdfs:label "User" ;
     skos:definition "A person, such as an employee or contractor." .
+backstage:AiResource a owl:Class ; rdfs:label "AiResource" ;
+    skos:definition "Contextual information consumed by AI coding tools, such as skills and rules (Backstage 1.51; @backstage/catalog-model 1.10.2, alpha, schema AiResource.v1alpha1: spec.type, lifecycle and owner required)." .
 
 # ------------------------------------------------------------------ well-known relations
 backstage:ownedBy a owl:ObjectProperty ; rdfs:label "owned by" ; owl:inverseOf backstage:ownerOf ;

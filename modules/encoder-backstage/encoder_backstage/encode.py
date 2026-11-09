@@ -12,7 +12,7 @@ own catalog processor derives from the spec, in its names:
   spec.type, spec.lifecycle, metadata.tags    backstage:type, lifecycle, tag
   metadata.annotations                        backstage:annotation {backstage:annotationKey: the key}
 
-Components and resources are `urn:kk:node:<name>`, the node names other modules use (the self-encoder's
+Components, resources and AI resources (skills, rules, hooks) are `urn:kk:node:<name>`, the node names other modules use (the self-encoder's
 services, Morphogen's cells, the metrics observer), so what is said about a part from anywhere meets; other
 kinds are `urn:kk:<kind>:<name>`. Where kk-tosca or ORG name the same concept, the mappings pack says so.
 
@@ -37,8 +37,8 @@ AGENT = "urn:kk:agent:encoder-backstage"
 SCOPE = "urn:kk:scope:default"
 
 KINDS = {"component": "Component", "resource": "Resource", "system": "System", "domain": "Domain",
-         "api": "API", "group": "Group", "user": "User"}
-NODE = {"component", "resource"}
+         "api": "API", "group": "Group", "user": "User", "airesource": "AiResource"}
+NODE = {"component", "resource", "airesource"}
 # Backstage's default kind for a ref in each field (descriptor format, "entity references"); dependsOn has none.
 DEFAULT_KIND = {"owner": "group", "system": "system", "domain": "domain", "subcomponentOf": "component",
                 "providesApis": "api", "consumesApis": "api", "memberOf": "group", "parent": "group"}

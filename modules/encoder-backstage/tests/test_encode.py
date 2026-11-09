@@ -37,6 +37,18 @@ check("every entity of a known kind is counted",
 check("kinds keep Backstage's names", find("urn:kk:node:model-gateway", RDF_TYPE, BS + "Component")
       and find("urn:kk:api:model-api", RDF_TYPE, BS + "API") and find("urn:kk:system:engine", RDF_TYPE, BS + "System"))
 check("components and resources are kk-tosca's node names", find("urn:kk:node:postgres", RDF_TYPE, BS + "Resource"))
+ai_text = """apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata: {name: setup, description: Bring the stack up}
+spec: {type: skill, lifecycle: production, owner: group:operator}
+"""
+ai_ops, ai_findings, ai_counts = encode(ai_text, "1" * 64)
+check("an AiResource (a skill) is a node, typed in Backstage's name, with its type",
+      ai_counts == {"AiResource": 1} and not [f for f in ai_findings if f["finding"] != "dangling-ref"]
+      and any(o["subject"] == "urn:kk:node:setup" and o["predicate"] == RDF_TYPE
+              and o["object"].get("entity") == BS + "AiResource" for o in ai_ops)
+      and any(o["subject"] == "urn:kk:node:setup" and o["predicate"] == BS + "type"
+              and o["object"].get("value", {}).get("@value") == "skill" for o in ai_ops))
 check("the title is the label", find("urn:kk:node:model-gateway", RDFS_LABEL, "Bifrost"))
 check("relations as Backstage derives them",
       find("urn:kk:node:model-gateway", BS + "ownedBy", "urn:kk:group:platform")

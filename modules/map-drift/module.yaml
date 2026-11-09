@@ -1,13 +1,16 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:map-drift
 name: Map drift processor
-version: 0.1.0
+version: 0.2.0
 description: 'Compares the declared map (dependencies and the interfaces between parts, in any vocabulary the
   mappings pack relates to kk-tosca, such as a Backstage catalog) with the calls observed (kkt:connectsTo
   observations, the metrics observer''s service graph) and claims every gap where its evidence could exist: a
   call observed that the map does not declare, or a declared call between two active parts that was not
   observed. Each gap is an oa:Annotation targeting both parts, inferred and derived from the claims on both
-  sides, and waits in the review lane, where a person decides which side is right (D-100).'
+  sides, and waits in the review lane, where a person decides which side is right (D-100). Also compares the
+  parts the map declares with the parts the self-encoder found in the repository (Claude Code skills and hooks
+  today): a part the repository has that the map does not declare, or a declared part of a kind the encoder
+  reads that the repository lacks (D-102).'
 license: Apache-2.0
 kind: processor
 slots:
@@ -36,11 +39,13 @@ accepts:
 - 'kkt:hasRequirement (declared, and every predicate mapped to it, e.g. backstage:consumesApi)'
 - 'kkt:hasCapability (declared, and every predicate mapped to it, e.g. backstage:providesApi)'
 - 'kkt:connectsTo (calls: observed by the metrics observer)'
+- 'kkt:nodeType (parts the self-encoder found: skills, hooks; D-102)'
 - 'skos:closeMatch (the mappings pack)'
 produces:
 - add_claim
 - set_status
 - 'oa:Annotation (a gap: dcterms:type urn:kk:discrepancy-kind:undeclared-call or unobserved-call, oa:hasTarget both parts, oa:bodyValue)'
+- 'oa:Annotation (a component gap: dcterms:type urn:kk:discrepancy-kind:undeclared-component or unobserved-component, oa:hasTarget the part; D-102)'
 triggers:
 - type: pattern
   spec: '? kkt:connectsTo ?'
@@ -48,6 +53,8 @@ triggers:
   spec: '? kkt:dependsOn ?'
 - type: pattern
   spec: '? backstage:* ?'
+- type: pattern
+  spec: '? kkt:nodeType ?'
 - type: schedule
   spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
 mcp:

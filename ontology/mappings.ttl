@@ -16,7 +16,7 @@
 <https://w3id.org/knowledge-kernel/mappings>
     a owl:Ontology ;
     rdfs:label "Mappings between vocabulary packs" ;
-    owl:versionInfo "0.2.0" .
+    owl:versionInfo "0.3.0" .
 
 bbo:Process              skos:closeMatch pplan:Plan .
 bbo:FlowNode             skos:closeMatch pplan:Step .
@@ -32,6 +32,7 @@ sosa:Actuator            skos:broadMatch prov:Agent .
 # names the API, TOSCA the need.
 backstage:Component   skos:closeMatch   kkt:NodeTemplate .
 backstage:Resource    skos:closeMatch   kkt:NodeTemplate .
+backstage:AiResource  skos:closeMatch   kkt:NodeTemplate .
 backstage:System      skos:closeMatch   kkt:ServiceTemplate .
 backstage:Domain      skos:broadMatch   kkt:ServiceTemplate .
 backstage:API         skos:closeMatch   kkt:CapabilityDefinition .

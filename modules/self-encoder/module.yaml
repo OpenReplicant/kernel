@@ -1,12 +1,13 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:self-encoder
 name: Repository encoder (self-model first)
-version: 0.3.0
+version: 0.4.0
 description: 'Scans a repository (first: this project''s own folder) and emits deterministic claims: module
   manifests -> kk:Module and the slots they fill; compose files -> node templates and their relationships;
   ontology files -> packs; SQL migrations -> schema objects. In any repository (D-68): package manifests
   (pyproject, requirements, package.json, go.mod, Cargo.toml) -> packages by Package URL and their
-  dependencies (CodeMeta / schema.org terms); Markdown -> documents and their headings. Every claim references the file artifact and
+  dependencies (CodeMeta / schema.org terms); Markdown -> documents and their headings; Claude Code''s project
+  files -> its skills and hooks as parts (kkt:NodeTemplate with node type skill or hook, D-102). Every claim references the file artifact and
   line span. A plain command (python -m self_encoder scan); runs the ingest filter first and supersedes the
   claims of changed or removed files.'
 license: Apache-2.0
@@ -37,7 +38,8 @@ requires:
 - slot: artifact-store
 accepts:
 - 'inode/directory (a repository checkout, git or not)'
-- text/markdown (documents and their headings)
+- text/markdown (documents and their headings; .claude/skills/*/SKILL.md as skills)
+- 'application/json (.claude/settings.json: hooks)'
 - 'application/toml (pyproject.toml, Cargo.toml)'
 - application/json (package.json)
 - 'text/plain (requirements.txt, go.mod)'

@@ -1,4 +1,5 @@
-"""map-drift: compares the declared map with the calls observed and submits each gap for review (D-100).
+"""map-drift: compares the declared map with the calls observed, and the parts it declares with the parts the
+repository has, and submits each gap for review (D-100, D-102).
 Needs no runner; also `kk serve` part `drift` (opt in).
 
 It listens on kernel_change_set and runs a pass when a dependency, an interface or an observed call is applied,
@@ -24,7 +25,7 @@ import sys
 from kk.changes import prior as prior_claims, supersede
 from kk.lib import connect, listen, manifest_patterns, run, submit
 
-from .compare import CONNECTS_TO, SKOS, declared, discrepancies, observed, predicates, settings
+from .compare import CONNECTS_TO, SKOS, components, declared, discrepancies, observed, predicates, settings
 
 MODULE = "urn:kk:module:map-drift"
 AGENT = "urn:kk:agent:map-drift"
@@ -44,6 +45,15 @@ DECLARED = """select id, subject, predicate, object_entity from api.claims
 OBSERVED = """select id, subject, object_entity, valid_to from api.claims
               where status <> 'deprecated' and evidence_type = 'observed' and predicate = %s
                 and object_entity is not null and valid_to >= now() - make_interval(secs => %s)"""
+SELF_ENCODER = "urn:kk:agent:self-encoder"
+NODE_CLASSES = """select subject from api.claims where status <> 'deprecated' and object_entity = %s
+                  and predicate = any(%s)"""
+DECLARED_NODES = """select id, subject from api.claims where status <> 'deprecated' and attributed_to <> %s
+                    and predicate = %s and object_entity = any(%s)"""
+NODE_FIELDS = """select subject, predicate, object_value->>'@value' as value from api.claims
+                 where status <> 'deprecated' and predicate = any(%s)"""
+OBSERVED_NODES = """select id, subject, object_entity from api.claims where status <> 'deprecated'
+                    and attributed_to = %s and predicate = %s and object_entity is not null"""
 PROPERTIES = """select subject, coalesce(qualifiers->>%s, qualifiers->>%s) as key, object_value->>'@value' as value
                 from api.claims where status <> 'deprecated' and predicate = any(%s)"""
 
@@ -72,7 +82,16 @@ def find(cur) -> list[dict]:
     alias, untraced = settings(rows(cur, PROPERTIES, (BS + "annotationKey", KKT + "propertyName",
                                                       [BS + "annotation", KKT + "propertyValue"])))
     seen = observed(rows(cur, OBSERVED, (CONNECTS_TO, LOOKBACK)), alias)
-    return discrepancies(want, seen, untraced)
+    # components (D-102): the classes mapped to kkt:NodeTemplate, the parts the map types with them, and the parts
+    # the self-encoder found
+    classes = [r["subject"] for r in rows(cur, NODE_CLASSES, (KKT + "NodeTemplate", [SKOS + "exactMatch", SKOS + "closeMatch"]))]
+    nodes = rows(cur, DECLARED_NODES, (SELF_ENCODER, RDF_TYPE, classes)) if classes else []
+    kinds: dict = {}
+    for r in rows(cur, NODE_FIELDS, ([BS + "type", BS + "lifecycle"],)):
+        t, lc = kinds.get(r["subject"], (None, None))
+        kinds[r["subject"]] = (r["value"], lc) if r["predicate"] == BS + "type" else (t, r["value"])
+    found = rows(cur, OBSERVED_NODES, (SELF_ENCODER, KKT + "nodeType"))
+    return discrepancies(want, seen, untraced) + components(nodes, kinds, found)
 
 
 def one_pass(conn) -> dict:
