@@ -2,8 +2,8 @@
 # Build context: the repository root. Behind a TLS-intercepting proxy: --secret id=ca,src=<ca bundle>.
 # Base: python 3.13.16 on Alpine 3.24, pinned by digest. gitleaks (the ingest filter) is a static binary
 # taken from its pinned image.
-FROM zricethezav/gitleaks:v8.30.1 AS gitleaks
-FROM python:3.13.16-alpine@sha256:2d9aefe2fef018a7eb2c13064c89c71929800fd2e5dccdbf52ea5da5bb8d929a
+FROM docker.io/zricethezav/gitleaks:v8.30.1 AS gitleaks
+FROM docker.io/library/python:3.13.16-alpine@sha256:2d9aefe2fef018a7eb2c13064c89c71929800fd2e5dccdbf52ea5da5bb8d929a
 COPY --from=gitleaks /usr/bin/gitleaks /usr/local/bin/gitleaks
 WORKDIR /kk
 COPY modules/kernel-mcp/requirements.txt req-mcp.txt

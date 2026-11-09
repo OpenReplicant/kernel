@@ -7,7 +7,7 @@
 #   pgGraph 1.2.1    graph queries over tables, kernel.current_edge first (D-86; Apache-2.0); row-level
 #                    security applies as the calling role. shared_preload_libraries=graph is optional
 #                    (pre-warms a built graph at start)
-ARG PG_IMAGE=postgres:17.11-bookworm
+ARG PG_IMAGE=docker.io/library/postgres:17.11-bookworm
 
 # pgmq is plain SQL (no C library): its control file and scripts, from the release tag, checked against its
 # commit id.
