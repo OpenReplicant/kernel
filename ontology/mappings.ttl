@@ -8,6 +8,12 @@
 @prefix kkt:   <https://w3id.org/knowledge-kernel/tosca#> .
 @prefix org:   <http://www.w3.org/ns/org#> .
 @prefix backstage: <https://w3id.org/knowledge-kernel/backstage#> .
+@prefix substrate: <https://w3id.org/knowledge-kernel/substrate#> .
+@prefix wdt:   <http://www.wikidata.org/prop/direct/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix dqv:   <http://www.w3.org/ns/dqv#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
 
 # Mappings between the packs (D-47): one concept, one home; where two packs name the same concept,
 # the mapping says so instead of a second definition. BPMN models use BBO terms (the documented
@@ -16,7 +22,7 @@
 <https://w3id.org/knowledge-kernel/mappings>
     a owl:Ontology ;
     rdfs:label "Mappings between vocabulary packs" ;
-    owl:versionInfo "0.2.0" .
+    owl:versionInfo "0.3.0" .
 
 bbo:Process              skos:closeMatch pplan:Plan .
 bbo:FlowNode             skos:closeMatch pplan:Step .
@@ -44,3 +50,23 @@ backstage:consumesApi skos:relatedMatch kkt:hasRequirement .
 backstage:memberOf    skos:closeMatch   org:memberOf .
 backstage:hasMember   skos:closeMatch   org:hasMember .
 backstage:childOf     skos:closeMatch   org:subOrganizationOf .
+
+# Substrate's store (D-102) keeps Wikidata's properties and its own map and catalog terms; these say where the
+# kernel's packs name the same thing. A role is what TOSCA calls a requirement (a slot), an interface what it
+# calls a capability; a goal is measured as DQV measures quality. A constraint is related to, not the same as, a
+# SHACL shape: Substrate reports a violation and never blocks.
+wdt:P31                     skos:exactMatch   rdf:type .
+wdt:P279                    skos:exactMatch   rdfs:subClassOf .
+wdt:P527                    skos:closeMatch   dcterms:hasPart .
+wdt:P527                    skos:closeMatch   backstage:hasPart .
+wdt:P3831                   skos:relatedMatch org:role .
+wdt:P973                    skos:closeMatch   rdfs:seeAlso .
+wdt:P2302                   skos:relatedMatch sh:property .
+substrate:Role              skos:closeMatch   kkt:RequirementDefinition .
+substrate:Interface         skos:closeMatch   kkt:CapabilityDefinition .
+substrate:requiresInterface skos:closeMatch   kkt:hasRequirement .
+substrate:providesInterface skos:closeMatch   kkt:hasCapability .
+substrate:providesInterface skos:closeMatch   backstage:providesApi .
+substrate:Goal              skos:closeMatch   dqv:Metric .
+substrate:metric            skos:relatedMatch dqv:isMeasurementOf .
+substrate:measurement       skos:closeMatch   dqv:value .

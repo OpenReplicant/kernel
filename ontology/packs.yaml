@@ -10,7 +10,7 @@
 # pin: the pack loader fetches the upstream file once, stores it as an artifact (sha256), and
 # records the pinned version. "pin at install" = choose and record the version when first loaded.
 
-version: 0.4.0
+version: 0.5.0
 
 core:
   - id: kk-core          # first: it types the annotation properties the other pack files use
@@ -182,6 +182,25 @@ profile:
     note: kept in Backstage's own terms, as BPMN is kept in BBO's; where kk-tosca or ORG name the same concept,
       mappings.ttl says so (catalog-info.yaml is read by encoder-backstage)
     load_when: always (Substrate's map; any team that keeps a Backstage catalog)
+  - id: wikidata
+    owns: nothing new — the Wikidata properties and constraint kinds Substrate's store uses (instance of, subclass of,
+      has part, object has role, described at URL, point in time, property constraints), under Wikidata's own IRIs (D-102)
+    iri: http://www.wikidata.org/prop/direct/
+    file: wikidata.ttl
+    license: CC0 (Wikidata's data)
+    pin: labels as Substrate's store quotes them (OpenReplicant/Substrate store/sql/001_store.sql, 003_components.sql at fd3a9b4)
+    note: kept in Wikidata's terms because Substrate's store is Wikibase's model; mappings.ttl relates them to rdf,
+      rdfs, dcterms and SHACL (constraints are reported, never blocking)
+    load_when: Substrate's store is folded into the kernel (Substrate S-153)
+  - id: substrate
+    owns: maps and catalogs as Substrate models them — roles, interfaces a role requires and a part provides, goals,
+      measurements, catalogs and a judge's verdicts on candidates (D-102)
+    iri: https://w3id.org/knowledge-kernel/substrate#
+    file: substrate.ttl
+    license: Apache-2.0
+    pin: OpenReplicant/Substrate store/sql/003_components.sql at fd3a9b4 (S-139)
+    note: kept in Substrate's own terms, as Backstage's are; mappings.ttl relates them to kk-tosca, Backstage and DQV
+    load_when: Substrate's store is folded into the kernel (Substrate S-153)
   - id: mappings
     owns: nothing new — the skos:*Match links between packs that name the same concept
     iri: https://w3id.org/knowledge-kernel/mappings

@@ -1,0 +1,54 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix wdt:  <http://www.wikidata.org/prop/direct/> .
+@prefix wd:   <http://www.wikidata.org/entity/> .
+
+# The Wikidata properties and constraint kinds that Substrate's store uses (D-102), under Wikidata's own IRIs:
+# direct properties in wdt:, items in wd:. Labels and definitions follow Wikidata's English ones as Substrate's
+# store quotes them (store/sql/001_store.sql and 003_components.sql in OpenReplicant/Substrate at fd3a9b4).
+# Wikidata's data, its property and item labels included, is CC0. Nothing here is translated: where another pack
+# names the same concept (rdf:type, dcterms:hasPart), mappings.ttl says so.
+
+<https://w3id.org/knowledge-kernel/wikidata>
+    a owl:Ontology ;
+    rdfs:label "Wikidata, the properties Substrate's store uses" ;
+    owl:versionInfo "0.1.0" .
+
+# ------------------------------------------------------------------ classes and parts
+wdt:P31 a owl:ObjectProperty ; rdfs:label "instance of" ;
+    skos:definition "That class of which this subject is a particular example and member (Wikidata P31)." .
+wdt:P279 a owl:ObjectProperty ; rdfs:label "subclass of" ;
+    skos:definition "Every instance of this subject is an instance of that class (Wikidata P279)." .
+wdt:P527 a owl:ObjectProperty ; rdfs:label "has part(s)" ;
+    skos:definition "This whole has that part (Wikidata P527); the part's role is the qualifier wdt:P3831." .
+wdt:P3831 a owl:ObjectProperty ; rdfs:label "object of statement has role" ;
+    skos:definition "The role the value plays in this statement, as a qualifier: a part's role in its whole (Wikidata P3831)." .
+
+# ------------------------------------------------------------------ pages and time
+wdt:P973 a owl:DatatypeProperty ; rdfs:label "described at URL" ;
+    skos:definition "A page describing the subject (Wikidata P973)." .
+wdt:P585 a owl:DatatypeProperty ; rdfs:label "point in time" ;
+    skos:definition "When the statement holds or the event took place, usually as a qualifier (Wikidata P585)." .
+
+# ------------------------------------------------------------------ property constraints (reported, never blocking)
+wdt:P2302 a owl:ObjectProperty ; rdfs:label "property constraint" ;
+    skos:definition "A constraint on this property's use, checked and reported, never blocking (Wikidata P2302)." .
+wdt:P1793 a owl:DatatypeProperty ; rdfs:label "format as a regular expression" ;
+    skos:definition "A format constraint's pattern, matched against the whole value (Wikidata P1793), as a qualifier." .
+wdt:P2308 a owl:ObjectProperty ; rdfs:label "class" ;
+    skos:definition "A value-type constraint's allowed class (Wikidata P2308), as a qualifier." .
+wdt:P2305 a owl:ObjectProperty ; rdfs:label "item of property constraint" ;
+    skos:definition "A one-of constraint's allowed value (Wikidata P2305), as a qualifier." .
+wdt:P2241 a owl:DatatypeProperty ; rdfs:label "reason for deprecated rank" ;
+    skos:definition "Why a statement was deprecated (Wikidata P2241; an item there, a sentence in Substrate's store)." .
+
+wd:Q19474404 a owl:Class ; rdfs:label "single-value constraint" ;
+    skos:definition "The property usually has one value per subject (Wikidata Q19474404)." .
+wd:Q21502404 a owl:Class ; rdfs:label "format constraint" ;
+    skos:definition "The property's string values match a pattern (Wikidata Q21502404)." .
+wd:Q21510859 a owl:Class ; rdfs:label "one-of constraint" ;
+    skos:definition "The property's values are among those listed (Wikidata Q21510859)." .
+wd:Q21510865 a owl:Class ; rdfs:label "value-type constraint" ;
+    skos:definition "The property's values are instances of a class (Wikidata Q21510865)." .
