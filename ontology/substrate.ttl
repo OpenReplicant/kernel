@@ -1,0 +1,66 @@
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix skos:      <http://www.w3.org/2004/02/skos/core#> .
+@prefix substrate: <https://w3id.org/knowledge-kernel/substrate#> .
+
+# Substrate's maps and catalogs (S-139 in OpenReplicant/Substrate), in its own names (D-102): a whole, its parts
+# and the role each plays; the interfaces a role requires and a part provides, so another part providing the same
+# interfaces could fill the role; the goals a whole is judged on, measurements, and a judge's verdicts on
+# candidates from catalogs. Substrate publishes no RDF namespace, so this mirror lives under the kernel's, as
+# backstage.ttl and kk-tosca do; every term keeps the key Substrate's store gives it (store/sql/003_components.sql
+# at fd3a9b4). The Wikidata properties the same store uses are in wikidata.ttl; mappings.ttl relates both to
+# kk-tosca, DQV and the rest.
+
+<https://w3id.org/knowledge-kernel/substrate>
+    a owl:Ontology ;
+    rdfs:label "Substrate maps and catalogs" ;
+    owl:versionInfo "0.1.0" .
+
+# ------------------------------------------------------------------ kinds
+substrate:Role a owl:Class ; rdfs:label "role" ;
+    skos:definition "What a part does in its whole: a slot that another part providing the same interfaces could fill." .
+substrate:Interface a owl:Class ; rdfs:label "interface" ;
+    skos:definition "What a part provides and a role requires: a contract, an API, a fitting, a protocol, a shape." .
+substrate:Goal a owl:Class ; rdfs:label "goal" ;
+    skos:definition "Something measurable a whole is meant to do better at." .
+substrate:Catalog a owl:Class ; rdfs:label "catalog" ;
+    skos:definition "A registry candidates come from: a package index, a vendor list, a parts book." .
+substrate:Verdict a owl:Class ; rdfs:label "verdict" ;
+    skos:definition "The class of a judge's verdicts on a candidate for a role." .
+substrate:better a substrate:Verdict ; rdfs:label "better" ;
+    skos:definition "The candidate scored higher on the goal than what fills the role." .
+substrate:worse a substrate:Verdict ; rdfs:label "worse" ;
+    skos:definition "The candidate scored lower on the goal." .
+substrate:same a substrate:Verdict ; rdfs:label "no measurable difference" ;
+    skos:definition "No difference the judge could measure." .
+
+# ------------------------------------------------------------------ roles and interfaces
+substrate:requiresInterface a owl:ObjectProperty ; rdfs:label "requires interface" ;
+    skos:definition "Anything filling this role must provide that interface." .
+substrate:providesInterface a owl:ObjectProperty ; rdfs:label "provides interface" ;
+    skos:definition "This part or candidate provides that interface." .
+substrate:forRole a owl:ObjectProperty ; rdfs:label "for role" ;
+    skos:definition "The role a verdict or candidate is about." .
+
+# ------------------------------------------------------------------ catalogs
+substrate:catalogId a owl:DatatypeProperty ; rdfs:label "catalog id" ;
+    skos:definition "This candidate's id in a catalog; the catalog is the qualifier substrate:inCatalog." .
+substrate:inCatalog a owl:ObjectProperty ; rdfs:label "catalog" ;
+    skos:definition "Which catalog an id or a candidate is from." .
+
+# ------------------------------------------------------------------ goals, measurements, verdicts
+substrate:hasGoal a owl:ObjectProperty ; rdfs:label "has goal" ;
+    skos:definition "This whole is judged on that goal." .
+substrate:metric a owl:DatatypeProperty ; rdfs:label "metric" ;
+    skos:definition "How a goal is measured, in words a judge can apply." .
+substrate:target a owl:DatatypeProperty ; rdfs:label "target" ;
+    skos:definition "The value a goal aims for." .
+substrate:measurement a owl:DatatypeProperty ; rdfs:label "measurement" ;
+    skos:definition "A measured value; the goal and the time are qualifiers (substrate:forGoal, wdt:P585)." .
+substrate:forGoal a owl:ObjectProperty ; rdfs:label "goal" ;
+    skos:definition "Which goal a measurement or verdict is about." .
+substrate:verdict a owl:ObjectProperty ; rdfs:label "verdict" ;
+    skos:definition "A judge's verdict on this candidate; for role, against and goal are qualifiers." .
+substrate:against a owl:ObjectProperty ; rdfs:label "against" ;
+    skos:definition "What the candidate was compared with." .

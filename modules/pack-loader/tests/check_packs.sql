@@ -19,16 +19,16 @@ begin
   end if;
   raise notice 'ok: every self-encoder property is approved';
 
-  -- Every kk/kkt/kkp property typed in a pack is approved.
+  -- Every kk/kkt/kkp/backstage/substrate property typed in a pack is approved.
   select count(*) into n from kernel.claim c
   where c.predicate = kernel.expand('rdf:type')
     and c.object_entity in (kernel.expand('rdf:Property'), kernel.expand('owl:ObjectProperty'),
                             kernel.expand('owl:DatatypeProperty'), kernel.expand('owl:AnnotationProperty'))
     and c.subject like 'https://w3id.org/knowledge-kernel/%';
-  if n <> 52 then
-    raise exception 'T3: expected 52 kk/kkt/kkp/backstage properties typed, found %', n;
+  if n <> 64 then
+    raise exception 'T3: expected 64 kk/kkt/kkp/backstage/substrate properties typed, found %', n;
   end if;
-  raise notice 'ok: 52 kk/kkt/kkp/backstage properties typed';
+  raise notice 'ok: 64 kk/kkt/kkp/backstage/substrate properties typed';
 
   -- Milestone 2 vocabularies (D-47): the BBO and SOSA terms the process and devops modules write.
   select string_agg(p, ', ') into missing
@@ -74,6 +74,30 @@ begin
     raise exception 'D-100: backstage:dependsOn is not mapped to kkt:dependsOn';
   end if;
   raise notice 'ok: Backstage terms approved and mapped';
+
+  -- D-102: Substrate's store in its own terms (Wikidata's properties and Substrate's maps), mapped to the packs.
+  select string_agg(p, ', ') into missing
+  from unnest(array['http://www.wikidata.org/prop/direct/P31', 'http://www.wikidata.org/prop/direct/P279',
+                    'http://www.wikidata.org/prop/direct/P527', 'http://www.wikidata.org/prop/direct/P3831',
+                    'http://www.wikidata.org/prop/direct/P973', 'http://www.wikidata.org/prop/direct/P585',
+                    'http://www.wikidata.org/prop/direct/P2302', 'http://www.wikidata.org/prop/direct/P1793',
+                    'http://www.wikidata.org/prop/direct/P2308', 'http://www.wikidata.org/prop/direct/P2305',
+                    'http://www.wikidata.org/prop/direct/P2241']
+                 || array(select 'https://w3id.org/knowledge-kernel/substrate#' || x from unnest(array[
+                    'requiresInterface', 'providesInterface', 'forRole', 'catalogId', 'inCatalog', 'hasGoal',
+                    'metric', 'target', 'measurement', 'forGoal', 'verdict', 'against']) x)) p
+  where not kernel.is_approved_property(p);
+  if missing is not null then
+    raise exception 'D-102: Substrate store properties not approved: %', missing;
+  end if;
+  select count(*) into n from kernel.claim
+  where predicate = kernel.expand('skos:closeMatch')
+    and subject = 'https://w3id.org/knowledge-kernel/substrate#requiresInterface'
+    and object_entity = kernel.expand('kkt:hasRequirement');
+  if n <> 1 then
+    raise exception 'D-102: substrate:requiresInterface is not mapped to kkt:hasRequirement';
+  end if;
+  raise notice 'ok: Substrate store terms approved and mapped';
 
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = 'http://www.w3.org/ns/sosa/ObservableProperty';
