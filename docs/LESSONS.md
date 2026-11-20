@@ -65,6 +65,10 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
 - Recall quality decides whether the kernel helps at all: with plain full-text search a good model did
   worse with the kernel than alone (SciFact, D-59); with BM25 it did much better (D-60). Measure recall
   before building on it.
+- Postgres resolves every table a statement names before it runs it: a `case when to_regclass(...)` guard
+  does not keep a missing table from failing the statement. Check that an optional module is installed in
+  one query and read its tables in a second (kernel-mcp's dense recall broke `search` and `recall` on plain
+  Postgres this way; CI only runs with pgvector, so it never showed).
 - A CURIE in a change set expands only with a prefix the kernel knows (`kernel.prefix`: rdf, rdfs, owl,
   dcterms, prov, …); `cito:supports` is refused as "not a known term". Pack vocabularies without a
   registered prefix go in as full IRIs (D-62).

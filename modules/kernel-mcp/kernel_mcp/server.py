@@ -198,7 +198,8 @@ async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
     full-text search, depending on the recall modules installed, then belief; re-ranked by a cross-encoder when
     one is downloaded), or by substring on labels and IRIs when no word matches. Each has id, status, belief, rank."""
     indexed = bool(await query(ctx, recall.INSTALLED) and await query(ctx, recall.READY))
-    model = await query(ctx, recall.DENSE) if indexed and recall.dense_on() else None
+    dense = indexed and recall.dense_on() and await query(ctx, recall.DENSE_INSTALLED)
+    model = await query(ctx, recall.DENSE) if dense else None
     vec = await anyio.to_thread.run_sync(recall.vector, text, model) if model else None
     args = recall.params(text, recall.pool(limit) if indexed else limit, vec)
     rows = await query(ctx, recall.ranked(indexed, vec), args)

@@ -49,8 +49,10 @@ READY = "select exists (select 1 from recall.corpus where n > 0)"   # only once 
 VIA_INDEX = "select api.recall(%(text)s, %(n)s)"
 
 
-DENSE = ("select case when to_regclass('recall_dense.vec') is not null then "
-         "(select model from recall_dense.state where exists (select 1 from recall_dense.vec)) end")
+# Two queries, as INSTALLED and READY: Postgres resolves every table a statement names before it runs, so one
+# statement that guards recall_dense.state with a CASE still fails where recall-dense is not installed.
+DENSE_INSTALLED = "select to_regclass('recall_dense.vec') is not null"
+DENSE = "select model from recall_dense.state where exists (select 1 from recall_dense.vec)"   # only once installed
 VIA_HYBRID = "select api.recall_hybrid(%(text)s, %(vec)s::vector, %(n)s)"
 MODEL = "BAAI/bge-small-en-v1.5"   # 384 dimensions, MIT; the recall-dense module's index is built with it
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "   # bge's query instruction
@@ -175,7 +177,10 @@ def dense_on() -> bool:
 
 def dense(conn) -> str | None:
     """The dense index's model when the recall-dense module is installed and has rows (and dense is on)."""
-    return conn.execute(DENSE).fetchone()[0] if dense_on() else None
+    if not dense_on() or not conn.execute(DENSE_INSTALLED).fetchone()[0]:
+        return None
+    row = conn.execute(DENSE).fetchone()
+    return row[0] if row else None
 
 
 def ranked(indexed: bool, vec: str | None = None) -> str:
