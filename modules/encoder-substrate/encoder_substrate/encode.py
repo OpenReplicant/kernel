@@ -284,6 +284,12 @@ def content_hash(ops: list[dict]) -> str:
     return hashlib.sha256(json.dumps(ops, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
 
 
+def content_of(idempotency_key: str) -> str:
+    """The content hash in a key: `substrate:<Qid>:<hash>`, or `...:<hash>:after:<change set>` when the item had
+    said something before."""
+    return idempotency_key.split(":")[2]
+
+
 def change_set(item_id: str, ops: list[dict], scope: str = SCOPE) -> dict:
     """One item's change set, keyed by the item and the content of its ops (before any superseding)."""
     return {"idempotency_key": f"{key_prefix(item_id)}{content_hash(ops)}", "attributed_to": AGENT,

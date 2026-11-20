@@ -24,13 +24,20 @@ import psycopg
 
 from kk.lib import connect, run, submit
 
-from .encode import AGENT, SCOPE, change_set, encode_store, key_prefix, supersede
+from .encode import AGENT, SCOPE, change_set, content_of, encode_store, key_prefix, supersede
 
 MODULE = "urn:kk:module:encoder-substrate"
 PRIOR = """select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.qualifiers, c.status
            from api.claims c join api.change_sets s on s.id = c.change_set
            where c.attributed_to = %s and c.status <> 'deprecated'
              and starts_with(s.idempotency_key, %s) and s.idempotency_key <> %s"""
+# The item's latest change set from this encoder that is in force or on its way (an invalid or rejected one
+# changed nothing): "unchanged" means the same content as that one, not as any earlier one, so an item that
+# returns to what it said before is submitted again and supersedes what came between.
+LATEST = """select id, idempotency_key from api.change_sets
+            where attributed_to = %s and starts_with(idempotency_key, %s)
+              and status not in ('invalid', 'rejected', 'conflict')
+            order by submitted_at desc, id desc limit 1"""
 
 
 def rows(cur, query: str) -> list[dict]:
@@ -70,10 +77,13 @@ def export(cur, entities, statements, scope: str, dry_run: bool = False) -> dict
     todo = []
     for item_id, _iri, ops in sets:
         cs = change_set(item_id, ops, scope)
-        cur.execute("select exists (select 1 from api.change_sets where idempotency_key = %s)", (cs["idempotency_key"],))
-        if cur.fetchone()[0]:   # the kernel answers a repeat with the change set it already has
+        cur.execute(LATEST, (AGENT, key_prefix(item_id)))
+        latest = cur.fetchone()
+        if latest and content_of(latest[1]) == content_of(cs["idempotency_key"]):
             counts["unchanged"] += 1
             continue
+        if latest:   # new content, or content said before and replaced since: key it after the latest
+            cs["idempotency_key"] += f":after:{str(latest[0])[:8]}"
         cur.execute(PRIOR, (AGENT, key_prefix(item_id), cs["idempotency_key"]))
         cols = [d.name for d in cur.description]
         prior = [dict(zip(cols, r)) for r in cur.fetchall()]

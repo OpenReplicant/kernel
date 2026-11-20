@@ -45,5 +45,6 @@ packs' own items, which have nothing to say), 25 claims, all applied; the second
 item and a deprecated statement gave 2 new change sets and deprecated 10 earlier claims (superseded where the
 new version states the claim again, retracted where not).
 
-Known limit: if an item goes back to content it had before, its key is one the kernel already has, so nothing is
-submitted and the claims of the later version stay current.
+"Unchanged" means the same content as the item's latest change set from this encoder. An item that returns to content
+it had before is submitted again, keyed `substrate:<Qid>:<hash>:after:<the latest change set>`, and supersedes what
+came between.
