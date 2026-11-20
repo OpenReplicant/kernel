@@ -1,0 +1,75 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:encoder-substrate
+name: Substrate store encoder
+version: 0.1.0
+description: 'Records Substrate''s store (its Wikibase-model Postgres schema, read-only) as claims in Wikidata''s
+  and Substrate''s own terms (the wikidata and substrate packs, D-102): one change set per item with its labels,
+  descriptions and aliases, and a claim per statement with its qualifiers and rank (preferred or deprecated as a
+  status). Items the packs define keep the pack''s IRI; the rest are urn:kk:substrate:<Qid>. Substrate''s v1
+  relations are Backstage''s. Who stated a statement in Substrate (a parser, a person, an interpreter, a rule)
+  is kept in each claim''s reference and its evidence type (deterministic for a parser, testimony for anyone else); the claim is
+  attributed to this encoder. A property with no term, somevalue and novalue, statements on properties and
+  uncited statements are findings kept with the run. Running again over an unchanged store submits nothing;
+  a changed item supersedes what the earlier version said. Not encoded: prose, units, rule premises.'
+license: Apache-2.0
+kind: encoder
+slots:
+- encoder
+protected: false
+agent:
+  iri: urn:kk:agent:encoder-substrate
+  db_role: kkm_encoder_substrate
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m encoder_substrate --store <dsn>
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_encoder_substrate
+    SUBSTRATE_STORE_URL: the Substrate store's database (read-only use); or --store
+accepts:
+- 'application/x-substrate-store (Substrate''s store: Postgres schema store, read with --store)'
+produces:
+- add_claim
+- set_status
+- 'wdt:P31 (instance of)'
+- 'wdt:P279 (subclass of)'
+- 'wdt:P527 (has part)'
+- 'wdt:P3831 (object has role)'
+- 'wdt:P973 (described at URL)'
+- 'wdt:P585 (point in time)'
+- 'wdt:P2302 (property constraint)'
+- 'wdt:P1793 (format as regex)'
+- 'wdt:P2308 (class)'
+- 'wdt:P2305 (item of property constraint)'
+- 'wdt:P2241 (reason for deprecated rank)'
+- 'substrate:requiresInterface'
+- 'substrate:providesInterface'
+- 'substrate:forRole'
+- 'substrate:catalogId'
+- 'substrate:inCatalog'
+- 'substrate:hasGoal'
+- 'substrate:metric'
+- 'substrate:target'
+- 'substrate:measurement'
+- 'substrate:forGoal'
+- 'substrate:verdict'
+- 'substrate:against'
+- 'backstage:consumesApi (Substrate''s v1 relation)'
+- 'backstage:providesApi (Substrate''s v1 relation)'
+- 'backstage:dependsOn (Substrate''s v1 relation)'
+- 'backstage:partOf (Substrate''s v1 relation)'
+- 'rdfs:label'
+- 'dcterms:description'
+- 'skos:altLabel'
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql
