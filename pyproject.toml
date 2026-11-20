@@ -33,7 +33,7 @@ packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encod
             "actuator_compose", "paper_encoder", "recall_index", "recall_dense",
             "verifier_quotes", "evaluator", "process_learner", "interaction_encoder",
             "map_gaps", "truth_maintenance", "memory_extractor", "encoder_morphogen",
-            "encoder_backstage", "map_drift"]
+            "encoder_backstage", "map_drift", "encoder_substrate"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -60,3 +60,4 @@ memory_extractor = "modules/memory-extractor/memory_extractor"
 encoder_morphogen = "modules/encoder-morphogen/encoder_morphogen"
 encoder_backstage = "modules/encoder-backstage/encoder_backstage"
 map_drift = "modules/map-drift/map_drift"
+encoder_substrate = "modules/encoder-substrate/encoder_substrate"

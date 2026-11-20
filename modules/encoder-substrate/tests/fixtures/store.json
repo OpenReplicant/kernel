@@ -1,0 +1,740 @@
+{
+ "entities": [
+  {
+   "id": "Q1",
+   "kind": "item",
+   "datatype": null,
+   "key": "role",
+   "label": "role",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q2",
+   "kind": "item",
+   "datatype": null,
+   "key": "interface",
+   "label": "interface",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q3",
+   "kind": "item",
+   "datatype": null,
+   "key": "goal",
+   "label": "goal",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q4",
+   "kind": "item",
+   "datatype": null,
+   "key": "verdict-class",
+   "label": "verdict",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q5",
+   "kind": "item",
+   "datatype": null,
+   "key": "verdict-better",
+   "label": "better",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q10",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "Workbench",
+   "description": "the thing Substrate watches",
+   "aliases": [
+    "wb",
+    "the workbench"
+   ],
+   "prose": "Long page text."
+  },
+  {
+   "id": "Q11",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "Postgres",
+   "description": "a database",
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q12",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "storage",
+   "description": "holds data",
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q13",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "SQL interface",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q14",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "SQLite",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q15",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "v1 component api",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q16",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "v1 component db",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q17",
+   "kind": "item",
+   "datatype": null,
+   "key": null,
+   "label": "latency",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P1",
+   "kind": "property",
+   "datatype": "item",
+   "key": "has-part",
+   "label": "has part",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P2",
+   "kind": "property",
+   "datatype": "item",
+   "key": "object-has-role",
+   "label": "object has role",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P3",
+   "kind": "property",
+   "datatype": "item",
+   "key": "requires-interface",
+   "label": "requires interface",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P4",
+   "kind": "property",
+   "datatype": "item",
+   "key": "provides-interface",
+   "label": "provides interface",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P5",
+   "kind": "property",
+   "datatype": "item",
+   "key": "instance-of",
+   "label": "instance of",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P6",
+   "kind": "property",
+   "datatype": "time",
+   "key": "point-in-time",
+   "label": "point in time",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P7",
+   "kind": "property",
+   "datatype": "quantity",
+   "key": "measurement",
+   "label": "measurement",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P8",
+   "kind": "property",
+   "datatype": "string",
+   "key": "reason-for-deprecated-rank",
+   "label": "reason for deprecated rank",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P9",
+   "kind": "property",
+   "datatype": "url",
+   "key": "described-at-url",
+   "label": "described at URL",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P10",
+   "kind": "property",
+   "datatype": "item",
+   "key": "v1:field:depends_on",
+   "label": "depends on (v1)",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P11",
+   "kind": "property",
+   "datatype": "string",
+   "key": "v1:annotation:foo",
+   "label": "foo (v1 annotation)",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P12",
+   "kind": "property",
+   "datatype": "item",
+   "key": "for-goal",
+   "label": "for goal",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P13",
+   "kind": "property",
+   "datatype": "string",
+   "key": "metric",
+   "label": "metric",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P14",
+   "kind": "property",
+   "datatype": "string",
+   "key": null,
+   "label": "no key",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P15",
+   "kind": "property",
+   "datatype": "item",
+   "key": "property-constraint",
+   "label": "property constraint",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P16",
+   "kind": "property",
+   "datatype": "external-id",
+   "key": "catalog-id",
+   "label": "catalog id",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  }
+ ],
+ "statements": [
+  {
+   "id": "10000000-0000-0000-0000-000000000001",
+   "subject": "Q10",
+   "property": "P1",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q11",
+   "rank": "normal",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P2",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q12"
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a2",
+     "by_kind": "parser",
+     "by_name": "map-skill",
+     "by_version": null,
+     "run": null,
+     "span": {
+      "source": "file:docs/framework.md",
+      "locator": "L10-12",
+      "text": "The workbench has a Postgres."
+     }
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000002",
+   "subject": "Q12",
+   "property": "P3",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q13",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000003",
+   "subject": "Q14",
+   "property": "P4",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q13",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000004",
+   "subject": "Q11",
+   "property": "P4",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q13",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a4",
+     "by_kind": "rule",
+     "by_name": "same-interface",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000005",
+   "subject": "Q12",
+   "property": "P5",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q1",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000006",
+   "subject": "Q15",
+   "property": "P10",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q16",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000007",
+   "subject": "Q15",
+   "property": "P11",
+   "snak": "value",
+   "value": "bar",
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000008",
+   "subject": "Q15",
+   "property": "P14",
+   "snak": "value",
+   "value": "baz",
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000009",
+   "subject": "Q10",
+   "property": "P1",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q14",
+   "rank": "normal",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P11",
+     "snak": "value",
+     "value": "x",
+     "value_entity": null
+    },
+    {
+     "ord": 1,
+     "property": "P2",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q12"
+    },
+    {
+     "ord": 2,
+     "property": "P2",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q13"
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-00000000000a",
+   "subject": "Q10",
+   "property": "P9",
+   "snak": "value",
+   "value": "https://old.example/wb",
+   "value_entity": null,
+   "rank": "deprecated",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P8",
+     "snak": "value",
+     "value": "superseded by a newer page",
+     "value_entity": null
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-00000000000b",
+   "subject": "Q10",
+   "property": "P9",
+   "snak": "value",
+   "value": "https://example.org/wb",
+   "value_entity": null,
+   "rank": "preferred",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-00000000000c",
+   "subject": "Q14",
+   "property": "P7",
+   "snak": "value",
+   "value": {
+    "amount": 12.5,
+    "unit": "Q13"
+   },
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P12",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q17"
+    },
+    {
+     "ord": 1,
+     "property": "P6",
+     "snak": "value",
+     "value": {
+      "time": "+2026-11-17T00:00:00Z",
+      "precision": 11
+     },
+     "value_entity": null
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a5",
+     "by_kind": "parser",
+     "by_name": "map-skill",
+     "by_version": null,
+     "run": "r1",
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-00000000000d",
+   "subject": "Q11",
+   "property": "P6",
+   "snak": "value",
+   "value": {
+    "time": "+2026-11-17T09:30:00Z",
+    "precision": 14
+   },
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a5",
+     "by_kind": "parser",
+     "by_name": "map-skill",
+     "by_version": null,
+     "run": "r1",
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-00000000000e",
+   "subject": "Q11",
+   "property": "P13",
+   "snak": "somevalue",
+   "value": null,
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-00000000000f",
+   "subject": "Q11",
+   "property": "P13",
+   "snak": "value",
+   "value": "p99",
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [],
+   "references": []
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000010",
+   "subject": "P9",
+   "property": "P15",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q5",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000011",
+   "subject": "Q12",
+   "property": "P16",
+   "snak": "value",
+   "value": "st-1",
+   "value_entity": null,
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    },
+    {
+     "id": "00000000-0000-0000-0000-0000000000a5",
+     "by_kind": "parser",
+     "by_name": "map-skill",
+     "by_version": null,
+     "run": "r1",
+     "span": null
+    },
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000012",
+   "subject": "Q13",
+   "property": "P5",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q2",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a3",
+     "by_kind": "interpreter",
+     "by_name": "claude-code",
+     "by_version": "2.1.0",
+     "run": null,
+     "span": null
+    },
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  }
+ ]
+}
