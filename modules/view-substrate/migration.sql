@@ -66,10 +66,11 @@ create or replace function substrate.short(p_iri text) returns text language sql
   select case when p_iri like 'urn:kk:substrate:%' then substr(p_iri, 18)
               else regexp_replace(p_iri, '^.*[#/:]', '') end $$;
 
--- Substrate's own items and the terms of its packs (wikidata, substrate): what search looks through.
+-- Substrate's own items and the terms of its packs (wikidata, substrate, backstage: the v1 import's relations): what search looks through.
 create or replace function substrate.in_namespace(p_iri text) returns boolean language sql immutable parallel safe as $$
   select p_iri like 'urn:kk:substrate:%' or p_iri like 'http://www.wikidata.org/%'
-      or p_iri like 'https://w3id.org/knowledge-kernel/substrate#%' $$;
+      or p_iri like 'https://w3id.org/knowledge-kernel/substrate#%'
+      or p_iri like 'https://w3id.org/knowledge-kernel/backstage#%' $$;
 
 -- The values of one qualifier: encoder-substrate keys a qualifier by its predicate IRI, a repeated one a list.
 create or replace function substrate.qvals(p_qualifiers jsonb, p_property text)
@@ -188,7 +189,7 @@ returns text language sql immutable parallel safe set search_path = pg_catalog a
   where m is not null $$;
 
 -- Search -----------------------------------------------------------------------------------------------------
--- What a page says in words (label, description, aliases, each statement's property and value, its references), for full-text
+-- What a page says in words (label, description, aliases, each statement's property, value and qualifiers, its references), for full-text
 -- search. Cheaper than rendering every page; the rank differs a little from Substrate's (see D-104).
 create or replace view substrate.entity_text with (security_invoker = true) as
 select e.iri,
@@ -196,7 +197,9 @@ select e.iri,
          (select string_agg(concat_ws(' ', substrate.label(u.predicate), substrate.short(u.predicate),
                                       case when u.object_entity is not null
                                            then substrate.label(u.object_entity) || ' ' || substrate.short(u.object_entity)
-                                           else u.object_value ->> '@value' end), ' ')
+                                           else u.object_value ->> '@value' end, ' ',
+                                      (select string_agg(substrate.label(k.key) || ' ' || substrate.fmt_qualifier(v.value), ' ')
+                                       from jsonb_each(u.qualifiers) k, lateral substrate.qvals(u.qualifiers, k.key) v)), ' ')
           from substrate.usable u
           where u.subject = e.iri and u.predicate not in (substrate.term('label'), substrate.term('description'),
                                                           substrate.term('alt'))),

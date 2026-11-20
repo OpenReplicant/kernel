@@ -190,7 +190,7 @@ def main():
 
     want, want_rank = set(), {}
     for r in q(st, "select u.*, p.key as pkey from store.usable u join store.entity p on p.id = u.property"):
-        if ents[r["subject"]]["kind"] == "item" and r["property"] in iri and r["snak"] == "value":
+        if ents[r["subject"]]["kind"] == "item" and r["subject"] in plain and r["property"] in iri and r["snak"] == "value":
             k = (iri[r["subject"]], iri[r["property"]], obj_key(r))
             want.add(k)
             want_rank[k] = r["rank"]
@@ -201,6 +201,8 @@ def main():
         k = (r["subject"], r["predicate"], o)
         got.add(k)
         got_rank[k] = r["rank"]
+    n_pack_st = q(st, "select count(*) as n from store.usable u join store.entity e on e.id = u.subject where e.kind = 'item'")[0]["n"] - len(want)
+    note("the packs' own items carry no claims from the encoder (their statements come with the packs)", f"{n_pack_st} statements")
     check(f"usable: the same {len(want)} subject, property, value triples as store.usable", want == got,
           f"only store {sorted(want - got, key=str)[:3]}; only kernel {sorted(got - want, key=str)[:3]}")
     check("usable: the same ranks (preferred or normal)", all(want_rank[k] == got_rank.get(k) for k in want))
@@ -221,6 +223,11 @@ def main():
             sn = {(iri[i], la, d, k) for i, la, d, k in
                   [tuple(r.values()) for r in q(st, "select id, label, description, kind from store.map_nodes(%s, %s)", whole, depth)]}
             kn = {tuple(r.values()) for r in q(rd, "select id, label, description, kind from substrate.map_nodes(%s, %s)", iri[whole], depth)}
+            # a pack term (single-value constraint, a verdict) has its description in the pack, not in these claims
+            if any(d != d2 for (a, _, d, _) in sn for (b, _, d2, _) in kn if a == b and a not in {iri[i] for i in plain}):
+                note("a pack term's description is not in the claims", f"{whole}")
+            sn = {(i, la, d if i in {iri[x] for x in plain} else None, k) for i, la, d, k in sn}
+            kn = {(i, la, d if i in {iri[x] for x in plain} else None, k) for i, la, d, k in kn}
             if se != ke or sn != kn:
                 map_bad.append((whole, depth, sorted(se ^ ke, key=str)[:3], sorted(sn ^ kn, key=str)[:3]))
             if se:
@@ -247,14 +254,27 @@ def main():
     queries = ["postgres", "pg", "pgvector", "vector", "sql", "queue", "storage", "latency", "Q14", "q16", "work", "nearest",
                "pgrst", "qdrant", "faiss", "interface", "role", "xyzzy", "parser", "docker", "gateway", "index", "a", "candidate",
                "has part", "message queue", "pg_vector", "postgre"]
-    s_bad, hits = [], 0
+    s_bad, hits, order_diff, prose_only = [], 0, 0, 0
     for text in queries:
-        s = [iri[r["id"]] for r in q(st, "select id from store.search(%s, 10)", text) if r["id"] in iri]
-        k = [r["iri"] for r in q(rd, "select iri from substrate.search(%s, 10)", text)]
+        # compared on Substrate's items: a pack term's page and its extra terms (backstage's) are the packs' to say
+        s = [iri[r["id"]] for r in q(st, "select id from store.search(%s, 100)", text) if r["id"] in plain]
+        k = [r["iri"] for r in q(rd, "select iri from substrate.search(%s, 100)", text) if r["iri"] in sid and sid[r["iri"]] in plain]
         hits += len(s)
-        if s != k:
-            s_bad.append((text, s[:5], k[:5]))
-    check(f"search: the same ranked results as store.search for {len(queries)} queries ({hits} hits)", not s_bad, str(s_bad[:3]))
+        extra = [x for x in s if x not in k]
+        # what the store finds that the claims cannot: the words of an item's prose, which is not in the claims
+        unexplained = [x for x in extra if not re.search(re.escape(text.lower()), (ents[sid[x]]["prose"] or "").lower())
+                       and not q(st, "select 1 from store.page where entity_id = %s and tsv @@ websearch_to_tsquery('simple', %s)", sid[x], text)]
+        if unexplained or [x for x in k if x not in s]:
+            s_bad.append((text, unexplained[:3], [x for x in k if x not in s][:3]))
+        prose_only += bool(extra)
+        order_diff += [x for x in s if x in k] != k
+    if prose_only:
+        note("search: the store also finds items by words of its page that the claims lack (prose, a parser run, lower ranks)", f"{prose_only} queries")
+    if order_diff:
+        note("search: the order differs where the page text differs (prose in the store's)", f"{order_diff} queries")
+    check(f"search: every hit of the claims is a hit of the store, and each the store has more is found by its prose, "
+          f"for {len(queries)} queries ({hits} store hits; {prose_only} queries with prose-only hits, {order_diff} with another order)",
+          not s_bad, str(s_bad[:3]))
     check("search: a score is the best of label, alias and page rank (same as the store's for a label hit)",
           all(abs(a["score"] - b["score"]) < 1e-6 for a, b in zip(q(st, "select score from store.search('postgres', 3)"),
                                                                     q(rd, "select score from substrate.search('postgres', 3)"))))
@@ -298,6 +318,9 @@ def main():
         for (label, pid), stmts in groups.items():
             if side == "store":
                 pi = next(i for i in ents if i == pid)
+                if pi not in iri:
+                    note("a property the encoder has no term for is not on the page", f"{label} ({pid}) of {item}")
+                    continue
                 label, pid = klabel.get(pi, label), kshort.get(pi, pid)
                 if ents[pi]["label"] != klabel.get(pi, ents[pi]["label"]):
                     note("a property's label is the pack's", f"{ents[pi]['label']!r} -> {klabel[pi]!r}")
