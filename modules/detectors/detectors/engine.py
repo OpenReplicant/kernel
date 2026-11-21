@@ -13,6 +13,7 @@ from __future__ import annotations
 import inspect
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -297,6 +298,12 @@ class Engine:
     def find(self, owner, d: Detector, anchors) -> list[Match]:
         """The matches, in a read-only transaction with a statement timeout, SQL and Python alike. The owner's
         role is checked inside the transaction, before anything is returned."""
+        # The statement timeout is the query's to change (set_config(..., true) inside it), so a watchdog cancels
+        # from outside as well, a little later; the cancel ends the transaction like a timeout does.
+        cancel = getattr(owner, "cancel_safe", None) or owner.cancel
+        watchdog = threading.Timer(self.timeout_ms / 1000 * 1.5 + 0.5, cancel)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             with owner.transaction():
                 owner.execute("set transaction read only")
@@ -312,6 +319,8 @@ class Engine:
         except Refused:
             self.drop(d.owner)
             raise
+        finally:
+            watchdog.cancel()
 
     def fail(self, conn, d: Detector, error: Exception, reported: Optional[str] = None) -> None:
         """A failed run, with the error: the record that this detector stopped, and why."""

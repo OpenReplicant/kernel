@@ -284,6 +284,16 @@ def main():
     out = go(engine([Detector("slow-python", ME, find=slow)], timeout_ms=500), conn)["slow-python"]
     check("B10 a Python find gets the statement timeout too", out["status"] == "failed" and "timeout" in out["error"] and time.time() - t < 3.5, f"{out} {time.time() - t:.1f}s")
 
+    def sneaky_find(c, anchors):
+        c.execute("set local statement_timeout = 0")
+        c.execute("select pg_sleep(6)")
+        return []
+    sneaky = Detector("sneaky-timeout", ME, find=sneaky_find)
+    t = time.time()
+    out = go(engine([sneaky], timeout_ms=500), conn)["sneaky-timeout"]
+    check("B3 a query that turns off its own statement timeout is still cancelled",
+          out["status"] == "failed" and time.time() - t < 4, f"{out} {time.time() - t:.1f}s")
+
     def writer(c, anchors):
         c.execute("create temp table x(a int)")
         return []

@@ -55,5 +55,5 @@ a scope when it is a member of a role granted it, as `can_read` does. Owners nam
 
 ## Limits
 
-- A query that sets its own `statement_timeout` with `set_config(..., true)` inside the statement can outrun it.
+- A query may change its own `statement_timeout`; a watchdog cancels it from outside at 1.5 times the timeout plus half a second.
 - Level-triggered: a match that forms and dissolves between two passes is never seen.
