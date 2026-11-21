@@ -292,6 +292,76 @@
    "description": null,
    "aliases": [],
    "prose": null
+  },
+  {
+   "id": "Q6",
+   "kind": "item",
+   "datatype": null,
+   "key": "single-value-constraint",
+   "label": "single-value constraint",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q7",
+   "kind": "item",
+   "datatype": null,
+   "key": "format-constraint",
+   "label": "format constraint",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q8",
+   "kind": "item",
+   "datatype": null,
+   "key": "one-of-constraint",
+   "label": "one-of constraint",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "Q9",
+   "kind": "item",
+   "datatype": null,
+   "key": "value-type-constraint",
+   "label": "value-type constraint",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P17",
+   "kind": "property",
+   "datatype": "string",
+   "key": "format-as-regex",
+   "label": "format as a regular expression",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P18",
+   "kind": "property",
+   "datatype": "item",
+   "key": "class",
+   "label": "class",
+   "description": null,
+   "aliases": [],
+   "prose": null
+  },
+  {
+   "id": "P19",
+   "kind": "property",
+   "datatype": "item",
+   "key": "item-of-property-constraint",
+   "label": "item of property constraint",
+   "description": null,
+   "aliases": [],
+   "prose": null
   }
  ],
  "statements": [
@@ -658,7 +728,7 @@
    "property": "P15",
    "snak": "value",
    "value": null,
-   "value_entity": "Q5",
+   "value_entity": "Q6",
    "rank": "normal",
    "qualifiers": [],
    "references": [
@@ -726,6 +796,151 @@
      "run": null,
      "span": null
     },
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000020",
+   "subject": "P9",
+   "property": "P15",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q7",
+   "rank": "normal",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P17",
+     "snak": "value",
+     "value": "^https://.*",
+     "value_entity": null
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000021",
+   "subject": "P1",
+   "property": "P15",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q9",
+   "rank": "normal",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P18",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q12"
+    },
+    {
+     "ord": 1,
+     "property": "P18",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q13"
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000022",
+   "subject": "P5",
+   "property": "P15",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q8",
+   "rank": "normal",
+   "qualifiers": [
+    {
+     "ord": 0,
+     "property": "P19",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q1"
+    },
+    {
+     "ord": 1,
+     "property": "P19",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q2"
+    },
+    {
+     "ord": 2,
+     "property": "P19",
+     "snak": "value",
+     "value": null,
+     "value_entity": "Q4"
+    }
+   ],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000023",
+   "subject": "P14",
+   "property": "P15",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q6",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
+    {
+     "id": "00000000-0000-0000-0000-0000000000a1",
+     "by_kind": "person",
+     "by_name": "pete",
+     "by_version": null,
+     "run": null,
+     "span": null
+    }
+   ]
+  },
+  {
+   "id": "10000000-0000-0000-0000-000000000024",
+   "subject": "P11",
+   "property": "P15",
+   "snak": "value",
+   "value": null,
+   "value_entity": "Q6",
+   "rank": "normal",
+   "qualifiers": [],
+   "references": [
     {
      "id": "00000000-0000-0000-0000-0000000000a1",
      "by_kind": "person",

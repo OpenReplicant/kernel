@@ -1,7 +1,7 @@
 """The substrate profile's tools (D-105): what Substrate's own store answers over MCP, answered from the kernel.
 
-Substrate (its `store/mcp.py`) gives its agent nine tools over a Wikibase-model store: search, read, expand,
-locate, path, alternatives, create_item, say and deprecate. Here they have the same names and arguments and
+Substrate (its `store/mcp.py`) gives its agent ten tools over a Wikibase-model store: search, read, expand,
+locate, path, alternatives, violations, create_item, say and deprecate. Here they have the same names and arguments and
 answer in the same layout, from the claims encoder-substrate writes (D-103) through the read model view-substrate
 makes (D-104, schema `substrate`). Nothing here touches a table:
 
@@ -282,6 +282,21 @@ async def alternatives(ctx: Context, role: str) -> str:
         or "nothing provides every interface this role requires (or it requires none)"
 
 
+@tool("violations", "Constraint violations (reported, never blocking): a property's values of the wrong class, a "
+                    "single-value property with several, a string off its format, a value not among those a property "
+                    "allows. For one entity, or all. Each line ends with the claim's handle and belief.")
+async def violations(ctx: Context, id: str | None = None) -> str:
+    async with connection(ctx) as conn:
+        iri = await resolve(conn, id) if id else None
+        rows = await fetch(conn, """
+            select v.subject, v.property, v.kind, v.message, v.statement_id, c.belief
+            from substrate.violations v join api.claims c on c.id = v.statement_id
+            where %(e)s::text is null or v.subject = %(e)s
+            order by v.subject, v.property, v.kind, v.message, v.statement_id""", {"e": iri})
+    return "\n".join(f"{short(s)} {short(p)} ({k}): {m} [statement {sid}, {cite(sid, b)}]"
+                     for s, p, k, m, sid, b in rows) or "none"
+
+
 # ------------------------------------------------------------------------------------------------ writing
 def time_value(v: str) -> dict:
     """'2026', '2026-11' or '2026-11-17' as Substrate's time value (its store's time_value)."""
@@ -499,10 +514,10 @@ async def deprecate(ctx: Context, statement: str, reason: str) -> str:
     return f"deprecated {cid}" if state == "applied" else pending(cs, state)
 
 
-TOOLS = ("search", "read", "expand", "locate", "path", "alternatives", "create_item", "say", "deprecate")
+TOOLS = ("search", "read", "expand", "locate", "path", "alternatives", "violations", "create_item", "say", "deprecate")
 INSTRUCTIONS = ("Substrate's store, answered from the knowledge kernel: entities with statements, references and quoted "
                 "evidence. search to find, read a page, expand to neighbours, locate the evidence, path and alternatives "
-                "over parts, roles and interfaces; create_item and say write your claims, with evidence; deprecate "
+                "over parts, roles and interfaces, violations for what breaks a property's constraints; create_item and say write your claims, with evidence; deprecate "
                 "withdraws one of yours. Every answer shows claim handles (#abcd1234) and their belief: cite them.")
 if os.environ.get("KK_PROFILE") == "substrate":   # stdio: the profile is known at start
     mcp._lowlevel_server.instructions = INSTRUCTIONS

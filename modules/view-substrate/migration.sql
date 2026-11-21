@@ -33,7 +33,7 @@ do $$ begin
     execute 'grant select on api.claim_references to kk_agent';
   end if;
 end $$;
--- Verdicts are read through api.verifications (the span watcher makes it; same definition).
+-- Verdicts are read through api.verifications (the span watcher and the constraints module make it; same definition).
 do $$ begin
   if to_regclass('api.verifications') is null then
     execute 'create view api.verifications with (security_invoker = true) as
@@ -147,6 +147,25 @@ where v.method = 'urn:kk:module:watcher-spans' and v.verdict = 'inconclusive'
   and not exists (select 1 from api.verifications w                  -- the latest verdict of the method decides
                   where w.claim_id = v.claim_id and w.method = v.method and w.recorded_at > v.recorded_at)
   and exists (select 1 from api.claims c where c.id = v.claim_id and c.status <> 'deprecated' and c.redacted_at is null);
+
+-- Constraint violations (D-108) -------------------------------------------------------------------------------
+-- What the constraints module has reported (method urn:kk:module:constraints-wikidata): a usable claim whose
+-- latest verdict from it is inconclusive, one row for each constraint it breaks, in the columns of Substrate's
+-- store.violation: the statement (the claim), its subject and property (IRIs), the constraint (the claim that
+-- states it), the kind (single-value, format, one-of or value-type) and the reason. Reported, never blocking.
+-- Empty where the module is not running. A claim that is no longer usable (a lower rank, deprecated) has none.
+create or replace view substrate.violations with (security_invoker = true) as
+select v.claim_id as statement_id, u.subject, u.predicate as property,
+       case when x ->> 'constraint' ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            then (x ->> 'constraint')::uuid end as constraint_id,
+       x ->> 'kind' as kind, x ->> 'message' as message
+from api.verifications v
+join substrate.usable u on u.id = v.claim_id
+cross join lateral jsonb_array_elements(case when jsonb_typeof(v.details -> 'violations') = 'array'
+                                             then v.details -> 'violations' else '[]'::jsonb end) x
+where v.method = 'urn:kk:module:constraints-wikidata' and v.verdict = 'inconclusive'
+  and not exists (select 1 from api.verifications w                  -- the latest verdict of the method decides
+                  where w.claim_id = v.claim_id and w.method = v.method and w.recorded_at > v.recorded_at);
 
 -- Labels ----------------------------------------------------------------------------------------------------
 -- The label of an IRI, else the IRI. A label with a language other than English comes after an English or
@@ -419,6 +438,6 @@ group by u.subject
 order by count(*) desc, 3;
 
 grant usage on schema substrate to kk_agent;
-grant select on substrate.usable, substrate.flag, substrate.entity, substrate.entity_text, substrate.wholes to kk_agent;
+grant select on substrate.usable, substrate.flag, substrate.violations, substrate.entity, substrate.entity_text, substrate.wholes to kk_agent;
 grant execute on all functions in schema substrate to kk_agent;
 reset role;

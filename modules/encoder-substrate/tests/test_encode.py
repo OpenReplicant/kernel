@@ -103,12 +103,36 @@ check("a statement with no reference is testimony, cites the statement, and is a
       unc["evidence_type"] == "testimony"
       and unc["references"] == [{"source_uri": "urn:kk:substrate:statement:10000000-0000-0000-0000-00000000000f"}]
       and finding("uncited-statement"))
-check("a statement on a property (a constraint) is a finding, skipped",
-      finding("statement-on-property") and not [o for o in claims if o["subject"].startswith(WDT)]) and not [o for o in claims if o["subject"].startswith(WDT)]
+def constraint(prop_iri, kind_iri):
+    return [o for o in claims if o["subject"] == prop_iri and o["predicate"] == WDT + "P2302" and o["object"].get("entity") == kind_iri]
+
+
+single, fmt = constraint(WDT + "P973", WD + "Q19474404"), constraint(WDT + "P973", WD + "Q21502404")
+vtype, oneof = constraint(WDT + "P527", WD + "Q21510865"), constraint(WDT + "P31", WD + "Q21510859")
+check("a constraint is a claim on the property's term, its kind an entity (Wikidata P2302)",
+      len(single) == len(fmt) == len(vtype) == len(oneof) == 1 and single[0].get("qualifiers") is None)
+check("a format constraint carries its pattern as a qualifier, never inside the value",
+      fmt[0]["qualifiers"] == {WDT + "P1793": "^https://.*"} and fmt[0]["object"] == {"entity": WD + "Q21502404"})
+check("a value-type constraint's classes are a list, a one-of's allowed values too (P2308, P2305)",
+      vtype[0]["qualifiers"] == {WDT + "P2308": [iri("Q12"), iri("Q13")]}
+      and oneof[0]["qualifiers"] == {WDT + "P2305": [SUB + "Role", SUB + "Interface", SUB + "Verdict"]})
+check("a constraint cites who stated it and has an evidence type, like any claim",
+      fmt[0]["evidence_type"] == "testimony" and fmt[0]["references"][0]["source_uri"].startswith("urn:kk:substrate:reference:"))
+check("a property's constraints are a change set of their own, keyed by the property, with no label claims",
+      sorted(i for i in by_item if i.startswith("P")) == ["P1", "P5", "P9"]
+      and change_set("P9", by_item["P9"])["idempotency_key"].startswith("substrate:P9:")
+      and all(o["predicate"] == WDT + "P2302" for o in by_item["P9"] if o["op"] == "add_claim") and len(by_item["P9"]) == 2)
+check("a constraint on a property with no key or no term is a finding, skipped",
+      sum(f["count"] for f in finding("constraint-on-unmapped-property")) == 2
+      and not [o for o in claims if o["subject"].startswith(WDT) and o["predicate"] != WDT + "P2302"])
+check("any other statement on a property is still a finding",
+      not [o for _, _, os_ in encode_store([e for e in E if e["kind"] == "property"], [dict(S[0], subject="P1", id="x")])[0] for o in os_]
+      and [f for f in encode_store(E, [dict(S[0], subject="P1", id="x")])[1] if f["finding"] == "statement-on-property"])
 check("every claim is attributed by the module, never 'extracted', and cites something",
       all(o["evidence_type"] != "extracted" and o["references"] for o in ops if o["op"] == "add_claim")
       and all(c["attributed_to"] == "urn:kk:agent:encoder-substrate" for c in (change_set(i, o) for i, _, o in sets)))
-check("counts", counts["entities"] == len(sets) == 8 and counts["properties"] == 16 and counts["skipped"] == 4 and counts["empty"] == 5)
+check("counts", counts["entities"] == 8 and counts["constrained"] == 3 and len(sets) == 11 and counts["properties"] == 19
+      and counts["skipped"] == 5 and counts["constraints"] == 4 and counts["empty"] == 9)
 
 # Idempotency and superseding.
 cs1, cs2 = change_set("Q10", by_item["Q10"]), change_set("Q10", copy.deepcopy(by_item["Q10"]))

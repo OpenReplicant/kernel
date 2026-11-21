@@ -46,9 +46,9 @@ REQUIRE_TOKEN = False  # set by the http entrypoint
 # tool, for operators, modules and the UI. The profile is chosen per login, not by the agent; it keeps an
 # agent's context small and is not a security boundary (Postgres decides what each role may do).
 PROFILES = {"memory": ("remember", "recall", "explain", "changes_since"),
-            # Substrate's own nine tools (D-105), answered from the kernel; registered as substrate__<name>
-            "substrate": ("search", "read", "expand", "locate", "path", "alternatives", "create_item", "say",
-                          "deprecate")}
+            # Substrate's own ten tools (D-105, D-108), answered from the kernel; registered as substrate__<name>
+            "substrate": ("search", "read", "expand", "locate", "path", "alternatives", "violations", "create_item",
+                          "say", "deprecate")}
 PREFIX = "substrate__"   # the substrate profile's tools are registered under it: the kernel has its own `search`
 ARGUMENTS = {"from": "from_"}   # a Python keyword cannot be a parameter's name; Substrate's `path` takes `from`
 
