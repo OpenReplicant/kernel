@@ -24,6 +24,17 @@ create index if not exists current_edge_subject on kernel.current_edge (subject,
 create index if not exists current_edge_object  on kernel.current_edge (object, predicate);
 create index if not exists current_edge_scope   on kernel.current_edge (scope);
 
+-- Applies (and redactions) run one at a time, from their start to their commit, under one lock only the kernel
+-- can take (agents hold SELECT only, which LOCK TABLE ... SHARE ROW EXCLUSIVE does not allow). One lock, taken
+-- first, means applies cannot deadlock on each other's edge rows, and it gives kernel.applied its commit order.
+-- Applies were already cheap SQL (validation runs before, outside); this trades their parallelism for that.
+create or replace function kernel.serialize() returns void
+language plpgsql security definer set search_path = kernel, pg_catalog as $$
+begin
+  lock table kernel.applied in share row exclusive mode;   -- self-conflicting; readers' ACCESS SHARE still reads
+end $$;
+revoke all on function kernel.serialize() from public;
+
 -- Recomputes one claim's edge from the claim and its latest status: inserted, updated or removed.
 create or replace function kernel.refresh_edge(p_claim uuid, p_change_set uuid) returns void
 language plpgsql security definer set search_path = kernel, pg_catalog as $$
@@ -31,8 +42,8 @@ declare
   c kernel.claim;
   s text;
 begin
-  -- one claim's edge at a time: a second status change waits, then reads the first's committed row
-  perform pg_advisory_xact_lock(hashtext('kernel.current_edge'), hashtext(p_claim::text));
+  -- no lock here: every caller holds kernel.serialize()'s (an apply, or a redaction), so edges change one
+  -- transaction at a time and a second change to a claim reads the first's committed row
   select * into c from kernel.claim where id = p_claim;
   s := kernel.current_status(p_claim);
   if c.id is null or c.object_entity is null or c.redacted_at is not null or s = 'deprecated' then
@@ -51,7 +62,14 @@ revoke all on function kernel.refresh_edge(uuid, uuid) from public;
 create or replace function kernel.edge_after_claim() returns trigger
 language plpgsql security definer set search_path = kernel, pg_catalog as $$
 begin
-  perform kernel.refresh_edge(new.id, case when tg_op = 'INSERT' then new.change_set end);
+  if tg_op = 'INSERT' then
+    if new.object_entity is not null then          -- a value claim has no edge: nothing to do, nothing to lock
+      perform kernel.refresh_edge(new.id, new.change_set);
+    end if;
+  else                                             -- the claim's only update is redaction
+    perform kernel.serialize();
+    perform kernel.refresh_edge(new.id, null);
+  end if;
   return null;
 end $$;
 
@@ -85,7 +103,8 @@ begin
   for r in select c.id from kernel.claim c
            where c.object_entity is not null and c.redacted_at is null
              and not exists (select 1 from kernel.current_edge e where e.claim_id = c.id) loop
-    perform kernel.refresh_edge(r.id, null);
+    perform kernel.refresh_edge(r.id, (select st.change_set from kernel.claim_status st where st.claim_id = r.id
+                                        order by st.recorded_at desc limit 1));
   end loop;
 end $$;
 
@@ -105,13 +124,12 @@ create table if not exists kernel.applied (
   applied_at   timestamptz not null
 );
 
--- The transaction lock makes numbering and commit happen in the same order: an apply numbered n+1 cannot
--- commit before n has, so a reader that has seen n never misses one numbered below it later. It is held from
--- the end of an apply (its last statement) to its commit.
+-- kernel.serialize()'s lock makes numbering and commit happen in the same order: an apply numbered n+1 cannot
+-- commit before n has, so a reader that has seen n never misses one numbered below it later.
 create or replace function kernel.change_set_number() returns trigger
 language plpgsql security definer set search_path = kernel, pg_catalog as $$
 begin
-  perform pg_advisory_xact_lock(hashtext('kernel.applied'));
+  perform kernel.serialize();                      -- already held since the apply began; taken again for safety
   insert into kernel.applied (change_set, target_scope, applied_at)
   values (new.id, new.target_scope, coalesce(new.applied_at, now()));
   return null;
@@ -121,6 +139,20 @@ drop trigger if exists change_set_number on kernel.change_set;
 create trigger change_set_number after update of status on kernel.change_set
   for each row when (new.status = 'applied' and old.status is distinct from 'applied')
   execute function kernel.change_set_number();
+
+-- Taken when a change set is about to be applied, before change_set_apply runs it (after-triggers fire in name
+-- order: change_set_a0_serialize, then change_set_apply), under the same condition as change_set_apply.
+create or replace function kernel.change_set_serialize() returns trigger
+language plpgsql security definer set search_path = kernel, pg_catalog as $$
+begin
+  perform kernel.serialize();
+  return null;
+end $$;
+revoke all on function kernel.change_set_serialize() from public;
+drop trigger if exists change_set_a0_serialize on kernel.change_set;
+create trigger change_set_a0_serialize after update of status on kernel.change_set
+  for each row when (new.status in ('valid','approved') and old.status is distinct from new.status)
+  execute function kernel.change_set_serialize();
 
 drop trigger if exists applied_immutable on kernel.applied;
 create trigger applied_immutable before update or delete on kernel.applied
@@ -136,7 +168,7 @@ grant select on kernel.applied to kk_agent;
 insert into kernel.applied (change_set, target_scope, applied_at)
 select c.id, c.target_scope, c.applied_at from kernel.change_set c
 where c.status = 'applied' and not exists (select 1 from kernel.applied a where a.change_set = c.id)
-order by c.applied_at, c.submitted_at, c.id;
+order by c.applied_at, c.submitted_at, c.ctid;   -- ctid: insertion order within one transaction, near enough
 
 -- What was applied after a cursor, in order: `select * from api.applied where seq > $1 order by seq`.
 create or replace view api.applied with (security_invoker = true) as

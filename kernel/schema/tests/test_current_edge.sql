@@ -151,6 +151,31 @@ select public.check((select bool_and(a.seq > b.seq) from kernel.applied a, kerne
 select public.check((select count(*) from kernel.applied) = (select count(*) from kernel.change_set where status = 'applied'),
                     'still one number per applied change set');
 select public.check(public.edges_match(), 'the edge table matches its definition at the end');
+select public.check(not exists (
+  select 1 from kernel.current_edge e join kernel.claim c on c.id = e.claim_id
+  where e.change_set <> coalesce((select st.change_set from kernel.claim_status st where st.claim_id = c.id
+                                  order by st.recorded_at desc limit 1), c.change_set)),
+  'each edge names the change set that last changed it (fresh and upgraded alike)');
+
+-- a large change set: value claims take no lock, so twenty-five thousand of them apply in one change set
+set role t_extractor;
+select public.t_cs('edge:big', 'urn:kk:scope:default', (select jsonb_agg(jsonb_build_object(
+  'op', 'add_claim', 'subject', 'ex:big/' || i, 'predicate', 'rdfs:label',
+  'object', jsonb_build_object('value', jsonb_build_object('@value', 'big ' || i)), 'evidence_type', 'deterministic',
+  'references', jsonb_build_array(jsonb_build_object('source_uri', 'https://example.org/big'))))
+  from generate_series(1, 25000) i)) as cs_big \gset
+reset role;
+set role t_validator;
+select public.check(api.record_validation(:'cs_big'::uuid, true) = 'applied', 'a change set of twenty-five thousand value claims applies');
+reset role;
+set role t_extractor;
+select public.t_cs('edge:bige', 'urn:kk:scope:default', (select jsonb_agg(public.t_link('b' || i, 'ex:bige/' || i, 'ex:bige/o'))
+  from generate_series(1, 3000) i)) as cs_bige \gset
+reset role;
+set role t_validator;
+select public.check(api.record_validation(:'cs_bige'::uuid, true) = 'applied', 'and one of three thousand entity claims');
+reset role;
+select public.check((select count(*) from kernel.current_edge where change_set = :'cs_bige'::uuid) = 3000, 'with an edge each');
 
 \o
 select 'CURRENT EDGE TESTS PASSED' as result;
