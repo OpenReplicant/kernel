@@ -92,6 +92,7 @@ kernel/
                  003_current_edge.sql                           ← v0.1: the edge table and applied order (D-109)
                  004_apply_retry_status_order.sql               ← v0.2: transient errors retried, status order (D-111)
                  005_touched.sql                                ← v0.3: api.touched, what each change set touched (D-112)
+                 006_replaced_by_scope.sql                      ← v0.4: set_status's replaced_by must be in the claim's scope (D-113)
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, activitystreams.ttl, org.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,

@@ -213,6 +213,14 @@ instead of marking it invalid; and a claim's current status is its last status r
 verified, with each claim's subject, entity object and scope, under the claims' clearance. A module that reacts to
 applies reads it with the change sets from `api.applied`. Each of the four tables it reads is indexed by change set.
 
+### 3.10 Kernel v0.4: `replaced_by` stays in the claim's scope (D-113)
+
+`006_replaced_by_scope.sql`: a `set_status` op that names a `replaced_by` must name a claim in the same scope as
+the claim it re-ranks (a claim added earlier in the same change set counts, since it is in the target scope).
+Otherwise apply raises KK040, as for the claim itself, and the change set is invalid. `api.claim_status` shows
+`replaced_by` to readers of the claim, so it may not name a claim they cannot read. Status rows written before
+this file are left as they are.
+
 ---
 
 ## 4. Identity, clearance, trust and budgets
