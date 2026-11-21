@@ -183,6 +183,23 @@ The kernel does not: compute belief, run SHACL, schedule anything, call models, 
 need any extension. Those are modules. If a feature seems to belong "in the core", it almost always
 belongs in a module that reads views and submits change sets.
 
+### 3.7 Kernel v0.1: the edge table and the applied order (D-86, D-87, D-109)
+
+The one change made to the frozen kernel, by the owner's decision (D-87 (a)), in `003_current_edge.sql`:
+
+- `kernel.current_edge`: one row per entity-valued claim that is neither deprecated nor redacted, kept in
+  step by triggers in the apply transaction and in redaction, read under the claims' row-level security
+  (`api.edges`). It is what a graph engine or a detector reads instead of filtering every claim.
+- `kernel.applied`: the order change sets were applied in, numbered in commit order, read under row-level
+  security by the change set's scope (`api.applied`). A reader keeps the last `seq` it handled as its cursor.
+
+Applies run one at a time, from their start to their commit, under a lock only the kernel can take; that is
+what keeps the edge table exact and the numbering in commit order. Numbers have gaps where a reader is not
+cleared, so a reader can count applies it cannot see, never read them. Edges carry valid time and are not
+filtered by it.
+
+The kernel still runs no module code in a write: detectors are a module reading `api.applied` (§3.6).
+
 ---
 
 ## 4. Identity, clearance, trust and budgets
