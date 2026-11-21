@@ -150,14 +150,14 @@ async def read(ctx: Context, id: str, all_ranks: bool = False) -> str:
             return f"no entity {id}"
         claims = await fetch(conn, """
             select c.id, substrate.label(c.predicate), substrate.fmt_value(c.object_entity, c.object_value),
-                   c.status, c.belief
+                   c.status, c.belief, (select f.reason from substrate.flag f where f.statement_id = c.id)
             from api.claims c
             where c.subject = %(e)s and c.redacted_at is null and not (c.predicate = any(%(labels)s))
               and (case when %(all)s then c.status in ('normal', 'preferred', 'deprecated')
                         else c.id in (select u.id from substrate.usable u where u.subject = %(e)s) end)
             order by 2, c.recorded_at, c.id limit 300""", {"e": iri, "labels": LABELS, "all": bool(all_ranks)})
     lines = [f"- {cite(c, b)}  {p}: {' '.join(str(v).split())[:80]}" + ("" if st == "normal" else f" ({st})")
-             for c, p, v, st, b in claims]
+             + (f" **flagged: {why}**" if why else "") for c, p, v, st, b, why in claims]
     return page.rstrip("\n") + ("\n\n## Claims\n\n" + "\n".join(lines) + "\n" if lines else "\n")
 
 
@@ -182,8 +182,10 @@ async def expand(ctx: Context, id: str) -> str:
 
 
 @tool("locate", "The evidence behind an entity's statements, or one statement (by its claim id or #handle): who stated "
-                "it, the source and quoted text it rests on, and each claim's belief. What the kernel does not keep "
-                "(a span's hash and whether its text has changed since, a parser's run, a rule's premises) is left out.")
+                "it, the source and quoted text it rests on, and each claim's belief. `flagged` is why the span watcher "
+                "doubts a claim (its span moved, changed or is gone; null when it does not), with where the text went "
+                "(`moved_to`, `found_at`). What the kernel does not keep (a span's hash, a parser's run, a rule's "
+                "premises) is left out.")
 async def locate(ctx: Context, target: str) -> str:
     async with connection(ctx) as conn:
         t = (target or "").strip()
@@ -193,14 +195,16 @@ async def locate(ctx: Context, target: str) -> str:
         rows = await fetch(conn, f"""
             select c.id, substrate.label(c.subject) || ' ' || substrate.label(c.predicate) || ' '
                          || substrate.fmt_value(c.object_entity, c.object_value),
-                   c.status, c.belief, r.source_uri, r.quote, r.span
+                   c.status, c.belief, r.source_uri, r.quote, r.span,
+                   (select f.reason from substrate.flag f where f.statement_id = c.id),
+                   (select f.details -> 'changed' from substrate.flag f where f.statement_id = c.id)
             from api.claims c join api.claim_references r on r.claim_id = c.id
             where {where} and c.redacted_at is null
             order by c.recorded_at, c.id, r.source_uri""", {"t": param, "labels": LABELS})
     out = []
-    for cid, says, rank, belief, uri, quote, span in rows:
+    for cid, says, rank, belief, uri, quote, span, why, changed in rows:
         ref = {"claim": str(cid), "handle": handle(cid), "belief": belief, "statement": str(cid), "says": says,
-               "rank": rank, "flagged": False}
+               "rank": rank, "flagged": why}
         m = REFERENCE.match(uri)
         if m:
             ref.update(reference=m.group(1), by=m.group(2), name=unquote(m.group(3)),
@@ -209,6 +213,12 @@ async def locate(ctx: Context, target: str) -> str:
             ref.update(by=None, name=uri)
         if span:
             ref["span"] = {"source": span.get("source"), "locator": span.get("value"), "text": quote}
+            # What the watcher found at this span: the store's `changed_since`, and where the text went.
+            hit = next((x for x in changed or [] if x.get("source") == span.get("source")
+                        and x.get("locator") == span.get("value")), None)
+            ref["span"]["changed_since"] = hit is not None
+            if hit:
+                ref["span"].update({k: hit[k] for k in ("why", "moved_to", "found_at") if k in hit})
         out.append(ref)
     return json.dumps(out, indent=1, default=str) if out else "no evidence found"
 

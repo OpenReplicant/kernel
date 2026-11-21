@@ -5,7 +5,7 @@
 -- answered from the claims encoder-substrate wrote (D-103), in the module's own schema `substrate`.
 --
 -- Only views and functions: no tables, no writes. Every view is `security_invoker` and every function `security
--- invoker`, and they read only `api.claims` and `api.claim_references`, so the kernel's row-level security applies
+-- invoker`, and they read only `api.claims`, `api.claim_references` and `api.verifications`, so the kernel's row-level security applies
 -- to whoever calls: a claim in a scope the caller may not read is not in any answer. Nothing here is `security
 -- definer`. Clearance comes from the default scope grants to kk_agent (kernel/schema/002_bootstrap.sql).
 --
@@ -31,6 +31,14 @@ do $$ begin
     execute 'create view api.claim_references with (security_invoker = true) as
              select claim_id, artifact, source_uri, quote, span from kernel.claim_reference';
     execute 'grant select on api.claim_references to kk_agent';
+  end if;
+end $$;
+-- Verdicts are read through api.verifications (the span watcher makes it; same definition).
+do $$ begin
+  if to_regclass('api.verifications') is null then
+    execute 'create view api.verifications with (security_invoker = true) as
+             select claim_id, verdict, method, run, details, recorded_at from kernel.verification';
+    execute 'grant select on api.verifications to kk_agent';
   end if;
 end $$;
 reset role;
@@ -118,6 +126,27 @@ from (
     and (c.valid_from is null or c.valid_from <= now()) and (c.valid_to is null or c.valid_to > now())
 ) x
 where x.rank = 'preferred' or not x.has_preferred;
+
+-- What the span watcher has flagged (D-106, D-107) -----------------------------------------------------------
+-- A current claim whose latest verdict from the watcher (method urn:kk:module:watcher-spans) is inconclusive: a
+-- span it cites moved, changed or is gone. `reason` is in the words of Substrate's store.flag; `details` is the
+-- watcher's verdict as recorded (`changed`: source, locator, why, and moved_to or found_at). Empty where the
+-- watcher is not running. Substrate's flag also follows premises; the kernel's truth maintenance does that
+-- (withdrawn premises), not this view.
+create or replace view substrate.flag with (security_invoker = true) as
+select v.claim_id as statement_id,
+       coalesce((select string_agg(distinct case x ->> 'why' when 'moved' then 'its span moved'
+                                                             when 'gone' then 'its span is gone'
+                                                             else 'its span changed' end, '; ')
+                 from jsonb_array_elements(case when jsonb_typeof(v.details -> 'changed') = 'array'
+                                                then v.details -> 'changed' else '[]'::jsonb end) x),
+                'its span changed') as reason,
+       v.details
+from api.verifications v
+where v.method = 'urn:kk:module:watcher-spans' and v.verdict = 'inconclusive'
+  and not exists (select 1 from api.verifications w                  -- the latest verdict of the method decides
+                  where w.claim_id = v.claim_id and w.method = v.method and w.recorded_at > v.recorded_at)
+  and exists (select 1 from api.claims c where c.id = v.claim_id and c.status <> 'deprecated' and c.redacted_at is null);
 
 -- Labels ----------------------------------------------------------------------------------------------------
 -- The label of an IRI, else the IRI. A label with a language other than English comes after an English or
@@ -237,7 +266,7 @@ create or replace function substrate.page(p_iri text, p_all_ranks boolean defaul
 language plpgsql stable set search_path = pg_catalog as $$
 declare
   out text; r record; q record; ref record; refs text[] := '{}'; n int; marks text; prev text;
-  hidden int; d text; al text[]; labels text[] := array[substrate.term('label'), substrate.term('description'),
+  hidden int; why text; d text; al text[]; labels text[] := array[substrate.term('label'), substrate.term('description'),
                                                          substrate.term('alt')];
 begin
   if not exists (select 1 from api.claims c where c.subject = p_iri and c.redacted_at is null) then
@@ -273,10 +302,12 @@ begin
       if n is null then refs := refs || ref.source_uri; n := cardinality(refs); end if;
       marks := marks || format('[%s]', n);
     end loop;
-    out := out || format(E'- %s%s%s\n',
+    select f.reason into why from substrate.flag f where f.statement_id = r.id;
+    out := out || format(E'- %s%s%s%s\n',
                          replace(substrate.fmt_value(r.object_entity, r.object_value), E'\n', E'\n  '),
                          case when r.status <> 'normal' then format(' (%s)', r.status) else '' end,
-                         case when marks <> '' then ' ' || marks else '' end);
+                         case when marks <> '' then ' ' || marks else '' end,
+                         case when why is not null then format(' **flagged: %s**', why) else '' end);
     for q in select substrate.label(k.key) as qlabel, k.key as qprop, v.value, v.n
              from jsonb_each(r.qualifiers) k, lateral substrate.qvals(r.qualifiers, k.key) v
              order by 1, 2, 4 loop
@@ -331,8 +362,8 @@ language sql stable set search_path = pg_catalog as $$
   order by 3 desc, 2 $$;
 
 -- A whole, its parts to any depth with the role each plays, the interfaces roles require and parts provide, and
--- what else could fill each role: the columns and kinds of Substrate's store.map. `flagged` (a statement resting
--- on a changed span) has no source in the claims yet: it is false.
+-- what else could fill each role: the columns and kinds of Substrate's store.map. `flagged`: the edge's statement
+-- rests on a span the watcher found changed (substrate.flag); the derived edges have no statement and are not.
 create or replace function substrate.map(p_whole text, p_depth int default 6)
 returns table (source text, target text, kind text, statement uuid, flagged boolean)
 language sql stable set search_path = pg_catalog as $$
@@ -351,7 +382,7 @@ language sql stable set search_path = pg_catalog as $$
   cand as (
     select a.entity, r.role from role r, lateral substrate.alternatives(r.role) a
     where a.entity not in (select e from holder)
-  ), edge as (
+  ), edge (source, target, kind, statement) as (
     select whole, part, 'has-part', st from part
     union all select part, role, 'plays', null::uuid from plays
     union all select u.subject, u.object_entity, 'requires', u.id from substrate.usable u
@@ -362,7 +393,8 @@ language sql stable set search_path = pg_catalog as $$
         and (u.subject in (select e from holder) or u.subject in (select entity from cand))
     union all select entity, role, 'could-fill', null::uuid from cand
   )
-  select distinct e.*, false from edge e $$;
+  select distinct e.source, e.target, e.kind, e.statement, f.statement_id is not null
+  from edge e left join (select statement_id from substrate.flag) f on f.statement_id = e.statement $$;
 
 create or replace function substrate.map_nodes(p_whole text, p_depth int default 6)
 returns table (id text, label text, description text, kind text)
@@ -387,6 +419,6 @@ group by u.subject
 order by count(*) desc, 3;
 
 grant usage on schema substrate to kk_agent;
-grant select on substrate.usable, substrate.entity, substrate.entity_text, substrate.wholes to kk_agent;
+grant select on substrate.usable, substrate.flag, substrate.entity, substrate.entity_text, substrate.wholes to kk_agent;
 grant execute on all functions in schema substrate to kk_agent;
 reset role;

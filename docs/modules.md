@@ -43,7 +43,7 @@ Terms are CURIEs of the vocabulary packs (`ontology/packs.yaml`); ops are change
 
 | Module | Slots | Takes in | Gives out | Runs on |
 | --- | --- | --- | --- | --- |
-| **view-substrate** 0.1.0<br>Substrate read model | read-model | `wdt:P527` (has part) with the qualifier wdt:P3831 (object of statement has role)<br>`substrate:requiresInterface`<br>`substrate:providesInterface`<br>`rdfs:label` (items in Substrate's namespaces)<br>`dcterms:description`<br>`skos:altLabel` | `application/sql` (views and functions in schema substrate: usable, entity, entity_text, wholes, label, search, page, map, map_nodes, alternatives) | — |
+| **view-substrate** 0.2.0<br>Substrate read model | read-model | `wdt:P527` (has part) with the qualifier wdt:P3831 (object of statement has role)<br>`substrate:requiresInterface`<br>`substrate:providesInterface`<br>`rdfs:label` (items in Substrate's namespaces)<br>`dcterms:description`<br>`skos:altLabel` | `application/sql` (views and functions in schema substrate: usable, flag, entity, entity_text, wholes, label, search, page, map, map_nodes, alternatives) | — |
 
 ## Actuators
 
