@@ -108,10 +108,10 @@ begin
 
   select count(distinct subject) into n from kernel.claim
   where predicate = kernel.expand('rdf:type') and object_entity = kernel.expand('kk:Slot');
-  if n <> 42 then
-    raise exception 'T3: expected 42 slot entities, found %', n;
+  if n <> 43 then
+    raise exception 'T3: expected 43 slot entities, found %', n;
   end if;
-  raise notice 'ok: 42 slot entities';
+  raise notice 'ok: 43 slot entities';
 
   select count(*) into n from kernel.claim c
   where c.change_set in (select id from kernel.change_set where idempotency_key like 'pack:%')

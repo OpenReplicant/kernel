@@ -6,7 +6,8 @@ description: 'Lists what the organisation and process maps people describe still
   nobody does, a step with nothing after or before it, a post nobody holds, a post that reports to no one
   while another does not either, a post in no unit. Each gap is an oa:Annotation whose body is the
   question to ask next, derived from the claims that put its target on the map; once answered, it is
-  retracted. The interviewer skill asks about these.'
+  retracted. The interviewer skill asks about these. Runs as a detector (D-110): the detector engine feeds
+  it from a cursor over what the kernel applied, and each gap that forms or dissolves is an event.'
 license: Apache-2.0
 kind: processor
 slots:
@@ -29,6 +30,8 @@ runtime:
   env:
     DATABASE_URL: the module's own login, or one that may SET ROLE kkm_map_gaps
     KK_SWEEP_SECONDS: sweep interval (default 30)
+requires:
+- slot: detector
 accepts:
 - 'bbo:has_container (steps extracted from what people said)'
 - bbo:has_nextFlowNode
@@ -44,16 +47,8 @@ produces:
 - set_status
 - 'oa:Annotation (a gap: dcterms:type urn:kk:gap-kind:*, oa:hasTarget the step or post, oa:bodyValue the question)'
 triggers:
-- type: pattern
-  spec: '? bbo:has_container ?'
-- type: pattern
-  spec: '? bbo:has_nextFlowNode ?'
-- type: pattern
-  spec: '? bbo:has_resource ?'
-- type: pattern
-  spec: '? org:* ?'
-- type: pattern
-  spec: '? rdf:type org:Post'
+- type: notify
+  spec: kernel_change_set
 - type: schedule
   spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
 mcp:

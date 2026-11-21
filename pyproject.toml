@@ -34,7 +34,7 @@ packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encod
             "verifier_quotes", "evaluator", "process_learner", "interaction_encoder",
             "map_gaps", "truth_maintenance", "memory_extractor", "encoder_morphogen",
             "encoder_backstage", "map_drift", "encoder_substrate", "watcher_spans",
-            "constraints_wikidata"]
+            "constraints_wikidata", "detectors"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -64,3 +64,4 @@ map_drift = "modules/map-drift/map_drift"
 encoder_substrate = "modules/encoder-substrate/encoder_substrate"
 watcher_spans = "modules/watcher-spans/watcher_spans"
 constraints_wikidata = "modules/constraints-wikidata/constraints_wikidata"
+detectors = "modules/detectors/detectors"
