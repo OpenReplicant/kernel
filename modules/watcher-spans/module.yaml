@@ -1,0 +1,45 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:watcher-spans
+name: Span watcher
+version: 0.1.0
+description: 'Flags the claims that cite a file span which has changed (D-106), with no model call. A claim
+  whose reference pins a line range of a file: source (the span''s source and line locator, the quote as
+  the pinned text) is checked against the file under the source roots: unchanged, moved (the text is now at
+  one other place, which the verdict names), changed, or the file is gone. A moved, changed or gone span
+  gives every claim citing it the verdict inconclusive; when every span it cites is as pinned again,
+  supported. The latest verdict of this method decides, so running again over an unchanged tree submits
+  nothing. Writes no claims and deletes nothing. Substrate''s store did this as stale_file_spans.'
+license: Apache-2.0
+kind: processor
+slots:
+- verifier
+protected: false
+agent:
+  iri: urn:kk:agent:watcher-spans
+  db_role: kkm_watcher_spans
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m watcher_spans
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_watcher_spans (kk_authenticator)
+    KK_SOURCE_ROOTS: 'directories where file: sources resolve, separated like PATH (default the working directory)'
+    KK_SWEEP_SECONDS: longest wait between passes (default 30)
+accepts:
+- 'claim (with a quoted reference whose span is a line range of a file: source)'
+produces:
+- add_verification
+triggers:
+- type: notify
+  spec: kernel_change_set
+- type: schedule
+  spec: every KK_SWEEP_SECONDS
+mcp:
+  expose: []
+migration: migration.sql

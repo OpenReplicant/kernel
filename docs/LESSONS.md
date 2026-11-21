@@ -180,3 +180,5 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   (the first never sees the validator's work). Finish the run only once the change set is applied (D-105).
 - The kernel has no counter for new ids and a caller sees only its own scopes, so `max(id) + 1` can hand two agents
   the same id and merge two items. Use something that cannot collide (microseconds since the epoch) (D-105).
+- `cur.execute(sql)` with no parameters sends the text as written, so a literal `%` in it stays `%`; with parameters it must be `%%`. A `like 'file:%%'` in a parameterless query matched nothing and the watcher saw no claims (D-106).
+- A module that compares a source over time (a file, a page) takes its verdict back when the source returns: decide on the latest verdict of one method, as truth-maintenance does, so a pass over an unchanged tree submits nothing (D-106).
