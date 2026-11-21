@@ -1,14 +1,14 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:view-substrate
 name: Substrate read model
-version: 0.1.0
+version: 0.2.0
 description: 'Substrate''s read model over the claims encoder-substrate writes (D-103), as SQL in its own
   schema `substrate`: usable (per subject and property the preferred claims if any, else the normal ones,
   never deprecated), label, search over labels, aliases and page text, page (an item as Markdown in the layout
   of Substrate''s own pages), map, map_nodes and alternatives (a whole, its parts and roles, the interfaces
   they require and provide, what else could fill a role). Only views and functions, all security invoker, over
-  api.claims and api.claim_references: a claim in a scope the reader is not cleared for is in no answer.
-  Reads only; the writes and constraint checks stay in Substrate (D-104).'
+  api.claims, api.claim_references and api.verifications: a claim in a scope the reader is not cleared for is in no answer.
+  A claim the span watcher flagged (D-106) shows as flagged in page and map (D-107). Reads only; the writes and constraint checks stay in Substrate (D-104).'
 license: Apache-2.0
 kind: decoder
 slots:
@@ -33,5 +33,5 @@ accepts:
 - 'dcterms:description'
 - 'skos:altLabel'
 produces:
-- 'application/sql (views and functions in schema substrate: usable, entity, entity_text, wholes, label, search, page, map, map_nodes, alternatives)'
+- 'application/sql (views and functions in schema substrate: usable, flag, entity, entity_text, wholes, label, search, page, map, map_nodes, alternatives)'
 migration: migration.sql

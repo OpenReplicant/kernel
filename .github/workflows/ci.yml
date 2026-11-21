@@ -157,6 +157,8 @@ jobs:
         run: KK_REQUIRE_UI=1 KK_REQUIRE_DENSE=1 sh scripts/smoke_kernel.sh
       - name: The span watcher on a kernel (D-106)
         run: python modules/watcher-spans/tests/test_watch.py
+      - name: What the watcher flags, in the read model and the substrate tools (D-107)
+        run: python modules/view-substrate/tests/test_flagged.py
       - name: kernel-mcp alone installs as a package with its two commands
         run: |
           python -m venv /tmp/mcp-only

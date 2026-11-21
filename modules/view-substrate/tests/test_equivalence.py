@@ -247,7 +247,7 @@ def main():
     check("map: all five edge kinds occur in the fixture", kinds == {"has-part", "plays", "requires", "provides", "could-fill"}, str(kinds))
     check(f"alternatives: the same candidates, fills_now, wholes and interfaces for {len(items)} roles "
           f"({alts} with candidates)", not alt_bad, str(alt_bad[:2]))
-    check("map: flagged is false (no source in the claims yet)",
+    check("map: flagged is false (the watcher has judged nothing)",
           not any(r["flagged"] for w in items for r in q(rd, "select flagged from substrate.map(%s, 6)", iri[w])))
 
     # ---- search -------------------------------------------------------------------------------------------
