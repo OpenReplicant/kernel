@@ -171,3 +171,12 @@ tools here were checked by experiment (details in `docs/spikes/` and the decisio
   scope to hold its own row on the default scope too (D-90).
 - Any feature that links claims across scopes (derivations, replacements) must be checked against
   `kk export` / `kk import`: import installs per scope and must order by dependency (D-90).
+- Two tools with one name (the kernel's `search` and Substrate's) cannot both be registered. The substrate profile
+  registers its tools as `substrate__<name>` and renames them in the tool list and the call (`KernelServer`); a
+  Python keyword (`from`, Substrate's `path` argument) is renamed the same way, in the schema and the call. Check a
+  new profile with `list_tools` over stdio, not only by calling the functions (D-105).
+- A tool that writes through a change set cannot answer with the claim's id when it returns: the validator applies it
+  after the transaction commits. Submit in one transaction, then poll `api.change_sets` and `api.claims` in a second
+  (the first never sees the validator's work). Finish the run only once the change set is applied (D-105).
+- The kernel has no counter for new ids and a caller sees only its own scopes, so `max(id) + 1` can hand two agents
+  the same id and merge two items. Use something that cannot collide (microseconds since the epoch) (D-105).

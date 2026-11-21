@@ -1,8 +1,11 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:kernel-mcp
 name: Kernel MCP server
-version: 0.8.0
-description: 'Agent-facing MCP tools over the api schema, in two profiles chosen per login (M6-T1): memory
+version: 0.9.0
+description: 'Agent-facing MCP tools over the api schema, in three profiles chosen per login (M6-T1, D-105): substrate
+  (Substrate''s own nine store tools, answered from the kernel through view-substrate: search, read, expand, locate,
+  path, alternatives, create_item, say, deprecate; the writes are change sets in the claim shapes encoder-substrate
+  makes), memory
   (remember, recall, explain, changes_since: one-sentence memories and cited briefings with who said what and
   its belief, also as MCP resources) and operator (every tool): search, get entity, query claims, explain, submit
   change set, start/finish run, list slots and modules; whoami, change sets, the review queue and review
@@ -25,7 +28,8 @@ runtime:
   env:
     DATABASE_URL: 'stdio: the agent''s own login; http: kk_authenticator'
     KK_JWT_SECRET: http mode (python -m kernel_mcp --http) only
-    KK_PROFILE: 'stdio: memory (four tools) or operator (every tool, the default); http: the token''s profile claim'
+    KK_PROFILE: 'stdio: memory (four tools), substrate (Substrate''s nine) or operator (every tool, the default); http: the token''s profile claim'
+    KK_SUBSTRATE_SCOPE: the scope the substrate profile writes to (default urn:kk:scope:default)
     KK_MEMORY_SCOPE: the scope remember writes to (default urn:kk:scope:default)
 requires:
 - slot: identity
@@ -50,6 +54,14 @@ mcp:
   - list_slots
   - list_modules
   - list_runs
+  - read
+  - expand
+  - locate
+  - path
+  - alternatives
+  - create_item
+  - say
+  - deprecate
   read_only: false
 skill: SKILL.md
 accepts:
