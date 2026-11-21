@@ -45,7 +45,12 @@ REQUIRE_TOKEN = False  # set by the http entrypoint
 # The tools each profile shows (D-85, M6-T1). An agent's door is `memory`: four tools. `operator` is every
 # tool, for operators, modules and the UI. The profile is chosen per login, not by the agent; it keeps an
 # agent's context small and is not a security boundary (Postgres decides what each role may do).
-PROFILES = {"memory": ("remember", "recall", "explain", "changes_since")}
+PROFILES = {"memory": ("remember", "recall", "explain", "changes_since"),
+            # Substrate's own nine tools (D-105), answered from the kernel; registered as substrate__<name>
+            "substrate": ("search", "read", "expand", "locate", "path", "alternatives", "create_item", "say",
+                          "deprecate")}
+PREFIX = "substrate__"   # the substrate profile's tools are registered under it: the kernel has its own `search`
+ARGUMENTS = {"from": "from_"}   # a Python keyword cannot be a parameter's name; Substrate's `path` takes `from`
 
 
 class KernelServer(MCPServer):
@@ -54,7 +59,7 @@ class KernelServer(MCPServer):
     @staticmethod
     def allowed(profile: str) -> tuple[str, ...] | None:
         if profile != "operator" and profile not in PROFILES:
-            raise KernelError(f"unknown profile {profile!r}: memory or operator")
+            raise KernelError(f"unknown profile {profile!r}: memory, substrate or operator")
         return PROFILES.get(profile)
 
     async def _handle_list_tools(self, ctx, params):
@@ -63,15 +68,32 @@ class KernelServer(MCPServer):
             allowed = self.allowed(caller(Context(request_context=ctx, mcp_server=self))[1])
         except KernelError:
             allowed = PROFILES["memory"]   # no valid token: list the small door; calls are refused anyway
+        if allowed is PROFILES.get("substrate"):   # Substrate's names and argument names
+            result.tools = [t.model_copy(update={"name": t.name[len(PREFIX):], "input_schema": public_schema(t.input_schema)})
+                            for t in result.tools if t.name.startswith(PREFIX)]
+            return result
+        result.tools = [t for t in result.tools if not t.name.startswith(PREFIX)]
         if allowed is not None:
             result.tools = [t for t in result.tools if t.name in allowed]
         return result
 
     async def call_tool(self, name, arguments, context=None):
         allowed = self.allowed(caller(context)[1])
-        if allowed is not None and name not in allowed:
-            raise KernelError(f"{name} is not in your profile; your tools: {', '.join(allowed)}")
+        if allowed is not None and name not in allowed or name.startswith(PREFIX):
+            raise KernelError(f"{name} is not in your profile; your tools: {', '.join(allowed or ())}")
+        if allowed is PROFILES["substrate"]:
+            name, arguments = PREFIX + name, {ARGUMENTS.get(k, k): v for k, v in arguments.items()}
         return await super().call_tool(name, arguments, context)
+
+
+def public_schema(schema: dict) -> dict:
+    """A substrate tool's input schema with the argument names Substrate's agent writes."""
+    back = {v: k for k, v in ARGUMENTS.items()}
+    schema = dict(schema)
+    schema["properties"] = {back.get(k, k): v for k, v in schema.get("properties", {}).items()}
+    if "required" in schema:
+        schema["required"] = [back.get(k, k) for k in schema["required"]]
+    return schema
 
 
 mcp = KernelServer(
@@ -335,3 +357,4 @@ async def graph(ctx: Context, module: str | None = None, slot: str | None = None
 
 
 from . import memory  # noqa: E402,F401  the memory profile's tools (they use what is defined above)
+from . import substrate  # noqa: E402,F401  the substrate profile's tools (D-105)

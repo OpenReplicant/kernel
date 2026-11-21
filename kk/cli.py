@@ -335,8 +335,8 @@ def main(argv=None) -> None:
     p = sub.add_parser("token", help="bearer token for MCP over HTTP (needs KK_JWT_SECRET)")
     p.add_argument("role")
     p.add_argument("--days", type=float, default=30)
-    p.add_argument("--profile", choices=("memory", "operator"),
-                   help="the MCP tools the token shows: memory (four) or operator (every tool; the default)")
+    p.add_argument("--profile", choices=("memory", "operator", "substrate"),
+                   help="the MCP tools the token shows: memory (four), substrate (Substrate's nine) or operator (every tool; the default)")
     p.set_defaults(fn=cmd_token)
     a = ap.parse_args(argv)
     a.fn(a)
