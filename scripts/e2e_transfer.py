@@ -14,7 +14,8 @@ from collections import Counter
 from pathlib import Path
 
 import psycopg
-from rdflib import Dataset
+from rdflib import Dataset, URIRef
+from rdflib.namespace import DCTERMS
 
 from kk.transfer import read
 
@@ -54,6 +55,26 @@ def records(path: Path) -> tuple[Counter, set]:
     return out, {json.dumps(a, sort_keys=True) for a in artifacts.values()}
 
 
+def cross_scope(first: Path, out: Path) -> tuple[str, str]:
+    """A copy of the export where one claim with a status names a claim in another scope as its replacement,
+    as a status row written before D-113 could. Returns the claim and the replacement."""
+    ds = Dataset()
+    ds.parse(first, format="nquads")
+    claims = {}
+    for g in ds.graphs():
+        for c in g.subjects(DCTERMS.type, None):
+            if str(c).startswith("urn:kk:claim:"):
+                claims.setdefault(str(g.identifier), []).append((g, c))
+    status = URIRef("http://www.w3.org/ns/adms#status")
+    with_status = [(g, c) for cs in claims.values() for g, c in cs if (c, status, None) in g]
+    g, c = with_status[0]
+    other = next(o for scope, cs in sorted(claims.items()) if scope != str(g.identifier) for _, o in cs)
+    g.remove((c, DCTERMS.isReplacedBy, None))
+    g.add((c, DCTERMS.isReplacedBy, other))
+    ds.serialize(out, format="nquads")
+    return str(c), str(other)
+
+
 def main() -> int:
     src, dst = os.environ.get("KK_SMOKE_DB", "kk_smoke"), os.environ.get("KK_SMOKE_DB", "kk_smoke") + "_copy"
     with tempfile.TemporaryDirectory() as tmp:
@@ -78,6 +99,18 @@ def main() -> int:
         check("statuses survive (deprecated, superseded with a replacement)",
               any('"deprecated", "superseded"' in k and not k.endswith("null]") for k in b), "")
         check("importing the same file again changes nothing", count(dst) == before, f"{before} claims")
+        # A status row from before D-113 whose replacement is in another scope: import keeps the status
+        # and drops the replacement, instead of failing the scope's statuses with KK040.
+        forged = Path(tmp) / "c.nq"
+        claim, other = cross_scope(first, forged)
+        subprocess.run(["dropdb", "--if-exists", dst], check=True)
+        subprocess.run(["createdb", dst], check=True)
+        kk(dst, "init", "--no-packs")
+        again = json.loads(kk(dst, "import", str(forged)))
+        check("a replacement in another scope (from before D-113) is dropped on import, the statuses kept",
+              again["replacements_dropped"] == done["replacements_dropped"] + 1
+              and again["statuses"] == done["statuses"] and count(dst) == before,
+              f"{claim} -> {other}: {again}")
         subprocess.run(["dropdb", "--if-exists", dst], check=True)
     print("T19 export/import", "passed" if all(checks) else "FAILED", f"({sum(checks)}/{len(checks)})")
     return 0 if all(checks) else 1
