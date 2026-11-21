@@ -102,6 +102,8 @@ jobs:
       - name: Span watcher tests (D-106)
         run: |
           python modules/watcher-spans/tests/test_check.py
+      - name: Property constraint checks (D-108)
+        run: python modules/constraints-wikidata/tests/test_check.py
       - name: Memory extractor tests (M6-T4)
         run: python modules/memory-extractor/tests/test_extract.py
       - name: Generated pack migration is up to date
@@ -159,6 +161,8 @@ jobs:
         run: python modules/watcher-spans/tests/test_watch.py
       - name: What the watcher flags, in the read model and the substrate tools (D-107)
         run: python modules/view-substrate/tests/test_flagged.py
+      - name: Property constraints on a kernel, reported and cleared, in the read model and the substrate tools (D-108)
+        run: python modules/constraints-wikidata/tests/test_constraints.py
       - name: kernel-mcp alone installs as a package with its two commands
         run: |
           python -m venv /tmp/mcp-only

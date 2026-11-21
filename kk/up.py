@@ -263,7 +263,7 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--no-scan", action="store_true", help="connect the project without reading its contents")
     ap.add_argument("--profile", choices=("memory", "operator", "substrate"), default="memory",
                     help="the agent's MCP tools: memory (four: remember, recall, explain, changes_since; default)"
-                         ", substrate (Substrate's nine tools: search, read, expand, locate, path, alternatives, create_item, say, deprecate) or operator (every tool)")
+                         ", substrate (Substrate's ten tools: search, read, expand, locate, path, alternatives, violations, create_item, say, deprecate) or operator (every tool)")
     ap.add_argument("--commands-dir", type=Path, help="write the harness's kernel-mcp, kernel-mcp-hook and kernel-mcp-cue"
                     " commands as this folder's (wrappers); also KK_COMMANDS_DIR")
     a = ap.parse_args(argv)

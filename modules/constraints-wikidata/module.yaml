@@ -1,0 +1,47 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:constraints-wikidata
+name: Wikidata property constraints
+version: 0.1.0
+description: 'Reports the claims that break a property constraint (D-108), with no model call. A constraint is a
+  claim on a property''s term (wdt:P2302) whose object is the kind and whose parameters are qualifiers, as
+  Wikidata states them and encoder-substrate carries them: single-value (Q19474404), format (Q21502404, pattern
+  P1793), one-of (Q21510859, values P2305) and value-type (Q21510865, classes P2308, instance of then subclass
+  of). It reads the constraints and the claims in force (by Wikidata''s rank rule) through view-substrate and
+  gives each claim that breaks one the verdict inconclusive, with the constraint, its kind and the reason in
+  the details; when it no longer does, supported. A report, never a block: Wikidata''s rule, and not a
+  refutation, so it does not cap belief. The latest verdict of this method decides, so running again over an
+  unchanged kernel submits nothing. Writes no claims and deletes nothing. Substrate''s store did this as
+  store.violation.'
+license: Apache-2.0
+kind: processor
+slots:
+- verifier
+protected: false
+agent:
+  iri: urn:kk:agent:constraints-wikidata
+  db_role: kkm_constraints_wikidata
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m constraints_wikidata
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_constraints_wikidata (kk_authenticator)
+    KK_SWEEP_SECONDS: longest wait between passes (default 30)
+accepts:
+- 'claim (on a property constrained by a wdt:P2302 claim; reads the substrate.usable view)'
+produces:
+- add_verification
+triggers:
+- type: notify
+  spec: kernel_change_set
+- type: schedule
+  spec: every KK_SWEEP_SECONDS
+mcp:
+  expose: []
+migration: migration.sql

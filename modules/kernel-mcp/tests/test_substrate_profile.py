@@ -6,8 +6,9 @@ throwaway kernel (`kk init`, `kk serve --only validator`) takes it through encod
 MCP server, in the substrate profile and as a harness agent's own login (stdio), answers what Substrate's
 `store.mcp.Server` answers, and writes what it writes:
 
-  - the profile lists Substrate's nine tools with its argument names (`from` of path included), refuses every
+  - the profile lists Substrate's ten tools with its argument names (`from` of path included), refuses every
     other tool, and the memory and operator profiles do not list them
+  - violations (D-108) lists what Substrate's tool lists, by subject and kind, each with a claim handle and belief
   - search, read, expand, locate, path and alternatives answer like the store (ids, labels, ranks, references,
     the path's length), plus claim handles and belief
   - create_item, say and deprecate, run on the kernel through MCP and on the store through Substrate's server then
@@ -157,8 +158,8 @@ async def run(kenv: dict, agent_url: str):
 
         # ---- the profile -------------------------------------------------------------------------------
         tools = {t.name: t for t in (await session.list_tools()).tools}
-        check("profile: Substrate's nine tools, nothing else", set(tools) == set(sub.TOOLS) == {
-            "search", "read", "expand", "locate", "path", "alternatives", "create_item", "say", "deprecate"},
+        check("profile: Substrate's ten tools, nothing else", set(tools) == set(sub.TOOLS) == {
+            "search", "read", "expand", "locate", "path", "alternatives", "violations", "create_item", "say", "deprecate"},
               f"{sorted(tools)}")
         arg = lambda n: set(tools[n].input_schema["properties"])  # noqa: E731
         want = {t["name"]: set(t["inputSchema"]["properties"]) for t in STORE_TOOLS}
@@ -284,6 +285,31 @@ async def run(kenv: dict, agent_url: str):
                   f"\nours {ours}\nstore {theirs}")
         check("alternatives: candidates cite the claims that say they provide the interface",
               all("[#" in x for x in (await k("alternatives", role=vindex)).splitlines()))
+
+        # ---- violations: what the constraints module reported, against the store's tool (D-108) ---------------------
+        subprocess.run([eq.PY, str(ROOT / "modules/view-substrate/tests/make_constraints_store.py"), store_db], check=True,
+                       env={**os.environ, "PYTHONPATH": eq.SUBSTRATE}, capture_output=True)
+        eq.encode(kenv)
+        eq.wait_applied(kadmin)
+        from constraints_wikidata.__main__ import one_pass
+        from kk.lib import connect
+        with connect("kkm_constraints_wikidata", url=eq.url("kk_authenticator", eq.PW, eq.KDB)) as mod:
+            one_pass(mod)
+        eq.wait_applied(kadmin)
+        parse = lambda x: re.match(r"(\S+) \S+ \((\S+)\): ", x).groups()  # noqa: E731  (subject, kind)
+        ours, theirs = (await k("violations")).splitlines(), st("violations").splitlines()
+        check(f"violations: the same {len(theirs)} lines as the store's tool, by subject and kind",
+              len(theirs) >= 8 and sorted(map(parse, ours)) == sorted(map(parse, theirs)), f"\nours {ours}\nstore {theirs}")
+        check("violations: every line ends with the statement's claim and its handle and belief",
+              all(re.search(r"\[statement [0-9a-f-]{36}, #[0-9a-f]{8} belief [\d.-]+\]$", x) for x in ours), str(ours[:2]))
+        cx = {k_: i for i, k_ in sconn.execute("select id, key from store.entity where key like 'cx:%%'").fetchall()}
+        for key in ("cx:x", "cx:y", "cx:whole"):
+            a, b = (await k("violations", id=cx[key])).splitlines(), st("violations", id=cx[key]).splitlines()
+            check(f"violations {key}: the same lines for one entity", sorted(map(parse, a)) == sorted(map(parse, b)) and len(b) > 0, f"{a} {b}")
+        by_label = (await k("violations", id="Constrained thing")).splitlines()
+        check("violations: an entity can be named by its label", sorted(map(parse, by_label)) == sorted(map(parse, st("violations", id=cx["cx:x"]).splitlines())))
+        check("violations: an entity with none says none, as the store does",
+              await k("violations", id=cx["cx:class"]) == st("violations", id=cx["cx:class"]) == "none")
 
         # ---- writing, the same on both sides, then the encoder's claims against ours -----------------------------
         ev = {"source": "file:docs/ledger.md", "locator": "L4-5", "quote": "The Quokka ledger is reconciled every night."}

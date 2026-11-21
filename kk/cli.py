@@ -45,7 +45,7 @@ from psycopg import sql
 ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parents[1])
 NAME = re.compile(r"^[a-z][a-z0-9-]{0,40}$")
 WORKERS = ("validator", "belief", "recall", "quotes", "tms")
-OPTIONAL = ("dense", "conformance", "learner", "gaps", "extract", "observer", "drift", "spans")   # opt in: dense needs pgvector and fastembed
+OPTIONAL = ("dense", "conformance", "learner", "gaps", "extract", "observer", "drift", "spans", "constraints")   # opt in: dense needs pgvector and fastembed
                                                          # (D-61); the process loop (D-50, D-76) for kernels holding
                                                          # processes; the map gaps an interviewer asks about (M5-T4);
                                                          # the memory extractor needs a model endpoint (M6-T4);
@@ -180,6 +180,8 @@ def worker(name: str):
         from truth_maintenance.__main__ import main
     elif name == "spans":
         from watcher_spans.__main__ import main
+    elif name == "constraints":
+        from constraints_wikidata.__main__ import main
     elif name == "conformance":
         from conformance.__main__ import main as loop
         return lambda: loop([])   # no command-line arguments of its own here
@@ -324,7 +326,7 @@ def main(argv=None) -> None:
             p.add_argument("--steward", action="store_true", help="may also redact")
         p.set_defaults(fn=fn)
     p = sub.add_parser("serve", help="MCP over HTTP + validator + belief")
-    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, tms, spans, dense, conformance, learner, gaps, extract, observer, drift (default: the first six)")
+    p.add_argument("--only", help="comma-separated parts: mcp, validator, belief, recall, quotes, tms, spans, dense, conformance, learner, gaps, extract, observer, drift, constraints (default: the first six)")
     p.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     p.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     p.set_defaults(fn=cmd_serve)
@@ -338,7 +340,7 @@ def main(argv=None) -> None:
     p.add_argument("role")
     p.add_argument("--days", type=float, default=30)
     p.add_argument("--profile", choices=("memory", "operator", "substrate"),
-                   help="the MCP tools the token shows: memory (four), substrate (Substrate's nine) or operator (every tool; the default)")
+                   help="the MCP tools the token shows: memory (four), substrate (Substrate's ten) or operator (every tool; the default)")
     p.set_defaults(fn=cmd_token)
     a = ap.parse_args(argv)
     a.fn(a)

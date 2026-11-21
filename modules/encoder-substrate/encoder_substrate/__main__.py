@@ -2,7 +2,7 @@
 
   python -m encoder_substrate [--store DSN] [--scope IRI] [--dry-run]
 
-Reads the store (schema `store`, read-only session) and submits one change set per item (encode.py), keyed by the
+Reads the store (schema `store`, read-only session) and submits one change set per item, and one per property that carries constraints (encode.py), keyed by the
 item and the content of what it says, so running again over an unchanged store submits nothing. When an item
 changed, its change set also deprecates what this encoder said about it before: a claim the new version states
 again is superseded by it, any other is retracted; nothing is deleted. Findings (a property with no term, a

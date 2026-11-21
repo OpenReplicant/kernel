@@ -1,7 +1,7 @@
 # encoder-substrate
 
 Reads Substrate's store (Postgres schema `store`, read-only) and submits what it holds as kernel claims, in
-Wikidata's and Substrate's own terms (D-102, D-103). One change set per item, so running it again over an
+Wikidata's and Substrate's own terms (D-102, D-103). One change set per item, and one per property that carries constraints (a `property-constraint` statement becomes a claim on the property's term, wdt:P2302, with its pattern, allowed values and classes as qualifiers; D-108), so running it again over an
 unchanged store submits nothing, and a changed item supersedes what the encoder said about it before.
 The mapping is in `encoder_substrate/encode.py`; the decision is D-103 in `docs/decisions.md`.
 

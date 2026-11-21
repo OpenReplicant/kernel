@@ -1,15 +1,16 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:encoder-substrate
 name: Substrate store encoder
-version: 0.1.0
+version: 0.2.0
 description: 'Records Substrate''s store (its Wikibase-model Postgres schema, read-only) as claims in Wikidata''s
   and Substrate''s own terms (the wikidata and substrate packs, D-102): one change set per item with its labels,
   descriptions and aliases, and a claim per statement with its qualifiers and rank (preferred or deprecated as a
   status). Items the packs define keep the pack''s IRI; the rest are urn:kk:substrate:<Qid>. Substrate''s v1
   relations are Backstage''s. Who stated a statement in Substrate (a parser, a person, an interpreter, a rule)
   is kept in each claim''s reference and its evidence type (deterministic for a parser, testimony for anyone else); the claim is
-  attributed to this encoder. A property with no term, somevalue and novalue, statements on properties and
-  uncited statements are findings kept with the run. Running again over an unchanged store submits nothing;
+  attributed to this encoder. A constraint on a property (a property-constraint statement, wdt:P2302, with its pattern, allowed
+  values and classes as qualifiers) is a claim on the property''s term, one change set per property (D-108). A property with
+  no term, somevalue and novalue, any other statement on a property and uncited statements are findings kept with the run. Running again over an unchanged store submits nothing;
   a changed item supersedes what the earlier version said. Not encoded: prose, units, rule premises.'
 license: Apache-2.0
 kind: encoder

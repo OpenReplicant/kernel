@@ -22,8 +22,14 @@ Out: one change set per item (`entity_change_sets`): its label claims and every 
                       reference becomes a kernel reference (urn:kk:substrate:reference:<uuid>?by=<kind>:<name>, its
                       span's text as the quote) and the evidence type follows the strongest of them: a parser
                       -> deterministic, else anyone else (a person, an interpreter, a rule) -> testimony
-Not encoded, and counted or found: an item's prose, a quantity's unit and bounds, somevalue and novalue, statements
-on properties (constraints) or to properties, coordinates, rule premises.
+  constraint          a statement `property-constraint` on a property (Wikidata P2302) is a claim whose subject is the
+                      property's term (wdt:P527 for `has-part`), the object the constraint's kind (wd:Q19474404,
+                      ...) and its parameters qualifiers (wdt:P1793 the pattern, wdt:P2305 an allowed value, wdt:P2308
+                      a class, a repeated one a list; D-108). A property's constraints are one change set of their own,
+                      keyed by the property (`substrate:P12:<hash>`), so the items' change sets are unchanged.
+Not encoded, and counted or found: an item's prose, a quantity's unit and bounds, somevalue and novalue, any other
+statement on a property, and a constraint on a property that has no term here, or to properties, coordinates, rule
+premises.
 """
 from __future__ import annotations
 
@@ -68,6 +74,7 @@ ITEMS = {
     "value-type-constraint": WD + "Q21510865",
 }
 REASON_KEY = "reason-for-deprecated-rank"
+CONSTRAINT_KEY = "property-constraint"
 
 
 def item_iri(entity: dict) -> str:
@@ -143,7 +150,7 @@ class Encoder:
         self.by_id = {e["id"]: e for e in entities}
         self.findings = Findings()
         self.counts = {"entities": 0, "claims": 0, "labels": 0, "statements": 0, "skipped": 0, "prose": 0,
-                       "properties": 0, "empty": 0, "unchanged": 0}
+                       "properties": 0, "empty": 0, "unchanged": 0, "constraints": 0, "constrained": 0}
 
     # -- values ----------------------------------------------------------------------------------------
     def value(self, snak_row: dict, what: str, example: str):
@@ -191,8 +198,13 @@ class Encoder:
             self.findings.add("unmapped-property", st["id"], key=prop.get("key"), property=prop["id"])
             return None
         if subject["kind"] != "item":
-            self.findings.add("statement-on-property", st["id"], key=prop.get("key"))
-            return None
+            if prop.get("key") != CONSTRAINT_KEY:
+                self.findings.add("statement-on-property", st["id"], key=prop.get("key"))
+                return None
+            if subject.get("key") not in PROPERTIES:   # the claim's subject is the property's term
+                self.findings.add("constraint-on-unmapped-property", st["id"], key=subject.get("key"),
+                                  property=subject["id"])
+                return None
         kind, v = self.value(st, "property", st["id"])
         if kind == "skip":
             return None
@@ -202,7 +214,8 @@ class Encoder:
         else:
             self.findings.add("uncited-statement", st["id"], key=prop.get("key"))
             ev, references = "testimony", [{"source_uri": f"urn:kk:substrate:statement:{st['id']}"}]
-        op = {"op": "add_claim", "subject": item_iri(subject), "predicate": pred,
+        op = {"op": "add_claim", "subject": PROPERTIES[subject["key"]] if subject["kind"] != "item" else item_iri(subject),
+              "predicate": pred,
               "object": {"entity": v} if kind == "entity" else {"value": v},
               "evidence_type": ev, "references": references}
         quals = self.qualifiers(st)
@@ -227,8 +240,10 @@ class Encoder:
         return out
 
     def run(self, statements: list[dict]) -> list[tuple[str, str, list[dict]]]:
-        """[(item id, its iri, its ops)] in id order; ops are add_claims with set_status after the ranked ones."""
+        """[(id, its iri, its ops)]: the items in id order, then the properties that carry constraints; ops are
+        add_claims with set_status after the ranked ones."""
         mine: dict[str, list[dict]] = {}
+        constrained: dict[str, list[dict]] = {}
         for e in self.by_id.values():
             if e["kind"] == "property":
                 self.counts["properties"] += 1
@@ -236,36 +251,33 @@ class Encoder:
                 mine[e["id"]] = []
                 self.counts["prose"] += bool((e.get("prose") or "").strip())
         for st in statements:
-            if st["subject"] in mine:
-                op = self.claim(st)
-                if op is None:
-                    self.counts["skipped"] += 1
-                else:
-                    rank = st.get("rank", "normal")
-                    mine[st["subject"]].append((op, rank))
-                    self.counts["statements"] += 1
-            else:
-                self.claim(st)   # a statement on a property: the finding says why
+            op = self.claim(st)   # on a property: a constraint is a claim, anything else a finding saying why
+            if op is None:
                 self.counts["skipped"] += 1
-        out = []
-        for eid in sorted(mine, key=lambda i: int(i[1:])):
-            e = self.by_id[eid]
-            labels = self.labels(e)
-            self.counts["labels"] += len(labels)
-            ranked = sorted(mine[eid], key=lambda t: json.dumps(t, sort_keys=True))
-            ops: list[dict] = []
-            for op, rank in [(o, "normal") for o in labels] + ranked:
-                op = dict(op, ref=f"c{len(ops)}")
-                ops.append(op)
-                if rank in ("preferred", "deprecated"):
-                    ops.append({"op": "set_status", "claim": op["ref"], "status": rank,
-                                **({"reason": "retracted"} if rank == "deprecated" else {})})
-            if not ops:
-                self.counts["empty"] += 1
                 continue
-            self.counts["entities"] += 1
-            self.counts["claims"] += sum(o["op"] == "add_claim" for o in ops)
-            out.append((eid, item_iri(e), ops))
+            on_item = st["subject"] in mine
+            (mine if on_item else constrained).setdefault(st["subject"], []).append((op, st.get("rank", "normal")))
+            self.counts["statements" if on_item else "constraints"] += 1
+        out = []
+        for group, with_labels in ((mine, True), (constrained, False)):
+            for eid in sorted(group, key=lambda i: int(i[1:])):
+                e = self.by_id[eid]
+                labels = self.labels(e) if with_labels else []
+                self.counts["labels"] += len(labels)
+                ranked = sorted(group[eid], key=lambda t: json.dumps(t, sort_keys=True))
+                ops: list[dict] = []
+                for op, rank in [(o, "normal") for o in labels] + ranked:
+                    op = dict(op, ref=f"c{len(ops)}")
+                    ops.append(op)
+                    if rank in ("preferred", "deprecated"):
+                        ops.append({"op": "set_status", "claim": op["ref"], "status": rank,
+                                    **({"reason": "retracted"} if rank == "deprecated" else {})})
+                if not ops:
+                    self.counts["empty"] += 1
+                    continue
+                self.counts["entities" if with_labels else "constrained"] += 1
+                self.counts["claims"] += sum(o["op"] == "add_claim" for o in ops)
+                out.append((eid, ops[0]["subject"] if not with_labels else item_iri(e), ops))
         return out
 
 

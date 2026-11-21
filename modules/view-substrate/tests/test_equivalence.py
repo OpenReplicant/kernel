@@ -422,6 +422,65 @@ def main():
     s3, u3, p3, m3, e3, w3 = blind()
     check("rls: and when the grant is taken away they are gone again", not s3 and not u3 and p3 is None and not m3)
 
+    # ---- constraints (D-108): store.violation against substrate.violations ------------------------------------
+    subprocess.run([PY, str(HERE / "make_constraints_store.py"), f"dbname={SDB}"], check=True,
+                   env={**os.environ, "PYTHONPATH": SUBSTRATE}, capture_output=True)
+    cons = encode(kenv)
+    wait_applied(kadmin)
+    bad = kadmin.execute("select count(*) from kernel.change_set where status in ('invalid', 'rejected', 'conflict')").fetchone()[0]
+    check("constraints: the new items and the constraints on properties are in the kernel, every change set applied",
+          bad == 0 and cons["new"] > 0 and cons["counts"]["constrained"] >= 4, f"{cons['new']} submitted, {bad} not applied, {cons['counts']}")
+    from constraints_wikidata.__main__ import one_pass
+    from kk.lib import connect
+    with connect("kkm_constraints_wikidata", url=url("kk_authenticator", PW, KDB)) as mod:
+        one_pass(mod)
+        wait_applied(kadmin)
+        one_pass(mod)                       # a second pass changes nothing
+    wait_applied(kadmin)
+    ents2 = {e["id"]: e for e in q(st, "select * from store.entity")}
+    iri2 = {i: (item_iri(e) if e["kind"] == "item" else PROPERTIES.get(e["key"])) for i, e in ents2.items()}
+
+    def obj2(entity, value, datatype):
+        if entity:
+            return ("e", iri2.get(entity))
+        lit = literal(datatype, value)
+        return ("l", lit["@value"] if lit else None)
+
+    # the private vault (rls section above) is in the store and not in what the module may read: left out of the store's side
+    want_v = sorted(((iri2[r["subject"]], PROPERTIES[r["pkey"]], r["kind"], obj2(r["value_entity"], r["value"], r["datatype"])), r["message"])
+                    for r in q(st, "select v.subject, p.key as pkey, p.datatype, v.kind, v.message, s.value_entity, s.value "
+                                   "from store.violation v join store.statement s on s.id = v.statement_id "
+                                   "join store.entity p on p.id = s.property")
+                    if iri2[r["subject"]] != v_iri)
+    got_v = sorted(((r["subject"], r["property"], r["kind"], ("e", r["object_entity"]) if r["object_entity"] else ("l", r["object_value"]["@value"])),
+                    r["message"])
+                   for r in q(rd, "select v.*, c.object_entity, c.object_value from substrate.violations v "
+                                  "join api.claims c on c.id = v.statement_id"))
+    kinds_want, kinds_got = [k for k, _ in want_v], [k for k, _ in got_v]
+    check(f"violations: the same {len(want_v)} (subject, property, kind, value) rows, a row for each statement and constraint",
+          kinds_want == kinds_got and len(want_v) >= 8, f"\nstore  {kinds_want}\nkernel {kinds_got}")
+    check("violations: every kind Substrate checks is among them",
+          {k[2] for k in kinds_got} == {"single-value", "format", "one-of", "value-type"})
+    fmt_want = [m for (k, m) in want_v if k[2] == "format"]
+    fmt_got = [m for (k, m) in got_v if k[2] == "format"]
+    check("violations: a format message reads the same", sorted(fmt_want) == sorted(fmt_got), f"{fmt_want} {fmt_got}")
+    norm = lambda m: re.sub(r"\bP\d+\b", "P", m)  # noqa: E731
+    single_w = sorted(norm(m) for (k, m) in want_v if k[2] == "single-value")
+    single_g = sorted(norm(m) for (k, m) in got_v if k[2] == "single-value")
+    check("violations: a single-value message counts the same values (property named by its P number)", single_w == single_g, f"{single_w} {single_g}")
+    note("messages name a pack item by its short id and a property by its Wikidata P number", "one-of, value-type")
+    wb_iri = iri2[next(i for i, e in ents2.items() if e["key"] == "fx:workbench")]
+    check("violations: the Workbench's deprecated old URL and its preferred one break nothing (the rank rule)",
+          not any(k[0] == wb_iri and k[1].endswith("P973") for k, _ in got_v)
+          and not any(r["subject"] == next(i for i, e in ents2.items() if e["key"] == "fx:workbench") and r["property"] == "described-at-url"
+                      for r in q(st, "select v.subject, p.key as property from store.violation v join store.entity p on p.id = v.property")))
+    check("violations: the private vault's violation is in the store and not in the kernel's view for a reader not cleared for it",
+          any(r["subject"] for r in q(st, "select subject from store.violation where subject = %s", next(i for i, k in ents_now(st).items() if k == "fx:zebrafish")))
+          and not any(k[0] == v_iri for k, _ in got_v))
+    check("violations: a pass over an unchanged kernel recorded each verdict once", kadmin.execute(
+        "select count(*) from (select claim_id from kernel.verification where method = 'urn:kk:module:constraints-wikidata' "
+        "group by claim_id having count(*) > 1) x").fetchone()[0] == 0)
+
     # ---- report ---------------------------------------------------------------------------------------------
     print("\ndocumented differences seen (kind: count, first example):")
     for k, v in sorted(diffs.items()):
