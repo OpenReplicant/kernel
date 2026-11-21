@@ -335,17 +335,25 @@ def import_(conn, ds: Dataset, digest: str) -> dict:
         for c in added:
             new[c["old"]] = made[(op_key(c["op"], agent, scope), ref_key(c["op"].get("references")))].pop(0)
     status_ops = defaultdict(list)
+    scope_of = {c["old"]: c["scope"] for c in claims}
+    dropped = 0
     for c in claims:
         if c["status"]:
+            # A replacement is kept only when it was exported and is in the claim's own scope: apply rejects
+            # one in another scope (KK040, D-113), and rows written before that check may still name one.
+            r = c["replaced_by"]
+            keep = r in new and scope_of.get(r) == c["scope"]
+            dropped += bool(r) and not keep
             status_ops[c["scope"]].append({"op": "set_status", "claim": new[c["old"]], "status": c["status"],
                                            **({"reason": c["reason"]} if c["reason"] else {}),
-                                           **({"replaced_by": new[c["replaced_by"]]} if c["replaced_by"] in new else {})})
+                                           **({"replaced_by": new[r]} if keep else {})})
             statuses += 1
     for scope, ops in sorted(status_ops.items()):
         install(f"status:{scope}", scope, ops)
     conn.execute("reset role")
     return {"claims": len(claims), "agents": len(agents), "scopes": len(scopes), "artifacts": len(artifacts),
-            "change_sets": len(groups), "statuses": statuses, "already_present": merged}
+            "change_sets": len(groups), "statuses": statuses,
+            "replacements_dropped": dropped, "already_present": merged}
 
 
 def _iso(v):
