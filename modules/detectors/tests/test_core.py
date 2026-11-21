@@ -16,6 +16,14 @@ except ImportError:
     kk = types.ModuleType("kk"); lib = types.ModuleType("kk.lib")
     lib.connect = lib.run = lib.submit = None
     sys.modules.update({"kk": kk, "kk.lib": lib})
+try:
+    import psycopg  # noqa: F401
+except ImportError:  # the engine imports psycopg at load; these checks never reach a database
+    pg = types.ModuleType("psycopg")
+    for sub in ("errors", "sql"):
+        setattr(pg, sub, types.ModuleType(f"psycopg.{sub}"))
+        sys.modules[f"psycopg.{sub}"] = getattr(pg, sub)
+    sys.modules["psycopg"] = pg
 from detectors.core import (DISSOLVED, FORMED, Match, Stored, change_set_key, chunks, diff, event_iri, event_ops,  # noqa: E402
                             match_iri)
 from detectors.registry import load  # noqa: E402
