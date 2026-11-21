@@ -207,6 +207,12 @@ The kernel still runs no module code in a write: detectors are a module reading 
 instead of marking it invalid; and a claim's current status is its last status row in insert order
 (`claim_status.seq`), not by transaction start time. `api.claim_status` shows that history to modules under the claims' clearance.
 
+### 3.9 Kernel v0.3: what each change set touched (D-112)
+
+`005_touched.sql`: `api.touched` lists, for each change set, the claims it added, re-ranked, scored (belief) or
+verified, with each claim's subject, entity object and scope, under the claims' clearance. A module that reacts to
+applies reads it with the change sets from `api.applied`. Each of the four tables it reads is indexed by change set.
+
 ---
 
 ## 4. Identity, clearance, trust and budgets
