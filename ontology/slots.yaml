@@ -81,6 +81,12 @@ groups:
       cardinality: many
       default: SQL rules; Nemo (Datalog) later
       milestone: later
+    - id: detector
+      contract: applied change sets (from a cursor) -> formed and dissolved events for registered detectors, each run as its owner (D-110)
+      kind: processor
+      cardinality: many
+      default: SQL detectors over api.edges and api.claims; openCypher once a graph projection exists
+      milestone: 6
     - id: mapping-aligner
       contract: two vocabularies -> candidate skos:*Match claims (review lane)
       kind: processor

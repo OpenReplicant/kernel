@@ -102,6 +102,8 @@ jobs:
         run: python modules/encoder-interaction/tests/test_encode.py
       - name: Map gap tests (M5-T4)
         run: python modules/map-gaps/tests/test_gaps.py
+      - name: Detector core tests, no database (M6-T0, D-110)
+        run: python modules/detectors/tests/test_core.py
       - name: Briefing tests (M6-T1)
         run: |
           python modules/kernel-mcp/tests/test_briefing.py
@@ -168,6 +170,12 @@ jobs:
         run: KK_REQUIRE_UI=1 KK_REQUIRE_DENSE=1 sh scripts/smoke_kernel.sh
       - name: The span watcher on a kernel (D-106)
         run: python modules/watcher-spans/tests/test_watch.py
+      - name: Detectors on a kernel, and map-gaps as a reactor on them (M6-T0, D-110)
+        run: |
+          python modules/detectors/tests/test_detectors.py
+          python modules/detectors/tests/test_review.py
+          python modules/map-gaps/tests/test_react.py
+          python modules/map-gaps/tests/test_reconcile.py
       - name: The validator retries a stuck change set and judges the rest (D-111)
         run: python modules/validator-shacl/tests/test_drain.py
       - name: What the watcher flags, in the read model and the substrate tools (D-107)
