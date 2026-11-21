@@ -67,7 +67,7 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
 ## Tests
 
 ```sh
-PGHOST=<socket or host> PGUSER=<superuser> sh kernel/schema/tests/run.sh   # 30 kernel checks
+PGHOST=<socket or host> PGUSER=<superuser> sh kernel/schema/tests/run.sh   # 30 kernel checks, the edge table and applied order (fresh and upgraded), concurrent applies
 pip install -r requirements-ci.txt
 python shapes/tests/test_shapes.py                                         # SHACL fixtures
 python scripts/check_manifests.py                                          # manifests and slots
@@ -89,6 +89,7 @@ secret (`--secret id=ca,src=/path/ca.crt`).
 ```
 kernel/
   schema/        001_kernel.sql, 002_bootstrap.sql, tests/      ← frozen v0
+                 003_current_edge.sql                           ← v0.1: the edge table and applied order (D-109)
   schemas/       change_set and module JSON Schemas             ← ABI
   contracts.py   Python Protocols for module kinds              ← ABI
 ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, activitystreams.ttl, org.ttl, profiles kk-tosca/kk-profile/bbo/sosa/fabio/cito,

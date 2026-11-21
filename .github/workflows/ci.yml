@@ -28,11 +28,18 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Kernel invariant tests
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.13"
+      - name: psycopg for the concurrent-apply test (pinned as kernel-mcp pins it)
+        run: pip install psycopg==3.3.6 psycopg-binary==3.3.6
+      - name: Kernel invariant tests, the edge table and applied order, concurrent applies (D-109)
         run: |
           sh kernel/schema/tests/run.sh 2>&1 | tee kernel-tests.log
           test "$(grep -c 'NOTICE:  ok:' kernel-tests.log)" -ge 30
-          grep -q 'ALL KERNEL TESTS PASSED' kernel-tests.log
+          test "$(grep -c 'ALL KERNEL TESTS PASSED' kernel-tests.log)" -eq 2
+          test "$(grep -c 'CURRENT EDGE TESTS PASSED' kernel-tests.log)" -eq 2
+          grep -q 'CONCURRENT APPLY TESTS PASSED' kernel-tests.log
 
   python-checks:
     name: shapes and manifests
