@@ -5,12 +5,36 @@
 --   O-10  claim_status gets `seq`, an identity in insert order; a claim's current status is its last row by
 --         `seq`, not by `recorded_at` (a transaction's start time, which ties within one transaction and puts a
 --         later-committing earlier-started write first). Applies are serialized (D-109), so insert order is
---         apply order. Existing rows are numbered in their stored order.
+--         apply order. Existing rows are numbered by their change set's apply order, then transaction start.
 -- Safe to run again, on a fresh kernel (after 003) or an existing one (kk init applies it to both).
 set role kk_owner;
+-- Adding the column locks claim_status; give up after a while rather than queue every reader behind it.
+-- `kk init` can simply be run again.
+set lock_timeout = '10s';
 
 -- ---------------------------------------------------------------- O-10: status history in insert order
-alter table kernel.claim_status add column if not exists seq bigint generated always as identity;
+-- Existing rows are numbered in the order they were written, as far as the record shows it: by the apply order
+-- of their change set (kernel.applied, D-109), then by transaction start, then by their place in the table.
+-- Not by their place alone: once vacuum lets new rows reuse old space, that is not the order they were written
+-- in (found by D-111's review). Then the column becomes an identity continuing above the highest number.
+do $$
+begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'kernel' and table_name = 'claim_status' and column_name = 'seq') then
+    alter table kernel.claim_status add column seq bigint;
+    perform set_config('kernel.redacting', 'on', true);       -- forbid_mutation lets this one update through
+    update kernel.claim_status s set seq = o.n
+      from (select st.ctid as t,
+                   row_number() over (order by a.seq nulls last, st.recorded_at, st.ctid) as n
+              from kernel.claim_status st left join kernel.applied a on a.change_set = st.change_set) o
+     where s.ctid = o.t;
+    perform set_config('kernel.redacting', 'off', true);
+    alter table kernel.claim_status alter column seq set not null;
+    alter table kernel.claim_status alter column seq add generated always as identity;
+    perform setval(pg_get_serial_sequence('kernel.claim_status', 'seq'),
+                   (select coalesce(max(seq), 0) + 1 from kernel.claim_status), false);
+  end if;
+end $$;
 create index if not exists claim_status_claim_seq on kernel.claim_status (claim_id, seq desc);
 
 create or replace function kernel.current_status(p_claim uuid) returns text
@@ -231,6 +255,7 @@ do $$
 declare r record;
 begin
   if to_regclass('kernel.current_edge') is not null then
+    perform kernel.serialize();                    -- refresh_edge's callers hold the apply lock
     for r in select claim_id from kernel.claim_status group by claim_id having count(*) > 1 loop
       perform kernel.refresh_edge(r.claim_id, (select st.change_set from kernel.claim_status st
                                                where st.claim_id = r.claim_id order by st.seq desc limit 1));
@@ -238,4 +263,5 @@ begin
   end if;
 end $$;
 
+reset lock_timeout;
 reset role;

@@ -22,9 +22,11 @@ psql -d "${db}_upgrade" -v ON_ERROR_STOP=1 -q \
   -f "$here/002_bootstrap.sql" \
   -f "$here/tests/test_kernel.sql" \
   -f "$here/003_current_edge.sql" \
+  -f "$here/tests/test_upgrade_heap_prep.sql" \
   -f "$here/004_apply_retry_status_order.sql" \
   -f "$here/003_current_edge.sql" \
   -f "$here/004_apply_retry_status_order.sql" \
+  -f "$here/tests/test_upgrade_heap_check.sql" \
   -f "$here/tests/test_current_edge.sql"
 dropdb "${db}_upgrade"
 
