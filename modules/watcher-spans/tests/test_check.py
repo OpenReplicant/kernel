@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "verifier-quotes"))  # watcher_spans reuses its check
 from watcher_spans.check import judge, lines_of, read, verdicts  # noqa: E402
 
 ok = 0
