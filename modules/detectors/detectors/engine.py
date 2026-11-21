@@ -4,9 +4,9 @@ compare with the matches stored as claims and record formed and dissolved events
   engine = Engine(detectors, role="kkm_detectors", agent="urn:kk:agent:detectors", module="urn:kk:module:detectors")
   engine.run_pass(conn)            # one pass over every detector; conn = the module's own connection
 
-Nothing here writes a table: the engine reads `api` views (and `kernel.claim_status`, `kernel.belief` and
-`kernel.verification`, read only, for the claims a change set re-ranked or scored, and `kernel.scope_grant`
-for the clearance check: none of them has an `api` view) and writes by `submit_change_set`.
+Nothing here writes a table: the engine reads `api` views (and `kernel.belief` and `kernel.verification`, read
+only, for the claims a change set scored, and `kernel.scope_grant` for the clearance check: none of them has an
+`api` view) and writes by `submit_change_set`.
 """
 from __future__ import annotations
 
@@ -380,12 +380,12 @@ def changed(owner, change_sets: list) -> list[str]:
     (belief) or verified, as the owner reads them: the subjects and the entity objects, the anchors a detector
     restricts its query to."""
     rows = owner.execute(
-        "select c.subject, c.object_entity from kernel.claim c where c.change_set = any(%(cs)s) "
-        "union select c.subject, c.object_entity from kernel.claim_status s join kernel.claim c on c.id = s.claim_id "
+        "select c.subject, c.object_entity from api.claims c where c.change_set = any(%(cs)s) "
+        "union select c.subject, c.object_entity from api.claim_status s join api.claims c on c.id = s.claim_id "
         "where s.change_set = any(%(cs)s) "
-        "union select c.subject, c.object_entity from kernel.belief b join kernel.claim c on c.id = b.claim_id "
+        "union select c.subject, c.object_entity from kernel.belief b join api.claims c on c.id = b.claim_id "
         "where b.change_set = any(%(cs)s) "
-        "union select c.subject, c.object_entity from kernel.verification v join kernel.claim c on c.id = v.claim_id "
+        "union select c.subject, c.object_entity from kernel.verification v join api.claims c on c.id = v.claim_id "
         "where v.change_set = any(%(cs)s)", {"cs": change_sets}).fetchall()
     return sorted({x for r in rows for x in r if x})
 
