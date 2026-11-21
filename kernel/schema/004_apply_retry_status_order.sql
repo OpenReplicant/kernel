@@ -1,4 +1,5 @@
--- Kernel v0.2 (D-111; the owner's answers to O-9 and O-10, 2026-11-21): two fixes to 001 found by D-109's review.
+-- Kernel v0.2 (D-111; the owner's answers to O-9 and O-10, 2026-11-21): two fixes to 001 found by D-109's review,
+-- and api.claim_status (the owner, the same day), so modules read status history through `api`.
 --   O-9   apply re-raises transient errors (deadlock, serialization failure, lock or statement timeout, out of
 --         memory or disk) instead of marking the change set invalid for good: the caller's statement fails, the
 --         change set keeps its state and is tried again. Data errors are verdicts, as before.
@@ -55,6 +56,14 @@ language sql stable as $$
     'verifications',coalesce((select jsonb_agg(to_jsonb(v) - 'claim_id') from kernel.verification v where v.claim_id = explain.claim_id), '[]'),
     'run',          (select to_jsonb(r) from kernel.run r join kernel.claim c on c.generated_by = r.id where c.id = explain.claim_id))
 $$;
+
+-- Status history for modules, which read `api` views only (D-111 (c); the detector module needs which claims a
+-- change set retracted or superseded). Security invoker: kernel.claim_status's row-level security applies, so a
+-- reader sees a claim's history only when it can read the claim.
+create or replace view api.claim_status with (security_invoker = true) as
+select claim_id, status, reason, replaced_by, invalidated_by_run, change_set, recorded_at, seq
+from kernel.claim_status;
+grant select on api.claim_status to kk_agent;
 
 -- ---------------------------------------------------------------- O-9: transient errors are retried, not verdicts
 create or replace function kernel.apply_change_set(p_id uuid) returns text

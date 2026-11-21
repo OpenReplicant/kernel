@@ -199,5 +199,23 @@ select public.check((select array_agg(x->>'status' order by o) from jsonb_array_
                        with ordinality as t(x, o)) = array['deprecated','normal','preferred','deprecated','normal'],
                     'explain lists the history in the order it was written');
 
+-- api.claim_status (D-111 (c)): status history through api, under the claims' clearance
+set role t_extractor;
+select public.t_cs('edge:secretstatus', 'urn:kk:scope:secret', jsonb_build_array(jsonb_build_object(
+  'op', 'set_status', 'claim', (select id from kernel.claim where change_set = :'cs_e7'::uuid), 'status', 'preferred',
+  'reason', 'review'))) as cs_ss \gset
+reset role;
+set role t_validator;
+select public.check(api.record_validation(:'cs_ss'::uuid, true) = 'applied', 'a status change in the secret scope applies');
+reset role;
+set role t_verifier;
+select public.check(not exists (select 1 from api.claim_status where change_set = :'cs_ss'::uuid), 'an uncleared reader sees no secret status row');
+select public.check(exists (select 1 from api.claim_status where change_set = :'cs_e2'::uuid), 'but sees those it is cleared for');
+reset role;
+set role t_extractor;
+select public.check(exists (select 1 from api.claim_status where change_set = :'cs_ss'::uuid and seq is not null), 'a cleared reader sees it, with its seq');
+select public.expect_error($$insert into api.claim_status (claim_id, status, change_set) values (gen_random_uuid(), 'normal', gen_random_uuid())$$, '42501');
+reset role;
+
 \o
 select 'CURRENT EDGE TESTS PASSED' as result;

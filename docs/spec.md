@@ -205,7 +205,7 @@ The kernel still runs no module code in a write: detectors are a module reading 
 `004_apply_retry_status_order.sql`, by the owner's decision on O-9 and O-10: a transient failure during apply
 (deadlock, timeout, lack of resources) fails the caller's statement and leaves the change set to be tried again,
 instead of marking it invalid; and a claim's current status is its last status row in insert order
-(`claim_status.seq`), not by transaction start time.
+(`claim_status.seq`), not by transaction start time. `api.claim_status` shows that history to modules under the claims' clearance.
 
 ---
 
