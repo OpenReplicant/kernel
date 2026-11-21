@@ -37,6 +37,7 @@ Terms are CURIEs of the vocabulary packs (`ontology/packs.yaml`); ops are change
 | **truth-maintenance** 0.1.0<br>Truth maintenance | verifier | `claim` (with derived_from)<br>`set_status` | `add_verification` | notify: kernel_change_set<br>schedule: every KK_SWEEP_SECONDS |
 | **validator-shacl** 0.3.1<br>Change-set validator (JSON Schema + SHACL) | shape-validator | `change_set` | `change_set` (its validation report and status) | notify: kernel_change_set<br>schedule: every 30s (sweep; NOTIFY is not durable) |
 | **verifier-quotes** 0.2.0<br>Quote verifier | verifier | `claim` (extracted, with a quote)<br>`artifact` | `add_verification` | notify: kernel_change_set<br>schedule: every KK_SWEEP_SECONDS |
+| **watcher-spans** 0.1.0<br>Span watcher | verifier | `claim` (with a quoted reference whose span is a line range of a file: source) | `add_verification` | notify: kernel_change_set<br>schedule: every KK_SWEEP_SECONDS |
 
 ## Decoders
 
