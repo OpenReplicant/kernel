@@ -110,7 +110,8 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  encoder-morphogen (Morphogen's verdicts as DQV measurements and PROV, D-99),
                  encoder-backstage (Backstage catalogs in Backstage's terms) and map-drift (declared map against
                  observed calls, gaps to review; D-100) and encoder-substrate (Substrate's store in Wikidata's and
-                 Substrate's terms; D-103);
+                 Substrate's terms; D-103) and view-substrate (Substrate's read model over those claims: usable, search, page,
+                 map, alternatives; D-104);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
