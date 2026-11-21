@@ -9,7 +9,9 @@ description: 'Reacts to what changed (M6-T0, D-110). Reads the kernel''s applied
   the applied change sets changed, and looks only there. The module compares what matches now with the
   matches it stored and records formed and dissolved events, as claims (prov:Activity, as:instrument the
   detector, prov:used the match), by submit_change_set. Level-triggered: a match that forms and dissolves
-  between two passes is never seen. A detector that fails stops only itself; the failure is a failed run.
+  between two passes is never seen. A detector that fails stops only itself; the failure is a failed run, and it is tried again after a growing wait.
+  A detector is refused unless every reader of its event scope can read every scope its owner can (its keys,
+  nodes and data are content); see README.md.
   One pass at a time. The cursor is the latest successful run''s info. map-gaps runs on it.'
 license: Apache-2.0
 kind: processor
@@ -34,6 +36,8 @@ runtime:
     KK_DETECTORS_FILE: YAML file of the registered detectors
     KK_DETECTORS_FULL_EVERY: every nth pass looks at everything, not only what changed (default 20)
     KK_DETECTORS_BATCH: change sets read per pass (default 1000)
+    KK_DETECTORS_CHUNK: matches per event change set (default 200)
+    KK_DETECTORS_BACKOFF_S: first wait after a failed run, doubled up to 300 (default 5)
     KK_SWEEP_SECONDS: longest wait between passes (default 30)
 accepts:
 - 'claim (whatever a registered detector''s query reads in api.claims and api.edges)'

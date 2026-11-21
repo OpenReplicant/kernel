@@ -6,12 +6,15 @@ digest of its premises and question, so a changed question is a gap that dissolv
 `react` writes what the interviewer reads: for each formed gap one change set (an oa:Annotation, inferred,
 derived from the claims that put its target on the map; the one from earlier premises is superseded), for
 each dissolved gap that was not formed again its claims retracted. Both are idempotent: a pass that failed
-is repeated.
+is repeated. On the first look (no cursor) it also retracts every annotation of an earlier worker whose gap
+is no longer found, so a gap that closed while the old worker was off does not stay open.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+
+import psycopg.errors
 
 from kk.changes import prior as prior_claims, supersede
 from kk.lib import submit
@@ -58,7 +61,26 @@ def find(conn, anchors=None) -> list[Match]:
     return [Match(f"{g['iri']}|{digest(g)}", (g["target"],), tuple(g["premises"]), g) for g in found]
 
 
-def react(conn, formed, dissolved, run_id) -> None:
+def own(cur, cs: dict, run_id: str) -> dict:
+    """Submit, and make sure the change set is ours: a key someone else took first is moved past with a key
+    bound to this run (the prefix `map-gaps:<iri>|` still finds it)."""
+    def go(c):
+        try:
+            return submit(cur, c, run_id)
+        except psycopg.errors.UniqueViolation:
+            return None
+    res = go(cs)
+    if res is not None:
+        cur.execute("select 1 from api.change_sets where id = %s and attributed_to = %s", (res["id"], AGENT))
+        if cur.fetchone():
+            return res
+    res = go({**cs, "idempotency_key": f"{cs['idempotency_key']}|run:{run_id}"})
+    if res is None:
+        raise RuntimeError("the kernel refused the change set")
+    return res
+
+
+def react(conn, formed, dissolved, run_id, first: bool = False, current=()) -> None:
     with conn.cursor() as cur:
         for m in formed:
             g = m.data
@@ -66,16 +88,21 @@ def react(conn, formed, dissolved, run_id) -> None:
             old = prior_claims(cur, AGENT, f"map-gaps:{g['iri']}|", cs["idempotency_key"])
             if old:   # the premises changed: the new version replaces the old one
                 supersede(cs, old)
-            submit(cur, cs, run_id)
+            own(cur, cs, run_id)
         again = {m.key.split("|")[0] for m in formed}
-        closed = [c for s in dissolved if (iri := s.key.split("|")[0]) not in again
-                  for c in prior_claims(cur, AGENT, f"map-gaps:{iri}|", "")]
+        closed = {str(c["id"]): c for s in dissolved if (iri := s.key.split("|")[0]) not in again
+                  for c in prior_claims(cur, AGENT, f"map-gaps:{iri}|", "")}
+        if first:     # an earlier worker's annotations for gaps that have since closed: nothing else will retract them
+            wanted = {m.key.split("|")[0] for m in current}
+            for c in prior_claims(cur, AGENT, "map-gaps:", ""):
+                if c["subject"] not in wanted:
+                    closed[str(c["id"])] = c
         if closed:
-            ids = sorted(str(c["id"]) for c in closed)
-            submit(cur, {"idempotency_key": "map-gaps-closed:" + hashlib.sha256(" ".join(ids).encode()).hexdigest()[:16],
-                         "attributed_to": AGENT, "target_scope": SCOPE,
-                         "ops": [{"op": "set_status", "claim": str(c["id"]), "status": "deprecated",
-                                  "reason": "retracted", "expect_status": c["status"]} for c in closed]}, run_id)
+            ids = sorted(closed)
+            own(cur, {"idempotency_key": "map-gaps-closed:" + hashlib.sha256(" ".join(ids).encode()).hexdigest()[:16],
+                      "attributed_to": AGENT, "target_scope": SCOPE,
+                      "ops": [{"op": "set_status", "claim": i, "status": "deprecated",
+                               "reason": "retracted", "expect_status": closed[i]["status"]} for i in ids]}, run_id)
 
 
 DETECTOR = Detector("map-gaps", "kkm_map_gaps", find=find, react=react, scope=SCOPE, anchored=False,

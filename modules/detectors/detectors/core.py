@@ -11,6 +11,10 @@ What is stored is claims (D-110): an event is a prov:Activity (dcterms:type urn:
 :dissolved, as:instrument the detector, prov:used the match, dcterms:relation each node, as:published the
 time), the match is a prov:Entity (dcterms:type the detector, rdfs:label its key). A match holds while its
 latest event, in the order the kernel applied them, is `formed`.
+
+A match's key, its nodes and its data are content: they are written into claims in the detector's event scope
+and read by everyone who reads that scope (see README.md, "Clearance"). When a match dissolves, the claim that
+carries its key (the rdfs:label) is deprecated, so a stale copy of a value does not stay current.
 """
 from __future__ import annotations
 
@@ -43,6 +47,7 @@ class Stored:
     key: str
     nodes: tuple
     type_claim: str
+    label_claim: str = ""         # the claim that carries the key (deprecated when the match dissolves)
 
 
 def short(text: str) -> str:
@@ -92,6 +97,8 @@ def event_ops(name: str, formed: list[Match], dissolved: list[Stored], cursor: i
     for s in dissolved:
         who, ev = match_iri(name, s.key), event_iri(name, s.key, DISSOLVED, cursor)
         ops += _event(ev, DISSOLVED, det, who, s.nodes, now, [s.type_claim])
+        if s.label_claim:      # the key may carry a copy of a value: it stops being current with the match (B8)
+            ops.append({"op": "set_status", "claim": s.label_claim, "status": "deprecated", "reason": "retracted"})
     return ops
 
 
@@ -102,7 +109,25 @@ def _event(ev, kind, det, who, nodes, now, premises):
     return ops + [_op(ev, RELATION, n, premises) for n in sorted(nodes)]
 
 
-def change_set_key(name: str, cursor_from, cursor_to: int, formed: list[Match], dissolved: list[Stored]) -> str:
-    """The same range with the same outcome is the same change set (a retry is a no-op); the time is not in it."""
+def chunks(formed: list, dissolved: list, size: int) -> list[tuple[list, list]]:
+    """The events split into pieces of at most `size` matches each: one change set per piece."""
+    size = max(1, size)
+    items = [("f", m) for m in formed] + [("d", s) for s in dissolved]
+    out = []
+    for i in range(0, len(items), size):
+        part = items[i:i + size]
+        out.append(([m for k, m in part if k == "f"], [s for k, s in part if k == "d"]))
+    return out
+
+
+def change_set_key(name: str, cursor_from, cursor_to: int, formed: list[Match], dissolved: list[Stored],
+                   part: int = 0, attempt: int = 0) -> str:
+    """The same range with the same outcome is the same change set (a retry is a no-op); the time is not in it.
+    `part`: which piece of a split outcome; `attempt`: how many change sets with this key the kernel refused."""
     what = [["f", m.key] for m in formed] + [["d", s.key] for s in dissolved]
-    return f"detectors:{name}|{cursor_from}-{cursor_to}|{short(repr(what))}"
+    key = f"detectors:{name}|{cursor_from}-{cursor_to}|{short(repr(what))}"
+    if part:
+        key += f"|p{part}"
+    if attempt:
+        key += f"|r{attempt}"
+    return key

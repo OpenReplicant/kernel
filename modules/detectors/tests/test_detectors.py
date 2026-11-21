@@ -62,6 +62,7 @@ def detectors():
 
 
 def new_engine(ds=None, **kw):
+    kw.setdefault("backoff_s", 0)
     return Engine(ds or detectors(), ME, AGENT, MODULE, **kw)
 
 

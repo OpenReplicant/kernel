@@ -3,10 +3,12 @@
   detectors:
     - name: unheld-post              # a-z, 0-9, dashes
       owner: kkm_detectors           # the db role the query runs as: it sees what that role is cleared for
+                                     # (not person_*, agent_*, kk_*; `scope` must be no more readable than any scope it reads)
       scope: urn:kk:scope:default    # where the events are written (the module's role needs to write it)
       anchored: true                 # false: the query always sees everything
-      sql: |                         # key, nodes (text[]), claims (uuid[]), data (jsonb, optional); %(anchors)s
-        select ...
+      sql: |                         # key, nodes (text[]), claims (uuid[]), data (jsonb, optional); %(anchors)s.
+        select ...               # The query goes through psycopg: write a literal % as %% (LIKE 'a%%').
+                                 # Use claim ids, not values, in `key`: see README.md (clearance, redaction).
     - python: map_gaps.detector:DETECTOR
 """
 from __future__ import annotations

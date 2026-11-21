@@ -16,7 +16,7 @@ except ImportError:
     kk = types.ModuleType("kk"); lib = types.ModuleType("kk.lib")
     lib.connect = lib.run = lib.submit = None
     sys.modules.update({"kk": kk, "kk.lib": lib})
-from detectors.core import (DISSOLVED, FORMED, Match, Stored, change_set_key, diff, event_iri, event_ops,  # noqa: E402
+from detectors.core import (DISSOLVED, FORMED, Match, Stored, change_set_key, chunks, diff, event_iri, event_ops,  # noqa: E402
                             match_iri)
 from detectors.registry import load  # noqa: E402
 
@@ -63,6 +63,12 @@ except ValueError:
 k1 = change_set_key("det", 3, 7, [a], [])
 check(k1 == change_set_key("det", 3, 7, [a], []) and k1 != change_set_key("det", 3, 7, [b], []),
       "the idempotency key is the range and the outcome, not the time")
+
+ds = event_ops("det", [], [Stored("z", ("n9",), "t-z", "lab-z")], 9, "t", set())
+check([o for o in ds if o["op"] == "set_status"] == [{"op": "set_status", "claim": "lab-z", "status": "deprecated", "reason": "retracted"}],
+      "a dissolved match's label claim (it may carry a copy of a value) is deprecated")
+check([len(f) + len(d) for f, d in chunks([a, b, c], [stored["z"]], 3)] == [3, 1] and chunks([], [], 3) == [], "events are split into pieces of at most n matches")
+check(change_set_key("det", 3, 7, [a], [], 1) != k1 and change_set_key("det", 3, 7, [a], [], 0, 2) != k1, "a piece and a retry after a refusal have their own keys")
 
 with tempfile.TemporaryDirectory() as t:
     p = Path(t) / "d.yaml"

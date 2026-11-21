@@ -171,7 +171,9 @@ jobs:
       - name: Detectors on a kernel, and map-gaps as a reactor on them (M6-T0, D-110)
         run: |
           python modules/detectors/tests/test_detectors.py
+          python modules/detectors/tests/test_review.py
           python modules/map-gaps/tests/test_react.py
+          python modules/map-gaps/tests/test_reconcile.py
       - name: What the watcher flags, in the read model and the substrate tools (D-107)
         run: python modules/view-substrate/tests/test_flagged.py
       - name: Property constraints on a kernel, reported and cleared, in the read model and the substrate tools (D-108)

@@ -3,7 +3,8 @@
   python -m detectors [--once] [--file detectors.yaml]
 Env: DATABASE_URL (the module's own login, or one that may SET ROLE to KK_ROLE and to each detector's owner),
 KK_ROLE (default kkm_detectors), KK_DETECTORS_FILE, KK_SWEEP_SECONDS, KK_DETECTORS_FULL_EVERY (every nth pass
-is a full look, default 20), KK_DETECTORS_BATCH (change sets per pass, default 1000), KK_DETECTORS_TIMEOUT_MS.
+is a full look, default 20), KK_DETECTORS_BATCH (change sets per pass, default 1000), KK_DETECTORS_TIMEOUT_MS, KK_DETECTORS_CHUNK (matches per
+change set, default 200), KK_DETECTORS_BACKOFF_S (first wait after a failed run, doubled up to 300; default 5).
 """
 from __future__ import annotations
 
@@ -23,6 +24,8 @@ MODULE, AGENT = "urn:kk:module:detectors", "urn:kk:agent:detectors"
 def worker(detectors, role: str = "kkm_detectors", agent: str = AGENT, module: str = MODULE, once: bool = False) -> int:
     engine = Engine(detectors, role, agent, module)
     conn = connect(role)
+    for name, why in engine.validate(conn).items():     # refused now, and again on every pass
+        print(f"detectors: refused {name}: {why}", file=sys.stderr)
     if once:
         print(json.dumps(engine.run_pass(conn), default=str))
         return 0
