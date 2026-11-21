@@ -39,6 +39,7 @@ jobs:
           test "$(grep -c 'NOTICE:  ok:' kernel-tests.log)" -ge 30
           test "$(grep -c 'ALL KERNEL TESTS PASSED' kernel-tests.log)" -eq 2
           test "$(grep -c 'CURRENT EDGE TESTS PASSED' kernel-tests.log)" -eq 2
+          test "$(grep -c 'TOUCHED TESTS PASSED' kernel-tests.log)" -eq 2
           grep -q 'CONCURRENT APPLY TESTS PASSED' kernel-tests.log
           grep -q 'UPGRADE ORDER TESTS PASSED' kernel-tests.log
 

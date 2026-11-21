@@ -264,4 +264,68 @@ holder.close()
 check(vt.execute("select api.record_validation(%s, true)", (lt,)).fetchone()[0] == "applied", "tried again, it applies")
 vt.commit()
 
+# 10. D-112: 005 run as `kk init` runs it (one string, one transaction, psycopg) on a kernel with applies in flight.
+# It takes the apply lock first, so it waits for an open apply instead of holding index locks that apply needs,
+# applies that start while it builds wait and then apply, and several at once do not collide on the indexes.
+from pathlib import Path  # noqa: E402
+
+MIG = (Path(__file__).resolve().parents[1] / "005_touched.sql").read_text()
+INDEXES = ("claim_change_set", "claim_status_change_set", "belief_change_set", "verification_change_set")
+
+
+def drop_indexes():
+    for ix in INDEXES:
+        admin.execute(f"drop index if exists kernel.{ix}")
+
+
+def migrate(out, key):
+    conn = psycopg.connect(dbname=DB, autocommit=True)
+    try:
+        conn.execute("set client_min_messages = warning")
+        conn.execute(MIG)
+        out[key] = "ok"
+    except Exception as e:  # noqa: BLE001  reported below
+        out[key] = repr(e)
+    finally:
+        conn.close()
+
+
+def have_indexes():
+    return admin.execute("select count(*) from pg_indexes where schemaname = 'kernel' and indexname = any(%s)",
+                         (list(INDEXES),)).fetchone()[0] == len(INDEXES)
+
+
+drop_indexes()
+held = submit("conc:mig:held", [link("h", "ex:c/mig-h", "ex:c/mig-ho")])
+claim_h = str(admin.execute("select id from kernel.claim where change_set = %s", (a_cs,)).fetchone()[0])
+both = submit("conc:mig:both", [{"op": "set_status", "claim": claim_h, "status": "preferred", "reason": "review"},
+                                link("b", "ex:c/mig-b", "ex:c/mig-bo")])
+check(va.execute("select api.record_validation(%s, true)", (both,)).fetchone()[0] == "applied",
+      "an apply that re-ranks a claim and adds one is open")
+res = {}
+mt = threading.Thread(target=migrate, args=(res, "m"))
+mt.start()
+time.sleep(1.0)
+check("m" not in res, "005 waits for the open apply")
+later = {}
+lt2 = threading.Thread(target=lambda: later.update(r=connect("t_validator").execute(
+    "select api.record_validation(%s, true)", (held,)).fetchone()[0]))
+va.commit()
+mt.join(30)
+check(res.get("m") == "ok" and have_indexes(), f"then builds its indexes once the apply commits {res}")
+lt2.start()
+lt2.join(30)
+check(later.get("r") == "applied", "an apply after it goes through")
+
+drop_indexes()
+runs = {}
+ts = [threading.Thread(target=migrate, args=(runs, i)) for i in range(3)]
+for th in ts:
+    th.start()
+for th in ts:
+    th.join(60)
+check(all(v == "ok" for v in runs.values()) and len(runs) == 3 and have_indexes(),
+      f"three runs of 005 at once all succeed {runs}")
+check(admin.execute(edges_match).fetchone()[0], "edges match after the migrations")
+
 print(f"CONCURRENT APPLY TESTS PASSED ({ok})")
