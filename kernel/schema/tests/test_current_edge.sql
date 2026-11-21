@@ -154,7 +154,7 @@ select public.check(public.edges_match(), 'the edge table matches its definition
 select public.check(not exists (
   select 1 from kernel.current_edge e join kernel.claim c on c.id = e.claim_id
   where e.change_set <> coalesce((select st.change_set from kernel.claim_status st where st.claim_id = c.id
-                                  order by st.recorded_at desc limit 1), c.change_set)),
+                                  order by st.seq desc limit 1), c.change_set)),
   'each edge names the change set that last changed it (fresh and upgraded alike)');
 
 -- a large change set: value claims take no lock, so twenty-five thousand of them apply in one change set
@@ -176,6 +176,46 @@ set role t_validator;
 select public.check(api.record_validation(:'cs_bige'::uuid, true) = 'applied', 'and one of three thousand entity claims');
 reset role;
 select public.check((select count(*) from kernel.current_edge where change_set = :'cs_bige'::uuid) = 3000, 'with an edge each');
+
+-- O-10 (D-111): several status changes to one claim in one change set; the last one written wins, every time
+set role t_extractor;
+select public.t_cs('edge:ties', 'urn:kk:scope:default', jsonb_build_array(public.t_link('t', 'ex:ties/a', 'ex:ties/b'),
+  jsonb_build_object('op', 'set_status', 'claim', 't', 'status', 'deprecated', 'reason', 'retracted'),
+  jsonb_build_object('op', 'set_status', 'claim', 't', 'status', 'normal', 'reason', 'review'),
+  jsonb_build_object('op', 'set_status', 'claim', 't', 'status', 'preferred', 'reason', 'review'),
+  jsonb_build_object('op', 'set_status', 'claim', 't', 'status', 'deprecated', 'reason', 'retracted'),
+  jsonb_build_object('op', 'set_status', 'claim', 't', 'status', 'normal', 'reason', 'review'))) as cs_ties \gset
+reset role;
+set role t_validator;
+select public.check(api.record_validation(:'cs_ties'::uuid, true) = 'applied', 'five status changes to one claim apply');
+reset role;
+select id as tie from kernel.claim where change_set = :'cs_ties'::uuid \gset
+select public.check(kernel.current_status(:'tie'::uuid) = 'normal', 'the last status written is the current one');
+select public.check((select status from kernel.current_edge where claim_id = :'tie'::uuid) = 'normal', 'and the edge agrees');
+set enable_indexscan = off; set enable_bitmapscan = off;
+select public.check(kernel.current_status(:'tie'::uuid) = 'normal', 'with another plan too');
+reset enable_indexscan; reset enable_bitmapscan;
+select public.check((select array_agg(x->>'status' order by o) from jsonb_array_elements(api.explain(:'tie'::uuid)->'status')
+                       with ordinality as t(x, o)) = array['deprecated','normal','preferred','deprecated','normal'],
+                    'explain lists the history in the order it was written');
+
+-- api.claim_status (D-111 (c)): status history through api, under the claims' clearance
+set role t_extractor;
+select public.t_cs('edge:secretstatus', 'urn:kk:scope:secret', jsonb_build_array(jsonb_build_object(
+  'op', 'set_status', 'claim', (select id from kernel.claim where change_set = :'cs_e7'::uuid), 'status', 'preferred',
+  'reason', 'review'))) as cs_ss \gset
+reset role;
+set role t_validator;
+select public.check(api.record_validation(:'cs_ss'::uuid, true) = 'applied', 'a status change in the secret scope applies');
+reset role;
+set role t_verifier;
+select public.check(not exists (select 1 from api.claim_status where change_set = :'cs_ss'::uuid), 'an uncleared reader sees no secret status row');
+select public.check(exists (select 1 from api.claim_status where change_set = :'cs_e2'::uuid), 'but sees those it is cleared for');
+reset role;
+set role t_extractor;
+select public.check(exists (select 1 from api.claim_status where change_set = :'cs_ss'::uuid and seq is not null), 'a cleared reader sees it, with its seq');
+select public.expect_error($$insert into api.claim_status (claim_id, status, change_set) values (gen_random_uuid(), 'normal', gen_random_uuid())$$, '42501');
+reset role;
 
 \o
 select 'CURRENT EDGE TESTS PASSED' as result;
