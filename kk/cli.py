@@ -152,7 +152,11 @@ def cmd_init(a) -> None:
                 if agent and conn.execute("select 1 from kernel.agent where iri = %s", (agent,)).fetchone():
                     continue
                 conn.execute("set client_min_messages = warning")
-                conn.execute(f.read_text())
+                try:
+                    conn.execute(f.read_text())
+                except psycopg.errors.LockNotAvailable:
+                    sys.exit(f"{f.relative_to(ROOT)}: an apply held the kernel's lock too long; nothing of this file "
+                             "was applied. Run `kk init` again.")
             print(f"applied {f.relative_to(ROOT)}", file=sys.stderr)
     else:
         for f in migrations(packs=not a.no_packs):
