@@ -129,7 +129,7 @@ def migrations(packs: bool = True) -> list[Path]:
     """Kernel v0, then each default module's migration (role + agent row), then the vocabulary packs."""
     mods = sorted(p for p in ROOT.glob("modules/*/migration.sql") if p.parent.name != "_template")
     return [ROOT / "kernel/schema/001_kernel.sql", ROOT / "kernel/schema/002_bootstrap.sql",
-            ROOT / "kernel/schema/003_current_edge.sql", *mods,
+            ROOT / "kernel/schema/003_current_edge.sql", ROOT / "kernel/schema/004_apply_retry_status_order.sql", *mods,
             *([ROOT / "modules/pack-loader/packs.sql"] if packs else [])]
 
 
@@ -137,12 +137,13 @@ def cmd_init(a) -> None:
     with admin() as conn:
         installed = conn.execute("select to_regclass('kernel.agent') is not null").fetchone()[0]
     if installed:
-        # An existing kernel: 003 (current_edge and the applied order, D-109; safe to run again), then the
+        # An existing kernel: 003 and 004 (current_edge and the applied order, D-109; retry and status order, D-111;
+        # both safe to run again), then the
         # default modules added since, as `kk module
         # install` does (a module whose agent this kernel has is installed; roles are shared by every
         # database in the cluster, so they do not tell), then the vocabulary packs (keyed by version, so
         # what is there stays as it is).
-        for f in migrations(packs=not a.no_packs)[2:]:
+        for f in migrations(packs=not a.no_packs)[2:]:   # 003, 004, then modules and packs
             manifest = f.parent / "module.yaml"
             agent = ((yaml.safe_load(manifest.read_text()).get("agent") or {}).get("iri")
                      if f.name == "migration.sql" and manifest.exists() else None)

@@ -11,6 +11,8 @@ kkm_validator), KK_SWEEP_SECONDS (default 30).
 import os
 import sys
 
+import psycopg
+
 from psycopg.types.json import Jsonb
 
 from kk.lib import connect, listen
@@ -48,7 +50,13 @@ def drain(conn) -> int:
                     ok, report = validate(cs, context(cur, cs))
                 except Exception as e:  # a crash on one change set must not stop the queue
                     ok, report = False, {"error": f"{type(e).__name__}: {e}"}
-                cur.execute("select api.record_validation(%s, %s, %s)", (cs["id"], ok, Jsonb(report)))
+                try:
+                    cur.execute("select api.record_validation(%s, %s, %s)", (cs["id"], ok, Jsonb(report)))
+                except psycopg.errors.OperationalError as e:
+                    # D-111 (O-9): a deadlock, timeout or lack of resources during apply is not a verdict. The
+                    # change set stays submitted; stop this pass, and the next wake or sweep tries it again.
+                    print(f"{cs['id']} {cs['idempotency_key']}: not recorded ({e.sqlstate}), tried again later", flush=True)
+                    return judged
                 print(f"{cs['id']} {cs['idempotency_key']}: {'valid' if ok else 'invalid'}", flush=True)
                 judged += 1
 
