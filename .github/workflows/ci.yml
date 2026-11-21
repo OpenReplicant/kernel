@@ -102,7 +102,6 @@ jobs:
       - name: Span watcher tests (D-106)
         run: |
           python modules/watcher-spans/tests/test_check.py
-          python modules/watcher-spans/tests/test_watch.py
       - name: Memory extractor tests (M6-T4)
         run: python modules/memory-extractor/tests/test_extract.py
       - name: Generated pack migration is up to date
@@ -156,6 +155,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Postgres + kk (init, person, agent, serve, review, scan, token, status) + the UI, nothing else
         run: KK_REQUIRE_UI=1 KK_REQUIRE_DENSE=1 sh scripts/smoke_kernel.sh
+      - name: The span watcher on a kernel (D-106)
+        run: python modules/watcher-spans/tests/test_watch.py
       - name: kernel-mcp alone installs as a package with its two commands
         run: |
           python -m venv /tmp/mcp-only
