@@ -118,7 +118,7 @@ def export(conn, scopes: list[str] | None = None) -> Dataset:
     claims = q(f"""select c.id, c.subject, c.predicate, c.object_entity, c.object_value, c.qualifiers, c.valid_from,
             c.valid_to, c.scope, c.evidence_type, c.attributed_to, c.generated_by, c.recorded_at,
             (select row(s.status, s.reason, s.replaced_by) from kernel.claim_status s where s.claim_id = c.id
-              order by s.recorded_at desc limit 1)
+              order by s.seq desc limit 1)   -- D-111: the last row written
             from kernel.claim c where c.redacted_at is null {only} order by c.recorded_at, c.id""", *args)
     kept = {str(c[0]) for c in claims}
     refs, derived, beliefs = defaultdict(list), defaultdict(list), defaultdict(list)

@@ -200,6 +200,13 @@ filtered by it.
 
 The kernel still runs no module code in a write: detectors are a module reading `api.applied` (§3.6).
 
+### 3.8 Kernel v0.2: retries and status order (D-111)
+
+`004_apply_retry_status_order.sql`, by the owner's decision on O-9 and O-10: a transient failure during apply
+(deadlock, timeout, lack of resources) fails the caller's statement and leaves the change set to be tried again,
+instead of marking it invalid; and a claim's current status is its last status row in insert order
+(`claim_status.seq`), not by transaction start time. `api.claim_status` shows that history to modules under the claims' clearance.
+
 ---
 
 ## 4. Identity, clearance, trust and budgets

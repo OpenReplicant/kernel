@@ -241,4 +241,27 @@ check([n for n, _ in seen] == sorted(n for n, _ in seen) and len({cs for _, cs i
       "the polling reader saw rising numbers, each once")
 check({str(cs) for _, cs in seen} >= {str(cs) for cs in ids}, "and every apply")
 
+# 9. O-9 (D-111): a lock timeout during apply is not a verdict. The change set stays submitted and applies later.
+# The wait has to happen inside apply: an agent's uncommitted insert of the entity the change set names (agents may
+# insert entity identifiers) holds the row apply's own insert waits on. (A wait for the apply lock happens before
+# apply starts and was never a verdict.)
+lt = submit("conc:timeout", [link("t", "ex:c/timeout", "ex:c/held")])
+holder = connect("t_extractor")
+holder.execute("insert into kernel.entity (iri) values (kernel.expand('ex:c/held'))")
+vt = connect("t_validator")
+vt.execute("set lock_timeout = '200ms'")
+vt.commit()
+try:
+    vt.execute("select api.record_validation(%s, true)", (lt,))
+    check(False, "a lock timeout during apply raises")
+except psycopg.errors.LockNotAvailable:
+    vt.rollback()
+    check(True, "a lock timeout during apply raises to the caller")
+check(admin.execute("select status from kernel.change_set where id = %s", (lt,)).fetchone()[0] == "submitted",
+      "the change set is still submitted, not invalid")
+holder.rollback()
+holder.close()
+check(vt.execute("select api.record_validation(%s, true)", (lt,)).fetchone()[0] == "applied", "tried again, it applies")
+vt.commit()
+
 print(f"CONCURRENT APPLY TESTS PASSED ({ok})")
