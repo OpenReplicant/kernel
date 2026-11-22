@@ -3,6 +3,8 @@
   /ui/              the shell (modules/ui/web): an MCP client; every call carries the person's own token
   /ui/views.json    the view modules: manifests with runtime type `view` that fill the `ui` slot
   /ui/views/<name>/ each view module's folder (its entrypoint script registers the view with the shell)
+  /ui/interview     GET the interview's conversation and the next scripted answer; POST {text}: one turn of
+                    the interviewer (the chat pane of the Map view, D-117); the person's token, as for MCP
   /ui/login         POST {name, password}: a person signs in with their own Postgres login (`kk person add`);
                     Postgres checks the password, and the answer is a bearer token for their role (D-73)
 
@@ -106,7 +108,34 @@ def routes(root: Path) -> list:
         return JSONResponse({"token": mint(role, secret, SESSION_HOURS / 24), "role": role,
                              "expires": int(time.time()) + SESSION_HOURS * 3600}, headers=headers)
 
+    async def person_of(request):
+        import jwt
+        auth = request.headers.get("authorization", "")
+        try:
+            claims = jwt.decode(auth[7:].strip(), os.environ["KK_JWT_SECRET"], algorithms=["HS256"])
+        except Exception:
+            return None
+        role = claims.get("role", "")
+        return role[len("person_"):] if role.startswith("person_") else None
+
+    async def interview(request):
+        headers = dict((k.decode(), v.decode()) for k, v in HEADERS)
+        who = await person_of(request)
+        if not who:
+            return JSONResponse({"error": "sign in as a person"}, status_code=401, headers=headers)
+        try:
+            from interviewer import core
+            cfg = core.config()
+            if request.method == "GET":
+                return JSONResponse(await asyncio.to_thread(core.state, cfg), headers=headers)
+            text = str((await request.json()).get("text", "")).strip()
+            if not text:
+                return JSONResponse({"error": "send {text}"}, status_code=400, headers=headers)
+            return JSONResponse(await asyncio.to_thread(core.say, cfg, who.replace("_", " "), text), headers=headers)
+        except Exception as e:   # the store may be read-only here, or the interviewer not installed
+            return JSONResponse({"error": f"the interviewer could not take that: {e}"}, status_code=500, headers=headers)
+
     return [Route("/", home), Route("/ui", home), Route("/ui/views.json", views_json),
-            Route("/ui/login", login, methods=["POST"]),
+            Route("/ui/login", login, methods=["POST"]), Route("/ui/interview", interview, methods=["GET", "POST"]),
             *[Mount(f"/ui/views/{v['name']}", app=Secure(StaticFiles(directory=v["dir"]))) for v in found],
             Mount("/ui", app=Secure(StaticFiles(directory=shell, html=True)))]

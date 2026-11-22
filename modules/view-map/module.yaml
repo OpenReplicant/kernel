@@ -8,7 +8,9 @@ description: 'A view module for the UI (D-116): the organisation and process map
   applied_since, once a second) and redraws only what changed. The signed-in person edits in place: rename a node,
   add or remove an edge, confirm or reject a proposal; each edit is a change set attributed to them, written with
   submit_change_set. A new type or property is looked up in the loaded packs first and, if it is new, proposed
-  through the review lane and shown pending until a person confirms it. Every node and edge shows its claim id,
+  through the review lane and shown pending until a person confirms it. A chat pane (M5-T5, D-117) beside the graph is the interview: a person answers, the
+  interviewer records it as a message, proposes the claims it holds quoting it and asks the next question
+  from the map gaps; the map fills as they are applied. Every node and edge shows its claim id,
   belief and what it cites.'
 license: Apache-2.0
 kind: interface

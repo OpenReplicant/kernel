@@ -53,6 +53,10 @@
       .map-side section { border:1px solid var(--line); border-radius:8px; padding:10px; background:var(--card); }
       .map-side h3 { margin:0 0 6px; font-size:13px; }
       .map-side .row { margin:4px 0; } .map-side input, .map-side select { min-width:0; }
+      #chat-log { max-height:220px; overflow:auto; font-size:13px; margin-bottom:6px; }
+      #chat-log p { margin:4px 0; padding:4px 8px; border-radius:6px; background:var(--bg); }
+      #chat-log p.person { border-left:3px solid #2563eb; } #chat-log p.agent { border-left:3px solid #0f766e; }
+      #chat-text { width:100%; box-sizing:border-box; min-height:52px; }
       #map-pending li { margin-bottom:8px; list-style:none; } #map-pending { padding:0; margin:0; }
       #map-pending li { border-left:3px dashed var(--accent); padding-left:8px; font-size:13px; }
       .map-cites { font-size:12px; margin:4px 0; padding-left:16px; } code { font-size:12px; word-break:break-all; }
@@ -61,6 +65,7 @@
     const cyBox = el('div', { id: 'map-cy', data: { ready: '0' } });
     const detail = el('section', { id: 'map-detail' }, el('h3', {}, 'Selected'), el('p', { class: 'muted' }, 'Click a node or an edge.'));
     const forms = el('section', { id: 'map-forms' });
+    const chat = el('section', { id: 'map-chat' }, el('h3', {}, 'Interview'), el('div', { id: 'chat-log', role: 'log' }));
     const pendingBox = el('section', {}, el('h3', {}, 'Awaiting review'), el('ul', { id: 'map-pending' }));
     const legend = el('div', { class: 'map-bar' },
       ...[['stated', ''], ['observed in a log', '2 3'], ['proposed, pending review', '6 4']].map(([t, d]) => el('span', {},
@@ -69,7 +74,7 @@
           ['x1:0', 'y1:4', 'x2:30', 'y2:4', 'stroke:currentColor', 'stroke-width:2', ...(d ? ['stroke-dasharray:' + d] : [])]
             .forEach(a => l.setAttribute(a.split(':')[0], a.split(':')[1])); s.append(l); return s; })(), t)),
       status);
-    root.replaceChildren(style, legend, el('div', { class: 'map-grid' }, cyBox, el('div', { class: 'map-side' }, detail, forms, pendingBox)));
+    root.replaceChildren(style, legend, el('div', { class: 'map-grid' }, cyBox, el('div', { class: 'map-side' }, chat, detail, forms, pendingBox)));
 
     // ---- state
     const me = await kk.call('whoami');
@@ -398,12 +403,54 @@
       if (!queue.length) ul.append(el('li', { class: 'muted' }, 'Nothing is waiting.'));
     }
 
+    // ---- the interview: a person answers in the chat, the interviewer records it, proposes claims quoting it and
+    // asks the next question from the map gaps (/ui/interview); the map follows through the applied order
+    const chatLog = chat.querySelector('#chat-log');
+    const chatText = el('textarea', { id: 'chat-text', 'aria-label': 'Your answer', placeholder: 'Answer the interviewer…' });
+    const chatSend = el('button', { id: 'chat-send', textContent: 'Send' });
+    const chatSuggest = el('button', { id: 'chat-suggest', textContent: 'Use the next scripted answer', type: 'button', hidden: true });
+    const chatNote = el('div', { id: 'chat-note', class: 'muted', role: 'status' });
+    chat.append(chatText, el('div', { class: 'row' }, chatSend, chatSuggest), chatNote);
+    let suggested = null, chatSig = '';
+    const interview = async body => {
+      const r = await fetch('/ui/interview', { method: body ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + KK.token, 'Content-Type': 'application/json' },
+                                               ...(body ? { body: JSON.stringify(body) } : {}) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || r.status);
+      return j;
+    };
+    function drawChat(j) {
+      suggested = j.suggestion;
+      chatSuggest.hidden = !suggested;
+      const sig = j.messages.map(m => m.id).join(',');
+      if (sig === chatSig) return;
+      chatSig = sig;
+      chatLog.replaceChildren(...j.messages.map(m => el('p', { class: m.kind, data: { id: m.id } }, el('strong', {}, m.kind === 'agent' ? 'Interviewer: ' : m.author + ': '), m.text)));
+      chatLog.scrollTop = chatLog.scrollHeight;
+      cyBox.dataset.messages = j.messages.length;
+    }
+    chatSuggest.addEventListener('click', () => { chatText.value = suggested || ''; chatText.focus(); });
+    chatSend.addEventListener('click', async () => {
+      const text = chatText.value.trim();
+      if (!text) return;
+      chatSend.disabled = true; chatNote.textContent = 'recording…';
+      try {
+        const j = await interview({ text });
+        chatText.value = ''; drawChat(j);
+        chatNote.textContent = j.extracted === 'none' ? 'Recorded. No claims taken from it: no scripted answer matches and no model is set (KK_EXTRACT_URL).'
+          : `Recorded; ${j.claims} claims proposed quoting it.`;
+      } catch (e) { chatNote.textContent = e.message; }
+      chatSend.disabled = false;
+    });
+    const readChat = () => interview().then(drawChat).catch(e => { chatNote.textContent = e.message; });
+
     // ---- start, then follow the applied order
     status.textContent = 'reading the maps…';
     const start = (await kk.call('applied_since', {})).cursor;   // the present; what is applied later is read by cursor
     await Promise.all([loadTerms(), discover(), loadQueue()]);
     cursor = start;
     paint(); drawQueue();
+    await readChat();
     cyBox.dataset.ready = '1';
 
     async function tick() {
@@ -430,7 +477,9 @@
       if (dirty) { paint(); drawQueue(); }
       if (wantEdge && known('property')[wantEdge.iri]) { const w = wantEdge; wantEdge = null; await submitEdge(w.a, w.iri, w.b); }
       cyBox.dataset.cursor = cursor;
+      if (r.applied.length || ++chatTick % 3 === 0) await readChat();
     }
+    let chatTick = 0;
     (async () => {
       while (mine === running && cyBox.isConnected) {
         try { await tick(); } catch (e) { status.textContent = 'live updates paused: ' + e.message; }

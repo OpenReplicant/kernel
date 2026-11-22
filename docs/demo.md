@@ -17,7 +17,10 @@ kk demo            # the bundled order-to-cash process: 40 orders, offline
 
 `kk demo` starts the stack, loads the event log, the documented BPMN model and the written procedure,
 and prints the address (http://127.0.0.1:8080/ui/) with the owner's name and password. Running it again
-changes nothing. To show it from a server with a domain name, see `deploy/public.yaml` (HTTPS by Caddy).
+changes nothing. `kk demo --interview` is the other demo: a scripted interview about a purchasing team plays
+in the Map tab's chat pane and the organisation chart and the process fill as each answer is recorded
+(`--fast` plays it at once). Correct a name or an edge in place, confirm what the interviewer proposed, or type an
+answer (it is recorded; claims are taken from it when a model is set with `KK_EXTRACT_URL`). To show it from a server with a domain name, see `deploy/public.yaml` (HTTPS by Caddy).
 
 ## The walkthrough
 

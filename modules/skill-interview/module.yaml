@@ -6,17 +6,33 @@ description: 'Instructions for a harness agent to interview a person and record 
   organisation (W3C ORG: units, posts, who holds them, who reports to whom) and its processes (BBO: steps,
   order, who does each), every claim extracted with the exact words of the message it came from, which
   the interaction encoder recorded (so the quote verifier, not the agent, checks it). The agent asks next
-  about the gaps the map gap processor lists. No code and no database role (D-49).'
+  about the gaps the map gap processor lists. The same steps run as a worker for the chat pane of the Map view
+  (D-117): the answer a person gives is recorded as a message, its claims come from the scripted answers file or a
+  small model, and the next question is the first gap listed.'
 license: Apache-2.0
 kind: agent
 slots:
 - agent-skill
 protected: false
 agent:
-  iri: urn:kk:agent:skill-interview
+  iri: urn:kk:agent:interviewer
+  db_role: kkm_interviewer
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
 runtime:
-  type: skill-only
-  entrypoint: SKILL.md
+  type: python-service
+  entrypoint: python -m interviewer
+  env:
+    DATABASE_URL: login that may SET ROLE kkm_interviewer, kkm_encoder_interaction and kkm_map_gaps (kk_authenticator)
+    KK_ARTIFACTS: the artifact store the encoder writes the transcripts to
+    KK_CHATS: the chat files (default beside the artifacts)
+    KK_EXTRACT_URL: an OpenAI-compatible endpoint for free answers (a :free small model or a local one); none, and only scripted answers are read
+    KK_EXTRACT_MODEL: the model (default liquid/lfm-2.5-2.6b:free)
 requires:
 - slot: agent-interface
 accepts:
@@ -38,4 +54,5 @@ triggers:
 - type: manual
 mcp:
   expose: []
+migration: migration.sql
 skill: SKILL.md

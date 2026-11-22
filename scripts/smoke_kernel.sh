@@ -110,6 +110,8 @@ elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
 else
   echo "skip the live map check (no playwright)"
 fi
+# M5-T5 (D-117): kk demo --interview fills both maps, a person corrects and confirms in place, the chat takes an answer.
+KK_REQUIRE_UI=${KK_REQUIRE_UI:-0} $py "$root/scripts/e2e_interview_demo.py"
 # D-61: dense recall fused with BM25.
 case $parts in
   *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;

@@ -1,7 +1,7 @@
 """M5-T4: the interviewer on a live kernel, run by scripts/smoke_kernel.sh while `kk serve` runs (with the
 quote verifier).
 
-A scripted interview (modules/skill-interview/tests/fixtures): after each of the person's answers, the
+A scripted interview (modules/skill-interview/interviewer/data): after each of the person's answers, the
 interaction encoder records the conversation so far, the agent records what the answer says as extracted
 claims quoting the message (as the interview skill says), and the map gap processor lists what the maps
 still lack. Checks: each answer closes the gaps it was asked about and the gaps are the ones expected; at

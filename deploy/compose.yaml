@@ -79,8 +79,10 @@ services:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
       KK_ARTIFACTS: /store      # read-only here; `kk scan` writes at /artifacts (docker compose run -v)
+      KK_CHATS: /chats          # the interview's chat files (the Map view's chat pane, D-117)
     volumes:
       - kk-artifacts:/store:ro
+      - kk-chats:/chats
     depends_on:
       init: {condition: service_completed_successfully}
     restart: unless-stopped
@@ -96,6 +98,7 @@ services:
 
 volumes:
   db-data:
+  kk-chats:
   kk-artifacts:             # per project: `docker compose run -v kk-artifacts:/artifacts` resolves to it too
 
 networks:

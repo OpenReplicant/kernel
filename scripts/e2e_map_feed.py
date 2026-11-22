@@ -1,6 +1,6 @@
 """One step of a live conversation for scripts/e2e_map.mjs (D-116), the way scripts/e2e_interview.py runs one: the
 interaction encoder records the chat so far, then the agent submits what the person's answer says (the scripted
-interview of modules/skill-interview/tests/fixtures, on an organisation and process of its own so the map grows).
+interview of modules/skill-interview/interviewer/data, on an organisation and process of its own so the map grows).
 
   python scripts/e2e_map_feed.py SLUG answer N     the Nth answer (0..4): the interaction encoder, then the agent's claims, applied
   python scripts/e2e_map_feed.py SLUG proposal     the agent proposes a post and who it reports to, in the review lane

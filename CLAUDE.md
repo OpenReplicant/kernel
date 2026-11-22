@@ -74,7 +74,7 @@ python scripts/check_manifests.py                                          # man
 python scripts/catalog.py --check                                          # what modules take in and give out (docs/modules.md)
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
-sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI), M4-G1 (kk demo, end to end), M5-T3 (interaction encoder), M5-T4 (the interviewer) on kk alone; needs gitleaks
+sh scripts/smoke_kernel.sh                                                 # G3, G4, G7, T13, T17, T19, T20, M2, D-60 (recall), D-61 and D-66 (dense, re-ranking; with pgvector and fastembed), D-62 (belief from evidence), M3-T6 (quote verifier), M3-T1 (kk up), M3-G1 (clone to a cited answer), M3-G2 (cited answers checked, scores as claims), M4-T1 (sign-in), M4-T3 (the process learns, in the UI), M4-G1 (kk demo, end to end), M5-T3 (interaction encoder), M5-T4 (the interviewer), M5-T5 (kk demo --interview, headless: both maps filled, a person corrects and confirms) on kk alone; needs gitleaks
                                                                            # and, for the UI, npm install --no-save playwright@1.56.1 bpmn-moddle@10.3.1
 sh scripts/e2e_module.sh                                                   # T18, M2-G3, M3-G3: modules in their own sandboxed containers; needs Docker
 sh scripts/e2e_devops.sh                                                   # M2-T5–T7, M2-G2: devops demo, MAPE-K loop, Devops view; needs Docker, gitleaks
@@ -118,7 +118,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  map, alternatives; D-104) and kernel-mcp's `substrate` profile (Substrate's ten store tools answered from them; D-105, `violations` D-108)
                  and detectors (reads the applied order from a cursor, runs detectors as their owners, records formed and dissolved events as claims; map-gaps is its first reactor; D-110)
                  and watcher-spans (a changed file span flags the claims that cite it, no model; D-106; flagged shows in view-substrate and the substrate tools, D-107)
-                 and view-map (the organisation and process maps as one live graph: stated, observed and pending edges, edited in place by the signed-in person; reads `applied_since`; D-116)
+                 and view-map (the organisation and process maps as one live graph: stated, observed and pending edges, edited in place by the signed-in person; reads `applied_since`; D-116; its chat pane is the interview, with `kk demo --interview`, D-117)
                  and constraints-wikidata (Wikidata's property constraints, carried by encoder-substrate, checked and reported as verdicts on the claims that break them, never blocking, no model; shown by `substrate.violations` and the `violations` tool; D-108);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,

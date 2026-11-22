@@ -1,4 +1,4 @@
-"""kk demo [--bpi]: a customer-ready process demo in one command (M4-T4, D-77).
+"""kk demo [--bpi | --interview]: a customer-ready demo in one command (M4-T4, D-77; the interview, M5-T5, D-117).
 
 1. `kk up` on a demo project folder (default ~/kk-demo): the compose stack (with the process loop:
    conformance and the process learner), the owner's sign-in and the demo agent's login, the harness
@@ -10,6 +10,11 @@
    about five minutes to load on four cores).
 3. Prints the UI address, the owner's sign-in and the walkthrough (docs/demo.md).
 
+--interview is the other demo: an organisation and a purchasing process told in a scripted conversation. The Map
+view's chat pane shows the interview and the maps fill as each answer is recorded, its claims proposed quoting
+it and the next question taken from the map gaps (a few seconds per message; --fast plays it at once). The mined
+order-to-cash log is not loaded beside it: it is a different process from the scripted one (Acme's purchasing).
+
 Running it again changes nothing. With the stack, step 2 runs in the kernel image (`kk demo --load`).
 """
 from __future__ import annotations
@@ -19,6 +24,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +39,7 @@ BPI_URL = "https://data.4tu.nl/file/35ed7122-966a-484e-a0e1-749b64e3366d/864493d
 BPI_SHA256 = "af63bc687fc4152f2123b05c3af7772b37ef3fce2d3f67f812666c9e356baae7"   # pinned Oct 2026 (D-72)
 CACHE = Path(os.environ.get("KK_EVAL_CACHE") or Path.home() / ".cache/knowledge-kernel/eval") / "bpi2019"
 BPI_LOG = CACHE / "BPI_Challenge_2019.xes"
+DELAY = 3.0   # seconds between the interview's messages
 QUOTE = "Billing sends the invoice only after the goods\nhave shipped, and within two days of shipping."
 
 
@@ -111,6 +118,23 @@ def load(bpi: Path | None, agent: str) -> dict:
             "procedure": procedure(agent)}
 
 
+def play(delay: float) -> dict:
+    """The interview's scripted answers, one by one, as the chat pane takes them (the interviewer worker); the ones
+    already said are skipped, so a second run changes nothing."""
+    from interviewer import core
+    cfg = core.config()
+    said = claims = 0
+    for ans in cfg["answers"]:
+        author = next(m["author"] for m in cfg["messages"] if m["id"] == ans["id"])
+        out = core.say(cfg, author, ans["text"])
+        if out["extracted"] != "already said":
+            said += 1
+            claims += out["claims"]
+            if delay:
+                time.sleep(delay)
+    return {"conversation": cfg["conversation"], "said": said, "claims": claims}
+
+
 # ---------------------------------------------------------------- the command
 def main(argv: list[str]) -> None:
     import argparse
@@ -121,18 +145,43 @@ def main(argv: list[str]) -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog="\n".join(__doc__.splitlines()[2:]))
     ap.add_argument("--bpi", action="store_true", help="BPI Challenge 2019 (fetched) instead of order-to-cash")
+    ap.add_argument("--interview", action="store_true", help="the scripted interview filling the org and process maps")
+    ap.add_argument("--fast", action="store_true", help="--interview: play every message at once, not a few seconds apart")
     ap.add_argument("--project", type=Path, default=Path.home() / "kk-demo", help="the demo project folder")
     ap.add_argument("--agent", type=name, default="claude-code", help="the demo project's agent")
     ap.add_argument("--no-stack", action="store_true", help="use the kernel at KK_ADMIN_URL; start nothing")
     ap.add_argument("--db-host", help="Postgres host:port as the harness reaches it")
     ap.add_argument("--load", type=Path, nargs="?", const=Path(), help=argparse.SUPPRESS)  # step 2 only, here
     a = ap.parse_args(argv)
+    if a.load is not None and a.interview:
+        print(json.dumps(play(0 if a.fast else DELAY)))
+        return
     if a.load is not None:     # inside the kernel image: DATABASE_URL may switch to each role
         print(json.dumps(load(a.load if a.bpi else None, a.agent)))
         return
-    bpi = fetch_bpi() if a.bpi else None
+    bpi = fetch_bpi() if a.bpi and not a.interview else None
     a.project.mkdir(parents=True, exist_ok=True)
     out = up.connect(a.project.resolve(), a.agent, a.no_stack, a.db_host, no_scan=True)
+    if a.interview:
+        shown = {k: v for k, v in out.items() if k not in ("admin_url", "owner_token")}
+        print(json.dumps(shown, indent=2), flush=True)
+        print(f"\nOpen {out.get('ui', 'the UI (kk serve, /ui/)')}, sign in as owner (owner_sign_in) and open the Map tab: the interview "
+              "plays now and the maps fill as it goes.", file=sys.stderr, flush=True)
+        if a.no_stack:
+            os.environ["DATABASE_URL"] = out["admin_url"]
+            played = play(0 if a.fast else DELAY)
+        else:
+            cmd = [up.engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(ROOT / "deploy/.env"),
+                   "run", "--rm", "--no-deps", "-T", "-v", "kk-artifacts:/artifacts", "-e", "KK_ARTIFACTS=/artifacts",
+                   "-v", "kk-chats:/chats", "-e", "KK_CHATS=/chats", "kernel", "kk", "demo", "--interview", "--load", *(["--fast"] if a.fast else [])]
+            p = subprocess.run(cmd, capture_output=True, text=True)
+            if p.returncode:
+                sys.exit(f"playing the interview failed: {(p.stderr or p.stdout)[-1500:]}")
+            played = json.loads(p.stdout.strip().splitlines()[-1])
+        print(json.dumps({"played": played}, indent=2))
+        print("\nThe interview is loaded: the Map tab shows the organisation chart and the purchasing process; correct a name "
+              "or an edge in place, and confirm what the interviewer proposed. Docs: docs/demo.md.", file=sys.stderr)
+        return
     if a.no_stack:
         os.environ["DATABASE_URL"] = out["admin_url"]
         loaded = load(bpi, a.agent)
