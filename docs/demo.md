@@ -36,6 +36,24 @@ Sign in as owner (printed) and open the Map tab: the maps fill as the interview 
 distribution's views. `process-maps` is the order-to-cash demo above as a distribution. Running either again
 changes nothing.
 
+## Run a distribution from its bundle
+
+Without cloning or building: each distribution has a folder of published images and a compose file
+(`distributions/<name>/bundle/`, or `kk distribution bundle NAME --out DIR` writes a fresh one). Copy that folder anywhere and:
+
+```sh
+cp .env.example .env       # fill in the three secrets (openssl rand -hex 24, 24 and 32; the file says which)
+podman compose up -d       # docker compose works the same
+podman compose run --rm init kk demo --distribution business --no-stack   # loads the demo, prints the owner's sign-in
+```
+
+Then open `http://127.0.0.1:<port>/ui/` (the bundle's README gives the port) and sign in as `owner`. The images are
+`ghcr.io/openreplicant/kernel` and `ghcr.io/openreplicant/kernel-postgres`, tagged `main`, the commit and each release;
+pin a release in `.env` (`KK_IMAGE`, `KK_DB_IMAGE`) for anything you keep. Bundles use the same ports as
+`kk up --distribution`, so several run side by side. `devops` has the kernel's side only (its observer and actuator
+are module containers installed from the repository) and `papers` has no scripted demo; their READMEs say what to run
+instead. D-120.
+
 ## The walkthrough
 
 **1. Sign in** as `owner` with the printed password. Everyone signs in as themselves, and the database

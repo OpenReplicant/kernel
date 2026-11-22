@@ -350,7 +350,7 @@ def main(argv=None) -> None:
     sub.add_parser("status", help="who you are, what you can see, what is waiting").set_defaults(fn=cmd_status)
     sub.add_parser("review", help="review lane: list, show, approve, reject")
     sub.add_parser("scan", help="ingest a repository (--repo DIR)")
-    sub.add_parser("distribution", help="list the distributions (kk up --distribution NAME starts one)")
+    sub.add_parser("distribution", help="list the distributions (kk up --distribution NAME starts one; bundle NAME writes a compose folder)")
     sub.add_parser("module", help="install a module from this repository, sandboxed")
     sub.add_parser("export", help="every claim with provenance as N-Quads, scopes as named graphs")
     sub.add_parser("import", help="claims from a kk export, keeping attribution")
