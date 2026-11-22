@@ -22,6 +22,20 @@ in the Map tab's chat pane and the organisation chart and the process fill as ea
 (`--fast` plays it at once). Correct a name or an edge in place, confirm what the interviewer proposed, or type an
 answer (it is recorded; claims are taken from it when a model is set with `KK_EXTRACT_URL`). To show it from a server with a domain name, see `deploy/public.yaml` (HTTPS by Caddy).
 
+## The business distribution
+
+A distribution is a preset bundle of modules, packs, skills and views that does one job (`kk distribution list`).
+The business suite builds org and process maps from a conversation, with mined logs beside them:
+
+```sh
+kk demo --distribution business   # its own stack (compose project kk-business, UI on its own port); plays the interview
+kk up --distribution business     # the same stack for your own project folder, without the demo data
+```
+
+Sign in as owner (printed) and open the Map tab: the maps fill as the interview plays. The UI lists only this
+distribution's views. `process-maps` is the order-to-cash demo above as a distribution. Running either again
+changes nothing.
+
 ## The walkthrough
 
 **1. Sign in** as `owner` with the printed password. Everyone signs in as themselves, and the database

@@ -1,0 +1,10 @@
+name: papers
+title: Papers
+does: "Papers read into cited claims, recalled by search, with their quotes checked against the source and answers scored as claims."
+modules: [encoder-papers, recall-index, verifier-quotes, evaluator, view-modules]
+packs: [dcterms, fabio, cito, dqv]
+skills: []
+views: [view-modules]
+demo: none
+settings:
+  serve: [mcp, validator, belief, recall, quotes]

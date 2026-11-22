@@ -70,7 +70,7 @@ If this file and the spec disagree, the spec wins; flag the conflict instead of 
 PGHOST=<socket or host> PGUSER=<superuser> sh kernel/schema/tests/run.sh   # 30 kernel checks, the edge table and applied order (fresh and upgraded), concurrent applies
 pip install -r requirements-ci.txt
 python shapes/tests/test_shapes.py                                         # SHACL fixtures
-python scripts/check_manifests.py                                          # manifests and slots
+python scripts/check_manifests.py                                          # manifests (modules and distributions) and slots
 python scripts/catalog.py --check                                          # what modules take in and give out (docs/modules.md)
 python modules/<module>/tests/*.py                                         # each module's tests and evals
 pip install -e .                                                           # the kk command and the default modules
@@ -99,6 +99,7 @@ ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, acti
                  observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, backstage.ttl (Backstage's catalog model), codemeta.ttl (packages), dqv.ttl (eval scores),
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
+distributions/   preset bundles of modules, packs, skills and views (business, process-maps, devops, papers); `kk up --distribution NAME` starts one as its own stack (D-118)
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
                  encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,
@@ -121,7 +122,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  and view-map (the organisation and process maps as one live graph: stated, observed and pending edges, edited in place by the signed-in person; reads `applied_since`; D-116; its chat pane is the interview, with `kk demo --interview`, D-117)
                  and constraints-wikidata (Wikidata's property constraints, carried by encoder-substrate, checked and reported as verdicts on the claims that break them, never blocking, no model; shown by `substrate.violations` and the `violations` tool; D-108);
                  _template/
-kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,
+kk/              the kk command (up, demo, distribution, init, person/agent add, serve, status, review, scan, token, module,
                  export/import) + kk.lib (modules) + kk.changes (supersede on re-ingest)
 deploy/          compose.yaml (db, init, kernel = kk serve, caddy), policy.yaml (sandbox grants), demo/ (devops demo overlay), postgres/ (image: pgvector, pg_cron, pgmq, pgGraph; D-94),
                  modules/ (installed), mcp/

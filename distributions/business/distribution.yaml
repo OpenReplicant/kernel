@@ -1,0 +1,10 @@
+name: business
+title: Business suite
+does: "Org and process maps built from conversations, interactively first, with event logs mined beside them and drift against the declared map flagged."
+modules: [skill-interview, encoder-interaction, map-gaps, view-map, encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance, view-bpm, learner-process, map-drift]
+packs: [prov-o, activitystreams, org, bbo, sosa, observables, conformance, web-annotation]
+skills: [skill-interview, skill-process-extraction]
+views: [view-map, view-bpm]
+demo: interview
+settings:
+  serve: [mcp, validator, belief, recall, quotes, tms, conformance, learner, gaps, drift]

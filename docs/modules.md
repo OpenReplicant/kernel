@@ -84,3 +84,14 @@ Terms are CURIEs of the vocabulary packs (`ontology/packs.yaml`); ops are change
 | --- | --- | --- | --- | --- |
 | **pack-loader** 0.1.0<br>Vocabulary pack loader | vocabulary-pack | `text/turtle` (vocabulary pack files) | `add_claim`<br>`rdfs:Class`<br>`rdf:Property`<br>`skos:Concept` | — |
 
+## Distributions
+
+Preset bundles of the modules above (`distributions/<name>/distribution.yaml`, D-118); `kk up --distribution <name>` starts one as its own stack.
+
+| Distribution | Does | Modules | Views | Demo |
+| --- | --- | --- | --- | --- |
+| **business** | Org and process maps built from conversations, interactively first, with event logs mined beside them and drift against the declared map flagged. | skill-interview, encoder-interaction, map-gaps, view-map, encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance, view-bpm, learner-process, map-drift | view-map, view-bpm | interview |
+| **devops** | The MAPE-K loop on a running service: observations, anomalies, a proposed adaptation a person approves, and an actuator that carries it out. | observer-prometheus, anomaly, skill-adaptation-planning, actuator-compose, view-devops | view-devops | devops |
+| **papers** | Papers read into cited claims, recalled by search, with their quotes checked against the source and answers scored as claims. | encoder-papers, recall-index, verifier-quotes, evaluator, view-modules | view-modules | none |
+| **process-maps** | Documented against actual: an event log and a BPMN model compared, deviations ranked with their cases, and a model that learns from what people approve. | encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance, view-bpm, learner-process | view-bpm | order-to-cash |
+

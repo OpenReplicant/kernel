@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://w3id.org/knowledge-kernel/schemas/distribution.schema.json",
+  "title": "Distribution manifest (D-118)",
+  "description": "A preset bundle of modules, packs, skills and views that does one job. The default modules every kernel has (kernel-mcp, validator-shacl, belief-corroboration, pack-loader, ui) are not listed.",
+  "type": "object",
+  "required": ["name", "title", "does", "modules", "packs", "skills", "views", "demo"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "title": {"type": "string", "minLength": 1},
+    "does": {"type": "string", "minLength": 1, "description": "What it does, in one sentence."},
+    "modules": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "Folder names under modules/."},
+    "packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "Pack ids from ontology/packs.yaml."},
+    "skills": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "Modules (also in modules) that carry a skill file."},
+    "views": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "View modules (also in modules) the UI lists for this distribution; no others are shown."},
+    "demo": {"enum": ["interview", "order-to-cash", "devops", "none"], "description": "Which demo loads its data: `kk demo --distribution` plays interview and order-to-cash; devops is scripts/e2e_devops.sh's overlay."},
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "serve": {"type": "array", "items": {"type": "string"}, "description": "The parts `kk serve --only` runs (KK_SERVE_PARTS); default: the stack's own."}
+      }
+    }
+  }
+}

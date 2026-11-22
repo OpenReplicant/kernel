@@ -30,11 +30,15 @@ HEADERS = [(b"content-security-policy", CSP.encode()), (b"x-content-type-options
 
 
 def views(root: Path) -> list[dict]:
+    from .distributions import current
+    dist = current()   # a distribution's stack lists only its own views (D-118)
     out = []
     for manifest in sorted(root.glob("modules/*/module.yaml")):
         m = yaml.safe_load(manifest.read_text())
         rt = m.get("runtime", {})
         if rt.get("type") != "view" or "ui" not in m.get("slots", []) or manifest.parent.name == "ui":
+            continue
+        if dist and manifest.parent.name not in dist["views"]:
             continue
         entry = Path(rt["entrypoint"])
         out.append({"name": manifest.parent.name, "title": m["name"], "module": m["id"],

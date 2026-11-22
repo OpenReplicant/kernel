@@ -120,6 +120,15 @@ def render(ms: list[dict]) -> str:
             lines.append(f"| **{m['folder']}** {m['version']}<br>{m['name']} | {', '.join(m['slots'])} | "
                          f"{cell(m.get('accepts'))} | {cell(m.get('produces'))} | {triggers(m)} |")
         lines.append("")
+    ds = [yaml.safe_load(p.read_text()) for p in sorted(ROOT.glob("distributions/*/distribution.yaml"))]
+    if ds:
+        lines += ["## Distributions", "",
+                  "Preset bundles of the modules above (`distributions/<name>/distribution.yaml`, D-118); "
+                  "`kk up --distribution <name>` starts one as its own stack.", "",
+                  "| Distribution | Does | Modules | Views | Demo |", "| --- | --- | --- | --- | --- |"]
+        lines += [f"| **{d['name']}** | {d['does']} | {', '.join(d['modules'])} | {', '.join(d['views']) or '—'} | "
+                  f"{d['demo']} |" for d in ds]
+        lines.append("")
     return "\n".join(lines)
 
 

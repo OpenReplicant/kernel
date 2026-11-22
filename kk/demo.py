@@ -1,4 +1,4 @@
-"""kk demo [--bpi | --interview]: a customer-ready demo in one command (M4-T4, D-77; the interview, M5-T5, D-117).
+"""kk demo [--bpi | --interview | --distribution NAME]: a customer-ready demo in one command (M4-T4, D-77; the interview, M5-T5, D-117).
 
 1. `kk up` on a demo project folder (default ~/kk-demo): the compose stack (with the process loop:
    conformance and the process learner), the owner's sign-in and the demo agent's login, the harness
@@ -152,7 +152,15 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--no-stack", action="store_true", help="use the kernel at KK_ADMIN_URL; start nothing")
     ap.add_argument("--db-host", help="Postgres host:port as the harness reaches it")
     ap.add_argument("--load", type=Path, nargs="?", const=Path(), help=argparse.SUPPRESS)  # step 2 only, here
+    ap.add_argument("--distribution", help="start a distribution as its own stack and load its demo data (D-118)")
     a = ap.parse_args(argv)
+    if a.distribution:
+        from .distributions import load as load_distribution
+        dist = load_distribution(a.distribution)
+        if dist["demo"] not in ("interview", "order-to-cash"):
+            sys.exit(f"{a.distribution}: its demo is {dist['demo']!r}, which kk demo does not play (docs/demo.md)")
+        os.environ["KK_DISTRIBUTION"] = a.distribution
+        a.interview = dist["demo"] == "interview"
     if a.load is not None and a.interview:
         print(json.dumps(play(0 if a.fast else DELAY)))
         return
@@ -171,8 +179,8 @@ def main(argv: list[str]) -> None:
             os.environ["DATABASE_URL"] = out["admin_url"]
             played = play(0 if a.fast else DELAY)
         else:
-            cmd = [up.engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(ROOT / "deploy/.env"),
-                   "run", "--rm", "--no-deps", "-T", "-v", "kk-artifacts:/artifacts", "-e", "KK_ARTIFACTS=/artifacts",
+            cmd = [*up.compose("run"),
+                    "--rm", "--no-deps", "-T", "-v", "kk-artifacts:/artifacts", "-e", "KK_ARTIFACTS=/artifacts",
                    "-v", "kk-chats:/chats", "-e", "KK_CHATS=/chats", "kernel", "kk", "demo", "--interview", "--load", *(["--fast"] if a.fast else [])]
             p = subprocess.run(cmd, capture_output=True, text=True)
             if p.returncode:
@@ -186,8 +194,8 @@ def main(argv: list[str]) -> None:
         os.environ["DATABASE_URL"] = out["admin_url"]
         loaded = load(bpi, a.agent)
     else:
-        cmd = [up.engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(ROOT / "deploy/.env"),
-               "run", "--rm", "--no-deps", "-T", "-v", "kk-artifacts:/artifacts", "-e", "KK_ARTIFACTS=/artifacts",
+        cmd = [*up.compose("run"),
+                "--rm", "--no-deps", "-T", "-v", "kk-artifacts:/artifacts", "-e", "KK_ARTIFACTS=/artifacts",
                *(["-v", f"{bpi.parent}:/data:ro"] if bpi else []),
                "kernel", "kk", "demo", "--agent", a.agent, *(["--bpi", "--load", f"/data/{bpi.name}"] if bpi else ["--load"])]
         p = subprocess.run(cmd, capture_output=True, text=True)
