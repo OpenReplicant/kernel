@@ -50,7 +50,7 @@ core:
   - id: p-plan
     owns: plans and steps, and links from runs to the steps they carried out
     iri: http://purl.org/net/p-plan#
-    license: check at install (published by the P-Plan authors)
+    license: CC BY-NC-SA 2.0 (rev 1.1, https://www.opmw.org/model/p-plan/, read 2026-11-22); IRIs referred to, vocabulary not copied; new plans use PROV-O (D-124)
     pin: pin at install
   - id: web-annotation
     owns: quotes and spans in sources (TextQuoteSelector, TextPositionSelector); annotations about things — a conformance discrepancy is an oa:Annotation targeting the steps it concerns (D-50)
