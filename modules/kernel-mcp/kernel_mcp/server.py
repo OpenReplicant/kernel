@@ -358,3 +358,4 @@ async def graph(ctx: Context, module: str | None = None, slot: str | None = None
 
 from . import memory  # noqa: E402,F401  the memory profile's tools (they use what is defined above)
 from . import substrate  # noqa: E402,F401  the substrate profile's tools (D-105)
+from . import live  # noqa: E402,F401  applied_since: the applied order as a cursor, for live views (D-116)

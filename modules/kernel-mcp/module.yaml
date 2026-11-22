@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:kernel-mcp
 name: Kernel MCP server
-version: 0.10.0
+version: 0.11.0
 description: 'Agent-facing MCP tools over the api schema, in three profiles chosen per login (M6-T1, D-105): substrate
   (Substrate''s own ten store tools, answered from the kernel through view-substrate: search, read, expand, locate,
   path, alternatives, violations, create_item, say, deprecate; the writes are change sets in the claim shapes encoder-substrate
@@ -9,7 +9,7 @@ description: 'Agent-facing MCP tools over the api schema, in three profiles chos
   (remember, recall, explain, changes_since: one-sentence memories and cited briefings with who said what and
   its belief, also as MCP resources) and operator (every tool): search, get entity, query claims, explain, submit
   change set, start/finish run, list slots and modules; whoami, change sets, the review queue and review
-  (people only, enforced by the kernel), and the graph projection that the UI draws. Talks to Postgres directly and runs every call as
+  (people only, enforced by the kernel), and the graph projection that the UI draws, and applied_since, the applied order as a cursor for live views (D-116). Talks to Postgres directly and runs every call as
   the caller''s own role (stdio: the agent''s own login; http: the role in the caller''s JWT), so row-level security
   and attribution apply per agent. Ships harness hooks (kernel-mcp-hook: session run, recall on every
   prompt) and the knowledge-kernel skill.'
@@ -54,6 +54,7 @@ mcp:
   - list_slots
   - list_modules
   - list_runs
+  - applied_since
   - read
   - expand
   - locate

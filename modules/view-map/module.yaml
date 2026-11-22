@@ -1,0 +1,34 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:view-map
+name: Map
+version: 0.1.0
+description: 'A view module for the UI (D-116): the organisation and process maps as one live graph. Stated claims
+  are solid edges, edges observed in event logs are dotted and drawn beside them, and what an agent proposed
+  and is still in the review lane is dashed. It follows the applied order by cursor (the kernel-mcp tool
+  applied_since, once a second) and redraws only what changed. The signed-in person edits in place: rename a node,
+  add or remove an edge, confirm or reject a proposal; each edit is a change set attributed to them, written with
+  submit_change_set. A new type or property is looked up in the loaded packs first and, if it is new, proposed
+  through the review lane and shown pending until a person confirms it. Every node and edge shows its claim id,
+  belief and what it cites.'
+license: Apache-2.0
+kind: interface
+slots:
+- ui
+protected: false
+agent:
+  iri: urn:kk:agent:view-map
+runtime:
+  type: view
+  entrypoint: view/view.js
+requires:
+- slot: agent-interface
+mcp:
+  expose: []
+accepts:
+- 'org:reportsTo'
+- 'org:holds'
+- 'bbo:has_nextFlowNode'
+- 'oa:Annotation'
+produces:
+- text/html (the Map view)
+- add_claim (a person's edits, as change sets attributed to them)
