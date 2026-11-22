@@ -10,6 +10,11 @@ Positioning (D-84): for developers, an agent memory layer with provenance and cl
 organisations, a knowledge management system sold as **distributions** (preset bundles of modules, packs,
 skills and views that do one job; the first is org and process maps from conversations).
 
+Framing (D-122, owner): the kernel is a **symbolic latent space**, one universal symbolic representation that
+encoders interpret systems into and decoders interpret out of. Claims are the unit the machinery checks; the working
+unit people and agents see is a typed item (D-101, `docs/content.md`, proposed: the catalog entry is its first
+proof, D-123). Runtimes, workflow engines and orchestrators are outside the kernel (D-121, D-94 c).
+
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.
