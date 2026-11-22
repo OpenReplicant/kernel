@@ -118,6 +118,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  map, alternatives; D-104) and kernel-mcp's `substrate` profile (Substrate's ten store tools answered from them; D-105, `violations` D-108)
                  and detectors (reads the applied order from a cursor, runs detectors as their owners, records formed and dissolved events as claims; map-gaps is its first reactor; D-110)
                  and watcher-spans (a changed file span flags the claims that cite it, no model; D-106; flagged shows in view-substrate and the substrate tools, D-107)
+                 and view-map (the organisation and process maps as one live graph: stated, observed and pending edges, edited in place by the signed-in person; reads `applied_since`; D-116)
                  and constraints-wikidata (Wikidata's property constraints, carried by encoder-substrate, checked and reported as verdicts on the claims that break them, never blocking, no model; shown by `substrate.violations` and the `violations` tool; D-108);
                  _template/
 kk/              the kk command (up, demo, init, person/agent add, serve, status, review, scan, token, module,

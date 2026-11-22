@@ -71,10 +71,11 @@ Terms are CURIEs of the vocabulary packs (`ontology/packs.yaml`); ops are change
 
 | Module | Slots | Takes in | Gives out | Runs on |
 | --- | --- | --- | --- | --- |
-| **kernel-mcp** 0.10.0<br>Kernel MCP server | agent-interface | `claim`<br>`change_set`<br>`run` | `add_claim` (and every op, as the calling agent)<br>`as:Note`<br>`as:content`<br>`dcterms:type`<br>`dcterms:subject`<br>`application/json` (MCP tool results) | — |
+| **kernel-mcp** 0.11.0<br>Kernel MCP server | agent-interface | `claim`<br>`change_set`<br>`run` | `add_claim` (and every op, as the calling agent)<br>`as:Note`<br>`as:content`<br>`dcterms:type`<br>`dcterms:subject`<br>`application/json` (MCP tool results) | — |
 | **ui** 0.2.0<br>Web UI shell | ui | `claim`<br>`change_set` | `text/html` (the shell at /ui) | — |
 | **view-bpm** 0.2.0<br>Processes | ui | `bbo:has_nextFlowNode`<br>`sosa:Observation`<br>`oa:Annotation` | `text/html` (the Processes view)<br>`application/bpmn+xml` (the documented process, learned paths included) | — |
 | **view-devops** 0.1.0<br>Devops | ui | `sosa:Observation`<br>`oa:Annotation`<br>`sosa:Actuation`<br>`run` | `text/html` (the Devops view) | — |
+| **view-map** 0.1.0<br>Map | ui | `org:reportsTo`<br>`org:holds`<br>`bbo:has_nextFlowNode`<br>`oa:Annotation` | `text/html` (the Map view)<br>`add_claim` (a person's edits, as change sets attributed to them) | — |
 | **view-modules** 0.1.0<br>Modules | ui | `kk:Module` | `text/html` (the Modules view) | — |
 
 ## Packs

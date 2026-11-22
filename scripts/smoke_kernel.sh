@@ -99,6 +99,17 @@ $py "$root/scripts/e2e_interaction.py"
 $py "$root/scripts/e2e_extract.py"
 # M5-T4: the interviewer: a scripted interview builds the org and process maps; the gaps close as it answers.
 $py "$root/scripts/e2e_interview.py"
+# D-116: the live map view: a conversation grows the map while the page is open; a person's edits, a new
+# term confirmed by a second person, a mined log's observed edges beside the stated ones.
+if (cd "$root" && node -e "require('playwright')" 2> /dev/null); then
+  KK_ADMIN_URL="$admin_url" kk person add editor --steward > /dev/null
+  (cd "$root" && PYTHON="$py" KK_URL="http://127.0.0.1:$port" KK_OWNER_TOKEN="$(kk token person_owner --days 0.01)" \
+    KK_EDITOR_TOKEN="$(kk token person_editor --days 0.01)" node scripts/e2e_map.mjs)
+elif [ "${KK_REQUIRE_UI:-0}" = 1 ]; then
+  echo "FAIL the live map check needs Node and playwright"; exit 1
+else
+  echo "skip the live map check (no playwright)"
+fi
 # D-61: dense recall fused with BM25.
 case $parts in
   *dense) KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_dense.py" ;;
