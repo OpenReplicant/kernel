@@ -10,24 +10,26 @@ import json
 from datetime import datetime, timezone
 
 
-def same(subject: str, predicate: str, qualifiers: dict | None, valid_from) -> str:
-    """What makes a new claim the replacement of an earlier one."""
+def same(subject: str, predicate: str, qualifiers: dict | None, valid_from, ignore=()) -> str:
+    """What makes a new claim the replacement of an earlier one. Qualifier keys in `ignore` are not part of
+    the identity (a mark that may change while the claim is still the same measurement)."""
+    qualifiers = {k: v for k, v in (qualifiers or {}).items() if k not in ignore}
     if isinstance(valid_from, str):
         valid_from = datetime.fromisoformat(valid_from)
     vf = valid_from.astimezone(timezone.utc).isoformat() if valid_from else None
     return json.dumps([subject, predicate, qualifiers or {}, vf], sort_keys=True)
 
 
-def supersede(cs: dict, prior: list[dict]) -> None:
+def supersede(cs: dict, prior: list[dict], ignore=()) -> None:
     """Append set_status ops to `cs` deprecating `prior` (rows with id, subject, predicate, qualifiers,
     valid_from, status)."""
     new = {}
     for i, op in enumerate(cs["ops"]):
         if op["op"] == "add_claim":
             op["ref"] = f"c{i}"
-            new.setdefault(same(op["subject"], op["predicate"], op.get("qualifiers"), op.get("valid_from")), op["ref"])
+            new.setdefault(same(op["subject"], op["predicate"], op.get("qualifiers"), op.get("valid_from"), ignore), op["ref"])
     for c in prior:
-        by = new.get(same(c["subject"], c["predicate"], c["qualifiers"], c["valid_from"]))
+        by = new.get(same(c["subject"], c["predicate"], c["qualifiers"], c["valid_from"], ignore))
         cs["ops"].append({"op": "set_status", "claim": str(c["id"]), "status": "deprecated", "expect_status": c["status"],
                           **({"reason": "superseded", "replaced_by": by} if by else {"reason": "retracted"})})
 

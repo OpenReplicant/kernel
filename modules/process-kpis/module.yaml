@@ -1,0 +1,56 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:process-kpis
+name: Process KPIs
+version: 0.1.0
+description: 'Per process and time window (a day by default), computes from the event logs the encoder stored the
+  case count, median and 90th-percentile cycle time, rework rate and throughput, and where the log carries them cost
+  per case and handoffs per case. Each KPI is an observed claim (a SOSA observation of the process, window as valid
+  time, citing the log artifact, in the scope of the log''s claims). A target a person states (bbo:maxValue or
+  bbo:minValue on the process) marks the observation met or missed in a qualifier, arithmetic only. A recompute
+  supersedes the earlier values (D-119).'
+license: Apache-2.0
+kind: processor
+slots:
+- observation-aggregator
+protected: false
+agent:
+  iri: urn:kk:agent:process-kpis
+  db_role: kkm_process_kpis
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:vocab
+  - urn:kk:scope:default
+  write:
+  - urn:kk:scope:default
+runtime:
+  type: python-service
+  entrypoint: python -m process_kpis
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_process_kpis
+    KK_KPI_WINDOW: "all, day, week or month (default day)"
+    KK_LOG_COLUMNS: "CSV columns as case,activity,timestamp,resource,cost (default case_id,activity,timestamp,resource,cost)"
+    KK_SWEEP_SECONDS: sweep interval (default 30)
+requires:
+- slot: artifact-store
+accepts:
+- 'sosa:hasSimpleResult (case-count of a process, citing the event-log artifact)'
+- 'bbo:maxValue (a person''s target for a KPI)'
+- 'bbo:minValue (a person''s target for a KPI)'
+produces:
+- add_claim
+- set_status
+- 'sosa:hasSimpleResult (KPIs per window: cases-in-window, cycle-time-median-seconds, cycle-time-p90-seconds, rework-rate, throughput-per-day, cost-per-case, handoffs-per-case; qualifier urn:kk:property:target-status met or missed)'
+triggers:
+- type: pattern
+  spec: '? sosa:hasSimpleResult ?'
+- type: pattern
+  spec: '? bbo:maxValue ?'
+- type: pattern
+  spec: '? bbo:minValue ?'
+- type: schedule
+  spec: every KK_SWEEP_SECONDS (sweep; NOTIFY is not durable)
+mcp:
+  expose: []
+migration: migration.sql

@@ -172,6 +172,50 @@
     return xml.join('\n');
   }
 
+  // Process KPIs (D-119): the observations process-kpis makes, one table per window, each with its target mark.
+  const KPIS = [['cases-in-window', 'Cases', 'n'], ['cycle-time-median-seconds', 'Cycle time, median', 's'],
+    ['cycle-time-p90-seconds', 'Cycle time, 90th percentile', 's'], ['rework-rate', 'Rework rate', '%'],
+    ['throughput-per-day', 'Throughput (cases per day)', 'n'], ['cost-per-case', 'Cost per case', 'n'],
+    ['handoffs-per-case', 'Handoffs per case', 'n']];
+  const duration = v => (v >= 172800 ? `${(v / 86400).toFixed(1)} d` : v >= 7200 ? `${(v / 3600).toFixed(1)} h` : v >= 120 ? `${(v / 60).toFixed(0)} min` : `${v} s`);
+  const fmt = (unit, v) => (unit === 's' ? duration(v) : unit === '%' ? `${(v * 100).toFixed(1)}%` : String(Math.round(v * 100) / 100));
+
+  async function showKpis(kk, process, box) {
+    const rows = (await kk.call('query_claims', { subject: process, predicate: SOSA + 'hasSimpleResult', limit: 1000 }))
+      .filter(c => ((c.qualifiers || {})[SOSA + 'observedProperty'] || '').startsWith('urn:kk:property:')
+        && KPIS.some(k => 'urn:kk:property:' + k[0] === c.qualifiers[SOSA + 'observedProperty']));
+    box.replaceChildren();
+    if (!rows.length) {
+      box.append(el('p', { class: 'muted', textContent: 'No KPIs yet: they are computed from an event log (process-kpis).' }));
+      return;
+    }
+    const windows = [...new Set(rows.map(c => c.valid_from))].sort().reverse();
+    const pick = el('select', { 'aria-label': 'KPI window' });
+    windows.forEach(w => pick.append(el('option', { value: w, textContent: String(w).slice(0, 10) })));
+    const table = el('table', { id: 'bpm-kpi-table' });
+    const draw = () => {
+      table.replaceChildren(el('tr', {}, ...['KPI', 'Value', 'Window', 'Target', 'Belief', 'Claim'].map(h => el('th', { textContent: h }))));
+      for (const [key, label, unit] of KPIS) {
+        const c = rows.find(r => r.valid_from === pick.value && r.qualifiers[SOSA + 'observedProperty'] === 'urn:kk:property:' + key);
+        if (!c) continue;
+        const q = c.qualifiers, status = q['urn:kk:property:target-status'];
+        const bound = [q[BBO + 'minValue'] != null && `at least ${fmt(unit, Number(q[BBO + 'minValue']))}`,
+                       q[BBO + 'maxValue'] != null && `at most ${fmt(unit, Number(q[BBO + 'maxValue']))}`].filter(Boolean).join(', ');
+        const tr = el('tr', { className: 'kpi' }, el('td', { textContent: label }), el('td', { className: 'kpi-value', textContent: fmt(unit, Number(val(c))) }),
+          el('td', { textContent: `${String(c.valid_from).slice(0, 10)} to ${String(c.valid_to).slice(0, 10)}` }),
+          el('td', { className: status ? (status === 'met' ? 'ok' : 'bad') : 'muted', textContent: status ? `${status}: ${bound}` : '—' }),
+          el('td', { textContent: c.belief ?? '—' }), el('td', {}, link(kk, c.id, c.id.slice(0, 8))));
+        tr.dataset.kpi = key;
+        tr.dataset.status = status || '';
+        table.append(tr);
+      }
+    };
+    pick.addEventListener('change', draw);
+    draw();
+    box.append(el('div', { class: 'row' }, el('strong', { textContent: 'Window ' }), pick), table);
+    box.dataset.ready = '1';
+  }
+
   function draw(container, kk, data, onEdge) {
     const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
     const shape = k => (k.endsWith('Gateway') ? 'diamond' : k.endsWith('Event') ? 'ellipse' : 'round-rectangle');
@@ -226,10 +270,12 @@
         'Click a flow, a discrepancy or a piece of evidence for its claims.' });
       const map = el('div', { id: 'bpm-map', style: 'height:520px;border:1px solid var(--line);border-radius:8px' });
       const info = el('div', { id: 'bpm-edge' });
+      const kpis = el('div', { id: 'bpm-kpis' });
       const list = el('ul', { id: 'bpm-discrepancies' });
       const learned = el('ul', { id: 'bpm-revisions' });
       const download = el('button', { textContent: 'Download BPMN', title: 'The documented process, learned paths included, as BPMN 2.0' });
       root.append(el('div', { class: 'row' }, el('strong', { textContent: 'Process ' }), pick, download), legend, map, info,
+                  el('h3', { textContent: 'KPIs' }), kpis,
                   el('h3', { textContent: 'Discrepancies' }), list,
                   el('h3', { textContent: 'Learned from practice' }),
                   el('p', { class: 'muted', textContent: 'Paths people confirmed as deviations that practice takes often: ' +
@@ -258,6 +304,7 @@
         const data = await load(kk, pick.value);
         current = data;
         draw(map, kk, data, showEdge);
+        showKpis(kk, pick.value, kpis).catch(e => kpis.replaceChildren(el('span', { class: 'bad', textContent: e.message })));
         list.dataset.ready = '0';
         list.replaceChildren();
         learned.replaceChildren();

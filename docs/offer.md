@@ -69,7 +69,7 @@ The system is modular. We build:
 | Ready today | Built in a pilot |
 | --- | --- |
 | event logs (CSV, XES), BPMN, written procedures, papers, chats and agent sessions as sources | connectors to your systems |
-| documented against actual; deviations with evidence; a model that learns from approvals | your process's specific rules and KPIs |
+| documented against actual; deviations with evidence; a model that learns from approvals; process KPIs per time window (cases, cycle time median and p90, rework, throughput) checked against targets people state | your process's specific rules, further KPIs and cost data |
 | interviews that build org charts and process maps, quoted | an interview programme across your teams |
 | the business distribution: interactive org and process maps from conversations, mined logs beside them, drift flagged (`kk up --distribution business`) | your teams' interview programme and systems |
 | the MAPE-K loop with a Docker Compose actuator on one host | actuators for your platform; hosting beyond one machine |

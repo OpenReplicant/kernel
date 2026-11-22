@@ -1,11 +1,12 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:view-bpm
 name: Processes
-version: 0.2.0
+version: 0.3.0
 description: 'A view module for the UI (BPM): the process map of a documented process next to what was
   observed — tasks, gateways and events; documented flows, observed flows with their case counts, and the
   conformance discrepancies, confirmed or awaiting review, highlighted on the steps and flows they concern.
-  Every node, edge and discrepancy explains the claims behind it (D-51).'
+  Every node, edge and discrepancy explains the claims behind it (D-51). A KPIs table shows each KPI
+  process-kpis observed for a window with its value, target, belief and claim (D-119).'
 license: Apache-2.0
 kind: interface
 slots:
@@ -24,6 +25,7 @@ accepts:
 - 'bbo:has_nextFlowNode'
 - 'sosa:Observation'
 - 'oa:Annotation'
+- 'sosa:hasSimpleResult (process KPIs: value, window, target-status qualifier)'
 produces:
 - text/html (the Processes view)
 - 'application/bpmn+xml (the documented process, learned paths included)'
