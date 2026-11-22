@@ -72,9 +72,12 @@ def main() -> int:
     embedded(agent, decoy)
     question = "Which animal is asleep on the doormat?"
     check("D-66 the cross-encoder is downloaded by the dense worker (KK_RERANK=1)", recall.reranker() is not None)
-    got = [c["subject"] for c in recall.recall(agent, question, 20)]
+    # A window wide enough to hold the decoy whatever else the smoke database holds: the check is the order of the
+    # two, not that the decoy lands in a fixed top 20 (the repository's own claims grow with every file).
+    got = [c["subject"] for c in recall.recall(agent, question, 100)]
     check("D-66 re-ranked recall puts the claim that answers the question first",
-          got[:1] == [mine] and decoy in got, got[:3])
+          got[:1] == [mine] and decoy in got and got.index(decoy) > got.index(mine),
+          [got[:3], got.index(decoy) if decoy in got else None])
     os.environ["KK_RERANK"] = "0"
     check("D-66 KK_RERANK=0 keeps the fused order", recall.reranker() is None
           and [c["subject"] for c in recall.recall(agent, question, 10)] == hits(agent, question))
