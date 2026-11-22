@@ -1,0 +1,40 @@
+# Module manifest — schema: kernel/schemas/module.schema.json
+id: urn:kk:module:decoder-compose
+name: Compose decoder
+version: 0.1.0
+description: 'Renders a service template''s compose file (the Compose Specification) from the kernel (D-125): the version
+  encoder-compose kept (kkt:hasArtifact, D-101) with the current claims applied. Members of the template are its
+  services; image, profiles, ports, volumes, environment names and dependencies follow the claims, and everything the
+  claims do not model comes from the version unchanged. Two current images for one service are reported, the later
+  used. Reads only; writes no claims.'
+license: Apache-2.0
+kind: decoder
+slots:
+- decoder
+protected: false
+agent:
+  iri: urn:kk:agent:decoder-compose
+  db_role: kkm_decoder_compose
+  member_of:
+  - kk_agent
+clearance:
+  read:
+  - urn:kk:scope:default
+runtime:
+  type: command
+  entrypoint: python -m decoder_compose --project <name> --out compose.yaml
+  env:
+    DATABASE_URL: the module's own login, or one that may SET ROLE kkm_decoder_compose
+    KK_ARTIFACTS: the artifact store encoder-compose wrote (default ~/.local/share/knowledge-kernel/artifacts)
+requires:
+- slot: artifact-store
+accepts:
+- kkt:ServiceTemplate
+- kkt:NodeTemplate
+produces:
+- 'application/yaml (a compose file)'
+triggers:
+- type: manual
+mcp:
+  expose: []
+migration: migration.sql

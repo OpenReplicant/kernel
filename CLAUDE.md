@@ -118,7 +118,7 @@ modules/         default modules: kernel-mcp, validator-shacl, belief-corroborat
                  milestone 6: truth-maintenance (flags claims whose premises were withdrawn; `docs/reasoning.md`),
                  memory-extractor (memories from recorded messages, quoting them, with a small model),
                  encoder-morphogen (Morphogen's verdicts as DQV measurements and PROV, D-99),
-                 encoder-backstage (Backstage catalogs in Backstage's terms) and map-drift (declared map against
+                 encoder-backstage (Backstage catalogs in Backstage's terms) and encoder-compose and decoder-compose (compose files into service and node templates, and rendered back from the kernel; D-125) and map-drift (declared map against
                  observed calls, gaps to review; D-100) and encoder-substrate (Substrate's store in Wikidata's and
                  Substrate's terms; D-103) and view-substrate (Substrate's read model over those claims: usable, search, page,
                  map, alternatives; D-104) and kernel-mcp's `substrate` profile (Substrate's ten store tools answered from them; D-105, `violations` D-108)
