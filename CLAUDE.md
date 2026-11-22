@@ -99,7 +99,7 @@ ontology/        kk-core.ttl (module contract only), dcterms.ttl, prov.ttl, acti
                  observables.ttl, conformance.ttl, oa.ttl, mappings.ttl, backstage.ttl (Backstage's catalog model), codemeta.ttl (packages), dqv.ttl (eval scores),
                  packs.yaml (packs + catalogs), slots.yaml
 shapes/          kernel.shacl.ttl + fixtures/tests
-distributions/   preset bundles of modules, packs, skills and views (business, process-maps, devops, papers); `kk up --distribution NAME` starts one as its own stack (D-118)
+distributions/   preset bundles of modules, packs, skills and views (business, process-maps, devops, papers); `kk up --distribution NAME` starts one as its own stack (D-118); each has `bundle/`, a compose folder of GHCR images that runs without a clone (`kk distribution bundle NAME`, `scripts/check_bundles.py`, `.github/workflows/image.yml`; D-120)
 modules/         default modules: kernel-mcp, validator-shacl, belief-corroboration, self-encoder,
                  ingest-filter-gitleaks, pack-loader, ui (shell at /ui), view-modules (a view); milestone 2:
                  encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance,

@@ -4,7 +4,8 @@ A distribution is a preset bundle of modules, packs, skills and views that does 
 (distributions/<name>/distribution.yaml, kernel/schemas/distribution.schema.json). `kk up --distribution
 NAME` starts it as its own stack: its own compose project and env file, the listed modules installed
 (their migrations applied where this kernel lacks their agent), the kernel serving the parts it names, and
-the UI listing only its views. Nothing in the kernel changes.
+the UI listing only its views. Nothing in the kernel changes. `kk distribution bundle NAME` writes a folder
+that runs one from published images (kk/bundle.py, D-120).
 """
 from __future__ import annotations
 
@@ -53,9 +54,21 @@ def ensure(conn, dist: dict) -> list[str]:
 def main(argv: list[str]) -> None:
     import argparse
     ap = argparse.ArgumentParser(prog="kk distribution", description=__doc__.splitlines()[0])
-    ap.add_argument("action", choices=("list",))
+    ap.add_argument("action", choices=("list", "bundle"))
+    ap.add_argument("name", nargs="?", help="bundle: the distribution")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--out", type=Path, help="bundle: the folder to write (default ./kk-NAME)")
+    ap.add_argument("--image-tag", default=None, help="bundle: the tag of the images in compose.yaml (default main)")
     a = ap.parse_args(argv)
+    if a.action == "bundle":
+        from .bundle import DEFAULT_TAG, write
+        if not a.name:
+            raise SystemExit("kk distribution bundle NAME")
+        load(a.name)
+        out = a.out or Path(f"kk-{a.name}")
+        changed = write(a.name, out, a.image_tag or DEFAULT_TAG)
+        print(json.dumps({"bundle": str(out), "changed": changed}))
+        return
     ds = [load(n) for n in names()]
     if a.json:
         print(json.dumps(ds, indent=2))

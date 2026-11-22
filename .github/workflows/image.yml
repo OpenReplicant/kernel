@@ -1,0 +1,60 @@
+# Publishes the kernel image and the Postgres image to GHCR (D-120): what the distribution bundles
+# (distributions/<name>/bundle/) pull. Pushes only from this repository's main branch and v* tags; a pull
+# request builds the images without pushing, and not at all when it comes from a fork.
+name: image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: ${{ matrix.name }} image
+    # no run for a pull request from a fork (its token cannot publish, and its code is not ours to build here)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write        # GITHUB_TOKEN may push to ghcr.io/openreplicant/* once the package allows this repository
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: kernel, image: ghcr.io/openreplicant/kernel, context: ., file: Dockerfile}
+          - {name: postgres, image: ghcr.io/openreplicant/kernel-postgres, context: deploy/postgres, file: deploy/postgres/Dockerfile}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Tags
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ matrix.image }}
+          # main (the branch), the short commit, and the version tag as pushed (v1.2.3) and without the v
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short,prefix=
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+      - name: Sign in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (and push, except on a pull request)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
