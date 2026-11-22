@@ -71,6 +71,32 @@ def engine() -> str:
     return os.environ.get("KK_CONTAINER_ENGINE") or "docker"
 
 
+def env_file() -> Path:
+    """The stack's secrets: deploy/.env, or deploy/.env.<name> for a distribution's own stack (D-118)."""
+    d = os.environ.get("KK_DISTRIBUTION")
+    return ROOT / "deploy" / (f".env.{d}" if d else ".env")
+
+
+def compose(*args: str) -> list[str]:
+    """`docker compose` on this stack: a distribution is its own compose project, kk-<name>, with its own volumes."""
+    d = os.environ.get("KK_DISTRIBUTION")
+    return [engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file()),
+            *(["-p", f"kk-{d}"] if d else []), *args]
+
+
+def distribution_settings(env: dict) -> dict:
+    """What a distribution's env file holds besides the secrets: its name, the parts the kernel serves and ports of
+    its own (once chosen they stay), so stacks run side by side."""
+    from .distributions import current, names
+    d = current()
+    if not d:
+        return {}
+    i = names().index(d["name"]) + 1
+    return {"KK_DISTRIBUTION": d["name"],
+            **({"KK_SERVE_PARTS": ",".join(d["settings"]["serve"])} if d.get("settings", {}).get("serve") else {}),
+            "KK_HTTP_PORT": env.get("KK_HTTP_PORT") or str(8080 + i), "KK_DB_PORT": env.get("KK_DB_PORT") or str(5432 + i)}
+
+
 def stack(env_file: Path) -> tuple[str, str]:
     """Start the compose stack (secrets generated once); return the admin URL and the JWT secret."""
     env = read_env(env_file)
@@ -82,13 +108,15 @@ def stack(env_file: Path) -> tuple[str, str]:
                "KK_JWT_SECRET": env.get("KK_JWT_SECRET") or secrets.token_urlsafe(48),
                **({"KK_DB_PORT": os.environ["KK_DB_PORT"]} if os.environ.get("KK_DB_PORT") else {})}
         write_secret(env_file, env)
+    if (extra := distribution_settings(env)) and {**env, **extra} != env:
+        env = {**env, **extra}
+        write_secret(env_file, env)
     # Built every time: the engine's layer cache makes an unchanged checkout a no-op, and an updated one is
     # never run on an image of older code.
     ca = os.environ.get("KK_BUILD_CA")    # a TLS-intercepting proxy's CA, as a build secret
     subprocess.run([engine(), "build", "-q", "-t", "knowledge-kernel:local",
                     *(["--secret", f"id=ca,src={ca}"] if ca else []), str(ROOT)], check=True, stdout=subprocess.DEVNULL)
-    subprocess.run([engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file),
-                    "up", "-d", "--wait", "db", "kernel", "caddy"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(compose("up", "-d", "--wait", "db", "kernel", "caddy"), check=True, stdout=subprocess.DEVNULL)
     port = os.environ.get("KK_DB_PORT") or env.get("KK_DB_PORT") or "5432"
     return f"postgresql://postgres:{env['POSTGRES_PASSWORD']}@127.0.0.1:{port}/kk", env["KK_JWT_SECRET"]
 
@@ -140,7 +168,7 @@ def encode(folder: Path, admin_url: str, env_file: Path | None) -> dict:
     from self_encoder.repo import commit
     args = ["--name", folder.name] + (["--commit", c] if (c := commit(folder)) else [])
     if env_file:   # the stack: the kernel image, the project read-only, artifacts in their volume
-        cmd = [engine(), "compose", "-f", str(ROOT / "deploy/compose.yaml"), "--env-file", str(env_file), "run",
+        cmd = [*compose("run"),
                "--rm", "--no-deps", "-v", f"{folder}:/repo:ro", "-v", "kk-artifacts:/artifacts",
                "-e", "KK_ARTIFACTS=/artifacts", "-e", "KK_ROLE=kkm_self_encoder",
                "kernel", "kk", "scan", "--repo", "/repo", *args]
@@ -226,7 +254,7 @@ def connect(folder: Path, agent: str, no_stack: bool, db_host: str | None, no_sc
     if no_stack:
         admin_url, jwt = os.environ.get("KK_ADMIN_URL", ""), os.environ.get("KK_JWT_SECRET", "")
     else:
-        admin_url, jwt = stack(ROOT / "deploy/.env")
+        admin_url, jwt = stack(env_file())
     agent_file = h / "agents" / f"{agent}.env"
     changed = [f for f, did in (
         (str(h / "owner.env"), login(admin_url, db_host, h / "owner.env", "person_owner", "urn:kk:agent:person:owner",
@@ -234,12 +262,17 @@ def connect(folder: Path, agent: str, no_stack: bool, db_host: str | None, no_sc
         (str(agent_file), login(admin_url, db_host, agent_file, f"agent_{agent.replace('-', '_')}",
                                 f"urn:kk:agent:{agent}", "software", agent, ["kk_agent"]))) if did]
     changed += project(folder, agent_file, profile)
+    from .distributions import current, ensure
+    if dist := current():   # the distribution's modules, installed where this kernel lacks them (idempotent)
+        with psycopg.connect(admin_url, autocommit=True) as conn:
+            changed += [f"module {m}" for m in ensure(conn, dist)]
     out = {"project": str(folder), "agent": f"urn:kk:agent:{agent}", "changed": changed,
            "owner_login": str(h / "owner.env")}
     if not no_scan:
-        out["encoded"] = encode(folder, admin_url, None if no_stack else ROOT / "deploy/.env")
+        out["encoded"] = encode(folder, admin_url, None if no_stack else env_file())
     if not no_stack:
-        out["ui"] = "http://127.0.0.1:8080/ui/"
+        port = read_env(env_file()).get("KK_HTTP_PORT") or "8080"
+        out["ui"] = f"http://127.0.0.1:{port}/ui/"
         ready(out["ui"] + "views.json")
     if pw := urlparse(read_env(h / "owner.env").get("KK_DATABASE_URL", "")).password:
         out["owner_sign_in"] = {"name": "owner", "password": unquote(pw)}   # the UI's sign-in (D-74)
@@ -266,7 +299,12 @@ def main(argv: list[str]) -> None:
                          ", substrate (Substrate's ten tools: search, read, expand, locate, path, alternatives, violations, create_item, say, deprecate) or operator (every tool)")
     ap.add_argument("--commands-dir", type=Path, help="write the harness's kernel-mcp, kernel-mcp-hook and kernel-mcp-cue"
                     " commands as this folder's (wrappers); also KK_COMMANDS_DIR")
+    ap.add_argument("--distribution", help="a preset bundle of modules, packs and views as its own stack (D-118; `kk distribution list`)")
     a = ap.parse_args(argv)
+    if a.distribution:
+        from .distributions import load
+        load(a.distribution)
+        os.environ["KK_DISTRIBUTION"] = a.distribution
     if a.commands_dir:
         os.environ["KK_COMMANDS_DIR"] = str(a.commands_dir)
     out = connect(a.project.resolve(), a.agent, a.no_stack, a.db_host, a.no_scan, a.profile)

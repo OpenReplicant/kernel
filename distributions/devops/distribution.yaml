@@ -1,0 +1,10 @@
+name: devops
+title: Devops
+does: "The MAPE-K loop on a running service: observations, anomalies, a proposed adaptation a person approves, and an actuator that carries it out."
+modules: [observer-prometheus, anomaly, skill-adaptation-planning, actuator-compose, view-devops]
+packs: [prov-o, sosa, observables, wot-td]
+skills: [skill-adaptation-planning]
+views: [view-devops]
+demo: devops
+settings:
+  serve: [mcp, validator, belief, recall, quotes, tms, observer]

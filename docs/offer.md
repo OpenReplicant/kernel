@@ -71,6 +71,7 @@ The system is modular. We build:
 | event logs (CSV, XES), BPMN, written procedures, papers, chats and agent sessions as sources | connectors to your systems |
 | documented against actual; deviations with evidence; a model that learns from approvals | your process's specific rules and KPIs |
 | interviews that build org charts and process maps, quoted | an interview programme across your teams |
+| the business distribution: interactive org and process maps from conversations, mined logs beside them, drift flagged (`kk up --distribution business`) | your teams' interview programme and systems |
 | the MAPE-K loop with a Docker Compose actuator on one host | actuators for your platform; hosting beyond one machine |
 | sign-in per person, database-enforced visibility, review lane, audit trail | your identity provider and policies |
 

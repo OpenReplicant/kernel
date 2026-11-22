@@ -1,0 +1,10 @@
+name: process-maps
+title: Process maps
+does: "Documented against actual: an event log and a BPMN model compared, deviations ranked with their cases, and a model that learns from what people approve."
+modules: [encoder-eventlog, encoder-bpmn, skill-process-extraction, conformance, view-bpm, learner-process]
+packs: [prov-o, bbo, sosa, observables, conformance]
+skills: [skill-process-extraction]
+views: [view-bpm]
+demo: order-to-cash
+settings:
+  serve: [mcp, validator, belief, recall, quotes, tms, conformance, learner]

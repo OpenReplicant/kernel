@@ -79,8 +79,11 @@ services:
       DATABASE_URL: postgresql://kk_authenticator:${KK_AUTHENTICATOR_PASSWORD}@db:5432/kk
       KK_JWT_SECRET: ${KK_JWT_SECRET:?set in .env}
       KK_ARTIFACTS: /store      # read-only here; `kk scan` writes at /artifacts (docker compose run -v)
+      KK_DISTRIBUTION: ${KK_DISTRIBUTION:-}   # a distribution lists only its own views (D-118)
+      KK_CHATS: /chats          # the interview's chat files (the Map view's chat pane, D-117)
     volumes:
       - kk-artifacts:/store:ro
+      - kk-chats:/chats
     depends_on:
       init: {condition: service_completed_successfully}
     restart: unless-stopped
@@ -90,12 +93,13 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:${KK_HTTP_PORT:-8080}:80"
     depends_on: [kernel]
     restart: unless-stopped
 
 volumes:
   db-data:
+  kk-chats:
   kk-artifacts:             # per project: `docker compose run -v kk-artifacts:/artifacts` resolves to it too
 
 networks:

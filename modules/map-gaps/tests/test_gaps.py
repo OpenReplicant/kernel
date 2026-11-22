@@ -1,4 +1,4 @@
-"""M5-T4 unit checks on the scripted interview (modules/skill-interview/tests/fixtures/acme.yaml): after
+"""M5-T4 unit checks on the scripted interview (modules/skill-interview/interviewer/data/acme.yaml): after
 each answer the gaps are the ones the script expects, every gap an answer was asked about is closed by
 it, and none are left at the end; process steps from event logs and BPMN files raise no questions."""
 import sys
