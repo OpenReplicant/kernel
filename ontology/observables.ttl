@@ -11,7 +11,7 @@
 <https://w3id.org/knowledge-kernel/observables>
     a owl:Ontology ;
     rdfs:label "Observable properties" ;
-    owl:versionInfo "0.3.0" .
+    owl:versionInfo "0.4.0" .
 
 <urn:kk:property:case-count> a sosa:ObservableProperty ;
     rdfs:label "case count" ;
@@ -46,3 +46,33 @@
 <urn:kk:property:latency-seconds-mean> a sosa:ObservableProperty ;
     rdfs:label "mean latency (seconds)" ;
     skos:definition "Mean time in seconds a service took to answer a request in the window, all replicas together." .
+
+# Process KPIs (D-119): observations of a process over a time window, computed from an event log's cases by
+# process-kpis. The subject is the process, the window is the claim's valid time.
+<urn:kk:property:cases-in-window> a sosa:ObservableProperty ;
+    rdfs:label "cases in window" ;
+    skos:definition "Number of cases whose first event falls in the window, as counted for the process KPIs." .
+<urn:kk:property:cycle-time-median-seconds> a sosa:ObservableProperty ;
+    rdfs:label "median cycle time (seconds)" ;
+    skos:definition "Median over the window's cases of the time in seconds from a case's first event to its last." .
+<urn:kk:property:cycle-time-p90-seconds> a sosa:ObservableProperty ;
+    rdfs:label "90th percentile cycle time (seconds)" ;
+    skos:definition "Nearest-rank 90th percentile over the window's cases of the time in seconds from a case's first event to its last." .
+<urn:kk:property:rework-rate> a sosa:ObservableProperty ;
+    rdfs:label "rework rate" ;
+    skos:definition "Share of the window's cases in which at least one step occurred more than once (0 to 1)." .
+<urn:kk:property:throughput-per-day> a sosa:ObservableProperty ;
+    rdfs:label "throughput (cases per day)" ;
+    skos:definition "The window's cases divided by the length of the window in days." .
+<urn:kk:property:cost-per-case> a sosa:ObservableProperty ;
+    rdfs:label "cost per case" ;
+    skos:definition "Mean over the window's cases that carry a cost of the sum of their events' costs, in the log's own unit; only where the log has a cost column." .
+<urn:kk:property:handoffs-per-case> a sosa:ObservableProperty ;
+    rdfs:label "handoffs per case" ;
+    skos:definition "Mean over the window's cases of the times consecutive events were carried out by different resources; only where the log names resources." .
+
+# The qualifier that marks a KPI observation against a person's target (a bbo:maxValue or bbo:minValue claim
+# on the process with the KPI as sosa:observedProperty): the value is `met` or `missed`, plain arithmetic.
+<urn:kk:property:target-status> a rdf:Property ;
+    rdfs:label "target status" ;
+    skos:definition "Qualifier on a KPI observation: `met` or `missed`, the value compared with the target a person stated for it; the target's bound is carried beside it under bbo:maxValue or bbo:minValue." .

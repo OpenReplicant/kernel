@@ -121,6 +121,9 @@ KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_up.py"
 KK_ADMIN_URL="$admin_url" $py "$root/scripts/e2e_g1.py"
 # M4-G1: the process loop as a customer sees it (kk demo, sign in, review, learn, a cited answer).
 $py "$root/scripts/e2e_demo.py"
+# D-119: process KPIs as observed claims citing the log, marked against a person's targets, recomputed, shown in the
+# Processes view. A fresh database of its own (kk demo resets that owner's password, not this kernel's).
+KK_REQUIRE_UI=${KK_REQUIRE_UI:-0} $py "$root/scripts/e2e_kpis.py"
 # M5-T5 (D-117): kk demo --interview fills both maps, a person corrects and confirms in place, the chat takes an answer.
 # After the checks that use the owner's login: like kk demo, it gives the owner a new password.
 KK_REQUIRE_UI=${KK_REQUIRE_UI:-0} $py "$root/scripts/e2e_interview_demo.py"

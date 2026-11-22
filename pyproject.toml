@@ -34,7 +34,7 @@ packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encod
             "verifier_quotes", "evaluator", "process_learner", "interaction_encoder",
             "map_gaps", "truth_maintenance", "memory_extractor", "encoder_morphogen",
             "encoder_backstage", "map_drift", "encoder_substrate", "watcher_spans",
-            "constraints_wikidata", "detectors", "interviewer"]
+            "constraints_wikidata", "detectors", "interviewer", "process_kpis"]
 
 [tool.setuptools.package-dir]
 kernel_mcp = "modules/kernel-mcp/kernel_mcp"
@@ -66,6 +66,7 @@ watcher_spans = "modules/watcher-spans/watcher_spans"
 constraints_wikidata = "modules/constraints-wikidata/constraints_wikidata"
 detectors = "modules/detectors/detectors"
 interviewer = "modules/skill-interview/interviewer"
+process_kpis = "modules/process-kpis/process_kpis"
 
 [tool.setuptools.package-data]
 interviewer = ["data/*"]
