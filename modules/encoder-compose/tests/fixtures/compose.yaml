@@ -1,0 +1,38 @@
+# A small stack: an anchor merged into two services, a dependency with a condition, profiles, both environment forms.
+name: shop
+x-locked: &locked
+  read_only: true
+  cap_drop: [ALL]
+
+services:
+  db:
+    image: docker.io/library/postgres:17.2
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+
+  api:
+    <<: *locked
+    image: ${API_IMAGE:-ghcr.io/example/shop-api:1.4}
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://shop@db/shop
+      - LOG_LEVEL
+    depends_on:
+      db: {condition: service_healthy}
+
+  worker:
+    <<: *locked
+    build: {context: ./worker}
+    profiles: [jobs]
+    depends_on: [api, db]
+
+  ghost:
+    environment: {X: "1"}
+
+volumes:
+  db-data:

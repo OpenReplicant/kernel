@@ -33,7 +33,7 @@ packages = ["kk", "kernel_mcp", "validator", "belief_corroboration", "self_encod
             "actuator_compose", "paper_encoder", "recall_index", "recall_dense",
             "verifier_quotes", "evaluator", "process_learner", "interaction_encoder",
             "map_gaps", "truth_maintenance", "memory_extractor", "encoder_morphogen",
-            "encoder_backstage", "map_drift", "encoder_substrate", "watcher_spans",
+            "encoder_backstage", "encoder_compose", "decoder_compose", "map_drift", "encoder_substrate", "watcher_spans",
             "constraints_wikidata", "detectors", "interviewer", "process_kpis"]
 
 [tool.setuptools.package-dir]
@@ -60,6 +60,8 @@ truth_maintenance = "modules/truth-maintenance/truth_maintenance"
 memory_extractor = "modules/memory-extractor/memory_extractor"
 encoder_morphogen = "modules/encoder-morphogen/encoder_morphogen"
 encoder_backstage = "modules/encoder-backstage/encoder_backstage"
+encoder_compose = "modules/encoder-compose/encoder_compose"
+decoder_compose = "modules/decoder-compose/decoder_compose"
 map_drift = "modules/map-drift/map_drift"
 encoder_substrate = "modules/encoder-substrate/encoder_substrate"
 watcher_spans = "modules/watcher-spans/watcher_spans"
