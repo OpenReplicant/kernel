@@ -1,4 +1,4 @@
-// T20 and gate G3, run by scripts/smoke_kernel.sh against the running `kk serve`: the UI in headless
+// T20 and gate G3 (the shell as a desktop since D-127: a launcher and windows), run by scripts/smoke_kernel.sh against the running `kk serve`: the UI in headless
 // Chromium, signed in as the owner with their own token. The self-model renders as a graph from live
 // claims and an edge explains its claim; search finds and explains a claim; a change set an agent
 // submitted for review is approved in the browser and applied; the Modules view module loads and
@@ -94,8 +94,8 @@ const after = await mcp(agent, 'get_change_set', { change_set_id: sub.id });
 check('a person approves a review-lane change set in the browser and it is applied', after.status === 'applied', after.status);
 
 await page.getByRole('button', { name: 'Modules' }).click();
-await page.waitForSelector('#view tr[data-module]', { timeout: 15000 });
-const modules = await page.$$eval('#view tr[data-module]', rows => rows.map(r => r.dataset.module));
+await page.waitForSelector('.view tr[data-module]', { timeout: 15000 });
+const modules = await page.$$eval('.view tr[data-module]', rows => rows.map(r => r.dataset.module));
 check('the Modules view module loads and lists the modules', modules.includes('urn:kk:module:validator-shacl'), `${modules.length} modules`);
 await shot('modules');
 
@@ -120,6 +120,7 @@ await page.waitForFunction(() => /derived_from/.test((document.querySelector('as
 const explained = JSON.parse(await page.textContent('aside.detail pre'));
 check('M2-T4 a discrepancy explains: the claims it was derived from', (explained.derived_from || []).length > 0,
       `${(explained.derived_from || []).length} premises`);
+await page.locator('aside.detail').getByRole('button', { name: 'Close' }).click();   // a window on top of the view
 
 // M2-G1: the person reviews every planted discrepancy in the process view, each with its evidence and
 // belief, and confirms it; all six end confirmed.
