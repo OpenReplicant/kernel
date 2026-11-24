@@ -117,6 +117,7 @@ jobs:
         run: |
           python modules/kernel-mcp/tests/test_briefing.py
           python modules/kernel-mcp/tests/test_cues.py
+          python modules/kernel-mcp/tests/test_annotations.py
       - name: Truth maintenance tests (M6-T12)
         run: python modules/truth-maintenance/tests/test_plan.py
       - name: Span watcher tests (D-106)

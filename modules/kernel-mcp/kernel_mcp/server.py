@@ -23,6 +23,7 @@ import jwt
 import psycopg
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.types import ToolAnnotations
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
@@ -189,7 +190,14 @@ def rows(select: str) -> str:
 
 
 # ------------------------------------------------------------------ reading
-@mcp.tool()
+# What each tool does to the kernel, as MCP tool annotations (D-128): a reader changes nothing; a writer adds claims, change
+# sets, runs or decisions but never deletes (invariant 2: supersede, refute or retract), so it is not destructive. A
+# router in front (Substrate's, S-205) lets a reader through and holds a writer for a person by default.
+READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+WRITES = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
+
+
+@mcp.tool(annotations=READ_ONLY)
 async def query_claims(ctx: Context, subject: str | None = None, predicate: str | None = None,
                        object_entity: str | None = None, scope: str | None = None,
                        include_deprecated: bool = False, limit: int = 100) -> list[dict]:
@@ -204,7 +212,7 @@ async def query_claims(ctx: Context, subject: str | None = None, predicate: str 
          "dep": include_deprecated, "n": max(1, min(limit, 1000))})
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def get_entity(ctx: Context, iri: str) -> dict:
     """The entity card: current claims about the entity, and claims that point at it."""
     iri = expand(iri)
@@ -214,7 +222,7 @@ async def get_entity(ctx: Context, iri: str) -> dict:
         {"i": iri})
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
     """Claims ranked by relevance to the text (any words; BM25 fused with dense embeddings, BM25, or
     full-text search, depending on the recall modules installed, then belief; re-ranked by a cross-encoder when
@@ -231,7 +239,7 @@ async def search(ctx: Context, text: str, limit: int = 20) -> list[dict]:
     return (rows or await query(ctx, recall.SUBSTRING, recall.params(text, limit)))[:limit]
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def explain(ctx: Context, claim_id: str) -> dict:
     """Where a claim came from: sources and quotes, derivations, uses, status history, beliefs, verifications,
     run. claim_id: a claim id, or the #handle a briefing shows (its first characters)."""
@@ -250,13 +258,13 @@ async def _typed(ctx: Context, cls: str, props: list[str]) -> list[dict]:
         {"type": RDF_TYPE, "cls": expand(cls), "props": [expand(p) for p in props]})
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def list_slots(ctx: Context) -> list[dict]:
     """The slot catalog as the kernel knows it: each slot with its contract and cardinality claims."""
     return await _typed(ctx, "kk:Slot", ["rdfs:label", "kk:slotContract", "kk:cardinality"])
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def list_modules(ctx: Context) -> list[dict]:
     """Modules in the self-model: label, version, kind, the slots they fill and the agent they run as."""
     return await _typed(ctx, "kk:Module", ["rdfs:label", "owl:versionInfo", "kk:moduleKind", "kk:fills", "kk:runsAs",
@@ -264,7 +272,7 @@ async def list_modules(ctx: Context) -> list[dict]:
 
 
 # ------------------------------------------------------------------ writing
-@mcp.tool()
+@mcp.tool(annotations=WRITES)
 async def start_run(ctx: Context, module: str | None = None, plan_step: str | None = None,
                     info: dict | None = None) -> str:
     """Start a run under your own identity; every change set names the run that produced it."""
@@ -272,14 +280,14 @@ async def start_run(ctx: Context, module: str | None = None, plan_step: str | No
                            (module, plan_step, Jsonb(info or {}))))
 
 
-@mcp.tool()
+@mcp.tool(annotations=WRITES)
 async def submit_change_set(ctx: Context, change_set: dict) -> dict:
     """Submit a change set (kernel/schemas/change_set.schema.json). Returns {id, status, lane}.
     attributed_to must be your own agent IRI and generated_by one of your running runs."""
     return await query(ctx, "select api.submit_change_set(%s)", (Jsonb(change_set),))
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def get_change_set(ctx: Context, change_set_id: str) -> dict:
     """Status of one of your change sets, with the validation report when it is invalid."""
     found = await query(ctx, "select to_jsonb(c) from api.change_sets c where id = %s::uuid", (change_set_id,))
@@ -288,7 +296,7 @@ async def get_change_set(ctx: Context, change_set_id: str) -> dict:
     return found
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def list_runs(ctx: Context, plan_step: str | None = None, used: str | None = None, module: str | None = None,
                     limit: int = 50) -> list[dict]:
     """Runs (prov:Activity), newest first: who ran what, for which plan step, using which claims, with
@@ -302,7 +310,7 @@ async def list_runs(ctx: Context, plan_step: str | None = None, used: str | None
         {"ps": expand(plan_step), "m": expand(module), "u": used, "n": max(1, min(limit, 500))})
 
 
-@mcp.tool()
+@mcp.tool(annotations=WRITES)
 async def finish_run(ctx: Context, run_id: str, status: str = "succeeded", cost: dict | None = None) -> str:
     """Finish one of your runs: status succeeded or failed, cost e.g. {"tokens": 1200, "ms": 5300}."""
     await query(ctx, "select api.finish_run(%s::uuid, %s, %s)", (run_id, status, Jsonb(cost or {})))
@@ -310,7 +318,7 @@ async def finish_run(ctx: Context, run_id: str, status: str = "succeeded", cost:
 
 
 # ------------------------------------------------------------------ people and views (the UI uses these too)
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def whoami(ctx: Context) -> dict:
     """Your identity as the kernel sees it: login role, agent IRI, claims you can see, what waits for review."""
     return await query(ctx, """select jsonb_build_object('role', current_user, 'agent', kernel.my_agent(),
@@ -318,7 +326,7 @@ async def whoami(ctx: Context) -> dict:
         'awaiting_review', (select count(*) from api.review_queue))""")
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def list_change_sets(ctx: Context, status: str | None = None, limit: int = 50) -> list[dict]:
     """Change sets you can see (your own; reviewers and validators: all in their cleared scopes), newest first."""
     return await query(ctx, rows(
@@ -328,21 +336,21 @@ async def list_change_sets(ctx: Context, status: str | None = None, limit: int =
         {"st": status, "n": max(1, min(limit, 500))})
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def review_queue(ctx: Context, limit: int = 50) -> list[dict]:
     """Change sets waiting for a person's review in scopes you may review (reviewers only), oldest first."""
     return await query(ctx, rows("select * from api.review_queue order by submitted_at limit %s"),
                        (max(1, min(limit, 200)),))
 
 
-@mcp.tool()
+@mcp.tool(annotations=WRITES)
 async def review(ctx: Context, change_set_id: str, approve: bool, note: str | None = None) -> str:
     """Approve or reject a change set in the review lane. People only: the kernel refuses anyone who is
     not a reviewer for its scope, and anyone reviewing their own change set."""
     return await query(ctx, "select api.review(%s::uuid, %s, %s)", (change_set_id, approve, note))
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def graph(ctx: Context, module: str | None = None, slot: str | None = None, root: str | None = None,
                 depth: int = 1) -> dict:
     """The claims you can see as a graph (Cytoscape.js elements): nodes are entities, edges are claims with
