@@ -33,7 +33,7 @@ from pydantic import Field
 
 from .briefing import handle
 from .memory import resolve as claim_of
-from .server import PREFIX, KernelError, connection, mcp, one
+from .server import PREFIX, READ_ONLY, WRITES, KernelError, connection, mcp, one
 
 SCOPE = os.environ.get("KK_SUBSTRATE_SCOPE", "urn:kk:scope:default")
 WAIT = float(os.environ.get("KK_SUBSTRATE_WAIT", "15"))    # seconds a write waits for the validator to apply it
@@ -54,8 +54,13 @@ DATATYPE = {
 }
 
 
+# what each tool does to the store (MCP tool annotations, so a router can gate a write and let a read through)
+SUBSTRATE_WRITES = {"create_item", "say", "deprecate"}
+
+
 def tool(name: str, description: str):
-    return mcp.tool(name=PREFIX + name, description=description)
+    return mcp.tool(name=PREFIX + name, description=description,
+                    annotations=WRITES if name in SUBSTRATE_WRITES else READ_ONLY)
 
 
 def encode():

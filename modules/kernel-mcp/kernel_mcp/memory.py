@@ -18,7 +18,7 @@ from psycopg.types.json import Jsonb
 
 from . import briefing, cues, recall as ranked
 from .briefing import AS, DCT, KIND, KINDS, LABEL, NOTE, NOTE_PARTS, RDF_TYPE
-from .server import CLAIM_COLUMNS, KernelError, connection, expand, mcp, one, rows
+from .server import CLAIM_COLUMNS, READ_ONLY, WRITES, KernelError, connection, expand, mcp, one, rows
 
 SCOPE = os.environ.get("KK_MEMORY_SCOPE", "urn:kk:scope:default")
 DATETIME = "http://www.w3.org/2001/XMLSchema#dateTime"
@@ -117,7 +117,7 @@ CONCLUSION_SCOPE = """select t from unnest(%(cands)s::text[]) with ordinality as
   order by n limit 1"""
 
 
-@mcp.tool()
+@mcp.tool(annotations=WRITES)
 async def remember(ctx: Context, kind: str, text: str, about: str | None = None, replaces: str | None = None,
                    because: list[str] | None = None, when: dict | None = None) -> dict:
     """Remember one thing, in a sentence. kind: fact, decision, preference, commitment, correction or
@@ -188,7 +188,7 @@ async def remember(ctx: Context, kind: str, text: str, about: str | None = None,
             "note": "recall shows it once it is applied" if result["status"] != "applied" else "applied"}
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def recall(ctx: Context, question: str, budget: int = 800) -> str:
     """What the kernel knows about the question, as a briefing within `budget` tokens (default 800): one
     line per memory or claim, saying who said it and its belief (0 to 1), ending in a #handle. Cite the
@@ -226,7 +226,7 @@ async def recall(ctx: Context, question: str, budget: int = 800) -> str:
                                                         labels, agents, me, types, room), budget)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def changes_since(ctx: Context, since: str | None = None, budget: int = 800) -> str:
     """What others changed since you last looked: claims added and claims superseded or retracted, newest
     first, as a briefing within `budget` tokens. since: the cursor a previous call returned (an ISO time);

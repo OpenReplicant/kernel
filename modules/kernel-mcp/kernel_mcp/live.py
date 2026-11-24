@@ -8,10 +8,10 @@ from __future__ import annotations
 import psycopg
 from mcp.server.mcpserver import Context
 
-from .server import connection, mcp, one, rows
+from .server import READ_ONLY, connection, mcp, one, rows
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def applied_since(ctx: Context, cursor: int | None = None, limit: int = 200) -> dict:
     """Change sets applied after `cursor` (the `cursor` a previous call returned; none: the present one, no
     history), in the order they were applied, each with the claims it touched (claim_id, kind added | status |
