@@ -1,7 +1,7 @@
 # Module manifest — schema: kernel/schemas/module.schema.json
 id: urn:kk:module:ui
 name: Web UI shell
-version: 0.3.0
+version: 0.3.1
 description: 'The kernel in a browser, served by kk serve at /ui, as a desktop (D-127): a launcher and windows
   for search and explain, the review queue, change sets, the self-model graph and your identity, every view module
   that fills the ui slot, and framed apps on origins of their own when the front door lists them in /ui/apps.json.

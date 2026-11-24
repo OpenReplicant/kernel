@@ -282,6 +282,7 @@
                     'approve one to make it part of the documented process; the next conformance pass then stops flagging it.' }),
                   learned);
       let current = null;
+      download.disabled = true;   // enabled once a process is drawn: an early click would otherwise do nothing (D-129)
       download.addEventListener('click', () => {
         if (!current) return;
         const a = el('a', { href: URL.createObjectURL(new Blob([toBpmn(current, pick.value)], { type: 'application/xml' })),
@@ -303,6 +304,7 @@
       const show = async () => {
         const data = await load(kk, pick.value);
         current = data;
+        download.disabled = false;
         draw(map, kk, data, showEdge);
         showKpis(kk, pick.value, kpis).catch(e => kpis.replaceChildren(el('span', { class: 'bad', textContent: e.message })));
         list.dataset.ready = '0';
