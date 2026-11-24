@@ -234,6 +234,7 @@ function shell() {
       await this.run(async () => { this.found = await KK.call('search', { text: this.query, limit: 50 }); this.searched = true; });
     },
     async explain(id) {
+      this.detail = null;   // the previous claim goes at once: never shown while the next one loads (D-129)
       await this.run(async () => {
         const body = await KK.call('explain', { claim_id: id });
         if (!this.win('explain')) await this.launch('explain'); else this.restore('explain');
