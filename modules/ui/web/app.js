@@ -39,6 +39,7 @@ const KK = {
   },
 
   explain: null,  // set by the shell: KK.explain(claimId) shows a claim's sources and history
+  open: null,     // set by the shell (D-129): KK.open(id) opens a launcher entry's window (search, view:NAME, app:NAME)
 };
 
 const CORE = [{ id: 'search', title: 'Search' }, { id: 'review', title: 'Review' }, { id: 'changes', title: 'Change sets' },
@@ -71,6 +72,7 @@ function shell() {
       try { this.saved = JSON.parse(localStorage.getItem(LAYOUT) || '{}'); } catch (e) { this.saved = {}; }
       KK.token = this.token;
       KK.explain = id => this.explain(id);
+      KK.open = id => this.launch(String(id));   // a view can put another window in front of the person (D-129)
       try { this.views = await (await fetch('/ui/views.json')).json(); } catch (e) { this.views = []; }
       try {
         const r = await fetch('/ui/apps.json');
