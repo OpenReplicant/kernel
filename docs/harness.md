@@ -76,7 +76,7 @@ request sends `Authorization: Bearer <JWT>` whose `role` claim is the agent's ro
 (stdio) or the token's `profile` claim (`kk token agent_claude_code --profile memory`). `memory` shows four
 tools: `remember`, `recall`, `explain` and `changes_since`; the briefings are also MCP resources
 (`kernel://recall/{question}`, `kernel://changes`). `substrate` shows Substrate's ten store tools (D-105, D-108), for a harness whose skills
-were written against Substrate's own MCP server. `operator`, the default, shows every tool except those. `kk up`
+were written against Substrate's older store server (a transitional profile: it will be retired with `encoder-substrate` and `view-substrate` once Morphogen's file-based skills replace Substrate's; not yet). `operator`, the default, shows every tool except those. `kk up`
 writes `memory` unless given `--profile operator`. A profile keeps the agent's context small; it is not
 a security boundary, since Postgres decides what each login may do.
 

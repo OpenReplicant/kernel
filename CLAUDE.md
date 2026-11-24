@@ -15,6 +15,14 @@ encoders interpret systems into and decoders interpret out of. Claims are the un
 unit people and agents see is a typed item (D-101, `docs/content.md`, proposed: the catalog entry is its first
 proof, D-123). Runtimes, workflow engines and orchestrators are outside the kernel (D-121, D-94 c).
 
+Neighbours (docs only, no change to what the kernel is): **Morphogen** is a file-based kit (map, research,
+catalog, optimise) that needs no kernel; the kernel is an optional layer above it, ingesting its Backstage files with
+`encoder-backstage` for indexing, search and traversal. **Substrate** is the default distribution: the kernel's core
+plus Substrate's optional parts installed onto a kernel instance, Morphogen's plugin, a configured harness, a model
+gateway and local models. The desktop stays here. The Substrate-specific modules (`encoder-substrate`, `view-substrate`,
+kernel-mcp's `substrate` profile and what depends on them) will be retired together once Morphogen's file-based skills
+replace Substrate's; they are not retired yet (D-130).
+
 ## Read first, in this order
 
 1. `docs/spec.md` — the specification (source of truth). Kernel v0 (§3) is **frozen**.

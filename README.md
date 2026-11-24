@@ -11,6 +11,15 @@ sure we are, and is reviewed by a person before it counts (D-84).
   views that does one job, installed as its own stack. The first: organisation and process maps from
   conversations.
 
+- **Neighbours:** two projects work beside the kernel, and neither is a dependency of it. **Morphogen** is a
+  file-based kit (map, research, catalog, optimise; a Claude Code plugin first) that needs no kernel: its map is
+  Backstage entity files. The kernel is an optional layer above it: when indexing, search or graph traversal are
+  wanted, `encoder-backstage` ingests those files. **Substrate** is the default distribution: the kernel's core plus
+  Substrate's optional parts installed onto a kernel instance (an environment module whose gates use the review
+  lane, a channel and an MCP router as MCP servers, the assistant's view in the desktop), Morphogen's plugin, a
+  configured harness (Claude Code first), a model gateway and local models. The desktop (windows, launcher, framed
+  apps; `modules/ui`) stays in this repository. Substrate's own repository holds its parts and the distribution;
+  the kernel's core ships without them (`docs/architecture.md`, "Neighbours").
 - **Work with us:** `docs/offer.md`: paid pilots of process intelligence and the self-healing MAPE-K loop, memory for your agents, custom modules. Apache-2.0 (`LICENSE`).
 - **How it works, in plain language:** `docs/architecture.md`; how agents reason over it: `docs/reasoning.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
