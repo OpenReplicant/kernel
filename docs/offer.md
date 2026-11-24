@@ -75,6 +75,15 @@ The system is modular. We build:
 | the MAPE-K loop with a Docker Compose actuator on one host | actuators for your platform; hosting beyond one machine |
 | sign-in per person, database-enforced visibility, review lane, audit trail | your identity provider and policies |
 
+## How this relates to Morphogen's mapping offer
+
+A separate offer exists beside this one: **Morphogen** mapping small and medium businesses, finding the
+optimisation opportunities and presenting them as implementation projects. It runs on Morphogen's file-based kit
+(a map as Backstage entity files, options catalogued, targets set) and needs neither this kernel nor Substrate. The
+kernel is the optional layer a client can add above those files when they want indexing, search, graph traversal,
+cited answers and review by people; the engagements above do not depend on Morphogen or on Substrate. Nothing in
+this page's scope or its decisions changes.
+
 ## Get in touch
 
 Open an issue at https://github.com/OpenReplicant/kernel with "Pilot:" in the title, saying what you

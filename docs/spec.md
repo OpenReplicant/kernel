@@ -45,6 +45,13 @@ the architecture (a symbolic store that learns, with models at its edges) is `do
 | **ABI** (slot contracts) | Change-set format, module manifest, slot catalog, hook contract. `kernel/schemas/`, `ontology/slots.yaml`, `kernel/contracts.py` | Versioned (semver). Additive changes are minor; breaking changes are major and need a decision |
 | **Distribution** | Default modules for the kernel's three jobs, each swappable: ingestion (repository encoder, ingest filter), processing (validator, belief model, quote verifier), recall (kernel-mcp, the BM25 recall index). Optional: Caddy, the UI and its views, and the further modules catalogued in `docs/modules.md`. Parked (D-36): chain runners and their decoders. `ontology/`, `modules/`, `deploy/` | Normal module lifecycle (review lane + eval) |
 
+Neighbours (descriptive, not part of the kernel's specification): Morphogen is a file-based kit that needs no
+kernel, and the kernel is an optional layer above it, ingesting its Backstage files with `encoder-backstage`.
+Substrate is a default distribution: this kernel's core plus Substrate's optional parts installed onto the instance,
+Morphogen's plugin, a configured harness, a model gateway and local models; the desktop stays in this kernel. The
+Substrate-specific modules (`encoder-substrate`, `view-substrate`, the `substrate` MCP profile) will be retired
+together once Morphogen's file-based skills replace Substrate's (D-130; `docs/architecture.md`, "Neighbours").
+
 Operating-system reading of the same thing: Postgres is the kernel (state, permissions, IPC via
 NOTIFY), the `api` schema is the system-call interface (views + `submit_change_set`), each module runs under
 its own database role (its uid), modules are processes in containers, encoders and actuators are

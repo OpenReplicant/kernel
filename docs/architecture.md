@@ -86,6 +86,25 @@ Six invariants are enforced by the database itself, not by a model's judgment:
 5. No method verifies its own output.
 6. Every answer cites claim ids with their belief.
 
+## Neighbours
+
+Two other projects work beside the kernel. The kernel depends on neither; they meet it through contracts (files,
+MCP, the module contract), never through each other's code.
+
+- **Morphogen** is a file-based kit for mapping a system, researching and cataloguing the options for each part,
+  and optimising against targets. It runs in a harness (a Claude Code plugin first) on files alone and needs no
+  kernel; its map is Backstage entity files. The kernel is an optional layer above it: when a person wants
+  indexing, search or graph traversal over those files, `encoder-backstage` ingests them as claims with sources.
+- **Substrate** is the default distribution: the kernel's core, Substrate's optional parts installed onto the
+  kernel instance (an environment module with gates on the kernel's review lane, a channel and an MCP router as
+  MCP servers, the assistant's conversation as a view in the desktop), Morphogen's plugin, a harness configured to
+  use them (Claude Code first), a model gateway and local models. Those parts live in Substrate's repository and
+  are installed the way any module is; the kernel's core ships without them. The desktop (the shell with windows,
+  a launcher and framed apps, `modules/ui`) stays in the kernel and grows here as use cases need.
+- **Planned retirement:** the modules written for Substrate's older store (`encoder-substrate`, `view-substrate`,
+  kernel-mcp's `substrate` profile, and `constraints-wikidata` and the other parts that read them) will be retired
+  together once Morphogen's file-based skills replace Substrate's. They stay until then.
+
 ## Read next
 
 - `docs/developer-guide.md`: the moving parts, the interfaces, and where to plug in.
