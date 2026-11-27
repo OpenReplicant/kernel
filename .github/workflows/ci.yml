@@ -59,6 +59,8 @@ jobs:
         run: python scripts/check_manifests.py
       - name: Distribution bundles match what kk distribution bundle generates (D-120)
         run: python scripts/check_bundles.py
+      - name: Distributions are found where KK_ROOT says, as in the image (D-131)
+        run: python kk/tests/test_distributions.py
       - name: Module catalog (what each module takes in and gives out) is valid and up to date
         run: python scripts/catalog.py --check
       - name: Validator eval (T4)

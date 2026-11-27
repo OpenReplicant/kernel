@@ -24,19 +24,40 @@ sure we are, and is reviewed by a person before it counts (D-84).
 - **How it works, in plain language:** `docs/architecture.md`; how agents reason over it: `docs/reasoning.md`
 - **For a developer joining:** `docs/developer-guide.md` (the moving parts, the interfaces, where to plug in)
 - **Specification:** `docs/spec.md` (kernel v0 is frozen)
+- **Without a checkout:** each distribution's `bundle/` folder runs it from the published images (`distributions/*/bundle/README.md`).
 - **Status:** milestones 1 (the kernel, `docs/milestone-1.md`), 2 (BPM and devops as modules and views, `docs/milestone-2.md`), 3 (your own data, cited, in minutes: `docs/milestone-3.md`) and 4 (a demo you can sell: `docs/milestone-4.md`, `kk demo`) are done; milestone 5 (maps from conversations, interactions and code: `docs/milestone-5.md`) built the interaction encoder and the interviewer; milestone 6 (agent memory without baggage: `docs/milestone-6.md`) is under way: the four-tool memory profile is in. What each module takes in and gives out: `docs/modules.md`.
 - **Decisions and open questions:** `docs/decisions.md`
 - **Working rules:** `CLAUDE.md`
 
+**Release:** v0.1.0 (2026-11-27), the first tagged release; release notes in `docs/release-notes/v0.1.0.md`. The
+images are `ghcr.io/openreplicant/kernel` and `ghcr.io/openreplicant/kernel-postgres`, tag `0.1.0` (public; `main`
+follows the main branch). Kernel v0 (the schema) is frozen; the `kk` command, the modules and the distributions may
+still change between 0.x releases.
+
+## Requirements
+
+- Linux (macOS untested) with **Docker** (compose v2) or **Podman** with a compose provider (tested for this release:
+  rootless Podman 4.9.3 on Ubuntu 24.04 with Docker Compose v5.8.0 as its provider).
+- **Python 3.12 or later** and git. Everything else (Postgres, gitleaks, the UI) runs in containers.
+- About 1 GB of disk for the images; ports 8080 (Caddy: the UI and MCP) and 5432 (Postgres) on 127.0.0.1, both
+  settings (below).
+- An agent harness for the MCP tools; Claude Code is the tested one (`docs/harness.md` for others).
+
 ## Quick start: connect your project
 
-With Docker and Python 3.12+, from a checkout:
+From a checkout, in a virtual environment (most Linux distributions refuse a system-wide `pip install`):
 
 ```sh
+git clone https://github.com/OpenReplicant/kernel && cd kernel
+python3 -m venv .venv && . .venv/bin/activate
 pip install -e .
 kk up ~/code/my-project        # the kernel in Docker, your and the agent's logins, MCP + skill + hooks, and the project read in
 cd ~/code/my-project && claude # approve the 'kernel' MCP server; the agent now recalls, cites and records
 ```
+
+The first `kk up` builds the image and takes a minute or two. When 8080 or 5432 is taken, put `KK_HTTP_PORT=...` and
+`KK_DB_PORT=...` in `deploy/.env` before `kk up` (it keeps what is there and fills in the secrets). To run beside
+another kernel stack on one machine, also give it its own compose project: `COMPOSE_PROJECT_NAME=NAME kk up ...`.
 
 The agent sees four tools (the `memory` profile, M6-T1): `recall(question)` answers with a briefing in which
 every line says who said it and how sure the kernel is, with a handle to cite; `remember(kind, text)` records
@@ -60,12 +81,12 @@ D-69); when the checkout moves on, the session tells the agent, and `kk up` agai
 ## The process demo
 
 ```sh
-pip install -e .
+pip install -e .  # in the virtual environment above
 kk demo           # order-to-cash, bundled; or kk demo --bpi for BPI Challenge 2019 (1.6 M events)
 ```
 
-It loads an event log, its documented BPMN model and the written procedure, and prints the UI address
-with the owner's sign-in. The walkthrough (`docs/demo.md`) covers documented against actual, the
+It runs `kk up` on a demo folder (`~/kk-demo`; `--project DIR` for another), loads an event log, its documented
+BPMN model and the written procedure, and prints the UI address with the owner's sign-in. The walkthrough (`docs/demo.md`) covers documented against actual, the
 deviations worth reviewing with their evidence, a process model that learns from what people approve,
 the model as BPMN, and an agent's cited answers (D-77).
 

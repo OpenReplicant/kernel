@@ -16,7 +16,10 @@ from .distributions import ROOT, load, names
 REGISTRY = "ghcr.io/openreplicant"
 KERNEL_IMAGE = f"{REGISTRY}/kernel"
 DB_IMAGE = f"{REGISTRY}/kernel-postgres"
-DEFAULT_TAG = "main"
+# The kernel release the committed bundles pull: pyproject.toml's version (scripts/check_bundles.py keeps them equal),
+# published as that image tag when the release's git tag (v<version>) is pushed (.github/workflows/image.yml). `main`
+# follows the main branch.
+DEFAULT_TAG = "0.1.0"
 
 
 def caddy_image() -> str:
@@ -151,7 +154,7 @@ KK_JWT_SECRET=
 KK_HTTP_PORT={http}
 KK_DB_PORT={db}
 
-# The images. Pin a release tag (v1.2.3) or a digest once you run this for real; `{tag}` follows the main branch.
+# The images: the kernel release `{tag}`. `main` follows the main branch; a digest pins one build exactly.
 KK_IMAGE={KERNEL_IMAGE}:{tag}
 KK_DB_IMAGE={DB_IMAGE}:{tag}
 CADDY_IMAGE={caddy_image()}
@@ -224,8 +227,8 @@ $EDITOR .env                      # 2. fill in the three secrets (how is written
 podman compose up -d              # 3. start it (docker compose works the same)
 ```
 
-Images are `{KERNEL_IMAGE}` and `{DB_IMAGE}`, tag `{tag}` (set `KK_IMAGE` and `KK_DB_IMAGE` in `.env` to pin a
-release). The packages are public, so pulling needs no registry login. The first start takes a minute while the
+Images are `{KERNEL_IMAGE}` and `{DB_IMAGE}`, tag `{tag}` (set `KK_IMAGE` and `KK_DB_IMAGE` in `.env` for
+another release, or `main` to follow the main branch). The packages are public, so pulling needs no registry login. The first start takes a minute while the
 database initialises. Check with `podman compose ps`.
 
 ## Sign in

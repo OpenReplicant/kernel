@@ -13,8 +13,8 @@ $EDITOR .env                      # 2. fill in the three secrets (how is written
 podman compose up -d              # 3. start it (docker compose works the same)
 ```
 
-Images are `ghcr.io/openreplicant/kernel` and `ghcr.io/openreplicant/kernel-postgres`, tag `main` (set `KK_IMAGE` and `KK_DB_IMAGE` in `.env` to pin a
-release). The packages are public, so pulling needs no registry login. The first start takes a minute while the
+Images are `ghcr.io/openreplicant/kernel` and `ghcr.io/openreplicant/kernel-postgres`, tag `0.1.0` (set `KK_IMAGE` and `KK_DB_IMAGE` in `.env` for
+another release, or `main` to follow the main branch). The packages are public, so pulling needs no registry login. The first start takes a minute while the
 database initialises. Check with `podman compose ps`.
 
 ## Sign in
