@@ -15,7 +15,9 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
+# The checkout's root, or KK_ROOT as kk.cli has it: the image installs kk into site-packages and keeps distributions/ at
+# KK_ROOT (/kk), so without it `kk distribution list` and `kk demo --distribution` found none there (D-131)
+ROOT = Path(os.environ.get("KK_ROOT") or Path(__file__).resolve().parent.parent)
 
 
 def names() -> list[str]:
@@ -58,7 +60,7 @@ def main(argv: list[str]) -> None:
     ap.add_argument("name", nargs="?", help="bundle: the distribution")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--out", type=Path, help="bundle: the folder to write (default ./kk-NAME)")
-    ap.add_argument("--image-tag", default=None, help="bundle: the tag of the images in compose.yaml (default main)")
+    ap.add_argument("--image-tag", default=None, help="bundle: the tag of the images in compose.yaml (default: this kernel release)")
     a = ap.parse_args(argv)
     if a.action == "bundle":
         from .bundle import DEFAULT_TAG, write

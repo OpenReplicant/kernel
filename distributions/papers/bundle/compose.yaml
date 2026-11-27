@@ -5,7 +5,7 @@
 name: kk-papers
 
 x-kk: &kk
-  image: ${KK_IMAGE:-ghcr.io/openreplicant/kernel:main}
+  image: ${KK_IMAGE:-ghcr.io/openreplicant/kernel:0.1.0}
   read_only: true
   cap_drop: [ALL]
   security_opt: [no-new-privileges:true]
@@ -15,7 +15,7 @@ services:
 
   # The kernel's store: Postgres with pgvector, pg_cron, pgmq and pgGraph.
   db:
-    image: ${KK_DB_IMAGE:-ghcr.io/openreplicant/kernel-postgres:main}
+    image: ${KK_DB_IMAGE:-ghcr.io/openreplicant/kernel-postgres:0.1.0}
     command: ["postgres", "-c", "shared_preload_libraries=pg_cron,graph", "-c", "cron.database_name=kk"]
     environment:
       POSTGRES_DB: kk

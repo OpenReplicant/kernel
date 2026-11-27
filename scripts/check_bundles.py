@@ -3,7 +3,7 @@
 Per distribution: the folder equals a fresh generation (and a second generation changes nothing); compose.yaml
 parses, has no `build:`, runs exactly db, init, kernel and caddy, publishes ports on 127.0.0.1 only, uses named
 volumes for data and takes images by tag from GHCR (Caddy aside); .env.example leaves every secret empty;
-no file holds anything that looks like a secret. Needs PyYAML only. Usage: python scripts/check_bundles.py
+no file holds anything that looks like a secret; the image tag is this release, pyproject.toml's version. Needs PyYAML only. Usage: python scripts/check_bundles.py
 """
 from __future__ import annotations
 
@@ -77,8 +77,21 @@ def check(name: str) -> list[str]:
     return errors
 
 
+def release() -> list[str]:
+    """The bundles pull the kernel release this checkout is: kk.bundle.DEFAULT_TAG is pyproject.toml's version."""
+    m = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)
+    if not m:
+        return ["pyproject.toml has no version"]
+    if DEFAULT_TAG != m.group(1):
+        return [f"kk.bundle.DEFAULT_TAG is {DEFAULT_TAG}, pyproject.toml's version is {m.group(1)}"]
+    return []
+
+
 def main() -> int:
     bad = 0
+    for e in release():
+        bad += 1
+        print("ERROR", e)
     for n in names():
         errs = check(n)
         bad += len(errs)
